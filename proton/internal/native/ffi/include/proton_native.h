@@ -475,23 +475,7 @@ int32_t proton_window_insert_page_css(proton_window_handle_t window,
                                       const char *css, int64_t *out_key);
 int32_t proton_window_remove_page_css(proton_window_handle_t window,
                                       int64_t key);
-int32_t proton_contents_back(void *target, int32_t is_view);
-int32_t proton_contents_forward(void *target, int32_t is_view);
-int32_t proton_contents_reload(void *target, int32_t is_view);
-int32_t proton_contents_reload_ignore_cache(void *target, int32_t is_view);
-int32_t proton_contents_stop(void *target, int32_t is_view);
-int32_t proton_contents_focus(void *target, int32_t is_view);
-int32_t proton_contents_undo(void *target, int32_t is_view);
-int32_t proton_contents_redo(void *target, int32_t is_view);
-int32_t proton_contents_cut(void *target, int32_t is_view);
-int32_t proton_contents_copy(void *target, int32_t is_view);
-int32_t proton_contents_paste(void *target, int32_t is_view);
-int32_t proton_contents_paste_and_match_style(void *target, int32_t is_view);
-int32_t proton_contents_delete(void *target, int32_t is_view);
-int32_t proton_contents_select_all(void *target, int32_t is_view);
-int32_t proton_contents_open_devtools(void *target, int32_t is_view);
-int32_t proton_contents_close_devtools(void *target, int32_t is_view);
-int32_t proton_contents_toggle_devtools(void *target, int32_t is_view);
+int32_t proton_contents_perform_browser_operation(void *target, int32_t is_view, int32_t operation);
 int32_t proton_contents_cancel_download(void *target, int32_t is_view, int32_t download_id);
 int32_t proton_window_get_browser_focus_state(
     proton_window_handle_t window, int32_t *out_focused);

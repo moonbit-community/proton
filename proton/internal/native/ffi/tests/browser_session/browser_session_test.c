@@ -489,19 +489,46 @@ MOONBIT_FFI_EXPORT moonbit_bytes_t proton_test_edit_operations_trace(void) {
   cef_browser_t browser = {0};
   browser.get_focused_frame = proton_test_focused_frame;
   char error[128] = {0};
-  int status = proton_browser_undo(NULL, &browser, error, sizeof(error));
-  status |= proton_browser_redo(NULL, &browser, error, sizeof(error));
-  status |= proton_browser_cut(NULL, &browser, error, sizeof(error));
-  status |= proton_browser_copy(NULL, &browser, error, sizeof(error));
-  status |= proton_browser_paste(NULL, &browser, error, sizeof(error));
-  status |= proton_browser_paste_and_match_style(NULL, &browser, error, sizeof(error));
-  status |= proton_browser_delete(NULL, &browser, error, sizeof(error));
-  status |= proton_browser_select_all(NULL, &browser, error, sizeof(error));
+  int status = proton_browser_perform_browser_operation(NULL, &browser, PROTON_BROWSER_UNDO, error, sizeof(error));
+  status |= proton_browser_perform_browser_operation(NULL, &browser, PROTON_BROWSER_REDO, error, sizeof(error));
+  status |= proton_browser_perform_browser_operation(NULL, &browser, PROTON_BROWSER_CUT, error, sizeof(error));
+  status |= proton_browser_perform_browser_operation(NULL, &browser, PROTON_BROWSER_COPY, error, sizeof(error));
+  status |= proton_browser_perform_browser_operation(NULL, &browser, PROTON_BROWSER_PASTE, error, sizeof(error));
+  status |= proton_browser_perform_browser_operation(NULL, &browser, PROTON_BROWSER_PASTE_AND_MATCH_STYLE, error, sizeof(error));
+  status |= proton_browser_perform_browser_operation(NULL, &browser, PROTON_BROWSER_DELETE, error, sizeof(error));
+  status |= proton_browser_perform_browser_operation(NULL, &browser, PROTON_BROWSER_SELECT_ALL, error, sizeof(error));
   browser.get_focused_frame = proton_test_missing_frame;
-  int missing = proton_browser_undo(NULL, &browser, error, sizeof(error));
+  int missing = proton_browser_perform_browser_operation(NULL, &browser, PROTON_BROWSER_UNDO, error, sizeof(error));
+  int unknown = proton_browser_perform_browser_operation(NULL, &browser, -1, NULL, 0);
+  if (unknown != PROTON_ERR_INVALID_ARGUMENT) return proton_test_copy_trace("unknown-operation-accepted");
   char trace[256];
   snprintf(trace, sizeof(trace), "operations=%s,releases=%d,status=%d,missing=%d,error=%s",
       proton_test_edit_frame.operations, proton_test_edit_frame.releases,
       status, missing, error);
   return proton_test_copy_trace(trace);
+}
+
+MOONBIT_FFI_EXPORT int32_t proton_test_browser_operation_abi(
+    int32_t operation, int32_t index) {
+  static const int32_t operations[] = {
+    PROTON_BROWSER_BACK,
+    PROTON_BROWSER_FORWARD,
+    PROTON_BROWSER_RELOAD,
+    PROTON_BROWSER_RELOAD_IGNORE_CACHE,
+    PROTON_BROWSER_STOP,
+    PROTON_BROWSER_FOCUS,
+    PROTON_BROWSER_UNDO,
+    PROTON_BROWSER_REDO,
+    PROTON_BROWSER_CUT,
+    PROTON_BROWSER_COPY,
+    PROTON_BROWSER_PASTE,
+    PROTON_BROWSER_PASTE_AND_MATCH_STYLE,
+    PROTON_BROWSER_DELETE,
+    PROTON_BROWSER_SELECT_ALL,
+    PROTON_BROWSER_OPEN_DEVTOOLS,
+    PROTON_BROWSER_CLOSE_DEVTOOLS,
+    PROTON_BROWSER_TOGGLE_DEVTOOLS,
+  };
+  return index >= 0 && (size_t)index < sizeof(operations) / sizeof(operations[0])
+      && operation == operations[index];
 }

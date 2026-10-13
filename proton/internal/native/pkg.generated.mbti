@@ -3,6 +3,7 @@ package "moonbit-community/proton/internal/native"
 
 import {
   "moonbit-community/proton/internal/locale",
+  "moonbit-community/proton/internal/native/ffi",
   "moonbit-community/proton_ffi",
   "moonbitlang/core/debug",
   "moonbitlang/core/json",
@@ -351,25 +352,9 @@ pub(all) enum Contents {
   PrimaryPage(Window)
   ChildView(View)
 }
-pub fn Contents::back(Self) -> Unit raise NativeError
 pub fn Contents::cancel_download(Self, Int) -> Unit raise NativeError
-pub fn Contents::close_devtools(Self) -> Unit raise NativeError
-pub fn Contents::copy(Self) -> Unit raise NativeError
-pub fn Contents::cut(Self) -> Unit raise NativeError
-pub fn Contents::delete(Self) -> Unit raise NativeError
-pub fn Contents::focus(Self) -> Unit raise NativeError
-pub fn Contents::forward(Self) -> Unit raise NativeError
-pub fn Contents::open_devtools(Self) -> Unit raise NativeError
-pub fn Contents::paste(Self) -> Unit raise NativeError
-pub fn Contents::paste_and_match_style(Self) -> Unit raise NativeError
+pub fn Contents::perform(Self, @ffi.BrowserOperation) -> Unit raise NativeError
 pub fn Contents::print_to_pdf(Self, String, PdfPrintSettings) -> Int raise NativeError
-pub fn Contents::redo(Self) -> Unit raise NativeError
-pub fn Contents::reload(Self) -> Unit raise NativeError
-pub fn Contents::reload_ignore_cache(Self) -> Unit raise NativeError
-pub fn Contents::select_all(Self) -> Unit raise NativeError
-pub fn Contents::stop(Self) -> Unit raise NativeError
-pub fn Contents::toggle_devtools(Self) -> Unit raise NativeError
-pub fn Contents::undo(Self) -> Unit raise NativeError
 
 pub(all) enum CookieSameSite {
   Unspecified
@@ -1099,5 +1084,6 @@ pub fn WindowThemePreference::not_equal(Self, Self) -> Bool
 pub fn WindowThemePreference::to_repr(Self) -> @debug.Repr
 
 // Type aliases
+pub using @ffi {type BrowserOperation}
 
 // Traits

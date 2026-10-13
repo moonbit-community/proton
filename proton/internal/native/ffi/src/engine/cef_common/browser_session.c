@@ -1281,75 +1281,64 @@ int32_t proton_browser_session_respond(
   return status;
 }
 
-#define PROTON_BROWSER_NAVIGATION(name, method) \
-  int32_t proton_browser_##name(proton_browser_session_t *session, \
-      cef_browser_t *browser, char *error, size_t error_len) { \
-    (void)session; (void)error; (void)error_len; \
-    browser->method(browser); \
-    return PROTON_OK; \
+int32_t proton_browser_perform_browser_operation(
+    proton_browser_session_t *session, cef_browser_t *browser,
+    int32_t operation, char *error, size_t error_len) {
+  switch (operation) {
+    case PROTON_BROWSER_BACK: browser->go_back(browser); break;
+    case PROTON_BROWSER_FORWARD: browser->go_forward(browser); break;
+    case PROTON_BROWSER_RELOAD: browser->reload(browser); break;
+    case PROTON_BROWSER_RELOAD_IGNORE_CACHE: browser->reload_ignore_cache(browser); break;
+    case PROTON_BROWSER_STOP: browser->stop_load(browser); break;
+    case PROTON_BROWSER_FOCUS: {
+      cef_browser_host_t *host = browser->get_host(browser);
+      if (host == NULL) {
+        proton_browser_set_message(error, error_len, "browser host is unavailable");
+        return PROTON_ERR_ENGINE;
+      }
+      host->set_focus(host, 1);
+      host->base.release((cef_base_ref_counted_t *)host);
+      break;
+    }
+#define PROTON_BROWSER_EDIT_CASE(operation, method) \
+    case operation: { \
+      cef_frame_t *frame = browser->get_focused_frame(browser); \
+      if (frame == NULL) { \
+        proton_browser_set_message(error, error_len, \
+                                    "focused browser frame is unavailable"); \
+        return PROTON_ERR_ENGINE; \
+      } \
+      frame->method(frame); \
+      frame->base.release((cef_base_ref_counted_t *)frame); \
+      break; \
+    }
+    PROTON_BROWSER_EDIT_CASE(PROTON_BROWSER_UNDO, undo)
+    PROTON_BROWSER_EDIT_CASE(PROTON_BROWSER_REDO, redo)
+    PROTON_BROWSER_EDIT_CASE(PROTON_BROWSER_CUT, cut)
+    PROTON_BROWSER_EDIT_CASE(PROTON_BROWSER_COPY, copy)
+    PROTON_BROWSER_EDIT_CASE(PROTON_BROWSER_PASTE, paste)
+    PROTON_BROWSER_EDIT_CASE(PROTON_BROWSER_PASTE_AND_MATCH_STYLE, paste_and_match_style)
+    PROTON_BROWSER_EDIT_CASE(PROTON_BROWSER_DELETE, del)
+    PROTON_BROWSER_EDIT_CASE(PROTON_BROWSER_SELECT_ALL, select_all)
+#undef PROTON_BROWSER_EDIT_CASE
+#define PROTON_BROWSER_DEVTOOLS_CASE(operation, method) \
+    case operation: \
+      if (!session->policy.devtools) { \
+        proton_browser_set_message(error, error_len, \
+                                    "DevTools are disabled by browser policy"); \
+        return PROTON_ERR_UNSUPPORTED; \
+      } \
+      return proton_browser_lifecycle_##method(session->lifecycle, error, error_len);
+    PROTON_BROWSER_DEVTOOLS_CASE(PROTON_BROWSER_OPEN_DEVTOOLS, open_devtools)
+    PROTON_BROWSER_DEVTOOLS_CASE(PROTON_BROWSER_CLOSE_DEVTOOLS, close_devtools)
+    PROTON_BROWSER_DEVTOOLS_CASE(PROTON_BROWSER_TOGGLE_DEVTOOLS, toggle_devtools)
+#undef PROTON_BROWSER_DEVTOOLS_CASE
+    default:
+      proton_browser_set_message(error, error_len, "unknown browser operation");
+      return PROTON_ERR_INVALID_ARGUMENT;
   }
-
-PROTON_BROWSER_NAVIGATION(back, go_back)
-PROTON_BROWSER_NAVIGATION(forward, go_forward)
-PROTON_BROWSER_NAVIGATION(reload, reload)
-PROTON_BROWSER_NAVIGATION(reload_ignore_cache, reload_ignore_cache)
-PROTON_BROWSER_NAVIGATION(stop, stop_load)
-#undef PROTON_BROWSER_NAVIGATION
-
-int32_t proton_browser_focus(proton_browser_session_t *session,
-    cef_browser_t *browser, char *error, size_t error_len) {
-  (void)session;
-  cef_browser_host_t *host = browser->get_host(browser);
-  if (host == NULL) {
-    proton_browser_set_message(error, error_len, "browser host is unavailable");
-    return PROTON_ERR_ENGINE;
-  }
-  host->set_focus(host, 1);
-  host->base.release((cef_base_ref_counted_t *)host);
   return PROTON_OK;
 }
-
-#define PROTON_BROWSER_EDIT(name, method) \
-  int32_t proton_browser_##name(proton_browser_session_t *session, \
-      cef_browser_t *browser, char *error, size_t error_len) { \
-    (void)session; \
-    cef_frame_t *frame = browser->get_focused_frame(browser); \
-    if (frame == NULL) { \
-      proton_browser_set_message(error, error_len, \
-                                  "focused browser frame is unavailable"); \
-      return PROTON_ERR_ENGINE; \
-    } \
-    frame->method(frame); \
-    frame->base.release((cef_base_ref_counted_t *)frame); \
-    return PROTON_OK; \
-  }
-
-PROTON_BROWSER_EDIT(undo, undo)
-PROTON_BROWSER_EDIT(redo, redo)
-PROTON_BROWSER_EDIT(cut, cut)
-PROTON_BROWSER_EDIT(copy, copy)
-PROTON_BROWSER_EDIT(paste, paste)
-PROTON_BROWSER_EDIT(paste_and_match_style, paste_and_match_style)
-PROTON_BROWSER_EDIT(delete, del)
-PROTON_BROWSER_EDIT(select_all, select_all)
-#undef PROTON_BROWSER_EDIT
-
-#define PROTON_BROWSER_DEVTOOLS(name) \
-  int32_t proton_browser_##name(proton_browser_session_t *session, \
-      cef_browser_t *browser, char *error, size_t error_len) { \
-    (void)browser; \
-    if (!session->policy.devtools) { \
-      proton_browser_set_message(error, error_len, \
-                                  "DevTools are disabled by browser policy"); \
-      return PROTON_ERR_UNSUPPORTED; \
-    } \
-    return proton_browser_lifecycle_##name(session->lifecycle, error, error_len); \
-  }
-
-PROTON_BROWSER_DEVTOOLS(open_devtools)
-PROTON_BROWSER_DEVTOOLS(close_devtools)
-PROTON_BROWSER_DEVTOOLS(toggle_devtools)
-#undef PROTON_BROWSER_DEVTOOLS
 
 int32_t proton_browser_cancel_download(proton_browser_session_t *session,
     int32_t download_id, char *error, size_t error_len) {

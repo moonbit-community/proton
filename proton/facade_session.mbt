@@ -2109,14 +2109,18 @@ pub async fn WebContentsHandle::print_to_pdf(
 pub fn WebContentsHandle::back(
   self : WebContentsHandle,
 ) -> Unit raise WindowSessionError {
-  self.with_target("back in", target => target.back())
+  self.with_target("back in", target => {
+    target.perform(@native.BrowserOperation::Back)
+  })
 }
 
 ///|
 pub fn WebContentsHandle::forward(
   self : WebContentsHandle,
 ) -> Unit raise WindowSessionError {
-  self.with_target("forward in", target => target.forward())
+  self.with_target("forward in", target => {
+    target.perform(@native.BrowserOperation::Forward)
+  })
 }
 
 ///|
@@ -2276,9 +2280,9 @@ pub fn WebContentsHandle::reload(
 ) -> Unit raise WindowSessionError {
   self.with_target("reload in", target => {
     if ignore_cache {
-      target.reload_ignore_cache()
+      target.perform(@native.BrowserOperation::ReloadIgnoreCache)
     } else {
-      target.reload()
+      target.perform(@native.BrowserOperation::Reload)
     }
   })
 }
@@ -2287,7 +2291,9 @@ pub fn WebContentsHandle::reload(
 pub fn WebContentsHandle::stop(
   self : WebContentsHandle,
 ) -> Unit raise WindowSessionError {
-  self.with_target("stop in", target => target.stop())
+  self.with_target("stop in", target => {
+    target.perform(@native.BrowserOperation::Stop)
+  })
 }
 
 ///|
@@ -2295,7 +2301,9 @@ pub fn WebContentsHandle::stop(
 pub fn WebContentsHandle::undo(
   self : WebContentsHandle,
 ) -> Unit raise WindowSessionError {
-  self.with_target("undo in", target => target.undo())
+  self.with_target("undo in", target => {
+    target.perform(@native.BrowserOperation::Undo)
+  })
 }
 
 ///|
@@ -2303,7 +2311,9 @@ pub fn WebContentsHandle::undo(
 pub fn WebContentsHandle::redo(
   self : WebContentsHandle,
 ) -> Unit raise WindowSessionError {
-  self.with_target("redo in", target => target.redo())
+  self.with_target("redo in", target => {
+    target.perform(@native.BrowserOperation::Redo)
+  })
 }
 
 ///|
@@ -2311,7 +2321,9 @@ pub fn WebContentsHandle::redo(
 pub fn WebContentsHandle::cut(
   self : WebContentsHandle,
 ) -> Unit raise WindowSessionError {
-  self.with_target("cut in", target => target.cut())
+  self.with_target("cut in", target => {
+    target.perform(@native.BrowserOperation::Cut)
+  })
 }
 
 ///|
@@ -2319,7 +2331,9 @@ pub fn WebContentsHandle::cut(
 pub fn WebContentsHandle::copy(
   self : WebContentsHandle,
 ) -> Unit raise WindowSessionError {
-  self.with_target("copy in", target => target.copy())
+  self.with_target("copy in", target => {
+    target.perform(@native.BrowserOperation::Copy)
+  })
 }
 
 ///|
@@ -2327,7 +2341,9 @@ pub fn WebContentsHandle::copy(
 pub fn WebContentsHandle::paste(
   self : WebContentsHandle,
 ) -> Unit raise WindowSessionError {
-  self.with_target("paste in", target => target.paste())
+  self.with_target("paste in", target => {
+    target.perform(@native.BrowserOperation::Paste)
+  })
 }
 
 ///|
@@ -2336,7 +2352,7 @@ pub fn WebContentsHandle::paste_and_match_style(
   self : WebContentsHandle,
 ) -> Unit raise WindowSessionError {
   self.with_target("paste_and_match_style in", target => {
-    target.paste_and_match_style()
+    target.perform(@native.BrowserOperation::PasteAndMatchStyle)
   })
 }
 
@@ -2345,7 +2361,9 @@ pub fn WebContentsHandle::paste_and_match_style(
 pub fn WebContentsHandle::delete(
   self : WebContentsHandle,
 ) -> Unit raise WindowSessionError {
-  self.with_target("delete in", target => target.delete())
+  self.with_target("delete in", target => {
+    target.perform(@native.BrowserOperation::Delete)
+  })
 }
 
 ///|
@@ -2353,7 +2371,9 @@ pub fn WebContentsHandle::delete(
 pub fn WebContentsHandle::select_all(
   self : WebContentsHandle,
 ) -> Unit raise WindowSessionError {
-  self.with_target("select_all in", target => target.select_all())
+  self.with_target("select_all in", target => {
+    target.perform(@native.BrowserOperation::SelectAll)
+  })
 }
 
 ///|
@@ -2363,17 +2383,9 @@ pub fn WebContentsHandle::focus(
 ) -> Unit raise WindowSessionError {
   let parent = self.session.resolve_window(self.id, self.native_id).window
   self.with_target("focus browser in", target => {
-    match target {
-      PrimaryPage(window) => {
-        window.focus()
-        target.focus()
-      }
-      ChildView(_) => {
-        // Resolve both identities before focusing the containing window.
-        parent.focus()
-        target.focus()
-      }
-    }
+    // Resolve both identities before focusing the containing window.
+    parent.focus()
+    target.perform(@native.BrowserOperation::Focus)
   })
 }
 
@@ -2394,14 +2406,18 @@ pub fn WebContentsHandle::is_focused(
 pub fn WebContentsHandle::open_devtools(
   self : WebContentsHandle,
 ) -> Unit raise WindowSessionError {
-  self.with_target("open_devtools in", target => target.open_devtools())
+  self.with_target("open_devtools in", target => {
+    target.perform(@native.BrowserOperation::OpenDevtools)
+  })
 }
 
 ///|
 pub fn WebContentsHandle::close_devtools(
   self : WebContentsHandle,
 ) -> Unit raise WindowSessionError {
-  self.with_target("close_devtools in", target => target.close_devtools())
+  self.with_target("close_devtools in", target => {
+    target.perform(@native.BrowserOperation::CloseDevtools)
+  })
 }
 
 ///|
@@ -2409,7 +2425,9 @@ pub fn WebContentsHandle::close_devtools(
 pub fn WebContentsHandle::toggle_devtools(
   self : WebContentsHandle,
 ) -> Unit raise WindowSessionError {
-  self.with_target("toggle_devtools in", target => target.toggle_devtools())
+  self.with_target("toggle_devtools in", target => {
+    target.perform(@native.BrowserOperation::ToggleDevtools)
+  })
 }
 
 ///|

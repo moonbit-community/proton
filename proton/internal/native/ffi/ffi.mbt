@@ -1,4 +1,26 @@
 ///|
+/// Fixed no-argument browser operations; tags match proton_browser_operation_t.
+pub(all) enum BrowserOperation {
+  Back = 0
+  Forward = 1
+  Reload = 2
+  ReloadIgnoreCache = 3
+  Stop = 4
+  Focus = 5
+  Undo = 6
+  Redo = 7
+  Cut = 8
+  Copy = 9
+  Paste = 10
+  PasteAndMatchStyle = 11
+  Delete = 12
+  SelectAll = 13
+  OpenDevtools = 14
+  CloseDevtools = 15
+  ToggleDevtools = 16
+}
+
+///|
 pub fn ensure_cef_loader_linked() -> Unit {
   @mac_engine.ensure_linked()
   @cef_loader.ensure_linked()
@@ -1003,106 +1025,11 @@ pub extern "C" fn proton_window_flash_frame_ffi(
 ) -> Int32 = "proton_window_flash_frame"
 
 ///|
-pub extern "C" fn proton_window_back_ffi(
+pub extern "C" fn proton_window_perform_browser_operation_ffi(
   window : WindowHandle,
   is_view : Int32,
-) -> Int32 = "proton_contents_back"
-
-///|
-pub extern "C" fn proton_window_forward_ffi(
-  window : WindowHandle,
-  is_view : Int32,
-) -> Int32 = "proton_contents_forward"
-
-///|
-pub extern "C" fn proton_window_reload_ffi(
-  window : WindowHandle,
-  is_view : Int32,
-) -> Int32 = "proton_contents_reload"
-
-///|
-pub extern "C" fn proton_window_reload_ignore_cache_ffi(
-  window : WindowHandle,
-  is_view : Int32,
-) -> Int32 = "proton_contents_reload_ignore_cache"
-
-///|
-pub extern "C" fn proton_window_stop_ffi(
-  window : WindowHandle,
-  is_view : Int32,
-) -> Int32 = "proton_contents_stop"
-
-///|
-pub extern "C" fn proton_window_contents_focus_ffi(
-  window : WindowHandle,
-  is_view : Int32,
-) -> Int32 = "proton_contents_focus"
-
-///|
-pub extern "C" fn proton_window_undo_ffi(
-  window : WindowHandle,
-  is_view : Int32,
-) -> Int32 = "proton_contents_undo"
-
-///|
-pub extern "C" fn proton_window_redo_ffi(
-  window : WindowHandle,
-  is_view : Int32,
-) -> Int32 = "proton_contents_redo"
-
-///|
-pub extern "C" fn proton_window_cut_ffi(
-  window : WindowHandle,
-  is_view : Int32,
-) -> Int32 = "proton_contents_cut"
-
-///|
-pub extern "C" fn proton_window_copy_ffi(
-  window : WindowHandle,
-  is_view : Int32,
-) -> Int32 = "proton_contents_copy"
-
-///|
-pub extern "C" fn proton_window_paste_ffi(
-  window : WindowHandle,
-  is_view : Int32,
-) -> Int32 = "proton_contents_paste"
-
-///|
-pub extern "C" fn proton_window_paste_and_match_style_ffi(
-  window : WindowHandle,
-  is_view : Int32,
-) -> Int32 = "proton_contents_paste_and_match_style"
-
-///|
-pub extern "C" fn proton_window_delete_ffi(
-  window : WindowHandle,
-  is_view : Int32,
-) -> Int32 = "proton_contents_delete"
-
-///|
-pub extern "C" fn proton_window_select_all_ffi(
-  window : WindowHandle,
-  is_view : Int32,
-) -> Int32 = "proton_contents_select_all"
-
-///|
-pub extern "C" fn proton_window_open_devtools_ffi(
-  window : WindowHandle,
-  is_view : Int32,
-) -> Int32 = "proton_contents_open_devtools"
-
-///|
-pub extern "C" fn proton_window_close_devtools_ffi(
-  window : WindowHandle,
-  is_view : Int32,
-) -> Int32 = "proton_contents_close_devtools"
-
-///|
-pub extern "C" fn proton_window_toggle_devtools_ffi(
-  window : WindowHandle,
-  is_view : Int32,
-) -> Int32 = "proton_contents_toggle_devtools"
+  operation : BrowserOperation,
+) -> Int32 = "proton_contents_perform_browser_operation"
 
 ///|
 pub extern "C" fn proton_window_cancel_download_ffi(
@@ -1524,106 +1451,11 @@ pub extern "C" fn proton_view_remove_page_css_ffi(
 ) -> Int32 = "proton_view_remove_page_css"
 
 ///|
-pub extern "C" fn proton_view_back_ffi(
+pub extern "C" fn proton_view_perform_browser_operation_ffi(
   view : ViewHandle,
   is_view : Int32,
-) -> Int32 = "proton_contents_back"
-
-///|
-pub extern "C" fn proton_view_forward_ffi(
-  view : ViewHandle,
-  is_view : Int32,
-) -> Int32 = "proton_contents_forward"
-
-///|
-pub extern "C" fn proton_view_reload_ffi(
-  view : ViewHandle,
-  is_view : Int32,
-) -> Int32 = "proton_contents_reload"
-
-///|
-pub extern "C" fn proton_view_reload_ignore_cache_ffi(
-  view : ViewHandle,
-  is_view : Int32,
-) -> Int32 = "proton_contents_reload_ignore_cache"
-
-///|
-pub extern "C" fn proton_view_stop_ffi(
-  view : ViewHandle,
-  is_view : Int32,
-) -> Int32 = "proton_contents_stop"
-
-///|
-pub extern "C" fn proton_view_focus_ffi(
-  view : ViewHandle,
-  is_view : Int32,
-) -> Int32 = "proton_contents_focus"
-
-///|
-pub extern "C" fn proton_view_undo_ffi(
-  view : ViewHandle,
-  is_view : Int32,
-) -> Int32 = "proton_contents_undo"
-
-///|
-pub extern "C" fn proton_view_redo_ffi(
-  view : ViewHandle,
-  is_view : Int32,
-) -> Int32 = "proton_contents_redo"
-
-///|
-pub extern "C" fn proton_view_cut_ffi(
-  view : ViewHandle,
-  is_view : Int32,
-) -> Int32 = "proton_contents_cut"
-
-///|
-pub extern "C" fn proton_view_copy_ffi(
-  view : ViewHandle,
-  is_view : Int32,
-) -> Int32 = "proton_contents_copy"
-
-///|
-pub extern "C" fn proton_view_paste_ffi(
-  view : ViewHandle,
-  is_view : Int32,
-) -> Int32 = "proton_contents_paste"
-
-///|
-pub extern "C" fn proton_view_paste_and_match_style_ffi(
-  view : ViewHandle,
-  is_view : Int32,
-) -> Int32 = "proton_contents_paste_and_match_style"
-
-///|
-pub extern "C" fn proton_view_delete_ffi(
-  view : ViewHandle,
-  is_view : Int32,
-) -> Int32 = "proton_contents_delete"
-
-///|
-pub extern "C" fn proton_view_select_all_ffi(
-  view : ViewHandle,
-  is_view : Int32,
-) -> Int32 = "proton_contents_select_all"
-
-///|
-pub extern "C" fn proton_view_open_devtools_ffi(
-  view : ViewHandle,
-  is_view : Int32,
-) -> Int32 = "proton_contents_open_devtools"
-
-///|
-pub extern "C" fn proton_view_close_devtools_ffi(
-  view : ViewHandle,
-  is_view : Int32,
-) -> Int32 = "proton_contents_close_devtools"
-
-///|
-pub extern "C" fn proton_view_toggle_devtools_ffi(
-  view : ViewHandle,
-  is_view : Int32,
-) -> Int32 = "proton_contents_toggle_devtools"
+  operation : BrowserOperation,
+) -> Int32 = "proton_contents_perform_browser_operation"
 
 ///|
 pub extern "C" fn proton_view_cancel_download_ffi(

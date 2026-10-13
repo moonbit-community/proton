@@ -2419,37 +2419,18 @@ static int32_t proton_get_contents_engine(void *handle, int32_t is_view,
       proton_set_error(PROTON_ERR_NOT_INITIALIZED, "web contents is not initialized");
 }
 
-#define PROTON_CONTENTS_BROWSER_OPERATION(name) \
-  int32_t proton_contents_##name(void *target, int32_t is_view) { \
-    void *engine = NULL; \
-    int32_t status = proton_get_contents_engine(target, is_view, &engine); \
-    if (status != PROTON_OK) return status; \
-    char engine_error[512] = {0}; \
-    status = proton_engine_contents_##name( \
-        engine, is_view, engine_error, sizeof(engine_error)); \
-    if (status != PROTON_OK) return proton_set_engine_status(status, engine_error); \
-    g_last_error[0] = '\0'; \
-    return PROTON_OK; \
-  }
-
-PROTON_CONTENTS_BROWSER_OPERATION(back)
-PROTON_CONTENTS_BROWSER_OPERATION(forward)
-PROTON_CONTENTS_BROWSER_OPERATION(reload)
-PROTON_CONTENTS_BROWSER_OPERATION(reload_ignore_cache)
-PROTON_CONTENTS_BROWSER_OPERATION(stop)
-PROTON_CONTENTS_BROWSER_OPERATION(focus)
-PROTON_CONTENTS_BROWSER_OPERATION(undo)
-PROTON_CONTENTS_BROWSER_OPERATION(redo)
-PROTON_CONTENTS_BROWSER_OPERATION(cut)
-PROTON_CONTENTS_BROWSER_OPERATION(copy)
-PROTON_CONTENTS_BROWSER_OPERATION(paste)
-PROTON_CONTENTS_BROWSER_OPERATION(paste_and_match_style)
-PROTON_CONTENTS_BROWSER_OPERATION(delete)
-PROTON_CONTENTS_BROWSER_OPERATION(select_all)
-PROTON_CONTENTS_BROWSER_OPERATION(open_devtools)
-PROTON_CONTENTS_BROWSER_OPERATION(close_devtools)
-PROTON_CONTENTS_BROWSER_OPERATION(toggle_devtools)
-#undef PROTON_CONTENTS_BROWSER_OPERATION
+int32_t proton_contents_perform_browser_operation(
+    void *target, int32_t is_view, int32_t operation) {
+  void *engine = NULL;
+  int32_t status = proton_get_contents_engine(target, is_view, &engine);
+  if (status != PROTON_OK) return status;
+  char engine_error[512] = {0};
+  status = proton_engine_contents_perform_browser_operation(
+      engine, is_view, operation, engine_error, sizeof(engine_error));
+  if (status != PROTON_OK) return proton_set_engine_status(status, engine_error);
+  g_last_error[0] = '\0';
+  return PROTON_OK;
+}
 
 int32_t proton_contents_cancel_download(void *target, int32_t is_view, int32_t download_id) {
   void *engine = NULL;
