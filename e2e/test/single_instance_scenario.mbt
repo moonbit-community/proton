@@ -3,7 +3,7 @@ async fn spawn_single_instance_probe(
   group : @async.TaskGroup[Unit],
   root : String,
   output_root : String,
-  run_id : Int,
+  run_id : Int32,
   role : String,
   ready_path : String,
   release_paths? : (String, String),
@@ -54,7 +54,7 @@ async fn spawn_single_instance_probe(
 }
 
 ///|
-async fn run_single_instance_probe(root : String, timeout : Int) -> Unit {
+async fn run_single_instance_probe(root : String, timeout : Int32) -> Unit {
   let output_root = @fs.tmpdir(prefix="proton-e2e-single-instance-")
   defer remove_dev_extension_tree(output_root)
   install_scenario_helper(root, output_root)
@@ -113,7 +113,7 @@ async fn run_single_instance_probe(root : String, timeout : Int) -> Unit {
 async fn run_single_instance_release_phase(
   root : String,
   output_root : String,
-  timeout : Int,
+  timeout : Int32,
 ) -> Unit {
   let run_id = next_app_run_id()
   let ready_path = join_path(output_root, "release-ready")
@@ -183,7 +183,7 @@ async fn run_single_instance_release_phase(
 async fn wait_for_scenario_marker(
   app : SpawnedScenarioApp,
   path : String,
-  timeout : Int,
+  timeout : Int32,
 ) -> Unit {
   let deadline = @async.now() + timeout.to_int64()
   while @async.now() <= deadline {

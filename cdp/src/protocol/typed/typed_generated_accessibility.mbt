@@ -668,7 +668,7 @@ pub fn AccessibilityAXValueType::from_json(
 /// let command = accessibility_disable_command(id=1, session_id=None)
 /// ```
 pub fn accessibility_disable_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(
@@ -690,7 +690,7 @@ pub fn accessibility_disable_command(
 /// let command = accessibility_enable_command(id=1, session_id=None)
 /// ```
 pub fn accessibility_enable_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(
@@ -803,7 +803,7 @@ pub fn AccessibilityGetAXNodeAndAncestorsResult::from_json(
 /// )
 /// ```
 pub fn accessibility_get_axnode_and_ancestors_command(
-  id~ : Int,
+  id~ : Int32,
   params : AccessibilityGetAXNodeAndAncestorsParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -912,7 +912,7 @@ pub fn AccessibilityGetChildAXNodesResult::from_json(
 /// )
 /// ```
 pub fn accessibility_get_child_axnodes_command(
-  id~ : Int,
+  id~ : Int32,
   params : AccessibilityGetChildAXNodesParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -931,7 +931,7 @@ pub fn accessibility_get_child_axnodes_command(
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
 pub(all) struct AccessibilityGetFullAXTreeParams {
-  depth : Int?
+  depth : Int32?
   frame_id : PageFrameId?
 } derive(Eq, Debug)
 
@@ -1023,7 +1023,7 @@ pub fn AccessibilityGetFullAXTreeResult::from_json(
 /// )
 /// ```
 pub fn accessibility_get_full_axtree_command(
-  id~ : Int,
+  id~ : Int32,
   params : AccessibilityGetFullAXTreeParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -1142,7 +1142,7 @@ pub fn AccessibilityGetPartialAXTreeResult::from_json(
 /// )
 /// ```
 pub fn accessibility_get_partial_axtree_command(
-  id~ : Int,
+  id~ : Int32,
   params : AccessibilityGetPartialAXTreeParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -1246,7 +1246,7 @@ pub fn AccessibilityGetRootAXNodeResult::from_json(
 /// )
 /// ```
 pub fn accessibility_get_root_axnode_command(
-  id~ : Int,
+  id~ : Int32,
   params : AccessibilityGetRootAXNodeParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -1365,7 +1365,7 @@ pub fn AccessibilityQueryAXTreeResult::from_json(
 /// let command = accessibility_query_axtree_command(id=1, params, session_id=None)
 /// ```
 pub fn accessibility_query_axtree_command(
-  id~ : Int,
+  id~ : Int32,
   params : AccessibilityQueryAXTreeParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {

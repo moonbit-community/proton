@@ -21,7 +21,7 @@ struct RawDevOptions {
   url : String?
   command : String?
   frontend_path : String?
-  timeout_ms : Int
+  timeout_ms : Int32
   ready_path : String?
   start_frontend : Bool
   setup_installation : Bool
@@ -51,7 +51,7 @@ pub extend DevRuntime with Debug::{to_repr}
 struct DevUrlEndpoint {
   url : String
   host : String
-  port : Int
+  port : Int32
 } derive(Debug, Eq)
 
 ///|
@@ -246,7 +246,7 @@ fn dev_options_from_matches(
 fn parse_non_negative_int(
   value : String,
   label : String,
-) -> Int raise DevUsageError {
+) -> Int32 raise DevUsageError {
   let parsed = @string.parse_int(value[:]) catch {
     _ => raise InvalidNonNegativeInteger(option=label, value~)
   }
@@ -582,7 +582,7 @@ fn frontend_cancel_handler() -> @process.CancellationHandler {
 }
 
 ///|
-async fn terminate_unix_frontend_tree(pid : Int, signal : String) -> Unit {
+async fn terminate_unix_frontend_tree(pid : Int32, signal : String) -> Unit {
   ignore(
     @process.run(
       "sh",
@@ -636,7 +636,7 @@ async fn announce_frontend_server_wait(
 async fn wait_for_frontend(
   frontend_url : String?,
   ready_path : String?,
-  timeout_ms : Int,
+  timeout_ms : Int32,
   frontend_process : @process.Process?,
 ) -> Unit {
   match frontend_url {
@@ -708,7 +708,7 @@ fn shell_quote(value : String) -> String {
 }
 
 ///|
-fn frontend_exit_code(process : @process.Process?) -> Int? {
+fn frontend_exit_code(process : @process.Process?) -> Int32? {
   match process {
     None => None
     Some(process) => process.try_wait() catch { _ => Some(-1) }
@@ -716,7 +716,7 @@ fn frontend_exit_code(process : @process.Process?) -> Int? {
 }
 
 ///|
-async fn tcp_ready(host : String, port : Int) -> Bool {
+async fn tcp_ready(host : String, port : Int32) -> Bool {
   let result = @async.with_timeout_opt(ready_probe_timeout_ms, () => {
     let conn = @socket.Tcp::connect_to_host(host, port~)
     conn.close()
@@ -820,8 +820,8 @@ fn dev_url_authority_is_valid(authority : String) -> Bool {
 ///|
 fn parse_host_port(
   host_port : String,
-  default_port : Int,
-) -> (String, Int) raise DevServerError {
+  default_port : Int32,
+) -> (String, Int32) raise DevServerError {
   if host_port.has_prefix("[") {
     match host_port.split_once("]") {
       Some((left, right)) => {
@@ -863,7 +863,7 @@ fn parse_host_port(
 }
 
 ///|
-fn parse_port(text : String) -> Int raise DevServerError {
+fn parse_port(text : String) -> Int32 raise DevServerError {
   let port = @string.parse_int(text[:]) catch {
     _ => raise InvalidPort(value=text)
   }
@@ -907,7 +907,7 @@ async fn run_app(
   app_args : Array[String],
   env : Map[String, String],
   moon_target_dir : String?,
-) -> Int raise DevProcessError {
+) -> Int32 raise DevProcessError {
   let moon_args : Array[String] = []
   match moon_target_dir {
     Some(target_dir) => {

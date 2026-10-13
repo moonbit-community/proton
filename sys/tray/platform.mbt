@@ -71,7 +71,7 @@ pub fn default_identifier() -> String {
 
 ///|
 /// Maps the native platform tag to the public `Platform` enum.
-fn platform_from_tag(tag : Int) -> Platform {
+fn platform_from_tag(tag : Int32) -> Platform {
   match tag {
     1 => Windows
     2 => Linux

@@ -1,6 +1,6 @@
 ///|
 #cfg(platform="windows")
-extern "C" fn view_bounds_test() -> Int = "proton_test_view_native_bounds"
+extern "C" fn view_bounds_test() -> Int32 = "proton_test_view_native_bounds"
 
 ///|
 #cfg(platform="windows")
@@ -10,7 +10,7 @@ test "child view bounds use logical pixels on creation and relayout" {
 
 ///|
 #cfg(platform="windows")
-extern "C" fn view_caption_test() -> Int = "proton_test_view_caption_clip"
+extern "C" fn view_caption_test() -> Int32 = "proton_test_view_caption_clip"
 
 ///|
 #cfg(platform="windows")
@@ -25,23 +25,23 @@ test "geometry fixture links the native runtime" {
 
 ///|
 #cfg(platform="windows")
-extern "C" fn conversion_test() -> Int = "proton_test_window_dpi_conversion"
+extern "C" fn conversion_test() -> Int32 = "proton_test_window_dpi_conversion"
 
 ///|
 #cfg(platform="windows")
-extern "C" fn placement_test() -> Int = "proton_test_window_initial_placement"
+extern "C" fn placement_test() -> Int32 = "proton_test_window_initial_placement"
 
 ///|
 #cfg(platform="windows")
-extern "C" fn tracking_size_test() -> Int = "proton_test_window_tracking_sizes"
+extern "C" fn tracking_size_test() -> Int32 = "proton_test_window_tracking_sizes"
 
 ///|
 #cfg(platform="windows")
-extern "C" fn native_size_test(overlay : Int) -> Int = "proton_test_window_native_sizes"
+extern "C" fn native_size_test(overlay : Int32) -> Int32 = "proton_test_window_native_sizes"
 
 ///|
 #cfg(platform="windows")
-extern "C" fn dpi_change_test() -> Int = "proton_test_window_dpi_change"
+extern "C" fn dpi_change_test() -> Int32 = "proton_test_window_dpi_change"
 
 ///|
 #cfg(platform="windows")
@@ -81,7 +81,7 @@ test "a DPI change adopts the suggested frame without rescaling it" {
 
 ///|
 #cfg(platform="windows")
-extern "C" fn titlebar_native_hit_test() -> Int = "proton_test_titlebar_native_hit_test"
+extern "C" fn titlebar_native_hit_test() -> Int32 = "proton_test_titlebar_native_hit_test"
 
 ///|
 #cfg(platform="windows")
@@ -91,7 +91,7 @@ test "overlay hit testing keeps the whole sidebar button clickable" {
 
 ///|
 #cfg(platform="windows")
-extern "C" fn titlebar_dpi_regions_test() -> Int = "proton_test_titlebar_dpi_regions"
+extern "C" fn titlebar_dpi_regions_test() -> Int32 = "proton_test_titlebar_dpi_regions"
 
 ///|
 #cfg(platform="windows")
@@ -101,7 +101,7 @@ test "titlebar button pixels and edges respect 100 through 250 percent DPI" {
 
 ///|
 #cfg(platform="windows")
-extern "C" fn closed_modal_collection_test() -> Int = "proton_test_closed_modal_window_collection"
+extern "C" fn closed_modal_collection_test() -> Int32 = "proton_test_closed_modal_window_collection"
 
 ///|
 #cfg(platform="windows")

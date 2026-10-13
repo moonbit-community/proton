@@ -39,10 +39,10 @@ pub fn watch_status() -> WatchStatus {
 
 ///|
 fn ensure_monitor(
-  create? : () -> @sys_power_monitor.PowerMonitor raise @sys_power_monitor.PowerMonitorError = () => {
+  create~ : () -> @sys_power_monitor.PowerMonitor raise @sys_power_monitor.PowerMonitorError = () => {
     @sys_power_monitor.PowerMonitor()
   },
-  watch? : (@sys_power_monitor.PowerMonitor) -> Unit raise @sys_power_monitor.PowerMonitorError = monitor => {
+  watch~ : (@sys_power_monitor.PowerMonitor) -> Unit raise @sys_power_monitor.PowerMonitorError = monitor => {
     monitor.start_watching()
   },
 ) -> @sys_power_monitor.PowerMonitor raise PowerMonitorError {

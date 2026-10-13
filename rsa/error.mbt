@@ -8,7 +8,7 @@ pub(all) suberror KeyError {
   UnknownAlgorithm(tag~ : String)
   Malformed(detail~ : String)
   NonCanonicalModulus
-  ModulusTooSmall(bits~ : Int, minimum~ : Int)
+  ModulusTooSmall(bits~ : Int32, minimum~ : Int32)
   InvalidExponent(detail~ : String)
 } derive(Debug, Eq)
 

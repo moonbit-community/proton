@@ -77,7 +77,7 @@ pub struct NativeImage {
 ///|
 /// A failure while creating, reading, or converting a native image.
 pub(all) suberror NativeImageError {
-  OperationFailed(action~ : String, status~ : Int, detail~ : String)
+  OperationFailed(action~ : String, status~ : Int32, detail~ : String)
 } derive(Debug, Eq)
 
 ///|
@@ -107,7 +107,7 @@ pub extend NativeImageError with Show::{to_string, output}
 struct App {
   mut main_window_config : WindowConfig
   windows : Array[(String, WindowConfig, Bool)]
-  mut debug_level_value : Int
+  mut debug_level_value : Int32
   mut headless_value : Bool
   mut accessibility_mode_value : AccessibilityMode
   mut application_identity : ApplicationIdentitySource?
@@ -119,7 +119,7 @@ struct App {
   path_overrides : Map[String, String]
   mut electron_default_logs_path : Bool
   mut create_logs_path : Bool
-  mut bridge_startup_timeout_value_ms : Int
+  mut bridge_startup_timeout_value_ms : Int32
   mut last_window_closed_policy_value : LastWindowClosedPolicy
   mut menu : MenuBar?
   url_schemes : Array[String]
@@ -133,7 +133,7 @@ struct App {
   application_lifecycle_hooks : Array[ApplicationLifecycleHook]
   mut before_quit_handler : (async (ApplicationContext) -> ApplicationQuitDecision noraise)?
   mut will_quit_handler : (async (ApplicationContext) -> ApplicationQuitDecision noraise)?
-  quit_handlers : Array[async (ApplicationContext, Int) -> Unit noraise]
+  quit_handlers : Array[async (ApplicationContext, Int32) -> Unit noraise]
   launch_input_handlers : Array[
     async (ApplicationContext, RuntimeLaunchInput) -> Unit noraise,
   ]
@@ -264,7 +264,7 @@ priv struct ResolvedAppConfig {
   application_lifecycle_hooks : Array[ApplicationLifecycleHook]
   window_lifecycle_hooks : Array[WindowLifecycleHook]
   menu : @native.MenuBar?
-  bridge_startup_timeout_ms : Int
+  bridge_startup_timeout_ms : Int32
   headless : Bool
   accessibility_mode : AccessibilityMode
   proxy_server : String?
@@ -293,7 +293,7 @@ priv struct ResolvedAppConfig {
   window_close_handler : (async (WindowHandle) -> WindowCloseDecision noraise)?
   before_quit_handler : (async (ApplicationContext) -> ApplicationQuitDecision noraise)?
   will_quit_handler : (async (ApplicationContext) -> ApplicationQuitDecision noraise)?
-  quit_handlers : Array[async (ApplicationContext, Int) -> Unit noraise]
+  quit_handlers : Array[async (ApplicationContext, Int32) -> Unit noraise]
   navigation_handler : (async (WebContentsHandle, NavigationRequest) -> NavigationDecision noraise)?
   new_window_handler : (async (WebContentsHandle, NewWindowRequest) -> NewWindowDecision noraise)?
   download_handler : (async (WebContentsHandle, DownloadRequest) -> DownloadDecision noraise)?
@@ -322,7 +322,7 @@ priv struct ResolvedUpdateChannel {
   endpoint : String
   public_keys : Array[String]
   check_on_launch : Bool
-  freshness_days : Int
+  freshness_days : Int32
 }
 
 ///|
@@ -401,7 +401,7 @@ priv enum PreparedEntry {
 
 ///|
 priv struct ResourceResponse {
-  status : Int
+  status : Int32
   mime_type : String
   body : Bytes
 }
@@ -436,15 +436,15 @@ priv struct PendingCloseDecision {
 
 ///|
 priv struct ApplicationExit {
-  exit_code : Int
+  exit_code : Int32
   forced : Bool
   update : @updater.PreparedUpdate?
 }
 
 ///|
 priv enum ExitPurpose {
-  Quit(Int)
-  ForceExit(Int)
+  Quit(Int32)
+  ForceExit(Int32)
   InstallUpdate
 } derive(Eq)
 
@@ -828,13 +828,13 @@ fn window_state_events(
 /// One update from an active page search. The selection rectangle uses the
 /// target web contents coordinate space.
 pub(all) struct FindInPageResult {
-  request_id : Int
-  active_match_ordinal : Int
-  matches : Int
-  selection_x : Int
-  selection_y : Int
-  selection_width : Int
-  selection_height : Int
+  request_id : Int32
+  active_match_ordinal : Int32
+  matches : Int32
+  selection_x : Int32
+  selection_y : Int32
+  selection_width : Int32
+  selection_height : Int32
   final_update : Bool
 } derive(Debug, Eq)
 
@@ -880,19 +880,19 @@ pub(all) struct PdfPrintOptions {
 
 ///|
 pub fn PdfPrintOptions::PdfPrintOptions(
-  landscape? : Bool = false,
-  print_background? : Bool = false,
-  scale? : Double = 1.0,
-  paper_width? : Double = 8.5,
-  paper_height? : Double = 11.0,
-  prefer_css_page_size? : Bool = false,
-  margins? : PdfPrintMargins = PdfPrintMargins::Default,
-  page_ranges? : String = "",
-  display_header_footer? : Bool = false,
-  header_template? : String = "",
-  footer_template? : String = "",
-  generate_tagged_pdf? : Bool = false,
-  generate_document_outline? : Bool = false,
+  landscape~ : Bool = false,
+  print_background~ : Bool = false,
+  scale~ : Double = 1.0,
+  paper_width~ : Double = 8.5,
+  paper_height~ : Double = 11.0,
+  prefer_css_page_size~ : Bool = false,
+  margins~ : PdfPrintMargins = PdfPrintMargins::Default,
+  page_ranges~ : String = "",
+  display_header_footer~ : Bool = false,
+  header_template~ : String = "",
+  footer_template~ : String = "",
+  generate_tagged_pdf~ : Bool = false,
+  generate_document_outline~ : Bool = false,
 ) -> PdfPrintOptions {
   {
     landscape,
@@ -983,7 +983,7 @@ pub extend NewWindowDecision with Debug::{to_repr}
 
 ///|
 pub(all) struct DownloadRequest {
-  id : Int
+  id : Int32
   url : String
   suggested_name : String
 } derive(Debug, Eq)
@@ -1010,7 +1010,7 @@ pub extend DownloadDecision with Debug::{to_repr}
 ///|
 pub(all) struct CertificateError {
   url : String
-  error_code : Int
+  error_code : Int32
 } derive(Debug, Eq)
 
 ///|
@@ -1022,7 +1022,7 @@ pub extend CertificateError with Debug::{to_repr}
 ///|
 pub(all) struct MediaPermissionRequest {
   origin : String
-  permissions : Int
+  permissions : Int32
 } derive(Debug, Eq)
 
 ///|
@@ -1058,11 +1058,11 @@ pub extend BrowserPermissionDecision with Debug::{to_repr}
 
 ///|
 pub(all) struct DownloadEvent {
-  id : Int
+  id : Int32
   state : String
   received_bytes : Int64
   total_bytes : Int64
-  percent : Int
+  percent : Int32
 } derive(Debug, Eq)
 
 ///|
@@ -1082,7 +1082,7 @@ pub(all) suberror WindowSessionError {
   AlreadyExists(id~ : String)
   StaleView(id~ : String)
   Cancelled
-  OperationFailed(action~ : String, status~ : Int, detail~ : String)
+  OperationFailed(action~ : String, status~ : Int32, detail~ : String)
   StartupFailed(id~ : String, error~ : AppRunError)
 } derive(Debug)
 
@@ -1111,10 +1111,10 @@ pub(all) enum WebContentsEvent {
   DidFinishLoad
   Navigated(url~ : String)
   TitleUpdated(title~ : String)
-  LoadFailed(url~ : String, error_code~ : Int, error_text~ : String)
+  LoadFailed(url~ : String, error_code~ : Int32, error_text~ : String)
   FoundInPage(result~ : FindInPageResult)
-  ResourceResponse(url~ : String, status_code~ : Int)
-  ResourceCompleted(url~ : String, status~ : Int, received_bytes~ : Int64)
+  ResourceResponse(url~ : String, status_code~ : Int32)
+  ResourceCompleted(url~ : String, status~ : Int32, received_bytes~ : Int64)
   /// A network resource request observed before Chromium sends it.
   /// `will_cancel` reports whether the configured synchronous policy blocks it.
   ResourceRequested(
@@ -1124,8 +1124,8 @@ pub(all) enum WebContentsEvent {
   )
   RendererProcessTerminated(
     url~ : String,
-    status~ : Int,
-    error_code~ : Int,
+    status~ : Int32,
+    error_code~ : Int32,
     detail~ : String
   )
 } derive(Debug, Eq)
@@ -1175,7 +1175,7 @@ pub(all) struct RenderProcessGoneDetails {
   /// Why the renderer disappeared.
   reason : RenderProcessGoneReason
   /// The platform exit code of the terminated renderer.
-  exit_code : Int
+  exit_code : Int32
 } derive(Debug, Eq)
 
 ///|
@@ -1224,7 +1224,7 @@ pub(all) enum NavigationTransition {
   Keyword
   KeywordGenerated
   /// A transition type this Proton release does not name.
-  Other(Int)
+  Other(Int32)
 } derive(Debug, Eq)
 
 ///|
@@ -1266,7 +1266,7 @@ pub(all) struct NavigationEntry {
   transition : NavigationTransition
   transition_qualifiers : Array[NavigationTransitionQualifier]
   has_post_data : Bool
-  http_status_code : Int
+  http_status_code : Int32
 } derive(Debug, Eq)
 
 ///|
@@ -1284,7 +1284,7 @@ pub extend NavigationEntry with Debug::{to_repr}
 pub(all) struct NavigationHistory {
   entries : Array[NavigationEntry]
   /// Index of the active entry, or `-1` while the browser has none.
-  active_index : Int
+  active_index : Int32
 } derive(Debug, Eq)
 
 ///|
@@ -1426,7 +1426,7 @@ pub(all) suberror AppControlError {
   /// The current platform does not implement this operation. Electron's
   /// `app` object omits the same methods outside macOS.
   UnsupportedPlatform(action~ : String)
-  NativeControlFailure(action~ : String, status~ : Int, detail~ : String)
+  NativeControlFailure(action~ : String, status~ : Int32, detail~ : String)
 } derive(Debug, Eq)
 
 ///|
@@ -1442,7 +1442,7 @@ pub extend AppConfigurationError with Debug::{to_repr}
 /// Failures while loading the application's initial document.
 pub(all) suberror AppEntryError {
   ReadFailed(path~ : String, detail~ : String)
-  PlatformLoad(action~ : String, status~ : Int, detail~ : String)
+  PlatformLoad(action~ : String, status~ : Int32, detail~ : String)
   ClosedDuringStartup
 } derive(Debug)
 
@@ -1464,10 +1464,10 @@ pub extend CommandExtensionLifecycleError with Debug::{to_repr}
 ///|
 /// Failures produced by application or window lifecycle hooks.
 pub(all) suberror LifecycleHookError {
-  ApplicationStart(index~ : Int, detail~ : String)
-  ApplicationShutdown(index~ : Int, detail~ : String)
-  WindowReady(index~ : Int, detail~ : String)
-  WindowClose(index~ : Int, detail~ : String)
+  ApplicationStart(index~ : Int32, detail~ : String)
+  ApplicationShutdown(index~ : Int32, detail~ : String)
+  WindowReady(index~ : Int32, detail~ : String)
+  WindowClose(index~ : Int32, detail~ : String)
 } derive(Debug)
 
 ///|
@@ -1478,8 +1478,8 @@ pub extend LifecycleHookError with Debug::{to_repr}
 pub(all) suberror AppCleanupError {
   CommandExtension(CommandExtensionLifecycleError)
   LifecycleHook(LifecycleHookError)
-  WindowDestroy(status~ : Int, detail~ : String)
-  RuntimeDestroy(status~ : Int, detail~ : String)
+  WindowDestroy(status~ : Int32, detail~ : String)
+  RuntimeDestroy(status~ : Int32, detail~ : String)
 } derive(Debug)
 
 ///|
@@ -1492,7 +1492,7 @@ pub(all) suberror AppRunError {
   ConfigurationError(AppConfigurationError)
   LoggingInitializationFailed(detail~ : String)
   UnsupportedNativeFeature(feature~ : String)
-  RuntimeOperationFailed(action~ : String, status~ : Int, detail~ : String)
+  RuntimeOperationFailed(action~ : String, status~ : Int32, detail~ : String)
   CommandExtensionLifecycleError(CommandExtensionLifecycleError)
   LifecycleHookError(LifecycleHookError)
   EntryLoadError(AppEntryError)

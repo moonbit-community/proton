@@ -1,8 +1,8 @@
 ///|
 struct StartPayload {
-  run_id : Int
-  count : Int
-  interval_ms : Int
+  run_id : Int32
+  count : Int32
+  interval_ms : Int32
 } derive(ToJson, FromJson)
 
 ///|
@@ -13,10 +13,10 @@ pub extend StartPayload with FromJson::{from_json}
 
 ///|
 struct TickEvent {
-  run_id : Int
-  index : Int
-  total : Int
-  remaining : Int
+  run_id : Int32
+  index : Int32
+  total : Int32
+  remaining : Int32
 } derive(ToJson, FromJson)
 
 ///|
@@ -27,8 +27,8 @@ pub extend TickEvent with FromJson::{from_json}
 
 ///|
 struct DoneEvent {
-  run_id : Int
-  total : Int
+  run_id : Int32
+  total : Int32
 } derive(ToJson, FromJson)
 
 ///|
@@ -71,7 +71,7 @@ let done_event : @proton_contract.Event[DoneEvent] = ticker_contract.event(
 )
 
 ///|
-fn clamp(value : Int, min : Int, max : Int) -> Int {
+fn clamp(value : Int32, min : Int32, max : Int32) -> Int32 {
   if value < min {
     min
   } else if value > max {

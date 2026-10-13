@@ -37,7 +37,7 @@ async fn assemble_runtime(
   platform~ : ProtonPlatform,
   cef_root~ : String,
   runtime_dir~ : String,
-  report_progress? : Bool = true,
+  report_progress~ : Bool = true,
 ) -> Unit {
   remove_tree(runtime_dir)
   ensure_dir(runtime_dir)

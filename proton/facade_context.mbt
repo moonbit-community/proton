@@ -7,8 +7,8 @@ pub struct ApplicationContext {
   tasks : @async.TaskGroup[Unit]
   windows : WindowManager
   locale_preferences : @locale.LocalePreferences
-  request_quit : (Int) -> Unit
-  request_exit : (Int) -> Unit
+  request_quit : (Int32) -> Unit
+  request_exit : (Int32) -> Unit
   priv request_update_install : () -> Unit raise AppControlError
   has_single_instance_lock : () -> Bool
   release_single_instance_lock : () -> Unit raise AppControlError
@@ -58,28 +58,28 @@ priv struct WindowLifecycleHook {
 ///|
 fn ApplicationContext::ApplicationContext(
   session~ : SessionHandle,
-  updates? : ApplicationUpdates = ApplicationUpdates(None),
-  close_coordinator? : CloseCoordinator = CloseCoordinator(),
+  updates~ : ApplicationUpdates = ApplicationUpdates(None),
+  close_coordinator~ : CloseCoordinator = CloseCoordinator(),
   tasks : @async.TaskGroup[Unit],
   windows : WindowManager,
   locale_preferences : @locale.LocalePreferences,
-  request_quit? : (Int) -> Unit = fn(_exit_code) {  },
-  request_update_install? : () -> Unit raise AppControlError = fn() -> Unit raise AppControlError {
+  request_quit~ : (Int32) -> Unit = fn(_exit_code) {  },
+  request_update_install~ : () -> Unit raise AppControlError = fn() -> Unit raise AppControlError {
     raise NativeControlFailure(
       action="quit and install update",
       status=-1,
       detail="no active application",
     )
   },
-  request_exit? : (Int) -> Unit = fn(exit_code) {
+  request_exit~ : (Int32) -> Unit = fn(exit_code) {
     @native.process_exit(exit_code)
   },
-  has_single_instance_lock? : () -> Bool = fn() { false },
-  release_single_instance_lock? : () -> Unit raise AppControlError = fn() { () },
-  application_identifier? : String = "",
-  application_executable? : String = "",
-  application_arguments? : Array[String] = [],
-  url_schemes? : Array[String] = [],
+  has_single_instance_lock~ : () -> Bool = fn() { false },
+  release_single_instance_lock~ : () -> Unit raise AppControlError = fn() { () },
+  application_identifier~ : String = "",
+  application_executable~ : String = "",
+  application_arguments~ : Array[String] = [],
+  url_schemes~ : Array[String] = [],
 ) -> ApplicationContext {
   ApplicationContext::{
     browser_session: session,
@@ -213,7 +213,7 @@ pub fn ApplicationContext::release_single_instance_lock(
 /// `process.exitCode`; Proton passes it with the quit request instead.
 pub fn ApplicationContext::quit(
   self : ApplicationContext,
-  exit_code? : Int = 0,
+  exit_code~ : Int32 = 0,
 ) -> Unit {
   (self.request_quit)(exit_code)
 }
@@ -259,7 +259,7 @@ pub fn ApplicationContext::set_as_default_protocol_client(
   self : ApplicationContext,
   scheme : String,
   executable? : String,
-  arguments? : Array[String] = [],
+  arguments~ : Array[String] = [],
 ) -> Bool raise AppControlError {
   let (scheme, executable) = self.protocol_client_values(scheme, executable)
   @native.protocol_client_set(
@@ -281,7 +281,7 @@ pub fn ApplicationContext::remove_default_protocol_client(
   self : ApplicationContext,
   scheme : String,
   executable? : String,
-  arguments? : Array[String] = [],
+  arguments~ : Array[String] = [],
 ) -> Bool raise AppControlError {
   let (scheme, executable) = self.protocol_client_values(scheme, executable)
   @native.protocol_client_remove(
@@ -301,7 +301,7 @@ pub fn ApplicationContext::is_default_protocol_client(
   self : ApplicationContext,
   scheme : String,
   executable? : String,
-  arguments? : Array[String] = [],
+  arguments~ : Array[String] = [],
 ) -> Bool raise AppControlError {
   let (scheme, executable) = self.protocol_client_values(scheme, executable)
   @native.protocol_client_is_default(
@@ -370,7 +370,7 @@ fn ApplicationContext::relaunch_command(
 /// before the process terminates.
 pub fn ApplicationContext::exit(
   self : ApplicationContext,
-  exit_code? : Int = 0,
+  exit_code~ : Int32 = 0,
 ) -> Unit {
   (self.request_exit)(exit_code)
 }

@@ -6,8 +6,8 @@ let async_extension_add_resource : String =
 
 ///|
 struct AsyncAddPayload {
-  left : Int
-  right : Int
+  left : Int32
+  right : Int32
 } derive(ToJson, FromJson)
 
 ///|
@@ -23,7 +23,7 @@ let async_add_contract : @proton_contract.ExtensionContract = @proton_contract.e
 )
 
 ///|
-let async_add_command : @proton_contract.Command[AsyncAddPayload, Int] = async_add_contract.command(
+let async_add_command : @proton_contract.Command[AsyncAddPayload, Int32] = async_add_contract.command(
   "slowAdd",
 )
 
@@ -57,7 +57,7 @@ let sync_async_extensions_resource : String =
 
 ///|
 struct SyncDoublePayload {
-  value : Int
+  value : Int32
 } derive(ToJson, FromJson)
 
 ///|
@@ -68,8 +68,8 @@ pub extend SyncDoublePayload with FromJson::{from_json}
 
 ///|
 struct SyncDoubleReply {
-  value : Int
-  doubled : Int
+  value : Int32
+  doubled : Int32
   source : String
 } derive(ToJson, FromJson)
 
@@ -81,9 +81,9 @@ pub extend SyncDoubleReply with FromJson::{from_json}
 
 ///|
 struct AsyncSumPayload {
-  left : Int
-  right : Int
-  delay_ms : Int?
+  left : Int32
+  right : Int32
+  delay_ms : Int32?
 } derive(ToJson, FromJson)
 
 ///|
@@ -94,8 +94,8 @@ pub extend AsyncSumPayload with FromJson::{from_json}
 
 ///|
 struct AsyncSumReply {
-  total : Int
-  waited_ms : Int
+  total : Int32
+  waited_ms : Int32
   source : String
 } derive(ToJson, FromJson)
 
@@ -194,9 +194,9 @@ let event_broadcast_resource : String =
 
 ///|
 struct EventStartPayload {
-  run_id : Int
-  count : Int
-  interval_ms : Int
+  run_id : Int32
+  count : Int32
+  interval_ms : Int32
 } derive(ToJson, FromJson)
 
 ///|
@@ -207,10 +207,10 @@ pub extend EventStartPayload with FromJson::{from_json}
 
 ///|
 struct EventTick {
-  run_id : Int
-  index : Int
-  total : Int
-  remaining : Int
+  run_id : Int32
+  index : Int32
+  total : Int32
+  remaining : Int32
 } derive(ToJson, FromJson)
 
 ///|
@@ -221,8 +221,8 @@ pub extend EventTick with FromJson::{from_json}
 
 ///|
 struct EventDone {
-  run_id : Int
-  total : Int
+  run_id : Int32
+  total : Int32
 } derive(ToJson, FromJson)
 
 ///|
@@ -266,7 +266,7 @@ let event_done_event : @proton_contract.Event[EventDone] = event_ticker_contract
 )
 
 ///|
-fn clamp_event_value(value : Int, min : Int, max : Int) -> Int {
+fn clamp_event_value(value : Int32, min : Int32, max : Int32) -> Int32 {
   if value < min {
     min
   } else if value > max {

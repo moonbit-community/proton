@@ -18,10 +18,10 @@ pub extend Locale with Debug::{to_repr}
 /// Failures produced while parsing an RFC 5646 language tag.
 pub(all) suberror LocaleParseError {
   Empty
-  InvalidCharacter(position~ : Int, character~ : Char)
-  EmptySubtag(index~ : Int)
-  OverlongSubtag(index~ : Int, value~ : String)
-  InvalidSubtag(index~ : Int, value~ : String, expectation~ : String)
+  InvalidCharacter(position~ : Int32, character~ : Char)
+  EmptySubtag(index~ : Int32)
+  OverlongSubtag(index~ : Int32, value~ : String)
+  InvalidSubtag(index~ : Int32, value~ : String, expectation~ : String)
   DuplicateVariant(variant~ : String)
   DuplicateExtension(singleton~ : String)
 } derive(Debug, Eq)
@@ -239,7 +239,7 @@ fn parse_regular_or_private_locale(
 ///|
 fn validate_private_use(
   subtags : Array[String],
-  singleton_index : Int,
+  singleton_index : Int32,
 ) -> Unit raise LocaleParseError {
   if singleton_index + 1 >= subtags.length() {
     raise InvalidSubtag(
@@ -312,12 +312,12 @@ fn is_extension_subtag(value : String) -> Bool {
 }
 
 ///|
-fn is_ascii_alpha_of_length(value : String, length : Int) -> Bool {
+fn is_ascii_alpha_of_length(value : String, length : Int32) -> Bool {
   value.length() == length && is_ascii_alpha(value)
 }
 
 ///|
-fn is_ascii_digit_of_length(value : String, length : Int) -> Bool {
+fn is_ascii_digit_of_length(value : String, length : Int32) -> Bool {
   value.length() == length && value.all(is_ascii_digit)
 }
 

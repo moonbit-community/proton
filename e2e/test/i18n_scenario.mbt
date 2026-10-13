@@ -3,7 +3,7 @@ async fn run_i18n_scenario_page_probe(
   tasks : @async.TaskGroup[Unit],
   app : SpawnedScenarioApp,
   target : String,
-  timeout : Int,
+  timeout : Int32,
 ) -> Unit {
   let page = connect_spawned_page(
     tasks,

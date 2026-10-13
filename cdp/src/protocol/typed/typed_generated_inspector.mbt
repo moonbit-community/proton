@@ -13,7 +13,7 @@
 /// let command = inspector_disable_command(id=1, session_id=None)
 /// ```
 pub fn inspector_disable_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(
@@ -35,7 +35,7 @@ pub fn inspector_disable_command(
 /// let command = inspector_enable_command(id=1, session_id=None)
 /// ```
 pub fn inspector_enable_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(id~, method_name="Inspector.enable", session_id?)

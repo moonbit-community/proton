@@ -1,6 +1,6 @@
 ///|
 /// Returns the numeric platform tag reported by the native tray backend.
-extern "C" fn current_platform_ffi() -> Int = "moonbit_tray_current_platform"
+extern "C" fn current_platform_ffi() -> Int32 = "moonbit_tray_current_platform"
 
 ///|
 /// Reports whether the native tray backend is available on the current machine.
@@ -57,7 +57,7 @@ extern "C" fn menu_add_normal_ffi(
   state : Int64,
   id : Bytes,
   label : Bytes,
-  enabled : Int,
+  enabled : Int32,
 ) -> Bool = "moonbit_tray_menu_add_normal"
 
 ///|
@@ -67,8 +67,8 @@ extern "C" fn menu_add_checkbox_ffi(
   state : Int64,
   id : Bytes,
   label : Bytes,
-  enabled : Int,
-  checked : Int,
+  enabled : Int32,
+  checked : Int32,
 ) -> Bool = "moonbit_tray_menu_add_checkbox"
 
 ///|
@@ -81,7 +81,7 @@ extern "C" fn menu_add_separator_ffi(state : Int64) -> Bool = "moonbit_tray_menu
 extern "C" fn menu_begin_submenu_ffi(
   state : Int64,
   label : Bytes,
-  enabled : Int,
+  enabled : Int32,
 ) -> Bool = "moonbit_tray_menu_begin_submenu"
 
 ///|
@@ -98,7 +98,7 @@ extern "C" fn menu_abort_ffi(state : Int64) -> Unit = "moonbit_tray_menu_abort"
 
 ///|
 /// Pumps one native event-loop step for the given tray handle.
-extern "C" fn pump_state_ffi(state : Int64, blocking : Int) -> Int = "moonbit_tray_pump"
+extern "C" fn pump_state_ffi(state : Int64, blocking : Int32) -> Int32 = "moonbit_tray_pump"
 
 ///|
 /// Polls one native tray event as a JSON payload.

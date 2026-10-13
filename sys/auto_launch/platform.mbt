@@ -49,7 +49,7 @@ pub extend BackendKind with Debug::{to_repr}
 
 ///|
 /// Decodes the numeric platform code returned by the native layer.
-fn platform_from_code(code : Int) -> Platform {
+fn platform_from_code(code : Int32) -> Platform {
   match code {
     1 => Platform::Windows
     2 => Platform::Macos

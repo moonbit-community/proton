@@ -358,7 +358,7 @@ pub fn TracingTracingBackend::from_json(
 /// let command = tracing_end_command(id=1, session_id=None)
 /// ```
 pub fn tracing_end_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(id~, method_name="Tracing.end", session_id?)
@@ -426,7 +426,7 @@ pub fn TracingGetCategoriesResult::from_json(
 /// let command = tracing_get_categories_command(id=1, session_id=None)
 /// ```
 pub fn tracing_get_categories_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(
@@ -491,7 +491,7 @@ pub fn TracingGetTrackEventDescriptorResult::from_json(
 /// let command = tracing_get_track_event_descriptor_command(id=1, session_id=None)
 /// ```
 pub fn tracing_get_track_event_descriptor_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(
@@ -548,7 +548,7 @@ pub fn TracingRecordClockSyncMarkerParams::to_json(
 /// )
 /// ```
 pub fn tracing_record_clock_sync_marker_command(
-  id~ : Int,
+  id~ : Int32,
   params : TracingRecordClockSyncMarkerParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -656,7 +656,7 @@ pub fn TracingRequestMemoryDumpResult::from_json(
 /// let command = tracing_request_memory_dump_command(id=1, params, session_id=None)
 /// ```
 pub fn tracing_request_memory_dump_command(
-  id~ : Int,
+  id~ : Int32,
   params : TracingRequestMemoryDumpParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -741,7 +741,7 @@ pub fn TracingStartParams::to_json(self : TracingStartParams) -> Json {
 /// let command = tracing_start_command(id=1, params, session_id=None)
 /// ```
 pub fn tracing_start_command(
-  id~ : Int,
+  id~ : Int32,
   params : TracingStartParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {

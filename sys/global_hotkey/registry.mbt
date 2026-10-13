@@ -1,7 +1,7 @@
 ///|
 /// Captures the work needed to register one new normalized shortcut.
 struct RegisterPlan {
-  id : Int
+  id : Int32
   parsed : ParsedGlobalHotkey
 } derive(Debug, Eq)
 
@@ -14,7 +14,7 @@ pub extend RegisterPlan with Debug::{to_repr}
 ///|
 /// Captures the work needed to unregister one previously normalized shortcut.
 struct UnregisterPlan {
-  id : Int
+  id : Int32
   normalized : String
 } derive(Debug, Eq)
 
@@ -27,9 +27,9 @@ pub extend UnregisterPlan with Debug::{to_repr}
 ///|
 /// Stores the MoonBit-side registration bookkeeping that mirrors the native backend.
 struct RegistrationStore {
-  registrations : Map[String, Int]
-  registration_names : Map[Int, String]
-  mut next_id : Int
+  registrations : Map[String, Int32]
+  registration_names : Map[Int32, String]
+  mut next_id : Int32
   mut destroyed : Bool
 }
 
@@ -65,7 +65,7 @@ fn RegistrationStore::parse_active_accelerator(
 
 ///|
 /// Reserves and returns the next registration id.
-fn RegistrationStore::take_next_id(self : RegistrationStore) -> Int {
+fn RegistrationStore::take_next_id(self : RegistrationStore) -> Int32 {
   let id = self.next_id
   self.next_id += 1
   id
@@ -140,7 +140,7 @@ fn RegistrationStore::list(self : RegistrationStore) -> Array[String] {
 /// Resolves a triggered id back to the normalized accelerator string.
 fn RegistrationStore::lookup_trigger(
   self : RegistrationStore,
-  id : Int,
+  id : Int32,
 ) -> String? {
   self.registration_names.get(id)
 }

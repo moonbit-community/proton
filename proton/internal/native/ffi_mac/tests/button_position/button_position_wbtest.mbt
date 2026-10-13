@@ -4,7 +4,7 @@ test "button fixture links the native runtime" {
 }
 
 ///|
-extern "C" fn button_layout_test(overlay : Int) -> Int = "proton_test_button_position"
+extern "C" fn button_layout_test(overlay : Int32) -> Int32 = "proton_test_button_position"
 
 ///|
 test "macOS overlay positions survive layout and restore the system defaults" {

@@ -10,7 +10,7 @@ let sha256_digest_info_prefix : Bytes = b"\x30\x31\x30\x0d\x06\x09\x60\x86\x48\x
 
 ///|
 /// Length of a SHA-256 digest in bytes.
-pub let sha256_digest_length : Int = 32
+pub let sha256_digest_length : Int32 = 32
 
 ///|
 /// Builds the EMSA-PKCS1-v1_5 encoded message for a SHA-256 digest.
@@ -27,7 +27,7 @@ pub let sha256_digest_length : Int = 32
 /// Returns `None` when the modulus cannot hold a correctly padded block. RFC
 /// 8017 requires at least eight `0xFF` octets, so `size` must be at least
 /// `tLen + 11`.
-fn encode_pkcs1_sha256(digest : Bytes, size : Int) -> Bytes? {
+fn encode_pkcs1_sha256(digest : Bytes, size : Int32) -> Bytes? {
   if digest.length() != sha256_digest_length {
     return None
   }

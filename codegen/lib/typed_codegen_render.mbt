@@ -39,7 +39,7 @@ fn render_typed_command_registrar(
 pub fn generate_extension_identity(
   id : String,
   js_namespace : String,
-  binding_name? : String = "generated_extension_contract",
+  binding_name~ : String = "generated_extension_contract",
 ) -> ProtonCommandCodegenOutput raise {
   validate_identifier("extension identity binding", binding_name)
   let builder = StringBuilder()

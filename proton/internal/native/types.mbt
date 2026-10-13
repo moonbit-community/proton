@@ -2,7 +2,7 @@
 /// Failures at Proton's private MoonBit/native boundary.
 pub(all) suberror NativeError {
   /// A negative status returned by a private platform stub.
-  Status(status~ : Int, message~ : String)
+  Status(status~ : Int32, message~ : String)
   /// An invalid argument rejected before entering the C ABI.
   InvalidArgument(message~ : String)
   /// Malformed data returned by the native runtime.
@@ -19,7 +19,7 @@ pub extend NativeError with Debug::{to_repr}
 pub extend NativeError with Show::{to_string, output}
 
 ///|
-pub fn NativeError::status(self : NativeError) -> Int {
+pub fn NativeError::status(self : NativeError) -> Int32 {
   match self {
     Status(status~, ..) => status
     InvalidArgument(..) | InvalidPayload(..) => -1
@@ -93,7 +93,7 @@ impl Show for NativeError with fn output(self, logger) {
 ///|
 pub(all) enum ProcessResult {
   MainProcess
-  SubprocessHandled(Int)
+  SubprocessHandled(Int32)
 } derive(Debug, Eq)
 
 ///|
@@ -136,7 +136,7 @@ pub extend SystemPathKind with Debug::{to_repr}
 
 ///|
 pub(all) struct RuntimeWaitReady {
-  mask : Int
+  mask : Int32
 } derive(Debug, Eq)
 
 ///|
@@ -160,7 +160,7 @@ pub extend AccessibilityMode with Debug::{to_repr}
 ///|
 /// Inputs forwarded by a second operating-system application instance.
 pub(all) struct AppActivation {
-  abi_version : Int
+  abi_version : Int32
   urls : Array[String]
   files : Array[String]
   reopen : Bool
@@ -250,13 +250,13 @@ pub extend NativeResourceRequest with Debug::{to_repr}
 
 ///|
 pub(all) struct NativeFindInPageResult {
-  request_id : Int
-  active_match_ordinal : Int
-  matches : Int
-  selection_x : Int
-  selection_y : Int
-  selection_width : Int
-  selection_height : Int
+  request_id : Int32
+  active_match_ordinal : Int32
+  matches : Int32
+  selection_x : Int32
+  selection_y : Int32
+  selection_width : Int32
+  selection_height : Int32
   final_update : Bool
 } derive(Debug, Eq)
 
@@ -274,7 +274,7 @@ pub(all) struct PdfPrintSettings {
   paper_width : Double
   paper_height : Double
   prefer_css_page_size : Bool
-  margin_type : Int
+  margin_type : Int32
   margin_top : Double
   margin_right : Double
   margin_bottom : Double
@@ -337,12 +337,12 @@ pub(all) enum NativeBrowserRequest {
   NewWindow(request_id~ : Int64, url~ : String, user_gesture~ : Bool)
   Download(
     request_id~ : Int64,
-    download_id~ : Int,
+    download_id~ : Int32,
     url~ : String,
     suggested_name~ : String
   )
-  Certificate(request_id~ : Int64, url~ : String, error_code~ : Int)
-  Media(request_id~ : Int64, origin~ : String, permissions~ : Int)
+  Certificate(request_id~ : Int64, url~ : String, error_code~ : Int32)
+  Media(request_id~ : Int64, origin~ : String, permissions~ : Int32)
 } derive(Debug, Eq)
 
 ///|
@@ -353,11 +353,11 @@ pub extend NativeBrowserRequest with Debug::{to_repr}
 
 ///|
 pub(all) struct NativeDownloadUpdate {
-  download_id : Int
+  download_id : Int32
   state : String
   received_bytes : Int64
   total_bytes : Int64
-  percent : Int
+  percent : Int32
 } derive(Debug, Eq)
 
 ///|
@@ -368,7 +368,7 @@ pub extend NativeDownloadUpdate with Debug::{to_repr}
 
 ///|
 pub(all) struct NativePdfPrintResult {
-  request_id : Int
+  request_id : Int32
   path : String
   success : Bool
 } derive(Debug, Eq)
@@ -388,10 +388,10 @@ pub(all) struct NavigationEntry {
   display_url : String
   original_url : String
   title : String
-  transition : Int
-  qualifiers : Int
+  transition : Int32
+  qualifiers : Int32
   has_post_data : Bool
-  http_status_code : Int
+  http_status_code : Int32
 } derive(Debug, Eq, FromJson)
 
 ///|
@@ -408,7 +408,7 @@ pub extend NavigationEntry with FromJson::{from_json}
 /// or -1 while the browser has no entries.
 pub(all) struct NavigationHistory {
   entries : Array[NavigationEntry]
-  active_index : Int
+  active_index : Int32
 } derive(Debug, Eq, FromJson)
 
 ///|
@@ -445,10 +445,10 @@ pub(all) struct BridgeDiagnostic {
   owner : String?
   source_url : String?
   source_line : String?
-  line : Int?
-  column : Int?
+  line : Int32?
+  column : Int32?
   stack : String?
-  additional_failure_count : Int?
+  additional_failure_count : Int32?
   details_truncated : Bool
 } derive(Debug, Eq)
 
@@ -506,7 +506,7 @@ pub extend DialogLevel with Eq::{not_equal, equal}
 pub extend DialogLevel with Debug::{to_repr}
 
 ///|
-fn DialogLevel::native_value(self : DialogLevel) -> Int {
+fn DialogLevel::native_value(self : DialogLevel) -> Int32 {
   match self {
     Info => 0
     Warning => 1
@@ -519,12 +519,12 @@ enum NativeBrowserEvent {
   LoadingChanged(Bool)
   Navigated(String)
   TitleUpdated(String)
-  LoadFailed(String, Int, String)
+  LoadFailed(String, Int32, String)
   FindResult(NativeFindInPageResult)
-  ResourceResponse(String, Int)
-  ResourceCompleted(String, Int, Int64)
+  ResourceResponse(String, Int32)
+  ResourceCompleted(String, Int32, Int64)
   ResourceRequested(String, String, Bool)
-  RendererProcessTerminated(String, Int, Int, String)
+  RendererProcessTerminated(String, Int32, Int32, String)
 } derive(Debug, Eq)
 
 ///|
@@ -592,7 +592,7 @@ pub extend CookieSameSite with Eq::{not_equal, equal}
 pub extend CookieSameSite with Debug::{to_repr}
 
 ///|
-fn CookieSameSite::native_value(self : CookieSameSite) -> Int {
+fn CookieSameSite::native_value(self : CookieSameSite) -> Int32 {
   match self {
     Unspecified => 0
     NoRestriction => 1
@@ -604,15 +604,15 @@ fn CookieSameSite::native_value(self : CookieSameSite) -> Int {
 ///|
 /// Geometry and scaling information for the monitor containing a window.
 pub(all) struct WindowMonitor {
-  x : Int
-  y : Int
-  width : Int
-  height : Int
-  work_x : Int
-  work_y : Int
-  work_width : Int
-  work_height : Int
-  scale_factor_percent : Int
+  x : Int32
+  y : Int32
+  width : Int32
+  height : Int32
+  work_x : Int32
+  work_y : Int32
+  work_width : Int32
+  work_height : Int32
+  scale_factor_percent : Int32
 } derive(Debug, Eq)
 
 ///|
@@ -626,12 +626,12 @@ pub extend WindowMonitor with Debug::{to_repr}
 ///
 /// `theme` is the effective theme after resolving `theme_preference`.
 pub(all) struct WindowState {
-  x : Int
-  y : Int
-  width : Int
-  height : Int
+  x : Int32
+  y : Int32
+  width : Int32
+  height : Int32
   monitor : WindowMonitor
-  zoom_percent : Int
+  zoom_percent : Int32
   visible : Bool
   focused : Bool
   minimized : Bool
@@ -660,16 +660,16 @@ pub extend BrowserState with Debug::{to_repr}
 ///|
 /// Information about a single connected display.
 pub(all) struct ScreenInfo {
-  id : Int
-  x : Int
-  y : Int
-  width : Int
-  height : Int
-  work_x : Int
-  work_y : Int
-  work_width : Int
-  work_height : Int
-  scale_factor_percent : Int
+  id : Int32
+  x : Int32
+  y : Int32
+  width : Int32
+  height : Int32
+  work_x : Int32
+  work_y : Int32
+  work_width : Int32
+  work_height : Int32
+  scale_factor_percent : Int32
   is_primary : Bool
 } derive(Debug, Eq)
 
@@ -957,7 +957,7 @@ pub(all) struct BrowserEventInfo {
   url : String?
   title : String?
   is_loading : Bool?
-  error_code : Int?
+  error_code : Int32?
   error_text : String?
   received_bytes : Int64?
 } derive(Debug, Eq)
@@ -971,8 +971,8 @@ pub extend BrowserEventInfo with Debug::{to_repr}
 ///|
 pub(all) struct RendererProcessTerminationInfo {
   url : String
-  status : Int
-  error_code : Int
+  status : Int32
+  error_code : Int32
   detail : String
 } derive(Debug, Eq)
 
@@ -1276,7 +1276,7 @@ pub fn RuntimeEvent::notification_click(self : RuntimeEvent) -> String?? {
 }
 
 ///|
-pub fn RuntimeWaitReady::mask(self : RuntimeWaitReady) -> Int {
+pub fn RuntimeWaitReady::mask(self : RuntimeWaitReady) -> Int32 {
   self.mask
 }
 
@@ -1438,7 +1438,7 @@ pub extend WindowThemePreference with Eq::{not_equal, equal}
 pub extend WindowThemePreference with Debug::{to_repr}
 
 ///|
-fn WindowThemePreference::native_value(self : WindowThemePreference) -> Int {
+fn WindowThemePreference::native_value(self : WindowThemePreference) -> Int32 {
   match self {
     System => 0
     Light => 1
@@ -1465,7 +1465,7 @@ pub extend ProgressMode with Eq::{not_equal, equal}
 pub extend ProgressMode with Debug::{to_repr}
 
 ///|
-fn ProgressMode::native_value(self : ProgressMode) -> Int {
+fn ProgressMode::native_value(self : ProgressMode) -> Int32 {
   match self {
     Automatic => 0
     Normal => 1
@@ -1495,7 +1495,7 @@ pub extend ThumbarButtonFlag with Debug::{to_repr}
 
 ///|
 /// Native flag bits, matching the PROTON_THUMBAR_FLAG_* values in the C ABI.
-fn ThumbarButtonFlag::native_value(self : ThumbarButtonFlag) -> Int {
+fn ThumbarButtonFlag::native_value(self : ThumbarButtonFlag) -> Int32 {
   match self {
     Disabled => 0x1
     DismissOnClick => 0x2
@@ -1524,7 +1524,7 @@ pub(all) struct JumpListItem {
   title : String
   description : String
   icon_path : String
-  icon_index : Int
+  icon_index : Int32
   working_directory : String
 }
 
@@ -1542,7 +1542,7 @@ pub extend JumpListItemKind with Eq::{not_equal, equal}
 pub extend JumpListItemKind with Debug::{to_repr}
 
 ///|
-fn JumpListItemKind::native_value(self : JumpListItemKind) -> Int {
+fn JumpListItemKind::native_value(self : JumpListItemKind) -> Int32 {
   match self {
     Task => 0
     Separator => 1
@@ -1573,7 +1573,7 @@ pub extend JumpListCategoryKind with Eq::{not_equal, equal}
 pub extend JumpListCategoryKind with Debug::{to_repr}
 
 ///|
-fn JumpListCategoryKind::native_value(self : JumpListCategoryKind) -> Int {
+fn JumpListCategoryKind::native_value(self : JumpListCategoryKind) -> Int32 {
   match self {
     Tasks => 0
     Custom => 1
@@ -1601,7 +1601,7 @@ pub extend JumpListResult with Eq::{not_equal, equal}
 pub extend JumpListResult with Debug::{to_repr}
 
 ///|
-fn jump_list_result_from_code(code : Int) -> JumpListResult {
+fn jump_list_result_from_code(code : Int32) -> JumpListResult {
   match code {
     0 => Ok
     2 => InvalidSeparator
@@ -1679,12 +1679,12 @@ pub extend BrowserPolicy with Debug::{to_repr}
 
 ///|
 pub fn BrowserPolicy::BrowserPolicy(
-  navigation? : BrowserPolicyMode = BrowserPolicyMode::Allow,
-  new_window? : BrowserPolicyMode = BrowserPolicyMode::Deny,
-  download? : BrowserPolicyMode = BrowserPolicyMode::Deny,
-  certificate? : BrowserPolicyMode = BrowserPolicyMode::Deny,
-  media? : BrowserPolicyMode = BrowserPolicyMode::Deny,
-  devtools? : Bool = false,
+  navigation~ : BrowserPolicyMode = BrowserPolicyMode::Allow,
+  new_window~ : BrowserPolicyMode = BrowserPolicyMode::Deny,
+  download~ : BrowserPolicyMode = BrowserPolicyMode::Deny,
+  certificate~ : BrowserPolicyMode = BrowserPolicyMode::Deny,
+  media~ : BrowserPolicyMode = BrowserPolicyMode::Deny,
+  devtools~ : Bool = false,
 ) -> BrowserPolicy {
   { navigation, new_window, download, certificate, media, devtools, }
 }
@@ -1700,7 +1700,7 @@ pub fn bridge_permission_grants_supported() -> Bool {
 pub(all) enum RemoteDebugging {
   Disabled
   Ephemeral
-  Fixed(Int)
+  Fixed(Int32)
 } derive(Debug, Eq)
 
 ///|
@@ -1738,12 +1738,12 @@ pub extend RuntimeConfig with Debug::{to_repr}
 ///|
 struct WindowConfig {
   title : String
-  width : Int
-  height : Int
+  width : Int32
+  height : Int32
   initial_url : String
   size_hint : WindowSizeHint
   titlebar_style : TitlebarStyle
-  traffic_light_position : (Int, Int)?
+  traffic_light_position : (Int32, Int32)?
   theme_preference : WindowThemePreference
   browser : BrowserPolicy
   bridge : BridgeConfig?
@@ -1776,13 +1776,13 @@ pub fn RuntimeConfig::RuntimeConfig(
   locales_dir? : String,
   cache_dir? : String,
   locale? : @locale.Locale,
-  accept_languages? : Array[@locale.Locale] = [],
+  accept_languages~ : Array[@locale.Locale] = [],
   proxy_server? : String,
   proxy_bypass? : String,
-  remote_debugging? : RemoteDebugging = Disabled,
-  headless? : Bool = false,
-  accessibility_mode? : AccessibilityMode = Automatic,
-  persist_session_cookies? : Bool = true,
+  remote_debugging~ : RemoteDebugging = Disabled,
+  headless~ : Bool = false,
+  accessibility_mode~ : AccessibilityMode = Automatic,
+  persist_session_cookies~ : Bool = true,
 ) -> RuntimeConfig {
   {
     use_bundled: false,
@@ -1814,13 +1814,13 @@ pub fn RuntimeConfig::bundled(
   helper_path? : String,
   cache_dir? : String,
   locale? : @locale.Locale,
-  accept_languages? : Array[@locale.Locale] = [],
+  accept_languages~ : Array[@locale.Locale] = [],
   proxy_server? : String,
   proxy_bypass? : String,
-  remote_debugging? : RemoteDebugging = Disabled,
-  headless? : Bool = false,
-  accessibility_mode? : AccessibilityMode = Automatic,
-  persist_session_cookies? : Bool = true,
+  remote_debugging~ : RemoteDebugging = Disabled,
+  headless~ : Bool = false,
+  accessibility_mode~ : AccessibilityMode = Automatic,
+  persist_session_cookies~ : Bool = true,
 ) -> RuntimeConfig {
   {
     use_bundled: true,
@@ -1844,19 +1844,19 @@ pub fn RuntimeConfig::bundled(
 
 ///|
 pub fn WindowConfig::WindowConfig(
-  title? : String = "Proton",
-  width? : Int = 800,
-  height? : Int = 600,
-  initial_url? : String = "about:blank",
-  size_hint? : WindowSizeHint = WindowSizeHint::Unconstrained,
-  titlebar_style? : TitlebarStyle = TitlebarStyle::Default,
-  traffic_light_position? : (Int, Int),
-  theme? : WindowThemePreference = WindowThemePreference::System,
-  browser? : BrowserPolicy = BrowserPolicy(),
+  title~ : String = "Proton",
+  width~ : Int32 = 800,
+  height~ : Int32 = 600,
+  initial_url~ : String = "about:blank",
+  size_hint~ : WindowSizeHint = WindowSizeHint::Unconstrained,
+  titlebar_style~ : TitlebarStyle = TitlebarStyle::Default,
+  traffic_light_position? : (Int32, Int32),
+  theme~ : WindowThemePreference = WindowThemePreference::System,
+  browser~ : BrowserPolicy = BrowserPolicy(),
   bridge? : BridgeConfig,
-  web_request_cancel_prefixes? : Array[String] = [],
-  web_request_redirect_prefixes? : Array[(String, String)] = [],
-  web_request_header_prefixes? : Array[(String, String, String)] = [],
+  web_request_cancel_prefixes~ : Array[String] = [],
+  web_request_redirect_prefixes~ : Array[(String, String)] = [],
+  web_request_header_prefixes~ : Array[(String, String, String)] = [],
 ) -> WindowConfig {
   {
     title,
@@ -1967,8 +1967,8 @@ pub fn MenuItem::command(
   id : String,
   label : String,
   key? : String,
-  enabled? : Bool = true,
-  visible? : Bool = true,
+  enabled~ : Bool = true,
+  visible~ : Bool = true,
   checked? : Bool,
 ) -> MenuItem {
   {
@@ -2085,8 +2085,8 @@ pub fn BridgeConfig::BridgeConfig(
 pub fn BridgeGrantConfig::BridgeGrantConfig(
   source_origin : String,
   ops~ : Array[String],
-  extensions? : Array[BridgeExtensionConfig] = [],
-  initialization_units? : Array[BridgeInitializationUnit] = [],
+  extensions~ : Array[BridgeExtensionConfig] = [],
+  initialization_units~ : Array[BridgeInitializationUnit] = [],
 ) -> BridgeGrantConfig {
   {
     source_origin,
@@ -2162,12 +2162,12 @@ struct View {
 /// A point-in-time web contents view state snapshot. Bounds use a top-left
 /// origin in the owning window's content coordinate space.
 pub(all) struct ViewState {
-  x : Int
-  y : Int
-  width : Int
-  height : Int
+  x : Int32
+  y : Int32
+  width : Int32
+  height : Int32
   visible : Bool
-  z_order : Int
+  z_order : Int32
 } derive(Debug, Eq)
 
 ///|
@@ -2183,12 +2183,12 @@ pub extend ViewState with Debug::{to_repr}
 /// to `about:blank`. Views stack above the window's main browser, ordered by
 /// ascending `z_order`.
 struct ViewConfig {
-  x : Int
-  y : Int
-  width : Int
-  height : Int
+  x : Int32
+  y : Int32
+  width : Int32
+  height : Int32
   visible : Bool
-  z_order : Int
+  z_order : Int32
   initial_url : String
   background_color : String?
 } derive(Debug, Eq)
@@ -2201,13 +2201,13 @@ pub extend ViewConfig with Debug::{to_repr}
 
 ///|
 pub fn ViewConfig::ViewConfig(
-  width~ : Int,
-  height~ : Int,
-  x? : Int = 0,
-  y? : Int = 0,
-  visible? : Bool = true,
-  z_order? : Int = 0,
-  initial_url? : String = "about:blank",
+  width~ : Int32,
+  height~ : Int32,
+  x~ : Int32 = 0,
+  y~ : Int32 = 0,
+  visible~ : Bool = true,
+  z_order~ : Int32 = 0,
+  initial_url~ : String = "about:blank",
   background_color? : String,
 ) -> ViewConfig {
   { x, y, width, height, visible, z_order, initial_url, background_color, }

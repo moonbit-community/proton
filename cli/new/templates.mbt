@@ -60,8 +60,8 @@ priv struct TemplateContext {
   frontend_module : String
   backend_module : String
   identifier : String
-  width : Int
-  height : Int
+  width : Int32
+  height : Int32
   proton_version : String
   proton_codegen_version : String
   proton_cli_version : String
@@ -104,8 +104,8 @@ fn template_context(
   author : String,
   project_name : String,
   identifier : String,
-  width : Int,
-  height : Int,
+  width : Int32,
+  height : Int32,
 ) -> TemplateContext {
   let module_prefix = author + "/" + project_name
   {
@@ -212,8 +212,8 @@ fn plan_project_files(
   author : String,
   project_name : String,
   identifier : String,
-  width : Int,
-  height : Int,
+  width : Int32,
+  height : Int32,
 ) -> Array[PlannedFile] raise NewProjectTemplateError {
   let context = template_context(
     title, author, project_name, identifier, width, height,

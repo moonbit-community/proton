@@ -110,7 +110,7 @@ pub fn HeapProfilerSamplingHeapProfile::from_json(
 pub(all) struct HeapProfilerSamplingHeapProfileNode {
   call_frame : RuntimeCallFrame
   self_size : Double
-  id : Int
+  id : Int32
   children : Array[HeapProfilerSamplingHeapProfileNode]
 } derive(Eq, Debug)
 
@@ -171,7 +171,7 @@ pub fn HeapProfilerSamplingHeapProfileNode::from_json(
 /// gives a referenced type name.
 pub(all) struct HeapProfilerSamplingHeapProfileSample {
   size : Double
-  node_id : Int
+  node_id : Int32
   ordinal : Double
 } derive(Eq, Debug)
 
@@ -262,7 +262,7 @@ pub fn HeapProfilerAddInspectedHeapObjectParams::to_json(
 /// )
 /// ```
 pub fn heap_profiler_add_inspected_heap_object_command(
-  id~ : Int,
+  id~ : Int32,
   params : HeapProfilerAddInspectedHeapObjectParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -286,7 +286,7 @@ pub fn heap_profiler_add_inspected_heap_object_command(
 /// let command = heap_profiler_collect_garbage_command(id=1, session_id=None)
 /// ```
 pub fn heap_profiler_collect_garbage_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(
@@ -308,7 +308,7 @@ pub fn heap_profiler_collect_garbage_command(
 /// let command = heap_profiler_disable_command(id=1, session_id=None)
 /// ```
 pub fn heap_profiler_disable_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(
@@ -330,7 +330,7 @@ pub fn heap_profiler_disable_command(
 /// let command = heap_profiler_enable_command(id=1, session_id=None)
 /// ```
 pub fn heap_profiler_enable_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(
@@ -430,7 +430,7 @@ pub fn HeapProfilerGetHeapObjectIdResult::from_json(
 /// )
 /// ```
 pub fn heap_profiler_get_heap_object_id_command(
-  id~ : Int,
+  id~ : Int32,
   params : HeapProfilerGetHeapObjectIdParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -536,7 +536,7 @@ pub fn HeapProfilerGetObjectByHeapObjectIdResult::from_json(
 /// )
 /// ```
 pub fn heap_profiler_get_object_by_heap_object_id_command(
-  id~ : Int,
+  id~ : Int32,
   params : HeapProfilerGetObjectByHeapObjectIdParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -603,7 +603,7 @@ pub fn HeapProfilerGetSamplingProfileResult::from_json(
 /// let command = heap_profiler_get_sampling_profile_command(id=1, session_id=None)
 /// ```
 pub fn heap_profiler_get_sampling_profile_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(
@@ -674,7 +674,7 @@ pub fn HeapProfilerStartSamplingParams::to_json(
 /// )
 /// ```
 pub fn heap_profiler_start_sampling_command(
-  id~ : Int,
+  id~ : Int32,
   params : HeapProfilerStartSamplingParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -738,7 +738,7 @@ pub fn HeapProfilerStartTrackingHeapObjectsParams::to_json(
 /// )
 /// ```
 pub fn heap_profiler_start_tracking_heap_objects_command(
-  id~ : Int,
+  id~ : Int32,
   params : HeapProfilerStartTrackingHeapObjectsParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -805,7 +805,7 @@ pub fn HeapProfilerStopSamplingResult::from_json(
 /// let command = heap_profiler_stop_sampling_command(id=1, session_id=None)
 /// ```
 pub fn heap_profiler_stop_sampling_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(
@@ -876,7 +876,7 @@ pub fn HeapProfilerStopTrackingHeapObjectsParams::to_json(
 /// )
 /// ```
 pub fn heap_profiler_stop_tracking_heap_objects_command(
-  id~ : Int,
+  id~ : Int32,
   params : HeapProfilerStopTrackingHeapObjectsParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -949,7 +949,7 @@ pub fn HeapProfilerTakeHeapSnapshotParams::to_json(
 /// )
 /// ```
 pub fn heap_profiler_take_heap_snapshot_command(
-  id~ : Int,
+  id~ : Int32,
   params : HeapProfilerTakeHeapSnapshotParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -1039,7 +1039,7 @@ pub fn heap_profiler_add_heap_snapshot_chunk_event(
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
 pub(all) struct HeapProfilerHeapStatsUpdateEventParams {
-  stats_update : Array[Int]
+  stats_update : Array[Int32]
 } derive(Eq, Debug)
 
 ///|
@@ -1118,7 +1118,7 @@ pub fn heap_profiler_heap_stats_update_event(
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
 pub(all) struct HeapProfilerLastSeenObjectIdEventParams {
-  last_seen_object_id : Int
+  last_seen_object_id : Int32
   timestamp : Double
 } derive(Eq, Debug)
 
@@ -1195,8 +1195,8 @@ pub fn heap_profiler_last_seen_object_id_event(
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
 pub(all) struct HeapProfilerReportHeapSnapshotProgressEventParams {
-  done : Int
-  total : Int
+  done : Int32
+  total : Int32
   finished : Bool?
 } derive(Eq, Debug)
 

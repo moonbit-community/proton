@@ -72,8 +72,8 @@ pub(all) struct RuntimeCallFrame {
   function_name : String
   script_id : RuntimeScriptId
   url : String
-  line_number : Int
-  column_number : Int
+  line_number : Int32
+  column_number : Int32
 } derive(Eq, Debug)
 
 ///|
@@ -184,7 +184,7 @@ pub(all) struct RuntimeDeepSerializedValue {
   type_ : String
   value : Json?
   object_id : String?
-  weak_local_object_reference : Int?
+  weak_local_object_reference : Int32?
 } derive(Eq, Debug)
 
 ///|
@@ -296,10 +296,10 @@ pub fn RuntimeEntryPreview::from_json(
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
 pub(all) struct RuntimeExceptionDetails {
-  exception_id : Int
+  exception_id : Int32
   text : String
-  line_number : Int
-  column_number : Int
+  line_number : Int32
+  column_number : Int32
   script_id : RuntimeScriptId?
   url : String?
   stack_trace : RuntimeStackTrace?
@@ -458,7 +458,7 @@ pub fn RuntimeExecutionContextDescription::from_json(
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
 pub(all) struct RuntimeExecutionContextId {
-  value : Int
+  value : Int32
 } derive(Eq, Debug)
 
 ///|
@@ -1068,7 +1068,7 @@ pub fn RuntimeScriptId::from_json(
 /// gives a referenced type name.
 pub(all) struct RuntimeSerializationOptions {
   serialization : String
-  max_depth : Int?
+  max_depth : Int32?
   additional_parameters : Json?
 } derive(Eq, Debug)
 
@@ -1451,7 +1451,7 @@ pub fn RuntimeAddBindingParams::to_json(self : RuntimeAddBindingParams) -> Json 
 /// let command = runtime_add_binding_command(id=1, params, session_id=None)
 /// ```
 pub fn runtime_add_binding_command(
-  id~ : Int,
+  id~ : Int32,
   params : RuntimeAddBindingParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -1563,7 +1563,7 @@ pub fn RuntimeAwaitPromiseResult::from_json(
 /// let command = runtime_await_promise_command(id=1, params, session_id=None)
 /// ```
 pub fn runtime_await_promise_command(
-  id~ : Int,
+  id~ : Int32,
   params : RuntimeAwaitPromiseParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -1715,7 +1715,7 @@ pub fn RuntimeCallFunctionOnResult::from_json(
 /// let command = runtime_call_function_on_command(id=1, params, session_id=None)
 /// ```
 pub fn runtime_call_function_on_command(
-  id~ : Int,
+  id~ : Int32,
   params : RuntimeCallFunctionOnParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -1828,7 +1828,7 @@ pub fn RuntimeCompileScriptResult::from_json(
 /// let command = runtime_compile_script_command(id=1, params, session_id=None)
 /// ```
 pub fn runtime_compile_script_command(
-  id~ : Int,
+  id~ : Int32,
   params : RuntimeCompileScriptParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -1852,7 +1852,7 @@ pub fn runtime_compile_script_command(
 /// let command = runtime_disable_command(id=1, session_id=None)
 /// ```
 pub fn runtime_disable_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(id~, method_name="Runtime.disable", session_id?)
@@ -1870,7 +1870,7 @@ pub fn runtime_disable_command(
 /// let command = runtime_discard_console_entries_command(id=1, session_id=None)
 /// ```
 pub fn runtime_discard_console_entries_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(
@@ -1892,7 +1892,7 @@ pub fn runtime_discard_console_entries_command(
 /// let command = runtime_enable_command(id=1, session_id=None)
 /// ```
 pub fn runtime_enable_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(id~, method_name="Runtime.enable", session_id?)
@@ -2044,7 +2044,7 @@ pub fn RuntimeEvaluateResult::from_json(
 /// let command = runtime_evaluate_command(id=1, params, session_id=None)
 /// ```
 pub fn runtime_evaluate_command(
-  id~ : Int,
+  id~ : Int32,
   params : RuntimeEvaluateParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -2148,7 +2148,7 @@ pub fn RuntimeGetExceptionDetailsResult::from_json(
 /// )
 /// ```
 pub fn runtime_get_exception_details_command(
-  id~ : Int,
+  id~ : Int32,
   params : RuntimeGetExceptionDetailsParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -2227,7 +2227,7 @@ pub fn RuntimeGetHeapUsageResult::from_json(
 /// let command = runtime_get_heap_usage_command(id=1, session_id=None)
 /// ```
 pub fn runtime_get_heap_usage_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(
@@ -2288,7 +2288,7 @@ pub fn RuntimeGetIsolateIdResult::from_json(
 /// let command = runtime_get_isolate_id_command(id=1, session_id=None)
 /// ```
 pub fn runtime_get_isolate_id_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(
@@ -2431,7 +2431,7 @@ pub fn RuntimeGetPropertiesResult::from_json(
 /// let command = runtime_get_properties_command(id=1, params, session_id=None)
 /// ```
 pub fn runtime_get_properties_command(
-  id~ : Int,
+  id~ : Int32,
   params : RuntimeGetPropertiesParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -2540,7 +2540,7 @@ pub fn RuntimeGlobalLexicalScopeNamesResult::from_json(
 /// )
 /// ```
 pub fn runtime_global_lexical_scope_names_command(
-  id~ : Int,
+  id~ : Int32,
   params : RuntimeGlobalLexicalScopeNamesParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -2642,7 +2642,7 @@ pub fn RuntimeQueryObjectsResult::from_json(
 /// let command = runtime_query_objects_command(id=1, params, session_id=None)
 /// ```
 pub fn runtime_query_objects_command(
-  id~ : Int,
+  id~ : Int32,
   params : RuntimeQueryObjectsParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -2697,7 +2697,7 @@ pub fn RuntimeReleaseObjectParams::to_json(
 /// let command = runtime_release_object_command(id=1, params, session_id=None)
 /// ```
 pub fn runtime_release_object_command(
-  id~ : Int,
+  id~ : Int32,
   params : RuntimeReleaseObjectParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -2756,7 +2756,7 @@ pub fn RuntimeReleaseObjectGroupParams::to_json(
 /// )
 /// ```
 pub fn runtime_release_object_group_command(
-  id~ : Int,
+  id~ : Int32,
   params : RuntimeReleaseObjectGroupParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -2811,7 +2811,7 @@ pub fn RuntimeRemoveBindingParams::to_json(
 /// let command = runtime_remove_binding_command(id=1, params, session_id=None)
 /// ```
 pub fn runtime_remove_binding_command(
-  id~ : Int,
+  id~ : Int32,
   params : RuntimeRemoveBindingParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -2835,7 +2835,7 @@ pub fn runtime_remove_binding_command(
 /// let command = runtime_run_if_waiting_for_debugger_command(id=1, session_id=None)
 /// ```
 pub fn runtime_run_if_waiting_for_debugger_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(
@@ -2959,7 +2959,7 @@ pub fn RuntimeRunScriptResult::from_json(
 /// let command = runtime_run_script_command(id=1, params, session_id=None)
 /// ```
 pub fn runtime_run_script_command(
-  id~ : Int,
+  id~ : Int32,
   params : RuntimeRunScriptParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -2978,7 +2978,7 @@ pub fn runtime_run_script_command(
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
 pub(all) struct RuntimeSetAsyncCallStackDepthParams {
-  max_depth : Int
+  max_depth : Int32
 } derive(Eq, Debug)
 
 ///|
@@ -3018,7 +3018,7 @@ pub fn RuntimeSetAsyncCallStackDepthParams::to_json(
 /// )
 /// ```
 pub fn runtime_set_async_call_stack_depth_command(
-  id~ : Int,
+  id~ : Int32,
   params : RuntimeSetAsyncCallStackDepthParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -3080,7 +3080,7 @@ pub fn RuntimeSetCustomObjectFormatterEnabledParams::to_json(
 /// )
 /// ```
 pub fn runtime_set_custom_object_formatter_enabled_command(
-  id~ : Int,
+  id~ : Int32,
   params : RuntimeSetCustomObjectFormatterEnabledParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -3099,7 +3099,7 @@ pub fn runtime_set_custom_object_formatter_enabled_command(
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
 pub(all) struct RuntimeSetMaxCallStackSizeToCaptureParams {
-  size : Int
+  size : Int32
 } derive(Eq, Debug)
 
 ///|
@@ -3139,7 +3139,7 @@ pub fn RuntimeSetMaxCallStackSizeToCaptureParams::to_json(
 /// )
 /// ```
 pub fn runtime_set_max_call_stack_size_to_capture_command(
-  id~ : Int,
+  id~ : Int32,
   params : RuntimeSetMaxCallStackSizeToCaptureParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -3163,7 +3163,7 @@ pub fn runtime_set_max_call_stack_size_to_capture_command(
 /// let command = runtime_terminate_execution_command(id=1, session_id=None)
 /// ```
 pub fn runtime_terminate_execution_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(
@@ -3360,7 +3360,7 @@ pub fn runtime_console_apicalled_event(
 /// gives a referenced type name.
 pub(all) struct RuntimeExceptionRevokedEventParams {
   reason : String
-  exception_id : Int
+  exception_id : Int32
 } derive(Eq, Debug)
 
 ///|

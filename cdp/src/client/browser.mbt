@@ -10,7 +10,7 @@
 /// successful response into the requested helper type. `WaitTimeout` is used by
 /// response waits when a command id does not complete in time.
 pub(all) suberror BrowserError {
-  CommandFailed(Int, String)
+  CommandFailed(Int32, String)
   MissingField(String)
   InvalidField(String)
   WaitTimeout(String)
@@ -127,9 +127,9 @@ fn parse_target_infos(
 /// ```
 pub async fn CdpClient::create_target(
   self : CdpClient,
-  url? : String = "about:blank",
+  url~ : String = "about:blank",
   browser_context_id? : String,
-  new_window? : Bool = false,
+  new_window~ : Bool = false,
 ) -> String {
   let params : Map[String, Json] = { "url": url }
   if browser_context_id is Some(browser_context_id) {
@@ -164,7 +164,7 @@ pub async fn CdpClient::create_target(
 pub async fn CdpClient::attach_to_target(
   self : CdpClient,
   target_id : String,
-  flatten? : Bool = true,
+  flatten~ : Bool = true,
 ) -> String {
   let response = self.send_schema_command("Target.attachToTarget", params={
     "targetId": target_id,
@@ -284,7 +284,7 @@ fn optional_bool(
 
 ///|
 /// Validates a positive duration in milliseconds.
-fn checked_duration(value : Int, name : String) -> Int raise BrowserError {
+fn checked_duration(value : Int32, name : String) -> Int32 raise BrowserError {
   if value > 0 {
     value
   } else {

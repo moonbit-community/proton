@@ -8,8 +8,8 @@ pub(all) suberror AppPathError {
   MissingExecutablePath
   UnsupportedPath(kind~ : String, platform~ : String)
   InvalidPathOverride(kind~ : String, path~ : String, reason~ : String)
-  SystemPath(kind~ : String, status~ : Int, detail~ : String)
-  PlatformProbe(status~ : Int, detail~ : String)
+  SystemPath(kind~ : String, status~ : Int32, detail~ : String)
+  PlatformProbe(status~ : Int32, detail~ : String)
 } derive(Debug, Eq)
 
 ///|

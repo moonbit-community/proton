@@ -207,7 +207,7 @@ pub fn PWAChangeAppUserSettingsParams::to_json(
 /// )
 /// ```
 pub fn pwa_change_app_user_settings_command(
-  id~ : Int,
+  id~ : Int32,
   params : PWAChangeAppUserSettingsParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -253,7 +253,7 @@ pub fn PWAGetOsAppStateParams::to_json(self : PWAGetOsAppStateParams) -> Json {
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
 pub(all) struct PWAGetOsAppStateResult {
-  badge_count : Int
+  badge_count : Int32
   file_handlers : Array[PWAFileHandler]
 } derive(Eq, Debug)
 
@@ -306,7 +306,7 @@ pub fn PWAGetOsAppStateResult::from_json(
 /// let command = pwa_get_os_app_state_command(id=1, params, session_id=None)
 /// ```
 pub fn pwa_get_os_app_state_command(
-  id~ : Int,
+  id~ : Int32,
   params : PWAGetOsAppStateParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -361,7 +361,7 @@ pub fn PWAInstallParams::to_json(self : PWAInstallParams) -> Json {
 /// let command = pwa_install_command(id=1, params, session_id=None)
 /// ```
 pub fn pwa_install_command(
-  id~ : Int,
+  id~ : Int32,
   params : PWAInstallParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -457,7 +457,7 @@ pub fn PWALaunchResult::from_json(
 /// let command = pwa_launch_command(id=1, params, session_id=None)
 /// ```
 pub fn pwa_launch_command(
-  id~ : Int,
+  id~ : Int32,
   params : PWALaunchParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -560,7 +560,7 @@ pub fn PWALaunchFilesInAppResult::from_json(
 /// let command = pwa_launch_files_in_app_command(id=1, params, session_id=None)
 /// ```
 pub fn pwa_launch_files_in_app_command(
-  id~ : Int,
+  id~ : Int32,
   params : PWALaunchFilesInAppParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -619,7 +619,7 @@ pub fn PWAOpenCurrentPageInAppParams::to_json(
 /// )
 /// ```
 pub fn pwa_open_current_page_in_app_command(
-  id~ : Int,
+  id~ : Int32,
   params : PWAOpenCurrentPageInAppParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -670,7 +670,7 @@ pub fn PWAUninstallParams::to_json(self : PWAUninstallParams) -> Json {
 /// let command = pwa_uninstall_command(id=1, params, session_id=None)
 /// ```
 pub fn pwa_uninstall_command(
-  id~ : Int,
+  id~ : Int32,
   params : PWAUninstallParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {

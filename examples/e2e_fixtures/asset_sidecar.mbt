@@ -1,7 +1,7 @@
 ///|
 struct AssetSidecarAddPayload {
-  left : Int
-  right : Int
+  left : Int32
+  right : Int32
 } derive(ToJson, FromJson)
 
 ///|
@@ -30,13 +30,13 @@ let asset_sidecar_contract : @proton_contract.ExtensionContract = @proton_contra
 ///|
 let asset_sidecar_add_command : @proton_contract.Command[
   AssetSidecarAddPayload,
-  Int,
+  Int32,
 ] = asset_sidecar_contract.command("add")
 
 ///|
 let asset_sidecar_add_later_command : @proton_contract.Command[
   AssetSidecarAddPayload,
-  Int,
+  Int32,
 ] = asset_sidecar_contract.command("addLater")
 
 ///|

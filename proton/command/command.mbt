@@ -41,7 +41,7 @@ pub fn AppCommandExtensionDescriptor::AppCommandExtensionDescriptor(
   id : String,
   js_namespace : String,
   apis : Array[AppCommandApiDescriptor],
-  scripts? : Array[String] = [],
+  scripts~ : Array[String] = [],
 ) -> AppCommandExtensionDescriptor {
   AppCommandExtensionDescriptor::{
     id,
@@ -57,11 +57,11 @@ pub fn AppCommandExtensionDescriptor::AppCommandExtensionDescriptor(
 pub fn AppCommandExtensionSpec::typed(
   contract : @proton_contract.ExtensionContract,
   register : (CommandRegistrar) -> Unit raise,
-  scripts? : Array[String] = [],
-  dependencies? : Array[String] = [],
+  scripts~ : Array[String] = [],
+  dependencies~ : Array[String] = [],
   resolve_permission? : (Json, String) -> Json raise PermissionScopeValidationError,
-  on_start? : (@async.TaskGroup[Unit]) -> Unit raise = fn(_tasks) {  },
-  on_destroy? : () -> Unit raise = fn() {  },
+  on_start~ : (@async.TaskGroup[Unit]) -> Unit raise = fn(_tasks) {  },
+  on_destroy~ : () -> Unit raise = fn() {  },
 ) -> AppCommandExtensionSpec raise ExtensionSpecError {
   contract.validate() catch {
     error => raise InvalidContract(detail=error.message())

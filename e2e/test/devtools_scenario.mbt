@@ -12,7 +12,7 @@ async fn run_devtools_scenario_page_probe(
   app : SpawnedScenarioApp,
   target : String,
   browser_web_socket_url : String,
-  timeout : Int,
+  timeout : Int32,
 ) -> ShutdownProbeResult {
   let (host, devtools) = wait_for_devtools_targets(app, target, timeout)
   let browser = @client.CdpClient::connect_with_timeout(
@@ -60,7 +60,7 @@ async fn run_devtools_scenario_page_probe(
 async fn wait_for_devtools_targets(
   app : SpawnedScenarioApp,
   target : String,
-  timeout : Int,
+  timeout : Int32,
 ) -> (@client.CdpDiscoveredTarget, @client.CdpDiscoveredTarget) {
   let cdp_target = cdp_target_from(target)
   let mut elapsed = 0

@@ -3,8 +3,8 @@
 pub struct Page {
   priv client : @client.CdpClient
   priv state : PageState
-  priv event_handler : Int
-  priv close_handler : Int
+  priv event_handler : Int32
+  priv close_handler : Int32
 }
 
 ///|
@@ -18,7 +18,7 @@ pub struct Navigation {
 /// An explicitly created isolated JavaScript world.
 pub struct IsolatedWorld {
   priv page : Page
-  priv context_id : Int
+  priv context_id : Int32
 }
 
 ///|
@@ -73,7 +73,7 @@ pub async fn[X] Page::connect(
   target_id? : String,
   url? : String,
   title? : String,
-  timeout_ms? : Int = 25000,
+  timeout_ms~ : Int32 = 25000,
 ) -> Page {
   let client = @client.connect_cdp_page_target_with_timeout(
     tasks,
@@ -91,7 +91,7 @@ pub async fn[X] Page::connect(
 pub async fn[X] Page::connect_web_socket(
   tasks : @async.TaskGroup[X],
   web_socket_url : String,
-  timeout_ms? : Int = 25000,
+  timeout_ms~ : Int32 = 25000,
 ) -> Page {
   let client = @client.CdpClient::connect_with_timeout(
     tasks,
@@ -105,7 +105,7 @@ pub async fn[X] Page::connect_web_socket(
 async fn[X] Page::initialize_scoped(
   tasks : @async.TaskGroup[X],
   client : @client.CdpClient,
-  timeout_ms : Int,
+  timeout_ms : Int32,
 ) -> Page {
   errdefer client.close()
   let page = Page::initialize(client, timeout_ms)
@@ -114,7 +114,10 @@ async fn[X] Page::initialize_scoped(
 }
 
 ///|
-async fn Page::initialize(client : @client.CdpClient, timeout_ms : Int) -> Page {
+async fn Page::initialize(
+  client : @client.CdpClient,
+  timeout_ms : Int32,
+) -> Page {
   let state = PageState()
   let event_handler = client.on_cdp_event(event => state.handle_event(event))
   let close_handler = client.on_close(() => state.close())
@@ -156,7 +159,7 @@ pub async fn Page::close(self : Page) -> Unit {
 pub async fn Page::evaluate(
   self : Page,
   expression : String,
-  await_promise? : Bool = false,
+  await_promise~ : Bool = false,
 ) -> Json {
   let lease = self.state.wait_for_context()
   let response = self.client.send_schema_command("Runtime.evaluate", params={
@@ -236,7 +239,7 @@ pub async fn Page::capture_png(self : Page) -> String {
 pub async fn Page::create_isolated_world(
   self : Page,
   world_name : String,
-  grant_universal_access? : Bool = false,
+  grant_universal_access~ : Bool = false,
 ) -> IsolatedWorld {
   let frame_id = self.state.wait_for_main_frame()
   let result = @client.cdp_response_result_json(
@@ -257,7 +260,7 @@ pub async fn Page::create_isolated_world(
 pub async fn IsolatedWorld::evaluate(
   self : IsolatedWorld,
   expression : String,
-  await_promise? : Bool = false,
+  await_promise~ : Bool = false,
 ) -> Json {
   let response = self.page.client.send_schema_command("Runtime.evaluate", params={
     "expression": expression,

@@ -68,7 +68,7 @@ fn typed_required_int(
   fields : Map[String, Json],
   name : String,
   expected : String,
-) -> Int raise @protocol.ProtocolSchemaError {
+) -> Int32 raise @protocol.ProtocolSchemaError {
   match typed_required_json(method_name, fields, name) {
     Number(value, ..) => {
       let int = value.to_int()
@@ -89,7 +89,7 @@ fn typed_optional_int(
   fields : Map[String, Json],
   name : String,
   expected : String,
-) -> Int? raise @protocol.ProtocolSchemaError {
+) -> Int32? raise @protocol.ProtocolSchemaError {
   match typed_optional_json(fields, name) {
     Some(Number(value, ..)) => {
       let int = value.to_int()
@@ -199,7 +199,7 @@ fn typed_array_int(
   name : String,
   expected : String,
   value : Json,
-) -> Int raise @protocol.ProtocolSchemaError {
+) -> Int32 raise @protocol.ProtocolSchemaError {
   match value {
     Number(inner, ..) => {
       let int = inner.to_int()
@@ -328,7 +328,7 @@ fn typed_result_array_int(
   name : String,
   expected : String,
   value : Json,
-) -> Int raise @protocol.ProtocolSchemaError {
+) -> Int32 raise @protocol.ProtocolSchemaError {
   match value {
     Number(inner, ..) => {
       let int = inner.to_int()
@@ -349,7 +349,7 @@ fn typed_required_result_int(
   fields : Map[String, Json],
   name : String,
   expected : String,
-) -> Int raise @protocol.ProtocolSchemaError {
+) -> Int32 raise @protocol.ProtocolSchemaError {
   match typed_required_result_json(method_name, fields, name) {
     Number(value, ..) => {
       let int = value.to_int()
@@ -370,7 +370,7 @@ fn typed_optional_result_int(
   fields : Map[String, Json],
   name : String,
   expected : String,
-) -> Int? raise @protocol.ProtocolSchemaError {
+) -> Int32? raise @protocol.ProtocolSchemaError {
   match typed_optional_result_json(fields, name) {
     Some(Number(value, ..)) => {
       let int = value.to_int()

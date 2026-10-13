@@ -1,8 +1,8 @@
 ///|
 fn native_text_buffer_length(
   context : String,
-  required : Int,
-) -> Int raise NativeError {
+  required : Int32,
+) -> Int32 raise NativeError {
   if required < 0 || required == 2147483647 {
     raise InvalidPayload(
       context~,
@@ -16,8 +16,8 @@ fn native_text_buffer_length(
 ///|
 fn native_text_payload_length(
   context : String,
-  required : Int,
-) -> Int raise NativeError {
+  required : Int32,
+) -> Int32 raise NativeError {
   if required < 0 {
     raise InvalidPayload(
       context~,
@@ -31,7 +31,7 @@ fn native_text_payload_length(
 ///|
 fn read_native_text(
   context : String,
-  query : (FixedArray[Byte], Int, Ref[Int]) -> Int,
+  query : (FixedArray[Byte], Int32, Ref[Int32]) -> Int32,
 ) -> String? raise NativeError {
   let required = Ref(0)
   let mut buffer = FixedArray::make(1, b'\x00')
@@ -80,7 +80,7 @@ fn read_native_text(
 ///|
 fn require_native_text(
   context : String,
-  query : (FixedArray[Byte], Int, Ref[Int]) -> Int,
+  query : (FixedArray[Byte], Int32, Ref[Int32]) -> Int32,
 ) -> String raise NativeError {
   match read_native_text(context, query) {
     Some(text) => text
@@ -96,7 +96,7 @@ fn require_native_text(
 /// its length, and a required-length ref; it returns a status code.
 fn read_native_bytes(
   context : String,
-  query : (FixedArray[Byte], Int, Ref[Int]) -> Int,
+  query : (FixedArray[Byte], Int32, Ref[Int32]) -> Int32,
 ) -> Bytes raise NativeError {
   let required = Ref(0)
   let mut buffer = FixedArray::make(1, b'\x00')

@@ -1,5 +1,5 @@
 ///|
-let process_shutdown_timeout_ms : Int = if @path.sep == '\\' {
+let process_shutdown_timeout_ms : Int32 = if @path.sep == '\\' {
   20000
 } else {
   10000
@@ -7,9 +7,9 @@ let process_shutdown_timeout_ms : Int = if @path.sep == '\\' {
 
 ///|
 struct ProcessRow {
-  pid : Int
-  parent_pid : Int
-  created_at : Int
+  pid : Int32
+  parent_pid : Int32
+  created_at : Int32
   command : String
 } derive(Eq, Debug)
 
@@ -21,9 +21,9 @@ pub extend ProcessRow with Debug::{to_repr}
 
 ///|
 struct ProcessRowJson {
-  pid : Int
-  parent_pid : Int
-  created_at : Int
+  pid : Int32
+  parent_pid : Int32
+  created_at : Int32
   command : String
 } derive(FromJson, Eq, Debug)
 
@@ -38,16 +38,16 @@ pub extend ProcessRowJson with FromJson::{from_json}
 
 ///|
 struct ProcessSnapshot {
-  pids : Array[Int]
-  helper_pids : Array[Int]
-  commands : Map[Int, String]
-  parents : Map[Int, Int]
-  created_at : Map[Int, Int]
+  pids : Array[Int32]
+  helper_pids : Array[Int32]
+  commands : Map[Int32, String]
+  parents : Map[Int32, Int32]
+  created_at : Map[Int32, Int32]
 }
 
 ///|
 struct ShutdownProbeResult {
-  helper_processes : Int
+  helper_processes : Int32
 } derive(Eq, Debug)
 
 ///|
@@ -70,7 +70,7 @@ async fn finish_scenario_app(
 async fn finish_scenario_app_with_exit_timeout(
   app : SpawnedScenarioApp,
   target : String,
-  exit_timeout : Int,
+  exit_timeout : Int32,
 ) -> ShutdownProbeResult {
   let mut phase = "process snapshot"
   errdefer println("E2E shutdown failed: phase=" + phase)
@@ -97,7 +97,7 @@ async fn wait_for_scenario_app_shutdown(
   app : SpawnedScenarioApp,
   target : String,
   snapshot : ProcessSnapshot,
-  exit_timeout : Int,
+  exit_timeout : Int32,
 ) -> ShutdownProbeResult {
   wait_for_app_exit(app, exit_timeout)
   wait_for_process_tree_stop(snapshot, exit_timeout)
@@ -122,11 +122,11 @@ async fn finish_scenario_app_with_connected_browser(
 }
 
 ///|
-async fn snapshot_process_tree(root_pid : Int) -> ProcessSnapshot {
+async fn snapshot_process_tree(root_pid : Int32) -> ProcessSnapshot {
   let rows = list_processes()
-  let commands : Map[Int, String] = Map([])
-  let parents : Map[Int, Int] = Map([])
-  let created_at : Map[Int, Int] = Map([])
+  let commands : Map[Int32, String] = Map([])
+  let parents : Map[Int32, Int32] = Map([])
+  let created_at : Map[Int32, Int32] = Map([])
   let mut root_row : ProcessRow? = None
   for row in rows {
     commands[row.pid] = row.command
@@ -154,7 +154,7 @@ async fn snapshot_process_tree(root_pid : Int) -> ProcessSnapshot {
     }
   }
   let pids = [root_pid]
-  let helper_pids : Array[Int] = []
+  let helper_pids : Array[Int32] = []
   for row in descendants {
     pids.push(row.pid)
     if process_command_is_helper(row.command) {
@@ -308,13 +308,13 @@ fn process_command_is_helper(command : String) -> Bool {
 ///|
 async fn wait_for_process_tree_stop(
   snapshot : ProcessSnapshot,
-  timeout : Int,
+  timeout : Int32,
 ) -> Unit {
   let mut elapsed = 0
-  let mut remaining : Array[Int] = []
+  let mut remaining : Array[Int32] = []
   while elapsed <= timeout {
     let rows = list_processes()
-    let alive : Map[Int, Int] = Map([])
+    let alive : Map[Int32, Int32] = Map([])
     for row in rows {
       alive[row.pid] = row.created_at
     }
@@ -348,7 +348,7 @@ async fn wait_for_process_tree_stop(
 }
 
 ///|
-async fn wait_for_cdp_endpoint_stop(endpoint : String, timeout : Int) -> Unit {
+async fn wait_for_cdp_endpoint_stop(endpoint : String, timeout : Int32) -> Unit {
   let mut elapsed = 0
   while elapsed <= timeout {
     let running = try {
@@ -374,7 +374,7 @@ async fn wait_for_cdp_endpoint_stop(endpoint : String, timeout : Int) -> Unit {
 async fn run_pending_lifecycle_probe_once(
   root : String,
   output_root : String,
-  timeout : Int,
+  timeout : Int32,
 ) -> Unit {
   let name = "41_app_commands"
   let run_id = next_app_run_id()
@@ -427,7 +427,7 @@ async fn run_pending_lifecycle_probe_once(
 }
 
 ///|
-async fn run_pending_lifecycle_probe(root : String, timeout : Int) -> Unit {
+async fn run_pending_lifecycle_probe(root : String, timeout : Int32) -> Unit {
   let output_root = @fs.tmpdir(prefix="proton-e2e-lifecycle-")
   defer remove_dev_extension_tree(output_root)
   install_scenario_helper(root, output_root)
@@ -440,7 +440,7 @@ async fn run_pending_lifecycle_probe(root : String, timeout : Int) -> Unit {
 async fn run_event_lifecycle_probe_once(
   root : String,
   output_root : String,
-  timeout : Int,
+  timeout : Int32,
 ) -> Unit {
   let name = "40_event_broadcast"
   let run_id = next_app_run_id()
@@ -487,7 +487,7 @@ async fn run_event_lifecycle_probe_once(
 }
 
 ///|
-async fn run_event_lifecycle_probe(root : String, timeout : Int) -> Unit {
+async fn run_event_lifecycle_probe(root : String, timeout : Int32) -> Unit {
   let output_root = @fs.tmpdir(prefix="proton-e2e-lifecycle-")
   defer remove_dev_extension_tree(output_root)
   install_scenario_helper(root, output_root)
@@ -503,7 +503,7 @@ async fn connect_spawned_page(
   tasks : @async.TaskGroup[Unit],
   app : SpawnedScenarioApp,
   target : String,
-  timeout : Int,
+  timeout : Int32,
   title? : String,
 ) -> @page.Page {
   let deadline = @async.now() + timeout.to_int64()

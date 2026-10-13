@@ -44,7 +44,7 @@ let browser_slot : Ref[@proton.WebContentsHandle?] = { val: None, }
 let view_slot : Ref[@proton.ViewHandle?] = { val: None, }
 
 ///|
-fn read_state(message : String, ok? : Bool = true) -> ControlReply {
+fn read_state(message : String, ok~ : Bool = true) -> ControlReply {
   let (host_focused, host_devtools_opened) = match browser_slot.val {
     Some(browser) =>
       (

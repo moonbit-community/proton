@@ -227,7 +227,7 @@ pub fn BackgroundServiceClearEventsParams::to_json(
 /// )
 /// ```
 pub fn background_service_clear_events_command(
-  id~ : Int,
+  id~ : Int32,
   params : BackgroundServiceClearEventsParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -288,7 +288,7 @@ pub fn BackgroundServiceSetRecordingParams::to_json(
 /// )
 /// ```
 pub fn background_service_set_recording_command(
-  id~ : Int,
+  id~ : Int32,
   params : BackgroundServiceSetRecordingParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -347,7 +347,7 @@ pub fn BackgroundServiceStartObservingParams::to_json(
 /// )
 /// ```
 pub fn background_service_start_observing_command(
-  id~ : Int,
+  id~ : Int32,
   params : BackgroundServiceStartObservingParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -406,7 +406,7 @@ pub fn BackgroundServiceStopObservingParams::to_json(
 /// )
 /// ```
 pub fn background_service_stop_observing_command(
-  id~ : Int,
+  id~ : Int32,
   params : BackgroundServiceStopObservingParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {

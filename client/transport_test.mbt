@@ -75,7 +75,7 @@ test "independent typed listeners survive malformed events and close separately"
     listeners.push(received)
     () => closes.val += 1
   })
-  let event : @proton_contract.Event[Int] = @proton_contract.event("changed")
+  let event : @proton_contract.Event[Int32] = @proton_contract.event("changed")
   let first = Ref(0)
   let second = Ref(0)
   let failures = Ref(0)

@@ -43,7 +43,7 @@ let application_slot : Ref[@proton.ApplicationContext?] = { val: None, }
 fn reply(
   context : @proton.ApplicationContext,
   message : String,
-  ok? : Bool = true,
+  ok~ : Bool = true,
 ) -> ControlReply {
   let is_default = context.is_default_protocol_client(scheme) catch {
     _ => false

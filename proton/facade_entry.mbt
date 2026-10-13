@@ -140,7 +140,7 @@ fn asset_url_path_byte_is_safe(byte : Byte) -> Bool {
 }
 
 ///|
-fn debug_level_from_bool(enabled : Bool) -> Int {
+fn debug_level_from_bool(enabled : Bool) -> Int32 {
   if enabled {
     1
   } else {
@@ -150,7 +150,7 @@ fn debug_level_from_bool(enabled : Bool) -> Int {
 
 ///|
 fn resolve_remote_debugging(
-  debug : Int,
+  debug : Int32,
   configured_port : String?,
 ) -> @native.RemoteDebugging raise AppConfigurationError {
   guard debug > 0 else { return @native.RemoteDebugging::Disabled }
@@ -180,7 +180,7 @@ fn resolve_remote_debugging(
 
 ///|
 fn remote_debugging(
-  debug : Int,
+  debug : Int32,
 ) -> @native.RemoteDebugging raise AppConfigurationError {
   resolve_remote_debugging(
     debug,

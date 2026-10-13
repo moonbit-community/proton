@@ -4,7 +4,7 @@ pub struct AppManifest {
   window : WindowManifest
   entry : AppEntry
   windows : Array[AppWindowManifest]
-  debug : Int
+  debug : Int32
 }
 
 ///|
@@ -14,8 +14,8 @@ pub struct AppManifest {
 pub fn AppManifest::AppManifest(
   window : WindowManifest,
   entry : AppEntry,
-  debug? : Int = 0,
-  windows? : Array[AppWindowManifest] = [],
+  debug~ : Int32 = 0,
+  windows~ : Array[AppWindowManifest] = [],
 ) -> AppManifest {
   AppManifest::{
     window,

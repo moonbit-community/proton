@@ -39,19 +39,19 @@ let proton_err_stale_resource_request = -18
 let proton_err_unsupported = -8
 
 ///|
-pub let runtime_wait_none : Int = 0
+pub let runtime_wait_none : Int32 = 0
 
 ///|
-pub let runtime_wait_event : Int = 1
+pub let runtime_wait_event : Int32 = 1
 
 ///|
-pub let runtime_wait_platform : Int = 4
+pub let runtime_wait_platform : Int32 = 4
 
 ///|
-pub let runtime_wait_all : Int = runtime_wait_event.lor(runtime_wait_platform)
+pub let runtime_wait_all : Int32 = runtime_wait_event.lor(runtime_wait_platform)
 
 ///|
-let runtime_wait_timeout_infinite : Int = -1
+let runtime_wait_timeout_infinite : Int32 = -1
 
 ///|
 let proton_invalid_handle : Int64 = 0L

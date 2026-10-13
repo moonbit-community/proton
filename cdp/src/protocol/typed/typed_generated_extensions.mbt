@@ -144,7 +144,7 @@ pub fn ExtensionsClearStorageItemsParams::to_json(
 /// )
 /// ```
 pub fn extensions_clear_storage_items_command(
-  id~ : Int,
+  id~ : Int32,
   params : ExtensionsClearStorageItemsParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -214,7 +214,7 @@ pub fn ExtensionsGetExtensionsResult::from_json(
 /// let command = extensions_get_extensions_command(id=1, session_id=None)
 /// ```
 pub fn extensions_get_extensions_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(
@@ -316,7 +316,7 @@ pub fn ExtensionsGetStorageItemsResult::from_json(
 /// )
 /// ```
 pub fn extensions_get_storage_items_command(
-  id~ : Int,
+  id~ : Int32,
   params : ExtensionsGetStorageItemsParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -414,7 +414,7 @@ pub fn ExtensionsLoadUnpackedResult::from_json(
 /// let command = extensions_load_unpacked_command(id=1, params, session_id=None)
 /// ```
 pub fn extensions_load_unpacked_command(
-  id~ : Int,
+  id~ : Int32,
   params : ExtensionsLoadUnpackedParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -477,7 +477,7 @@ pub fn ExtensionsRemoveStorageItemsParams::to_json(
 /// )
 /// ```
 pub fn extensions_remove_storage_items_command(
-  id~ : Int,
+  id~ : Int32,
   params : ExtensionsRemoveStorageItemsParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -540,7 +540,7 @@ pub fn ExtensionsSetStorageItemsParams::to_json(
 /// )
 /// ```
 pub fn extensions_set_storage_items_command(
-  id~ : Int,
+  id~ : Int32,
   params : ExtensionsSetStorageItemsParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -597,7 +597,7 @@ pub fn ExtensionsTriggerActionParams::to_json(
 /// let command = extensions_trigger_action_command(id=1, params, session_id=None)
 /// ```
 pub fn extensions_trigger_action_command(
-  id~ : Int,
+  id~ : Int32,
   params : ExtensionsTriggerActionParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -652,7 +652,7 @@ pub fn ExtensionsUninstallParams::to_json(
 /// let command = extensions_uninstall_command(id=1, params, session_id=None)
 /// ```
 pub fn extensions_uninstall_command(
-  id~ : Int,
+  id~ : Int32,
   params : ExtensionsUninstallParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {

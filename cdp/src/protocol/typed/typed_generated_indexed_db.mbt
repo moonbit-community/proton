@@ -485,7 +485,7 @@ pub fn IndexedDBClearObjectStoreParams::to_json(
 /// )
 /// ```
 pub fn indexed_db_clear_object_store_command(
-  id~ : Int,
+  id~ : Int32,
   params : IndexedDBClearObjectStoreParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -552,7 +552,7 @@ pub fn IndexedDBDeleteDatabaseParams::to_json(
 /// let command = indexed_db_delete_database_command(id=1, params, session_id=None)
 /// ```
 pub fn indexed_db_delete_database_command(
-  id~ : Int,
+  id~ : Int32,
   params : IndexedDBDeleteDatabaseParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -627,7 +627,7 @@ pub fn IndexedDBDeleteObjectStoreEntriesParams::to_json(
 /// )
 /// ```
 pub fn indexed_db_delete_object_store_entries_command(
-  id~ : Int,
+  id~ : Int32,
   params : IndexedDBDeleteObjectStoreEntriesParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -651,7 +651,7 @@ pub fn indexed_db_delete_object_store_entries_command(
 /// let command = indexed_db_disable_command(id=1, session_id=None)
 /// ```
 pub fn indexed_db_disable_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(
@@ -673,7 +673,7 @@ pub fn indexed_db_disable_command(
 /// let command = indexed_db_enable_command(id=1, session_id=None)
 /// ```
 pub fn indexed_db_enable_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(id~, method_name="IndexedDB.enable", session_id?)
@@ -783,7 +783,7 @@ pub fn IndexedDBGetMetadataResult::from_json(
 /// let command = indexed_db_get_metadata_command(id=1, params, session_id=None)
 /// ```
 pub fn indexed_db_get_metadata_command(
-  id~ : Int,
+  id~ : Int32,
   params : IndexedDBGetMetadataParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -808,8 +808,8 @@ pub(all) struct IndexedDBRequestDataParams {
   database_name : String
   object_store_name : String
   index_name : String?
-  skip_count : Int
-  page_size : Int
+  skip_count : Int32
+  page_size : Int32
   key_range : IndexedDBKeyRange?
 } derive(Eq, Debug)
 
@@ -914,7 +914,7 @@ pub fn IndexedDBRequestDataResult::from_json(
 /// let command = indexed_db_request_data_command(id=1, params, session_id=None)
 /// ```
 pub fn indexed_db_request_data_command(
-  id~ : Int,
+  id~ : Int32,
   params : IndexedDBRequestDataParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -1026,7 +1026,7 @@ pub fn IndexedDBRequestDatabaseResult::from_json(
 /// let command = indexed_db_request_database_command(id=1, params, session_id=None)
 /// ```
 pub fn indexed_db_request_database_command(
-  id~ : Int,
+  id~ : Int32,
   params : IndexedDBRequestDatabaseParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -1145,7 +1145,7 @@ pub fn IndexedDBRequestDatabaseNamesResult::from_json(
 /// )
 /// ```
 pub fn indexed_db_request_database_names_command(
-  id~ : Int,
+  id~ : Int32,
   params : IndexedDBRequestDatabaseNamesParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {

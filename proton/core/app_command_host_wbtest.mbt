@@ -257,7 +257,7 @@ async test "request context emits through its page-scoped destination" {
 async test "dispatch preserves failure codes with and without request context" {
   for with_context in [false, true] {
     let host = AppCommandHost()
-    host.op("app:number", fn(value : Int) { value })
+    host.op("app:number", fn(value : Int32) { value })
     host.op("app:fail", fn(_value : Unit) -> Unit raise {
       raise CommandHostTestError::PrivateFailure("private diagnostic")
     })
@@ -302,9 +302,11 @@ async test "dispatch preserves failure codes with and without request context" {
 ///|
 async test "handler kinds share one ordered registration namespace" {
   let host = AppCommandHost()
-  host.op("sync", fn(value : Int) { value + 1 })
-  host.op_async("async", fn(value : Int) { value + 2 })
-  host.op_async_with_context("context", fn(_context, value : Int) { value + 3 })
+  host.op("sync", fn(value : Int32) { value + 1 })
+  host.op_async("async", fn(value : Int32) { value + 2 })
+  host.op_async_with_context("context", fn(_context, value : Int32) {
+    value + 3
+  })
   for name in ["sync", "async", "context"] {
     try host.op(name, fn(_ : Unit) { () }) catch {
       OpRegistrationError::DuplicateName(name=actual) => assert_eq(actual, name)

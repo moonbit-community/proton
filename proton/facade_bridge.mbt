@@ -2,7 +2,7 @@
 fn build_command_host(
   command_capabilities : Array[AppCommandCapability],
   command_extensions : CommandExtensionCatalog,
-  titlebar_area_targets? : Array[RendererTarget] = [],
+  titlebar_area_targets~ : Array[RendererTarget] = [],
 ) -> CommandHostBuild raise AppRunError {
   let host = @core.AppCommandHost(
     expose_error_details=proton_dev_mode_enabled(),
@@ -210,7 +210,7 @@ fn close_command_host_runtime(
 fn command_extension_order(
   command_extensions : Map[String, @proton_command.AppCommandExtensionSpec],
 ) -> Array[String] raise AppConfigurationError {
-  let visit_state : Map[String, Int] = Map([])
+  let visit_state : Map[String, Int32] = Map([])
   let ordered : Array[String] = []
   for id, _spec in command_extensions {
     visit_command_extension(id, None, command_extensions, visit_state, ordered)
@@ -223,7 +223,7 @@ fn visit_command_extension(
   id : String,
   requested_by : String?,
   command_extensions : Map[String, @proton_command.AppCommandExtensionSpec],
-  visit_state : Map[String, Int],
+  visit_state : Map[String, Int32],
   ordered : Array[String],
 ) -> Unit raise AppConfigurationError {
   match visit_state.get(id) {

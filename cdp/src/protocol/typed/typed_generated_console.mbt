@@ -12,8 +12,8 @@ pub(all) struct ConsoleConsoleMessage {
   level : String
   text : String
   url : String?
-  line : Int?
-  column : Int?
+  line : Int32?
+  column : Int32?
 } derive(Eq, Debug)
 
 ///|
@@ -76,7 +76,7 @@ pub fn ConsoleConsoleMessage::from_json(
 /// let command = console_clear_messages_command(id=1, session_id=None)
 /// ```
 pub fn console_clear_messages_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(
@@ -98,7 +98,7 @@ pub fn console_clear_messages_command(
 /// let command = console_disable_command(id=1, session_id=None)
 /// ```
 pub fn console_disable_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(id~, method_name="Console.disable", session_id?)
@@ -116,7 +116,7 @@ pub fn console_disable_command(
 /// let command = console_enable_command(id=1, session_id=None)
 /// ```
 pub fn console_enable_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(id~, method_name="Console.enable", session_id?)

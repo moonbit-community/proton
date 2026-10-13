@@ -48,7 +48,11 @@ pub extend AnimationSettings with Debug::{to_repr}
 /// identifies the failing read; unsupported platforms and platforms whose
 /// preference source is unavailable both report here instead of a default.
 pub(all) suberror SystemPreferencesError {
-  SystemPreferencesUnavailable(query~ : String, status~ : Int, detail~ : String)
+  SystemPreferencesUnavailable(
+    query~ : String,
+    status~ : Int32,
+    detail~ : String
+  )
 } derive(Debug, Eq)
 
 ///|

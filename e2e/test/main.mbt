@@ -42,7 +42,7 @@ async fn main {
 async fn run_cdp_scenario_probe(
   name : String,
   target : String,
-  timeout : Int,
+  timeout : Int32,
 ) -> Unit {
   ensure_supported_scenario(name)
   let _ = @client.wait_for_browser_endpoint(
@@ -56,7 +56,7 @@ async fn run_cdp_scenario_probe(
 async fn run_connected_scenario_probe(
   name : String,
   target : String,
-  timeout : Int,
+  timeout : Int32,
 ) -> Unit {
   @async.with_task_group(group => {
     if name == "45_bridge_multi_window" {

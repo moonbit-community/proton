@@ -34,7 +34,7 @@ pub extend GlobalHotkeyReply with FromJson::{from_json}
 
 ///|
 pub(all) struct UnregisterAllReply {
-  count : Int
+  count : Int32
 } derive(ToJson, FromJson, Debug, Eq)
 
 ///|

@@ -45,7 +45,7 @@ fn quit_chain_prefix_matches(
 async fn wait_for_quit_chain_prefix(
   log_path : String,
   expected : Array[String],
-  timeout : Int,
+  timeout : Int32,
 ) -> Unit {
   let deadline = @async.now() + timeout.to_int64()
   while @async.now() <= deadline {
@@ -66,7 +66,7 @@ async fn wait_for_quit_chain_prefix(
 async fn wait_for_quit_chain_exact(
   log_path : String,
   expected : Array[String],
-  timeout : Int,
+  timeout : Int32,
 ) -> Unit {
   let deadline = @async.now() + timeout.to_int64()
   while @async.now() <= deadline {
@@ -89,7 +89,7 @@ async fn wait_for_quit_chain_exact(
 async fn wait_for_quit_chain_ready(
   app : SpawnedScenarioApp,
   ready_path : String,
-  timeout : Int,
+  timeout : Int32,
 ) -> Unit {
   let deadline = @async.now() + timeout.to_int64()
   while @async.now() <= deadline {
@@ -114,8 +114,8 @@ async fn wait_for_quit_chain_ready(
 async fn wait_for_quit_chain_exit(
   app : SpawnedScenarioApp,
   log_path : String,
-  expected_code : Int,
-  timeout : Int,
+  expected_code : Int32,
+  timeout : Int32,
 ) -> Unit {
   let deadline = @async.now() + timeout.to_int64()
   while @async.now() <= deadline {
@@ -153,7 +153,7 @@ async fn spawn_quit_chain_probe(
   root : String,
   output_root : String,
   mode : String,
-  run_id : Int,
+  run_id : Int32,
   log_path : String,
   ready_path : String,
   gate_path : String,
@@ -188,9 +188,9 @@ async fn run_quit_chain_case(
   root : String,
   output_root : String,
   mode : String,
-  expected_exit : Int?,
+  expected_exit : Int32?,
   expected_log : Array[String],
-  timeout : Int,
+  timeout : Int32,
 ) -> Unit {
   let run_id = next_app_run_id()
   let log_path = join_path(output_root, "quit-chain-" + mode + ".chain")
@@ -238,7 +238,7 @@ async fn run_quit_chain_case(
 }
 
 ///|
-async fn run_quit_chain_probe(root : String, timeout : Int) -> Unit {
+async fn run_quit_chain_probe(root : String, timeout : Int32) -> Unit {
   let output_root = @fs.tmpdir(prefix="proton-e2e-quit-chain-")
   defer remove_dev_extension_tree(output_root)
   install_scenario_helper(root, output_root)

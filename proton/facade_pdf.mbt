@@ -2,7 +2,7 @@
 priv struct PendingPdf {
   window : Int64
   view : Int64?
-  request : Int
+  request : Int32
   path : String
   completion : Completion[Result[Unit, WindowSessionError]]
 }
@@ -78,7 +78,7 @@ async fn PdfCompletionStore::wait(
   self : PdfCompletionStore,
   window : Int64,
   view : Int64?,
-  request : Int,
+  request : Int32,
   path : String,
 ) -> Unit {
   let pending : PendingPdf = {

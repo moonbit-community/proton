@@ -18,8 +18,8 @@ async fn[Reply] emit_command_result(
   context : @proton.CommandContext,
   reply : Reply,
   operation : String,
-  path? : String? = None,
-  level? : String? = None,
+  path~ : String? = None,
+  level~ : String? = None,
 ) -> Reply {
   context.emit(@dialog_contract.activity, @dialog_contract.DialogActivity::{
     operation,

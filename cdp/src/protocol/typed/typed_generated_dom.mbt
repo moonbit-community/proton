@@ -8,7 +8,7 @@
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
 pub(all) struct DOMBackendNode {
-  node_type : Int
+  node_type : Int32
   node_name : String
   backend_node_id : DOMBackendNodeId
 } derive(Eq, Debug)
@@ -58,7 +58,7 @@ pub fn DOMBackendNode::from_json(
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
 pub(all) struct DOMBackendNodeId {
-  value : Int
+  value : Int32
 } derive(Eq, Debug)
 
 ///|
@@ -109,8 +109,8 @@ pub(all) struct DOMBoxModel {
   padding : DOMQuad
   border : DOMQuad
   margin : DOMQuad
-  width : Int
-  height : Int
+  width : Int32
+  height : Int32
   shape_outside : DOMShapeOutsideInfo?
 } derive(Eq, Debug)
 
@@ -364,11 +364,11 @@ pub(all) struct DOMNode {
   node_id : DOMNodeId
   parent_id : DOMNodeId?
   backend_node_id : DOMBackendNodeId
-  node_type : Int
+  node_type : Int32
   node_name : String
   local_name : String
   node_value : String
-  child_node_count : Int?
+  child_node_count : Int32?
   children : Array[DOMNode]?
   attributes : Array[String]?
   document_url : String?
@@ -670,7 +670,7 @@ pub fn DOMNode::from_json(
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
 pub(all) struct DOMNodeId {
-  value : Int
+  value : Int32
 } derive(Eq, Debug)
 
 ///|
@@ -889,9 +889,9 @@ pub fn DOMRect::from_json(
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
 pub(all) struct DOMRGBA {
-  r : Int
-  g : Int
-  b : Int
+  r : Int32
+  g : Int32
+  b : Int32
   a : Double?
 } derive(Eq, Debug)
 
@@ -1202,7 +1202,7 @@ pub fn DOMCollectClassNamesFromSubtreeResult::from_json(
 /// )
 /// ```
 pub fn dom_collect_class_names_from_subtree_command(
-  id~ : Int,
+  id~ : Int32,
   params : DOMCollectClassNamesFromSubtreeParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -1300,7 +1300,7 @@ pub fn DOMCopyToResult::from_json(
 /// let command = dom_copy_to_command(id=1, params, session_id=None)
 /// ```
 pub fn dom_copy_to_command(
-  id~ : Int,
+  id~ : Int32,
   params : DOMCopyToParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -1322,7 +1322,7 @@ pub(all) struct DOMDescribeNodeParams {
   node_id : DOMNodeId?
   backend_node_id : DOMBackendNodeId?
   object_id : RuntimeRemoteObjectId?
-  depth : Int?
+  depth : Int32?
   pierce : Bool?
 } derive(Eq, Debug)
 
@@ -1410,7 +1410,7 @@ pub fn DOMDescribeNodeResult::from_json(
 /// let command = dom_describe_node_command(id=1, params, session_id=None)
 /// ```
 pub fn dom_describe_node_command(
-  id~ : Int,
+  id~ : Int32,
   params : DOMDescribeNodeParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -1434,7 +1434,7 @@ pub fn dom_describe_node_command(
 /// let command = dom_disable_command(id=1, session_id=None)
 /// ```
 pub fn dom_disable_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(id~, method_name="DOM.disable", session_id?)
@@ -1483,7 +1483,7 @@ pub fn DOMDiscardSearchResultsParams::to_json(
 /// let command = dom_discard_search_results_command(id=1, params, session_id=None)
 /// ```
 pub fn dom_discard_search_results_command(
-  id~ : Int,
+  id~ : Int32,
   params : DOMDiscardSearchResultsParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -1536,7 +1536,7 @@ pub fn DOMEnableParams::to_json(self : DOMEnableParams) -> Json {
 /// let command = dom_enable_command(id=1, params, session_id=None)
 /// ```
 pub fn dom_enable_command(
-  id~ : Int,
+  id~ : Int32,
   params : DOMEnableParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -1597,7 +1597,7 @@ pub fn DOMFocusParams::to_json(self : DOMFocusParams) -> Json {
 /// let command = dom_focus_command(id=1, params, session_id=None)
 /// ```
 pub fn dom_focus_command(
-  id~ : Int,
+  id~ : Int32,
   params : DOMFocusParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -1700,7 +1700,7 @@ pub fn DOMForceShowPopoverResult::from_json(
 /// let command = dom_force_show_popover_command(id=1, params, session_id=None)
 /// ```
 pub fn dom_force_show_popover_command(
-  id~ : Int,
+  id~ : Int32,
   params : DOMForceShowPopoverParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -1802,7 +1802,7 @@ pub fn DOMGetAnchorElementResult::from_json(
 /// let command = dom_get_anchor_element_command(id=1, params, session_id=None)
 /// ```
 pub fn dom_get_anchor_element_command(
-  id~ : Int,
+  id~ : Int32,
   params : DOMGetAnchorElementParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -1901,7 +1901,7 @@ pub fn DOMGetAttributesResult::from_json(
 /// let command = dom_get_attributes_command(id=1, params, session_id=None)
 /// ```
 pub fn dom_get_attributes_command(
-  id~ : Int,
+  id~ : Int32,
   params : DOMGetAttributesParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -2003,7 +2003,7 @@ pub fn DOMGetBoxModelResult::from_json(
 /// let command = dom_get_box_model_command(id=1, params, session_id=None)
 /// ```
 pub fn dom_get_box_model_command(
-  id~ : Int,
+  id~ : Int32,
   params : DOMGetBoxModelParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -2122,7 +2122,7 @@ pub fn DOMGetContainerForNodeResult::from_json(
 /// let command = dom_get_container_for_node_command(id=1, params, session_id=None)
 /// ```
 pub fn dom_get_container_for_node_command(
-  id~ : Int,
+  id~ : Int32,
   params : DOMGetContainerForNodeParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -2233,7 +2233,7 @@ pub fn DOMGetContentQuadsResult::from_json(
 /// let command = dom_get_content_quads_command(id=1, params, session_id=None)
 /// ```
 pub fn dom_get_content_quads_command(
-  id~ : Int,
+  id~ : Int32,
   params : DOMGetContentQuadsParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -2303,7 +2303,7 @@ pub fn DOMGetDetachedDomNodesResult::from_json(
 /// let command = dom_get_detached_dom_nodes_command(id=1, session_id=None)
 /// ```
 pub fn dom_get_detached_dom_nodes_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(
@@ -2320,7 +2320,7 @@ pub fn dom_get_detached_dom_nodes_command(
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
 pub(all) struct DOMGetDocumentParams {
-  depth : Int?
+  depth : Int32?
   pierce : Bool?
 } derive(Eq, Debug)
 
@@ -2399,7 +2399,7 @@ pub fn DOMGetDocumentResult::from_json(
 /// let command = dom_get_document_command(id=1, params, session_id=None)
 /// ```
 pub fn dom_get_document_command(
-  id~ : Int,
+  id~ : Int32,
   params : DOMGetDocumentParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -2499,7 +2499,7 @@ pub fn DOMGetElementByRelationResult::from_json(
 /// let command = dom_get_element_by_relation_command(id=1, params, session_id=None)
 /// ```
 pub fn dom_get_element_by_relation_command(
-  id~ : Int,
+  id~ : Int32,
   params : DOMGetElementByRelationParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -2587,7 +2587,7 @@ pub fn DOMGetFileInfoResult::from_json(
 /// let command = dom_get_file_info_command(id=1, params, session_id=None)
 /// ```
 pub fn dom_get_file_info_command(
-  id~ : Int,
+  id~ : Int32,
   params : DOMGetFileInfoParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -2606,7 +2606,7 @@ pub fn dom_get_file_info_command(
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
 pub(all) struct DOMGetFlattenedDocumentParams {
-  depth : Int?
+  depth : Int32?
   pierce : Bool?
 } derive(Eq, Debug)
 
@@ -2694,7 +2694,7 @@ pub fn DOMGetFlattenedDocumentResult::from_json(
 /// let command = dom_get_flattened_document_command(id=1, params, session_id=None)
 /// ```
 pub fn dom_get_flattened_document_command(
-  id~ : Int,
+  id~ : Int32,
   params : DOMGetFlattenedDocumentParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -2791,7 +2791,7 @@ pub fn DOMGetFrameOwnerResult::from_json(
 /// let command = dom_get_frame_owner_command(id=1, params, session_id=None)
 /// ```
 pub fn dom_get_frame_owner_command(
-  id~ : Int,
+  id~ : Int32,
   params : DOMGetFrameOwnerParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -2810,8 +2810,8 @@ pub fn dom_get_frame_owner_command(
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
 pub(all) struct DOMGetNodeForLocationParams {
-  x : Int
-  y : Int
+  x : Int32
+  y : Int32
   include_user_agent_shadow_dom : Bool?
   ignore_pointer_events_none : Bool?
 } derive(Eq, Debug)
@@ -2908,7 +2908,7 @@ pub fn DOMGetNodeForLocationResult::from_json(
 /// let command = dom_get_node_for_location_command(id=1, params, session_id=None)
 /// ```
 pub fn dom_get_node_for_location_command(
-  id~ : Int,
+  id~ : Int32,
   params : DOMGetNodeForLocationParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -3021,7 +3021,7 @@ pub fn DOMGetNodesForSubtreeByStyleResult::from_json(
 /// )
 /// ```
 pub fn dom_get_nodes_for_subtree_by_style_command(
-  id~ : Int,
+  id~ : Int32,
   params : DOMGetNodesForSubtreeByStyleParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -3120,7 +3120,7 @@ pub fn DOMGetNodeStackTracesResult::from_json(
 /// let command = dom_get_node_stack_traces_command(id=1, params, session_id=None)
 /// ```
 pub fn dom_get_node_stack_traces_command(
-  id~ : Int,
+  id~ : Int32,
   params : DOMGetNodeStackTracesParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -3226,7 +3226,7 @@ pub fn DOMGetOuterHTMLResult::from_json(
 /// let command = dom_get_outer_html_command(id=1, params, session_id=None)
 /// ```
 pub fn dom_get_outer_html_command(
-  id~ : Int,
+  id~ : Int32,
   params : DOMGetOuterHTMLParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -3337,7 +3337,7 @@ pub fn DOMGetQueryingDescendantsForContainerResult::from_json(
 /// )
 /// ```
 pub fn dom_get_querying_descendants_for_container_command(
-  id~ : Int,
+  id~ : Int32,
   params : DOMGetQueryingDescendantsForContainerParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -3435,7 +3435,7 @@ pub fn DOMGetRelayoutBoundaryResult::from_json(
 /// let command = dom_get_relayout_boundary_command(id=1, params, session_id=None)
 /// ```
 pub fn dom_get_relayout_boundary_command(
-  id~ : Int,
+  id~ : Int32,
   params : DOMGetRelayoutBoundaryParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -3455,8 +3455,8 @@ pub fn dom_get_relayout_boundary_command(
 /// gives a referenced type name.
 pub(all) struct DOMGetSearchResultsParams {
   search_id : String
-  from_index : Int
-  to_index : Int
+  from_index : Int32
+  to_index : Int32
 } derive(Eq, Debug)
 
 ///|
@@ -3540,7 +3540,7 @@ pub fn DOMGetSearchResultsResult::from_json(
 /// let command = dom_get_search_results_command(id=1, params, session_id=None)
 /// ```
 pub fn dom_get_search_results_command(
-  id~ : Int,
+  id~ : Int32,
   params : DOMGetSearchResultsParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -3610,7 +3610,7 @@ pub fn DOMGetTopLayerElementsResult::from_json(
 /// let command = dom_get_top_layer_elements_command(id=1, session_id=None)
 /// ```
 pub fn dom_get_top_layer_elements_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(
@@ -3632,7 +3632,7 @@ pub fn dom_get_top_layer_elements_command(
 /// let command = dom_hide_highlight_command(id=1, session_id=None)
 /// ```
 pub fn dom_hide_highlight_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(
@@ -3654,7 +3654,7 @@ pub fn dom_hide_highlight_command(
 /// let command = dom_highlight_node_command(id=1, session_id=None)
 /// ```
 pub fn dom_highlight_node_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(
@@ -3676,7 +3676,7 @@ pub fn dom_highlight_node_command(
 /// let command = dom_highlight_rect_command(id=1, session_id=None)
 /// ```
 pub fn dom_highlight_rect_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(
@@ -3698,7 +3698,7 @@ pub fn dom_highlight_rect_command(
 /// let command = dom_mark_undoable_state_command(id=1, session_id=None)
 /// ```
 pub fn dom_mark_undoable_state_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(
@@ -3794,7 +3794,7 @@ pub fn DOMMoveToResult::from_json(
 /// let command = dom_move_to_command(id=1, params, session_id=None)
 /// ```
 pub fn dom_move_to_command(
-  id~ : Int,
+  id~ : Int32,
   params : DOMMoveToParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -3845,7 +3845,7 @@ pub fn DOMPerformSearchParams::to_json(self : DOMPerformSearchParams) -> Json {
 /// gives a referenced type name.
 pub(all) struct DOMPerformSearchResult {
   search_id : String
-  result_count : Int
+  result_count : Int32
 } derive(Eq, Debug)
 
 ///|
@@ -3894,7 +3894,7 @@ pub fn DOMPerformSearchResult::from_json(
 /// let command = dom_perform_search_command(id=1, params, session_id=None)
 /// ```
 pub fn dom_perform_search_command(
-  id~ : Int,
+  id~ : Int32,
   params : DOMPerformSearchParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -3996,7 +3996,7 @@ pub fn DOMPushNodeByPathToFrontendResult::from_json(
 /// )
 /// ```
 pub fn dom_push_node_by_path_to_frontend_command(
-  id~ : Int,
+  id~ : Int32,
   params : DOMPushNodeByPathToFrontendParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -4103,7 +4103,7 @@ pub fn DOMPushNodesByBackendIdsToFrontendResult::from_json(
 /// )
 /// ```
 pub fn dom_push_nodes_by_backend_ids_to_frontend_command(
-  id~ : Int,
+  id~ : Int32,
   params : DOMPushNodesByBackendIdsToFrontendParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -4197,7 +4197,7 @@ pub fn DOMQuerySelectorResult::from_json(
 /// let command = dom_query_selector_command(id=1, params, session_id=None)
 /// ```
 pub fn dom_query_selector_command(
-  id~ : Int,
+  id~ : Int32,
   params : DOMQuerySelectorParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -4300,7 +4300,7 @@ pub fn DOMQuerySelectorAllResult::from_json(
 /// let command = dom_query_selector_all_command(id=1, params, session_id=None)
 /// ```
 pub fn dom_query_selector_all_command(
-  id~ : Int,
+  id~ : Int32,
   params : DOMQuerySelectorAllParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -4324,7 +4324,7 @@ pub fn dom_query_selector_all_command(
 /// let command = dom_redo_command(id=1, session_id=None)
 /// ```
 pub fn dom_redo_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(id~, method_name="DOM.redo", session_id?)
@@ -4375,7 +4375,7 @@ pub fn DOMRemoveAttributeParams::to_json(
 /// let command = dom_remove_attribute_command(id=1, params, session_id=None)
 /// ```
 pub fn dom_remove_attribute_command(
-  id~ : Int,
+  id~ : Int32,
   params : DOMRemoveAttributeParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -4426,7 +4426,7 @@ pub fn DOMRemoveNodeParams::to_json(self : DOMRemoveNodeParams) -> Json {
 /// let command = dom_remove_node_command(id=1, params, session_id=None)
 /// ```
 pub fn dom_remove_node_command(
-  id~ : Int,
+  id~ : Int32,
   params : DOMRemoveNodeParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -4446,7 +4446,7 @@ pub fn dom_remove_node_command(
 /// gives a referenced type name.
 pub(all) struct DOMRequestChildNodesParams {
   node_id : DOMNodeId
-  depth : Int?
+  depth : Int32?
   pierce : Bool?
 } derive(Eq, Debug)
 
@@ -4489,7 +4489,7 @@ pub fn DOMRequestChildNodesParams::to_json(
 /// let command = dom_request_child_nodes_command(id=1, params, session_id=None)
 /// ```
 pub fn dom_request_child_nodes_command(
-  id~ : Int,
+  id~ : Int32,
   params : DOMRequestChildNodesParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -4581,7 +4581,7 @@ pub fn DOMRequestNodeResult::from_json(
 /// let command = dom_request_node_command(id=1, params, session_id=None)
 /// ```
 pub fn dom_request_node_command(
-  id~ : Int,
+  id~ : Int32,
   params : DOMRequestNodeParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -4687,7 +4687,7 @@ pub fn DOMResolveNodeResult::from_json(
 /// let command = dom_resolve_node_command(id=1, params, session_id=None)
 /// ```
 pub fn dom_resolve_node_command(
-  id~ : Int,
+  id~ : Int32,
   params : DOMResolveNodeParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -4760,7 +4760,7 @@ pub fn DOMScrollIntoViewIfNeededParams::to_json(
 /// )
 /// ```
 pub fn dom_scroll_into_view_if_needed_command(
-  id~ : Int,
+  id~ : Int32,
   params : DOMScrollIntoViewIfNeededParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -4821,7 +4821,7 @@ pub fn DOMSetAttributesAsTextParams::to_json(
 /// let command = dom_set_attributes_as_text_command(id=1, params, session_id=None)
 /// ```
 pub fn dom_set_attributes_as_text_command(
-  id~ : Int,
+  id~ : Int32,
   params : DOMSetAttributesAsTextParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -4880,7 +4880,7 @@ pub fn DOMSetAttributeValueParams::to_json(
 /// let command = dom_set_attribute_value_command(id=1, params, session_id=None)
 /// ```
 pub fn dom_set_attribute_value_command(
-  id~ : Int,
+  id~ : Int32,
   params : DOMSetAttributeValueParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -4947,7 +4947,7 @@ pub fn DOMSetFileInputFilesParams::to_json(
 /// let command = dom_set_file_input_files_command(id=1, params, session_id=None)
 /// ```
 pub fn dom_set_file_input_files_command(
-  id~ : Int,
+  id~ : Int32,
   params : DOMSetFileInputFilesParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -5002,7 +5002,7 @@ pub fn DOMSetInspectedNodeParams::to_json(
 /// let command = dom_set_inspected_node_command(id=1, params, session_id=None)
 /// ```
 pub fn dom_set_inspected_node_command(
-  id~ : Int,
+  id~ : Int32,
   params : DOMSetInspectedNodeParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -5096,7 +5096,7 @@ pub fn DOMSetNodeNameResult::from_json(
 /// let command = dom_set_node_name_command(id=1, params, session_id=None)
 /// ```
 pub fn dom_set_node_name_command(
-  id~ : Int,
+  id~ : Int32,
   params : DOMSetNodeNameParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -5155,7 +5155,7 @@ pub fn DOMSetNodeStackTracesEnabledParams::to_json(
 /// )
 /// ```
 pub fn dom_set_node_stack_traces_enabled_command(
-  id~ : Int,
+  id~ : Int32,
   params : DOMSetNodeStackTracesEnabledParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -5208,7 +5208,7 @@ pub fn DOMSetNodeValueParams::to_json(self : DOMSetNodeValueParams) -> Json {
 /// let command = dom_set_node_value_command(id=1, params, session_id=None)
 /// ```
 pub fn dom_set_node_value_command(
-  id~ : Int,
+  id~ : Int32,
   params : DOMSetNodeValueParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -5261,7 +5261,7 @@ pub fn DOMSetOuterHTMLParams::to_json(self : DOMSetOuterHTMLParams) -> Json {
 /// let command = dom_set_outer_html_command(id=1, params, session_id=None)
 /// ```
 pub fn dom_set_outer_html_command(
-  id~ : Int,
+  id~ : Int32,
   params : DOMSetOuterHTMLParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -5285,7 +5285,7 @@ pub fn dom_set_outer_html_command(
 /// let command = dom_undo_command(id=1, session_id=None)
 /// ```
 pub fn dom_undo_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(id~, method_name="DOM.undo", session_id?)
@@ -5773,7 +5773,7 @@ pub fn dom_character_data_modified_event(
 /// gives a referenced type name.
 pub(all) struct DOMChildNodeCountUpdatedEventParams {
   node_id : DOMNodeId
-  child_node_count : Int
+  child_node_count : Int32
 } derive(Eq, Debug)
 
 ///|

@@ -2,7 +2,7 @@
 /// Checks the private Proton ABI, not CEF enum ordinals. Real CEF task
 /// classification is covered by the task-metrics E2E scenario.
 test "Proton task type codes decode at the FFI boundary" {
-  let cases : Array[(Int, AppTaskType)] = [
+  let cases : Array[(Int32, AppTaskType)] = [
     (0, Unknown),
     (1, Browser),
     (2, Gpu),

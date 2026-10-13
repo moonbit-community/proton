@@ -16,7 +16,7 @@ pub extend DockBounceType with Eq::{not_equal, equal}
 pub extend DockBounceType with Debug::{to_repr}
 
 ///|
-fn DockBounceType::native_value(self : DockBounceType) -> Int {
+fn DockBounceType::native_value(self : DockBounceType) -> Int32 {
   match self {
     Informational => 0
     Critical => 1
@@ -32,7 +32,7 @@ fn DockBounceType::native_value(self : DockBounceType) -> Int {
 /// count is rejected.
 pub fn ApplicationContext::set_badge_count(
   self : ApplicationContext,
-  count : Int,
+  count : Int32,
 ) -> Bool raise AppControlError {
   ignore(self)
   @native.app_set_badge_count(count) catch {
@@ -49,7 +49,7 @@ pub fn ApplicationContext::set_badge_count(
 /// zero.
 pub fn ApplicationContext::badge_count(
   self : ApplicationContext,
-) -> Int raise AppControlError {
+) -> Int32 raise AppControlError {
   ignore(self)
   @native.app_badge_count() catch {
     error =>
@@ -68,8 +68,8 @@ pub fn ApplicationContext::badge_count(
 /// already focused.
 pub fn ApplicationContext::dock_bounce(
   self : ApplicationContext,
-  kind? : DockBounceType = Informational,
-) -> Int raise AppControlError {
+  kind~ : DockBounceType = Informational,
+) -> Int32 raise AppControlError {
   ignore(self)
   @native.app_dock_bounce(kind.native_value()) catch {
     error => raise app_control_native_error("bouncing the Dock tile", error)
@@ -82,7 +82,7 @@ pub fn ApplicationContext::dock_bounce(
 /// raises `UnsupportedPlatform`.
 pub fn ApplicationContext::dock_cancel_bounce(
   self : ApplicationContext,
-  request_id : Int,
+  request_id : Int32,
 ) -> Unit raise AppControlError {
   ignore(self)
   @native.app_dock_cancel_bounce(request_id) catch {

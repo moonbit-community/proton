@@ -42,11 +42,11 @@ pub extend FrontendConfig with Debug::{to_repr}
 
 ///|
 pub fn FrontendConfig::FrontendConfig(
-  dev_url? : String? = None,
-  dist? : String? = None,
-  before_dev? : String? = None,
-  before_build? : String? = None,
-  path? : String? = None,
+  dev_url~ : String? = None,
+  dist~ : String? = None,
+  before_dev~ : String? = None,
+  before_build~ : String? = None,
+  path~ : String? = None,
 ) -> FrontendConfig {
   FrontendConfig::{ dev_url, dist, before_dev, before_build, path, }
 }
@@ -63,7 +63,7 @@ pub extend SignConfig with Eq::{not_equal, equal}
 pub extend SignConfig with Debug::{to_repr}
 
 ///|
-pub fn SignConfig::SignConfig(binaries? : Array[String] = []) -> SignConfig {
+pub fn SignConfig::SignConfig(binaries~ : Array[String] = []) -> SignConfig {
   SignConfig::{ binaries: binaries.copy(), }
 }
 
@@ -88,7 +88,7 @@ pub extend PlatformPackageConfig with Debug::{to_repr}
 ///|
 pub fn PlatformPackageConfig::PlatformPackageConfig(
   formats? : Array[String],
-  resources? : Array[String] = [],
+  resources~ : Array[String] = [],
   sign? : SignConfig,
   minimum_system_version? : String,
   nsis_install_mode? : String,
@@ -145,7 +145,7 @@ pub extend DocumentType with Debug::{to_repr}
 pub fn DocumentType::DocumentType(
   name : String,
   extensions : Array[String],
-  role? : String = "Viewer",
+  role~ : String = "Viewer",
 ) -> DocumentType {
   DocumentType::{ name, extensions: extensions.copy(), role, }
 }
@@ -177,15 +177,15 @@ pub extend PackageConfig with Debug::{to_repr}
 pub fn PackageConfig::PackageConfig(
   product_name : String,
   version : String,
-  formats? : Array[String] = [],
-  icons? : Array[String] = [],
-  prepare? : String? = None,
-  resources? : Array[String] = [],
-  sign? : SignConfig? = None,
-  url_schemes? : Array[String] = [],
-  document_types? : Array[DocumentType] = [],
-  output? : String = "dist",
-  platforms? : PackagePlatforms = PackagePlatforms(),
+  formats~ : Array[String] = [],
+  icons~ : Array[String] = [],
+  prepare~ : String? = None,
+  resources~ : Array[String] = [],
+  sign~ : SignConfig? = None,
+  url_schemes~ : Array[String] = [],
+  document_types~ : Array[DocumentType] = [],
+  output~ : String = "dist",
+  platforms~ : PackagePlatforms = PackagePlatforms(),
 ) -> PackageConfig {
   PackageConfig::{
     product_name,
@@ -225,9 +225,9 @@ pub extend AppConfig with Debug::{to_repr}
 ///|
 pub fn AppConfig::AppConfig(
   identifier : String,
-  backend? : BackendConfig? = None,
-  frontend? : FrontendConfig? = None,
-  package_config? : PackageConfig? = None,
+  backend~ : BackendConfig? = None,
+  frontend~ : FrontendConfig? = None,
+  package_config~ : PackageConfig? = None,
 ) -> AppConfig {
   AppConfig::{ identifier, backend, frontend, package_config, }
 }

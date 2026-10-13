@@ -77,7 +77,7 @@ fn app_output_lines(path : String) -> Array[String] {
 }
 
 ///|
-async fn run_lifecycle_regressions(root : String, timeout : Int) -> Unit {
+async fn run_lifecycle_regressions(root : String, timeout : Int32) -> Unit {
   let output_root = @fs.tmpdir(prefix="proton-e2e-lifecycle-")
   defer remove_dev_extension_tree(output_root)
   install_scenario_helper(root, output_root)

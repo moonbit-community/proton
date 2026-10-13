@@ -12,8 +12,8 @@ pub extend ProtectionRequest with FromJson::{from_json}
 ///|
 struct ProtectionReply {
   enabled : Bool
-  width : Int
-  height : Int
+  width : Int32
+  height : Int32
   message : String
 } derive(ToJson, FromJson)
 
