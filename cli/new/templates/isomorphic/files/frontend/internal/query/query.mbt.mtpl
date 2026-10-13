@@ -40,8 +40,8 @@ pub struct Query[Input, Value] {
 priv struct Model[I, V] {
   input : I
   previous : (I, V)?
-  generation : Int
-  listener : Int
+  generation : Int32
+  listener : Int32
   listening : Bool
   pending : Bool
   dirty : Bool
@@ -52,10 +52,10 @@ priv struct Model[I, V] {
 priv enum Msg[I, V] {
   InputChanged(I)
   Refresh
-  Listening(Int)
-  ListenFailed(Int, @proton_client.ClientFailure)
-  Invalidated(Int)
-  Completed(Int, Result[V, @proton_client.ClientFailure])
+  Listening(Int32)
+  ListenFailed(Int32, @proton_client.ClientFailure)
+  Invalidated(Int32)
+  Completed(Int32, Result[V, @proton_client.ClientFailure])
 }
 
 ///|
@@ -227,7 +227,7 @@ pub fn[I : Eq + ToJson, V : Eq + @json.FromJson] create(
   command : @proton_contract.Command[I, V],
   initial~ : I,
   invalidated_by? : &Invalidation,
-  client? : @proton_client.Client = @proton_client.desktop,
+  client~ : @proton_client.Client = @proton_client.desktop,
 ) -> Query[I, V] {
   let (model, emit) = @rabbita.create_state(
     initial_model(initial),

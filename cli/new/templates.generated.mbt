@@ -55,7 +55,7 @@ fn generated_isomorphic_template_specs() -> Array[TemplateSpec] {
       template_source: (
           #|///|
           #|pub(all) struct TodoItem {
-          #|  id : Int
+          #|  id : Int32
           #|  title : String
           #|  completed : Bool
           #|} derive(ToJson, FromJson, Eq, Debug)
@@ -74,7 +74,7 @@ fn generated_isomorphic_template_specs() -> Array[TemplateSpec] {
           #|
           #|///|
           #|pub(all) struct TodoSnapshot {
-          #|  version : Int
+          #|  version : Int32
           #|  todos : Array[TodoItem]
           #|} derive(ToJson, FromJson, Eq, Debug)
           #|
@@ -109,7 +109,7 @@ fn generated_isomorphic_template_specs() -> Array[TemplateSpec] {
           #|
           #|///|
           #|pub(all) struct SetTodoCompletedRequest {
-          #|  id : Int
+          #|  id : Int32
           #|  completed : Bool
           #|} derive(ToJson, FromJson, Eq, Debug)
           #|
@@ -127,7 +127,7 @@ fn generated_isomorphic_template_specs() -> Array[TemplateSpec] {
           #|
           #|///|
           #|pub(all) struct DeleteTodoRequest {
-          #|  id : Int
+          #|  id : Int32
           #|} derive(ToJson, FromJson, Eq, Debug)
           #|
           #|///|
@@ -185,7 +185,7 @@ fn generated_isomorphic_template_specs() -> Array[TemplateSpec] {
           #|///|
           #|/// Expected business outcomes are data, separate from transport failures.
           #|pub(all) enum MutationReply {
-          #|  Changed(version~ : Int)
+          #|  Changed(version~ : Int32)
           #|  InvalidTitle
           #|  MissingTodo
           #|} derive(ToJson, FromJson)
@@ -199,7 +199,7 @@ fn generated_isomorphic_template_specs() -> Array[TemplateSpec] {
           #|///|
           #|/// A live invalidation notice. Query a fresh snapshot after receiving it.
           #|pub(all) struct TodosChanged {
-          #|  version : Int
+          #|  version : Int32
           #|} derive(ToJson, FromJson)
           #|
           #|///|
@@ -277,8 +277,8 @@ fn generated_isomorphic_template_specs() -> Array[TemplateSpec] {
           #|enum Msg {
           #|  DraftChanged(String)
           #|  Create
-          #|  SetCompleted(Int, Bool)
-          #|  Delete(Int)
+          #|  SetCompleted(Int32, Bool)
+          #|  Delete(Int32)
           #|  MutationReceived(@shared.MutationReply)
           #|  Created(String, @shared.MutationReply)
           #|  CommandFailed(@proton_client.ClientFailure)
@@ -764,8 +764,8 @@ fn generated_isomorphic_template_specs() -> Array[TemplateSpec] {
       template_source: (
           #|///|
           #|pub struct Backend {
-          #|  mut next_id : Int
-          #|  mut version : Int
+          #|  mut next_id : Int32
+          #|  mut version : Int32
           #|  todos : Array[@shared.TodoItem]
           #|  listeners : Map[String, @proton.WindowEventEmitter]
           #|}
@@ -815,7 +815,7 @@ fn generated_isomorphic_template_specs() -> Array[TemplateSpec] {
           #|///|
           #|fn Backend::set_completed(
           #|  self : Backend,
-          #|  id : Int,
+          #|  id : Int32,
           #|  completed : Bool,
           #|) -> @shared.MutationReply {
           #|  for index = 0; index < self.todos.length(); index = index + 1 {
@@ -832,7 +832,7 @@ fn generated_isomorphic_template_specs() -> Array[TemplateSpec] {
           #|}
           #|
           #|///|
-          #|fn Backend::delete(self : Backend, id : Int) -> @shared.MutationReply {
+          #|fn Backend::delete(self : Backend, id : Int32) -> @shared.MutationReply {
           #|  for index = 0; index < self.todos.length(); index = index + 1 {
           #|    if self.todos[index].id == id {
           #|      ignore(self.todos.remove(index))
@@ -1133,7 +1133,10 @@ fn generated_isomorphic_template_specs() -> Array[TemplateSpec] {
           #|
           #|///|
           #|test "invalidations coalesce and completed queries stay idle" {
-          #|  let start : Model[String, Int] = update(initial_model("query"), Listening(0))
+          #|  let start : Model[String, Int32] = update(
+          #|    initial_model("query"),
+          #|    Listening(0),
+          #|  )
           #|  let dirty = update(update(start, Invalidated(0)), Invalidated(0))
           #|  assert_eq(dirty.generation, start.generation)
           #|  let next = update(dirty, Completed(start.generation, Ok(1)))
@@ -1201,7 +1204,7 @@ fn generated_isomorphic_template_specs() -> Array[TemplateSpec] {
           #|    delivered.val = received
           #|    () => closed.val += 1
           #|  })
-          #|  let event : @proton_contract.Event[Int] = @proton_contract.event("changed")
+          #|  let event : @proton_contract.Event[Int32] = @proton_contract.event("changed")
           #|  let source : &Invalidation = event
           #|  let subscription = source.subscribe(client, () => notices.val += 1, _ => {
           #|    errors.val += 1
@@ -1265,8 +1268,8 @@ fn generated_isomorphic_template_specs() -> Array[TemplateSpec] {
           #|priv struct Model[I, V] {
           #|  input : I
           #|  previous : (I, V)?
-          #|  generation : Int
-          #|  listener : Int
+          #|  generation : Int32
+          #|  listener : Int32
           #|  listening : Bool
           #|  pending : Bool
           #|  dirty : Bool
@@ -1277,10 +1280,10 @@ fn generated_isomorphic_template_specs() -> Array[TemplateSpec] {
           #|priv enum Msg[I, V] {
           #|  InputChanged(I)
           #|  Refresh
-          #|  Listening(Int)
-          #|  ListenFailed(Int, @proton_client.ClientFailure)
-          #|  Invalidated(Int)
-          #|  Completed(Int, Result[V, @proton_client.ClientFailure])
+          #|  Listening(Int32)
+          #|  ListenFailed(Int32, @proton_client.ClientFailure)
+          #|  Invalidated(Int32)
+          #|  Completed(Int32, Result[V, @proton_client.ClientFailure])
           #|}
           #|
           #|///|
@@ -1452,7 +1455,7 @@ fn generated_isomorphic_template_specs() -> Array[TemplateSpec] {
           #|  command : @proton_contract.Command[I, V],
           #|  initial~ : I,
           #|  invalidated_by? : &Invalidation,
-          #|  client? : @proton_client.Client = @proton_client.desktop,
+          #|  client~ : @proton_client.Client = @proton_client.desktop,
           #|) -> Query[I, V] {
           #|  let (model, emit) = @rabbita.create_state(
           #|    initial_model(initial),

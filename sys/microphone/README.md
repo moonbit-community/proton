@@ -42,7 +42,7 @@ Normalize capture settings before using them to size buffers:
 
 ```mbt
 ///|
-fn chunk_bytes(config : @proton_microphone.CaptureConfig) -> Int {
+fn chunk_bytes(config : @proton_microphone.CaptureConfig) -> Int32 {
   let normalized = config.normalized()
   normalized.recommended_chunk_frames() *
   normalized.channels *

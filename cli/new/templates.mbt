@@ -20,7 +20,7 @@ let default_proton_rabbita_version = "0.4.0"
 let default_rabbita_version = "0.16.4"
 
 ///|
-let default_warren_version = "0.3.3"
+let default_warren_version = "0.4.5"
 
 ///|
 /// Scaffolded backends need this directly: `async fn main` is only available to

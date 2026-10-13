@@ -14,8 +14,8 @@ struct Model {
 enum Msg {
   DraftChanged(String)
   Create
-  SetCompleted(Int, Bool)
-  Delete(Int)
+  SetCompleted(Int32, Bool)
+  Delete(Int32)
   MutationReceived(@shared.MutationReply)
   Created(String, @shared.MutationReply)
   CommandFailed(@proton_client.ClientFailure)

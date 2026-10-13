@@ -41,7 +41,10 @@ test "input changes reject queued old success and failure including ABA inputs" 
 
 ///|
 test "invalidations coalesce and completed queries stay idle" {
-  let start : Model[String, Int] = update(initial_model("query"), Listening(0))
+  let start : Model[String, Int32] = update(
+    initial_model("query"),
+    Listening(0),
+  )
   let dirty = update(update(start, Invalidated(0)), Invalidated(0))
   assert_eq(dirty.generation, start.generation)
   let next = update(dirty, Completed(start.generation, Ok(1)))
@@ -109,7 +112,7 @@ test "typed invalidations decode their payload and close independently" {
     delivered.val = received
     () => closed.val += 1
   })
-  let event : @proton_contract.Event[Int] = @proton_contract.event("changed")
+  let event : @proton_contract.Event[Int32] = @proton_contract.event("changed")
   let source : &Invalidation = event
   let subscription = source.subscribe(client, () => notices.val += 1, _ => {
     errors.val += 1

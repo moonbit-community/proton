@@ -71,7 +71,7 @@ pub fn[Payload : @json.FromJson] subscribe(
   }
   let payload = EventSubscription(route~, client~, callbacks~, ready~, invalid~)
   @sub.custom_sub(
-    ["proton:event", route, key, retry.to_string()].to_json().stringify(),
+    Json(["proton:event", route, key, retry.to_string()]).stringify(),
     @sub.Local,
     payload,
     @sub.SubLoader(load_event_subscription),
