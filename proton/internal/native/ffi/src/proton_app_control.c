@@ -688,6 +688,64 @@ int32_t proton_app_is_hidden(int32_t *out_hidden) {
       "app is_hidden is only available on macOS");
 }
 
+/* Badge counts match Electron's platform policy: macOS applies the count and
+   Windows and Linux report that nothing was applied. They return success
+   instead of an error so the application sees Electron's Boolean result. */
+int32_t proton_app_set_badge_count(int32_t count, int32_t *out_applied) {
+  if (count < 0) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "application badge count must be non-negative");
+  }
+  if (out_applied == NULL) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "out_applied is required");
+  }
+  *out_applied = 0;
+  return proton_set_error(PROTON_OK, NULL);
+}
+
+int32_t proton_app_get_badge_count(int32_t *out_count) {
+  if (out_count == NULL) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "out_count is required");
+  }
+  *out_count = 0;
+  return proton_set_error(PROTON_OK, NULL);
+}
+
+int32_t proton_app_dock_bounce(int32_t bounce_type, int32_t *out_request_id) {
+  (void)bounce_type;
+  if (out_request_id == NULL) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "out_request_id is required");
+  }
+  *out_request_id = -1;
+  return proton_app_control_unsupported(
+      "dock bounce is only available on macOS");
+}
+
+int32_t proton_app_dock_cancel_bounce(int32_t request_id) {
+  (void)request_id;
+  return proton_app_control_unsupported(
+      "dock cancel_bounce is only available on macOS");
+}
+
+int32_t proton_app_dock_set_badge(const char *badge_text) {
+  (void)badge_text;
+  return proton_app_control_unsupported(
+      "dock set_badge is only available on macOS");
+}
+
+int32_t proton_app_dock_get_badge(char *buffer,
+                                  int32_t buffer_len,
+                                  int32_t *out_required_len) {
+  (void)buffer;
+  (void)buffer_len;
+  (void)out_required_len;
+  return proton_app_control_unsupported(
+      "dock badge reading is only available on macOS");
+}
+
 #endif
 
 /* Jump list support. The builder mirrors the menu configuration builder: it

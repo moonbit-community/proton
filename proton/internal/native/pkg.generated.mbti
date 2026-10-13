@@ -9,6 +9,16 @@ import {
 }
 
 // Values
+pub fn app_badge_count() -> Int raise NativeError
+
+pub fn app_dock_badge() -> String raise NativeError
+
+pub fn app_dock_bounce(Int) -> Int raise NativeError
+
+pub fn app_dock_cancel_bounce(Int) -> Unit raise NativeError
+
+pub fn app_dock_set_badge(String) -> Unit raise NativeError
+
 pub fn app_focus(Bool) -> Unit raise NativeError
 
 pub fn app_hide() -> Unit raise NativeError
@@ -16,6 +26,8 @@ pub fn app_hide() -> Unit raise NativeError
 pub fn app_is_active() -> Bool raise NativeError
 
 pub fn app_is_hidden() -> Bool raise NativeError
+
+pub fn app_set_badge_count(Int) -> Bool raise NativeError
 
 pub fn app_show() -> Unit raise NativeError
 

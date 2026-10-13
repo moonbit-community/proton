@@ -141,6 +141,58 @@ pub fn app_is_hidden() -> Bool raise NativeError {
 }
 
 ///|
+/// Sets the application badge count, mirroring Electron's `app.setBadgeCount`.
+/// macOS shows the count on the Dock tile; other platforms apply no badge and
+/// report `false` instead of raising, matching Electron's Boolean result.
+pub fn app_set_badge_count(count : Int) -> Bool raise NativeError {
+  if count < 0 {
+    raise invalid_argument("application badge count must be non-negative")
+  }
+  let applied = Ref(0)
+  check_status(@native_ffi.proton_app_set_badge_count_ffi(count, applied))
+  applied.val != 0
+}
+
+///|
+/// Reads back the badge count set through `app_set_badge_count`. Platforms
+/// without badge support report zero, as Electron's `app.getBadgeCount` does.
+pub fn app_badge_count() -> Int raise NativeError {
+  let count = Ref(0)
+  check_status(@native_ffi.proton_app_get_badge_count_ffi(count))
+  count.val
+}
+
+///|
+/// Requests a bouncing Dock tile, mirroring Electron's `app.dock.bounce`.
+/// `bounce_type` is `PROTON_DOCK_BOUNCE_INFORMATIONAL` or
+/// `PROTON_DOCK_BOUNCE_CRITICAL`; the returned id cancels the request.
+pub fn app_dock_bounce(bounce_type : Int) -> Int raise NativeError {
+  let request_id = Ref(0)
+  check_status(@native_ffi.proton_app_dock_bounce_ffi(bounce_type, request_id))
+  request_id.val
+}
+
+///|
+/// Cancels a bouncing Dock tile requested through `app_dock_bounce`.
+pub fn app_dock_cancel_bounce(request_id : Int) -> Unit raise NativeError {
+  check_status(@native_ffi.proton_app_dock_cancel_bounce_ffi(request_id))
+}
+
+///|
+/// Sets the Dock badge text, mirroring Electron's `app.dock.setBadge`.
+pub fn app_dock_set_badge(text : String) -> Unit raise NativeError {
+  check_status(@native_ffi.proton_app_dock_set_badge_ffi(@ffi.to_cstr(text)))
+}
+
+///|
+/// Reads back the Dock badge text set through `app_dock_set_badge`.
+pub fn app_dock_badge() -> String raise NativeError {
+  require_native_text("dock badge", (buffer, buffer_len, required) => {
+    @native_ffi.proton_app_dock_get_badge_ffi(buffer, buffer_len, required)
+  })
+}
+
+///|
 /// Builds the native jump list, reporting the first failing status. The
 /// builder owns copies of every string, so it is released once the list was
 /// applied.

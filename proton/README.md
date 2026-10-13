@@ -280,6 +280,24 @@ the typed `AppControlError::UnsupportedPlatform` instead; `is_hidden` is the
 readback for `hide` and `show`. Focus, hide, and show require the main thread,
 which is where the facade and its hooks run.
 
+### Dock and badge
+
+The Dock-attention group maps Electron's macOS Dock and application badge APIs:
+
+| Proton | Electron | Behavior |
+| --- | --- | --- |
+| `set_badge_count(count)` | `app.setBadgeCount(count)` | macOS shows the count on the Dock tile and returns `true`; Windows and Linux apply no badge and return `false`, matching Electron's Boolean result |
+| `badge_count()` | `app.getBadgeCount()` | Reads back the last set count; platforms without badge support report zero |
+| `dock_bounce(kind=...)` | `app.dock.bounce([type])` _macOS_ | Requests a bouncing Dock tile, `Informational` once, `Critical` repeatedly; returns the request id for cancellation |
+| `dock_cancel_bounce(request_id)` | `app.dock.cancelBounce(id)` _macOS_ | Cancels a bounce requested with `dock_bounce` |
+| `dock_set_badge(text)` | `app.dock.setBadge(text)` _macOS_ | Sets the Dock badge text; an empty string clears it |
+| `dock_badge()` | `app.dock.getBadge()` _macOS_ | Reads back the Dock badge text set with `dock_set_badge` |
+
+`set_badge_count` never raises for an unsupported platform: it reports `false`
+like Electron. The `dock_*` group raises `AppControlError::UnsupportedPlatform`
+outside macOS. `badge_count` reads Proton's own cache, because AppKit exposes no
+readback for the Dock badge label, exactly as Electron's implementation does.
+
 `@proton.is_ready()` corresponds to Electron's `app.isReady()`. It is `false`
 before `App::run`, while startup hooks run, and in the per-window `on_ready`
 hooks; it becomes `true` once the startup hooks completed and the initial

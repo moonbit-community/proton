@@ -379,7 +379,12 @@ pub struct ApplicationContext {
   url_schemes : Array[String]
   // private fields
 }
+pub fn ApplicationContext::badge_count(Self) -> Int raise AppControlError
 pub async fn ApplicationContext::check_for_update(Self) -> UpdateCheck
+pub fn ApplicationContext::dock_badge(Self) -> String raise AppControlError
+pub fn ApplicationContext::dock_bounce(Self, kind? : DockBounceType) -> Int raise AppControlError
+pub fn ApplicationContext::dock_cancel_bounce(Self, Int) -> Unit raise AppControlError
+pub fn ApplicationContext::dock_set_badge(Self, String) -> Unit raise AppControlError
 pub fn ApplicationContext::exit(Self, exit_code? : Int) -> Unit
 pub fn ApplicationContext::focus(Self, steal? : Bool) -> Unit raise AppControlError
 pub fn ApplicationContext::has_single_instance_lock(Self) -> Bool
@@ -396,6 +401,7 @@ pub fn ApplicationContext::release_single_instance_lock(Self) -> Unit raise AppC
 pub fn ApplicationContext::remove_default_protocol_client(Self, String, executable? : String, arguments? : Array[String]) -> Bool raise AppControlError
 pub fn ApplicationContext::session(Self) -> SessionHandle
 pub fn ApplicationContext::set_as_default_protocol_client(Self, String, executable? : String, arguments? : Array[String]) -> Bool raise AppControlError
+pub fn ApplicationContext::set_badge_count(Self, Int) -> Bool raise AppControlError
 pub fn ApplicationContext::show(Self) -> Unit raise AppControlError
 pub fn ApplicationContext::task_group(Self) -> @async.TaskGroup[Unit]
 pub fn ApplicationContext::task_metrics(Self) -> Array[AppTaskMetric] raise AppControlError
@@ -494,6 +500,14 @@ pub(all) enum CookieSameSite {
 pub fn CookieSameSite::equal(Self, Self) -> Bool
 pub fn CookieSameSite::not_equal(Self, Self) -> Bool
 pub fn CookieSameSite::to_repr(Self) -> @debug.Repr
+
+pub(all) enum DockBounceType {
+  Informational
+  Critical
+} derive(Eq, @debug.Debug)
+pub fn DockBounceType::equal(Self, Self) -> Bool
+pub fn DockBounceType::not_equal(Self, Self) -> Bool
+pub fn DockBounceType::to_repr(Self) -> @debug.Repr
 
 pub(all) enum DownloadDecision {
   Deny
