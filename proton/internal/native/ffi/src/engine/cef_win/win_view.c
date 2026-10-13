@@ -683,21 +683,6 @@ int32_t proton_engine_view_eval(proton_engine_view_t *view,
   return PROTON_OK;
 }
 
-int32_t proton_engine_view_browser_command(proton_engine_view_t *view,
-                                                const char *command,
-                                                int32_t download_id,
-                                                char *error,
-                                                size_t error_len) {
-  if (view == NULL || view->closed || view->browser_session == NULL ||
-      proton_engine_view_browser(view) == NULL) {
-    proton_engine_set_message(error, error_len, "browser is not initialized");
-    return PROTON_ERR_NOT_INITIALIZED;
-  }
-  return proton_browser_session_command(view->browser_session,
-                                        proton_engine_view_browser(view), command,
-                                        download_id, error, error_len);
-}
-
 int32_t proton_engine_view_get_browser_focus_state(
     proton_engine_view_t *view, int32_t *out_focused,
     char *error, size_t error_len) {

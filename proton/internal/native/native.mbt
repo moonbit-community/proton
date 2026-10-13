@@ -2544,25 +2544,6 @@ pub fn Window::remove_page_css(
 }
 
 ///|
-/// Sends a browser control command to the main page: `back`, `forward`,
-/// `reload`, `reload_ignore_cache`, `stop`, `focus`, `undo`, `redo`, `cut`,
-/// `copy`, `paste`, `paste_and_match_style`, `delete`, `select_all`,
-/// `open_devtools`, `close_devtools`, `toggle_devtools`, or `cancel_download`.
-pub fn Window::browser_command(
-  self : Window,
-  command : String,
-  download_id? : Int32,
-) -> Unit raise NativeError {
-  check_status(
-    @native_ffi.proton_window_browser_command_ffi(
-      self.live_handle(),
-      @ffi.to_cstr(command),
-      download_id.unwrap_or(-1),
-    ),
-  )
-}
-
-///|
 /// Returns whether the main browser currently owns web-content focus.
 pub fn Window::browser_is_focused(self : Window) -> Bool raise NativeError {
   let focused : Ref[Int32] = { val: 0, }
@@ -3712,25 +3693,6 @@ pub fn View::remove_page_css(
 }
 
 ///|
-/// Sends a browser control command to the view: `back`, `forward`, `reload`,
-/// `reload_ignore_cache`, `stop`, `focus`, `undo`, `redo`, `cut`, `copy`,
-/// `paste`, `paste_and_match_style`, `delete`, `select_all`, `open_devtools`,
-/// `close_devtools`, or `toggle_devtools`.
-pub fn View::browser_command(
-  self : View,
-  command : String,
-  download_id? : Int32,
-) -> Unit raise NativeError {
-  check_status(
-    @native_ffi.proton_view_browser_command_ffi(
-      self.live_handle(),
-      @ffi.to_cstr(command),
-      download_id.unwrap_or(-1),
-    ),
-  )
-}
-
-///|
 /// Returns whether this view currently owns web-content focus.
 pub fn View::browser_is_focused(self : View) -> Bool raise NativeError {
   let focused : Ref[Int32] = { val: 0, }
@@ -3920,4 +3882,251 @@ fn native_event_view_id(event : @native_ffi.EventHandle) -> Int64? {
 pub fn AppInstance::prepare_update_handoff(self : AppInstance) -> Bool {
   !self.destroyed &&
   @native_ffi.proton_app_instance_prepare_update_ffi(self.handle) != 0
+}
+
+///|
+/// Navigates to the previous page.
+pub fn Contents::back(self : Contents) -> Unit raise NativeError {
+  check_status(
+    match self {
+      PrimaryPage(window) =>
+        @native_ffi.proton_window_back_ffi(window.live_handle(), 0)
+      ChildView(view) => @native_ffi.proton_view_back_ffi(view.live_handle(), 1)
+    },
+  )
+}
+
+///|
+/// Navigates to the next page.
+pub fn Contents::forward(self : Contents) -> Unit raise NativeError {
+  check_status(
+    match self {
+      PrimaryPage(window) =>
+        @native_ffi.proton_window_forward_ffi(window.live_handle(), 0)
+      ChildView(view) =>
+        @native_ffi.proton_view_forward_ffi(view.live_handle(), 1)
+    },
+  )
+}
+
+///|
+/// Reloads the current page.
+pub fn Contents::reload(self : Contents) -> Unit raise NativeError {
+  check_status(
+    match self {
+      PrimaryPage(window) =>
+        @native_ffi.proton_window_reload_ffi(window.live_handle(), 0)
+      ChildView(view) =>
+        @native_ffi.proton_view_reload_ffi(view.live_handle(), 1)
+    },
+  )
+}
+
+///|
+/// Reloads the current page without using cached resources.
+pub fn Contents::reload_ignore_cache(self : Contents) -> Unit raise NativeError {
+  check_status(
+    match self {
+      PrimaryPage(window) =>
+        @native_ffi.proton_window_reload_ignore_cache_ffi(
+          window.live_handle(),
+          0,
+        )
+      ChildView(view) =>
+        @native_ffi.proton_view_reload_ignore_cache_ffi(view.live_handle(), 1)
+    },
+  )
+}
+
+///|
+/// Stops loading the current page.
+pub fn Contents::stop(self : Contents) -> Unit raise NativeError {
+  check_status(
+    match self {
+      PrimaryPage(window) =>
+        @native_ffi.proton_window_stop_ffi(window.live_handle(), 0)
+      ChildView(view) => @native_ffi.proton_view_stop_ffi(view.live_handle(), 1)
+    },
+  )
+}
+
+///|
+/// Focuses the browser content.
+pub fn Contents::focus(self : Contents) -> Unit raise NativeError {
+  check_status(
+    match self {
+      PrimaryPage(window) =>
+        @native_ffi.proton_window_contents_focus_ffi(window.live_handle(), 0)
+      ChildView(view) =>
+        @native_ffi.proton_view_focus_ffi(view.live_handle(), 1)
+    },
+  )
+}
+
+///|
+/// Undoes the last edit in the focused frame.
+pub fn Contents::undo(self : Contents) -> Unit raise NativeError {
+  check_status(
+    match self {
+      PrimaryPage(window) =>
+        @native_ffi.proton_window_undo_ffi(window.live_handle(), 0)
+      ChildView(view) => @native_ffi.proton_view_undo_ffi(view.live_handle(), 1)
+    },
+  )
+}
+
+///|
+/// Redoes the last edit in the focused frame.
+pub fn Contents::redo(self : Contents) -> Unit raise NativeError {
+  check_status(
+    match self {
+      PrimaryPage(window) =>
+        @native_ffi.proton_window_redo_ffi(window.live_handle(), 0)
+      ChildView(view) => @native_ffi.proton_view_redo_ffi(view.live_handle(), 1)
+    },
+  )
+}
+
+///|
+/// Cuts the selection in the focused frame.
+pub fn Contents::cut(self : Contents) -> Unit raise NativeError {
+  check_status(
+    match self {
+      PrimaryPage(window) =>
+        @native_ffi.proton_window_cut_ffi(window.live_handle(), 0)
+      ChildView(view) => @native_ffi.proton_view_cut_ffi(view.live_handle(), 1)
+    },
+  )
+}
+
+///|
+/// Copies the selection in the focused frame.
+pub fn Contents::copy(self : Contents) -> Unit raise NativeError {
+  check_status(
+    match self {
+      PrimaryPage(window) =>
+        @native_ffi.proton_window_copy_ffi(window.live_handle(), 0)
+      ChildView(view) => @native_ffi.proton_view_copy_ffi(view.live_handle(), 1)
+    },
+  )
+}
+
+///|
+/// Pastes into the focused frame.
+pub fn Contents::paste(self : Contents) -> Unit raise NativeError {
+  check_status(
+    match self {
+      PrimaryPage(window) =>
+        @native_ffi.proton_window_paste_ffi(window.live_handle(), 0)
+      ChildView(view) =>
+        @native_ffi.proton_view_paste_ffi(view.live_handle(), 1)
+    },
+  )
+}
+
+///|
+/// Pastes into the focused frame using its text style.
+pub fn Contents::paste_and_match_style(
+  self : Contents,
+) -> Unit raise NativeError {
+  check_status(
+    match self {
+      PrimaryPage(window) =>
+        @native_ffi.proton_window_paste_and_match_style_ffi(
+          window.live_handle(),
+          0,
+        )
+      ChildView(view) =>
+        @native_ffi.proton_view_paste_and_match_style_ffi(view.live_handle(), 1)
+    },
+  )
+}
+
+///|
+/// Deletes the selection in the focused frame.
+pub fn Contents::delete(self : Contents) -> Unit raise NativeError {
+  check_status(
+    match self {
+      PrimaryPage(window) =>
+        @native_ffi.proton_window_delete_ffi(window.live_handle(), 0)
+      ChildView(view) =>
+        @native_ffi.proton_view_delete_ffi(view.live_handle(), 1)
+    },
+  )
+}
+
+///|
+/// Selects all content in the focused frame.
+pub fn Contents::select_all(self : Contents) -> Unit raise NativeError {
+  check_status(
+    match self {
+      PrimaryPage(window) =>
+        @native_ffi.proton_window_select_all_ffi(window.live_handle(), 0)
+      ChildView(view) =>
+        @native_ffi.proton_view_select_all_ffi(view.live_handle(), 1)
+    },
+  )
+}
+
+///|
+/// Opens DevTools if browser policy permits it.
+pub fn Contents::open_devtools(self : Contents) -> Unit raise NativeError {
+  check_status(
+    match self {
+      PrimaryPage(window) =>
+        @native_ffi.proton_window_open_devtools_ffi(window.live_handle(), 0)
+      ChildView(view) =>
+        @native_ffi.proton_view_open_devtools_ffi(view.live_handle(), 1)
+    },
+  )
+}
+
+///|
+/// Closes DevTools if browser policy permits it.
+pub fn Contents::close_devtools(self : Contents) -> Unit raise NativeError {
+  check_status(
+    match self {
+      PrimaryPage(window) =>
+        @native_ffi.proton_window_close_devtools_ffi(window.live_handle(), 0)
+      ChildView(view) =>
+        @native_ffi.proton_view_close_devtools_ffi(view.live_handle(), 1)
+    },
+  )
+}
+
+///|
+/// Toggles DevTools if browser policy permits it.
+pub fn Contents::toggle_devtools(self : Contents) -> Unit raise NativeError {
+  check_status(
+    match self {
+      PrimaryPage(window) =>
+        @native_ffi.proton_window_toggle_devtools_ffi(window.live_handle(), 0)
+      ChildView(view) =>
+        @native_ffi.proton_view_toggle_devtools_ffi(view.live_handle(), 1)
+    },
+  )
+}
+
+///|
+/// Cancels the active download with the specified id.
+pub fn Contents::cancel_download(
+  self : Contents,
+  download_id : Int32,
+) -> Unit raise NativeError {
+  check_status(
+    match self {
+      PrimaryPage(window) =>
+        @native_ffi.proton_window_cancel_download_ffi(
+          window.live_handle(),
+          0,
+          download_id,
+        )
+      ChildView(view) =>
+        @native_ffi.proton_view_cancel_download_ffi(
+          view.live_handle(),
+          1,
+          download_id,
+        )
+    },
+  )
 }

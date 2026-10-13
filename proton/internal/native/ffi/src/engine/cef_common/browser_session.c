@@ -1281,112 +1281,95 @@ int32_t proton_browser_session_respond(
   return status;
 }
 
-static int32_t proton_browser_execute_edit_command(
-    cef_browser_t *browser, const char *command, char *error,
-    size_t error_len) {
-  cef_frame_t *frame = browser->get_focused_frame(browser);
-  if (frame == NULL) {
-    proton_browser_set_message(error, error_len,
-                               "focused browser frame is unavailable");
+#define PROTON_BROWSER_NAVIGATION(name, method) \
+  int32_t proton_browser_##name(proton_browser_session_t *session, \
+      cef_browser_t *browser, char *error, size_t error_len) { \
+    (void)session; (void)error; (void)error_len; \
+    browser->method(browser); \
+    return PROTON_OK; \
+  }
+
+PROTON_BROWSER_NAVIGATION(back, go_back)
+PROTON_BROWSER_NAVIGATION(forward, go_forward)
+PROTON_BROWSER_NAVIGATION(reload, reload)
+PROTON_BROWSER_NAVIGATION(reload_ignore_cache, reload_ignore_cache)
+PROTON_BROWSER_NAVIGATION(stop, stop_load)
+#undef PROTON_BROWSER_NAVIGATION
+
+int32_t proton_browser_focus(proton_browser_session_t *session,
+    cef_browser_t *browser, char *error, size_t error_len) {
+  (void)session;
+  cef_browser_host_t *host = browser->get_host(browser);
+  if (host == NULL) {
+    proton_browser_set_message(error, error_len, "browser host is unavailable");
     return PROTON_ERR_ENGINE;
   }
-  if (strcmp(command, "undo") == 0) {
-    frame->undo(frame);
-  } else if (strcmp(command, "redo") == 0) {
-    frame->redo(frame);
-  } else if (strcmp(command, "cut") == 0) {
-    frame->cut(frame);
-  } else if (strcmp(command, "copy") == 0) {
-    frame->copy(frame);
-  } else if (strcmp(command, "paste") == 0) {
-    frame->paste(frame);
-  } else if (strcmp(command, "paste_and_match_style") == 0) {
-    frame->paste_and_match_style(frame);
-  } else if (strcmp(command, "delete") == 0) {
-    frame->del(frame);
-  } else if (strcmp(command, "select_all") == 0) {
-    frame->select_all(frame);
-  } else {
-    frame->base.release((cef_base_ref_counted_t *)frame);
-    proton_browser_set_message(error, error_len,
-                               "unknown browser editing command");
-    return PROTON_ERR_INVALID_ARGUMENT;
-  }
-  frame->base.release((cef_base_ref_counted_t *)frame);
+  host->set_focus(host, 1);
+  host->base.release((cef_base_ref_counted_t *)host);
   return PROTON_OK;
 }
 
-int32_t proton_browser_session_command(
-    proton_browser_session_t *session, cef_browser_t *browser,
-    const char *command, int32_t download_id, char *error, size_t error_len) {
-  if (session == NULL || browser == NULL || command == NULL ||
-      command[0] == '\0' || download_id < -1) {
+#define PROTON_BROWSER_EDIT(name, method) \
+  int32_t proton_browser_##name(proton_browser_session_t *session, \
+      cef_browser_t *browser, char *error, size_t error_len) { \
+    (void)session; \
+    cef_frame_t *frame = browser->get_focused_frame(browser); \
+    if (frame == NULL) { \
+      proton_browser_set_message(error, error_len, \
+                                  "focused browser frame is unavailable"); \
+      return PROTON_ERR_ENGINE; \
+    } \
+    frame->method(frame); \
+    frame->base.release((cef_base_ref_counted_t *)frame); \
+    return PROTON_OK; \
+  }
+
+PROTON_BROWSER_EDIT(undo, undo)
+PROTON_BROWSER_EDIT(redo, redo)
+PROTON_BROWSER_EDIT(cut, cut)
+PROTON_BROWSER_EDIT(copy, copy)
+PROTON_BROWSER_EDIT(paste, paste)
+PROTON_BROWSER_EDIT(paste_and_match_style, paste_and_match_style)
+PROTON_BROWSER_EDIT(delete, del)
+PROTON_BROWSER_EDIT(select_all, select_all)
+#undef PROTON_BROWSER_EDIT
+
+#define PROTON_BROWSER_DEVTOOLS(name) \
+  int32_t proton_browser_##name(proton_browser_session_t *session, \
+      cef_browser_t *browser, char *error, size_t error_len) { \
+    (void)browser; \
+    if (!session->policy.devtools) { \
+      proton_browser_set_message(error, error_len, \
+                                  "DevTools are disabled by browser policy"); \
+      return PROTON_ERR_UNSUPPORTED; \
+    } \
+    return proton_browser_lifecycle_##name(session->lifecycle, error, error_len); \
+  }
+
+PROTON_BROWSER_DEVTOOLS(open_devtools)
+PROTON_BROWSER_DEVTOOLS(close_devtools)
+PROTON_BROWSER_DEVTOOLS(toggle_devtools)
+#undef PROTON_BROWSER_DEVTOOLS
+
+int32_t proton_browser_cancel_download(proton_browser_session_t *session,
+    int32_t download_id, char *error, size_t error_len) {
+  if (download_id < 0) {
     proton_browser_set_message(error, error_len,
-                               "browser session, browser, and command are required");
+                               "cancel_download requires a download id");
     return PROTON_ERR_INVALID_ARGUMENT;
   }
-  if (strcmp(command, "back") == 0) {
-    browser->go_back(browser);
-  } else if (strcmp(command, "forward") == 0) {
-    browser->go_forward(browser);
-  } else if (strcmp(command, "reload") == 0) {
-    browser->reload(browser);
-  } else if (strcmp(command, "reload_ignore_cache") == 0) {
-    browser->reload_ignore_cache(browser);
-  } else if (strcmp(command, "stop") == 0) {
-    browser->stop_load(browser);
-  } else if (strcmp(command, "cancel_download") == 0) {
-    if (download_id < 0) {
-      proton_browser_set_message(error, error_len,
-                                 "cancel_download requires a download id");
-      return PROTON_ERR_INVALID_ARGUMENT;
-    }
-    proton_browser_download_t *download =
-        proton_browser_download_find(session, (uint32_t)download_id);
-    if (download == NULL) {
-      proton_browser_set_message(error, error_len,
-                                 "download is no longer active");
-      return PROTON_ERR_STALE_BROWSER_REQUEST;
-    }
-    proton_browser_download_request_cancel(download);
-    proton_browser_pending_t *pending =
-        proton_browser_pending_take_download(
-            session, (uint32_t)download_id);
-    proton_browser_pending_release(pending);
-  } else if (strcmp(command, "focus") == 0) {
-    cef_browser_host_t *host = browser->get_host(browser);
-    if (host == NULL) {
-      proton_browser_set_message(error, error_len,
-                                 "browser host is unavailable");
-      return PROTON_ERR_ENGINE;
-    }
-    host->set_focus(host, 1);
-    host->base.release((cef_base_ref_counted_t *)host);
-  } else if (strcmp(command, "undo") == 0 ||
-             strcmp(command, "redo") == 0 ||
-             strcmp(command, "cut") == 0 ||
-             strcmp(command, "copy") == 0 ||
-             strcmp(command, "paste") == 0 ||
-             strcmp(command, "paste_and_match_style") == 0 ||
-             strcmp(command, "delete") == 0 ||
-             strcmp(command, "select_all") == 0) {
-    return proton_browser_execute_edit_command(browser, command, error,
-                                               error_len);
-  } else if (strcmp(command, "open_devtools") == 0 ||
-             strcmp(command, "close_devtools") == 0 ||
-             strcmp(command, "toggle_devtools") == 0) {
-    if (!session->policy.devtools) {
-      proton_browser_set_message(error, error_len,
-                                 "DevTools are disabled by browser policy");
-      return PROTON_ERR_UNSUPPORTED;
-    }
-    return proton_browser_lifecycle_devtools_command(
-        session->lifecycle, command, error, error_len);
-  } else {
+  proton_browser_download_t *download =
+      proton_browser_download_find(session, (uint32_t)download_id);
+  if (download == NULL) {
     proton_browser_set_message(error, error_len,
-                               "unknown browser command");
-    return PROTON_ERR_INVALID_ARGUMENT;
+                               "download is no longer active");
+    return PROTON_ERR_STALE_BROWSER_REQUEST;
   }
+  proton_browser_download_request_cancel(download);
+  proton_browser_pending_t *pending =
+      proton_browser_pending_take_download(
+          session, (uint32_t)download_id);
+  proton_browser_pending_release(pending);
   return PROTON_OK;
 }
 

@@ -78,9 +78,42 @@ int32_t proton_browser_session_is_loading(
 int32_t proton_browser_session_respond(
     proton_browser_session_t *session, uint64_t request_id,
     const char *action, const char *path, char *error, size_t error_len);
-int32_t proton_browser_session_command(
-    proton_browser_session_t *session, cef_browser_t *browser,
-    const char *command, int32_t download_id, char *error, size_t error_len);
+int32_t proton_browser_back(proton_browser_session_t *session,
+    cef_browser_t *browser, char *error, size_t error_len);
+int32_t proton_browser_forward(proton_browser_session_t *session,
+    cef_browser_t *browser, char *error, size_t error_len);
+int32_t proton_browser_reload(proton_browser_session_t *session,
+    cef_browser_t *browser, char *error, size_t error_len);
+int32_t proton_browser_reload_ignore_cache(proton_browser_session_t *session,
+    cef_browser_t *browser, char *error, size_t error_len);
+int32_t proton_browser_stop(proton_browser_session_t *session,
+    cef_browser_t *browser, char *error, size_t error_len);
+int32_t proton_browser_focus(proton_browser_session_t *session,
+    cef_browser_t *browser, char *error, size_t error_len);
+int32_t proton_browser_undo(proton_browser_session_t *session,
+    cef_browser_t *browser, char *error, size_t error_len);
+int32_t proton_browser_redo(proton_browser_session_t *session,
+    cef_browser_t *browser, char *error, size_t error_len);
+int32_t proton_browser_cut(proton_browser_session_t *session,
+    cef_browser_t *browser, char *error, size_t error_len);
+int32_t proton_browser_copy(proton_browser_session_t *session,
+    cef_browser_t *browser, char *error, size_t error_len);
+int32_t proton_browser_paste(proton_browser_session_t *session,
+    cef_browser_t *browser, char *error, size_t error_len);
+int32_t proton_browser_paste_and_match_style(proton_browser_session_t *session,
+    cef_browser_t *browser, char *error, size_t error_len);
+int32_t proton_browser_delete(proton_browser_session_t *session,
+    cef_browser_t *browser, char *error, size_t error_len);
+int32_t proton_browser_select_all(proton_browser_session_t *session,
+    cef_browser_t *browser, char *error, size_t error_len);
+int32_t proton_browser_open_devtools(proton_browser_session_t *session,
+    cef_browser_t *browser, char *error, size_t error_len);
+int32_t proton_browser_close_devtools(proton_browser_session_t *session,
+    cef_browser_t *browser, char *error, size_t error_len);
+int32_t proton_browser_toggle_devtools(proton_browser_session_t *session,
+    cef_browser_t *browser, char *error, size_t error_len);
+int32_t proton_browser_cancel_download(proton_browser_session_t *session,
+    int32_t download_id, char *error, size_t error_len);
 /* Borrow browser for the call; each operation owns and releases its main frame.
    Callers retain host validation, platform wakeups and autorelease pools. */
 int32_t proton_browser_load_url(

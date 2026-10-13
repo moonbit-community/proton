@@ -351,7 +351,25 @@ pub(all) enum Contents {
   PrimaryPage(Window)
   ChildView(View)
 }
+pub fn Contents::back(Self) -> Unit raise NativeError
+pub fn Contents::cancel_download(Self, Int) -> Unit raise NativeError
+pub fn Contents::close_devtools(Self) -> Unit raise NativeError
+pub fn Contents::copy(Self) -> Unit raise NativeError
+pub fn Contents::cut(Self) -> Unit raise NativeError
+pub fn Contents::delete(Self) -> Unit raise NativeError
+pub fn Contents::focus(Self) -> Unit raise NativeError
+pub fn Contents::forward(Self) -> Unit raise NativeError
+pub fn Contents::open_devtools(Self) -> Unit raise NativeError
+pub fn Contents::paste(Self) -> Unit raise NativeError
+pub fn Contents::paste_and_match_style(Self) -> Unit raise NativeError
 pub fn Contents::print_to_pdf(Self, String, PdfPrintSettings) -> Int raise NativeError
+pub fn Contents::redo(Self) -> Unit raise NativeError
+pub fn Contents::reload(Self) -> Unit raise NativeError
+pub fn Contents::reload_ignore_cache(Self) -> Unit raise NativeError
+pub fn Contents::select_all(Self) -> Unit raise NativeError
+pub fn Contents::stop(Self) -> Unit raise NativeError
+pub fn Contents::toggle_devtools(Self) -> Unit raise NativeError
+pub fn Contents::undo(Self) -> Unit raise NativeError
 
 pub(all) enum CookieSameSite {
   Unspecified
@@ -881,7 +899,6 @@ pub fn UpdateStage::write(Self, Bytes) -> Unit raise NativeError
 
 type View
 pub fn View::View(Window, ViewConfig) -> Self raise NativeError
-pub fn View::browser_command(Self, String, download_id? : Int) -> Unit raise NativeError
 pub fn View::browser_is_focused(Self) -> Bool raise NativeError
 pub fn View::browser_state(Self) -> BrowserState raise NativeError
 pub fn View::destroy(Self) -> Unit raise NativeError
@@ -929,7 +946,6 @@ type Window
 pub fn Window::Window(Runtime, config? : WindowConfig) -> Self raise NativeError
 pub fn Window::as_ref(Self) -> WindowRef
 pub fn Window::bridge_lifecycle_state(Self) -> BridgeLifecycleState? raise NativeError
-pub fn Window::browser_command(Self, String, download_id? : Int) -> Unit raise NativeError
 pub fn Window::browser_is_focused(Self) -> Bool raise NativeError
 pub fn Window::browser_state(Self) -> BrowserState raise NativeError
 pub fn Window::button_position(Self) -> (Int, Int)? raise NativeError

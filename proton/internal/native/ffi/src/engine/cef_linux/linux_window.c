@@ -1927,17 +1927,57 @@ int32_t proton_engine_window_eval(proton_engine_window_t *window,
       error, error_len);
 }
 
-int32_t proton_engine_window_browser_command(
-    proton_engine_window_t *window, const char *command, int32_t download_id,
+#define PROTON_CONTENTS_BROWSER_OPERATION(name) \
+  int32_t proton_engine_contents_##name( \
+      void *target, int32_t is_view, char *error, size_t error_len) { \
+    proton_engine_window_t *window = is_view ? NULL : target; \
+    proton_engine_view_t *view = is_view ? target : NULL; \
+    cef_browser_t *browser = is_view ? proton_engine_view_browser(view) \
+        : proton_engine_window_browser(window); \
+    proton_browser_session_t *session = is_view \
+        ? (view == NULL ? NULL : view->browser_session) \
+        : (window == NULL ? NULL : window->browser_session); \
+    if (browser == NULL || session == NULL || (is_view && view->closed)) { \
+      proton_engine_set_message(error, error_len, "browser is not initialized"); \
+      return PROTON_ERR_NOT_INITIALIZED; \
+    } \
+    return proton_browser_##name(session, browser, error, error_len); \
+  }
+
+PROTON_CONTENTS_BROWSER_OPERATION(back)
+PROTON_CONTENTS_BROWSER_OPERATION(forward)
+PROTON_CONTENTS_BROWSER_OPERATION(reload)
+PROTON_CONTENTS_BROWSER_OPERATION(reload_ignore_cache)
+PROTON_CONTENTS_BROWSER_OPERATION(stop)
+PROTON_CONTENTS_BROWSER_OPERATION(focus)
+PROTON_CONTENTS_BROWSER_OPERATION(undo)
+PROTON_CONTENTS_BROWSER_OPERATION(redo)
+PROTON_CONTENTS_BROWSER_OPERATION(cut)
+PROTON_CONTENTS_BROWSER_OPERATION(copy)
+PROTON_CONTENTS_BROWSER_OPERATION(paste)
+PROTON_CONTENTS_BROWSER_OPERATION(paste_and_match_style)
+PROTON_CONTENTS_BROWSER_OPERATION(delete)
+PROTON_CONTENTS_BROWSER_OPERATION(select_all)
+PROTON_CONTENTS_BROWSER_OPERATION(open_devtools)
+PROTON_CONTENTS_BROWSER_OPERATION(close_devtools)
+PROTON_CONTENTS_BROWSER_OPERATION(toggle_devtools)
+#undef PROTON_CONTENTS_BROWSER_OPERATION
+
+int32_t proton_engine_contents_cancel_download(
+    void *target, int32_t is_view, int32_t download_id,
     char *error, size_t error_len) {
-  if (window == NULL || window->browser_session == NULL ||
-      proton_engine_window_browser(window) == NULL) {
+  proton_engine_window_t *window = is_view ? NULL : target;
+  proton_engine_view_t *view = is_view ? target : NULL;
+  cef_browser_t *browser = is_view ? proton_engine_view_browser(view)
+      : proton_engine_window_browser(window);
+  proton_browser_session_t *session = is_view
+      ? (view == NULL ? NULL : view->browser_session)
+      : (window == NULL ? NULL : window->browser_session);
+  if (browser == NULL || session == NULL || (is_view && view->closed)) {
     proton_engine_set_message(error, error_len, "browser is not initialized");
     return PROTON_ERR_NOT_INITIALIZED;
   }
-  return proton_browser_session_command(
-      window->browser_session, proton_engine_window_browser(window), command,
-      download_id, error, error_len);
+  return proton_browser_cancel_download(session, download_id, error, error_len);
 }
 
 int32_t proton_engine_window_get_browser_focus_state(

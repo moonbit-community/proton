@@ -97,3 +97,11 @@ test "header names use ASCII case-insensitive comparison but paths and values do
     content="first=0,different_path=0,value=Token AbC",
   )
 }
+
+///|
+test "editing operations call distinct CEF methods and release their focused frame" {
+  inspect(
+    edit_operations_trace(),
+    content="operations=urxcpmda,releases=8,status=0,missing=-7,error=focused browser frame is unavailable",
+  )
+}

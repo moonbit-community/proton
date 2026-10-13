@@ -75,9 +75,11 @@ proton_browser_lifecycle_client(const proton_browser_lifecycle_t *lifecycle);
 int proton_browser_lifecycle_browser_id(
     const proton_browser_lifecycle_t *lifecycle);
 
-int32_t
-proton_browser_lifecycle_devtools_command(proton_browser_lifecycle_t *lifecycle,
-                                          const char *command, char *error,
-                                          size_t error_len);
+int32_t proton_browser_lifecycle_open_devtools(proton_browser_lifecycle_t *lifecycle,
+    char *error, size_t error_len);
+int32_t proton_browser_lifecycle_close_devtools(proton_browser_lifecycle_t *lifecycle,
+    char *error, size_t error_len);
+int32_t proton_browser_lifecycle_toggle_devtools(proton_browser_lifecycle_t *lifecycle,
+    char *error, size_t error_len);
 
 #endif
