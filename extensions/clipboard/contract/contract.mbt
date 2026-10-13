@@ -106,7 +106,7 @@ pub extend ClearReply with FromJson::{from_json}
 /// One completed clipboard operation.
 pub(all) struct ClipboardActivity {
   operation : String
-  text_length : Int?
+  text_length : Int32?
 } derive(ToJson, FromJson, Debug, Eq)
 
 ///|

@@ -13,9 +13,9 @@ pub extend ControlRequest with FromJson::{from_json}
 struct ControlReply {
   ok : Bool
   message : String
-  windows : Int
-  contents : Int
-  gone : Int
+  windows : Int32
+  contents : Int32
+  gone : Int32
 } derive(ToJson, FromJson)
 
 ///|
@@ -79,7 +79,7 @@ fn web_contents_label(contents : @proton.WebContentsHandle) -> String {
 }
 
 ///|
-fn state_reply(message : String, ok? : Bool = true) -> ControlReply {
+fn state_reply(message : String, ok~ : Bool = true) -> ControlReply {
   {
     ok,
     message,

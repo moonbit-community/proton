@@ -184,7 +184,7 @@ async fn dispatch_cli(cwd : String, matches : @argparse.Matches) -> Bool {
 }
 
 ///|
-async fn run(args : ArrayView[String]) -> Int {
+async fn run(args : ArrayView[String]) -> Int32 {
   let matches = @argparse.parse(cli_command(), argv=args, env=Map([])) catch {
     error => {
       print_error_message(error.to_string())

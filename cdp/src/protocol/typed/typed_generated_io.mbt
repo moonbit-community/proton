@@ -80,7 +80,7 @@ pub fn IOCloseParams::to_json(self : IOCloseParams) -> Json {
 /// let command = io_close_command(id=1, params, session_id=None)
 /// ```
 pub fn io_close_command(
-  id~ : Int,
+  id~ : Int32,
   params : IOCloseParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -100,8 +100,8 @@ pub fn io_close_command(
 /// gives a referenced type name.
 pub(all) struct IOReadParams {
   handle : IOStreamHandle
-  offset : Int?
-  size : Int?
+  offset : Int32?
+  size : Int32?
 } derive(Eq, Debug)
 
 ///|
@@ -184,7 +184,7 @@ pub fn IOReadResult::from_json(
 /// let command = io_read_command(id=1, params, session_id=None)
 /// ```
 pub fn io_read_command(
-  id~ : Int,
+  id~ : Int32,
   params : IOReadParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -272,7 +272,7 @@ pub fn IOResolveBlobResult::from_json(
 /// let command = io_resolve_blob_command(id=1, params, session_id=None)
 /// ```
 pub fn io_resolve_blob_command(
-  id~ : Int,
+  id~ : Int32,
   params : IOResolveBlobParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {

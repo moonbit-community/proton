@@ -3,48 +3,48 @@
 
 ///|
 /// Return the number of generated typed CDP command builders.
-pub fn protocol_typed_command_builder_count() -> Int {
+pub fn protocol_typed_command_builder_count() -> Int32 {
   664
 }
 
 ///|
 /// Return the number of generated command parameter structs.
-pub fn protocol_typed_command_params_count() -> Int {
+pub fn protocol_typed_command_params_count() -> Int32 {
   506
 }
 
 ///|
 /// Return the number of generated command result structs.
-pub fn protocol_typed_command_result_count() -> Int {
+pub fn protocol_typed_command_result_count() -> Int32 {
   229
 }
 
 ///|
 /// Return the number of generated command result decoders.
-pub fn protocol_typed_command_result_decoder_count() -> Int {
+pub fn protocol_typed_command_result_decoder_count() -> Int32 {
   229
 }
 
 ///|
 /// Return the number of generated typed CDP event builders.
-pub fn protocol_typed_event_builder_count() -> Int {
+pub fn protocol_typed_event_builder_count() -> Int32 {
   236
 }
 
 ///|
 /// Return the number of generated event parameter structs.
-pub fn protocol_typed_event_params_count() -> Int {
+pub fn protocol_typed_event_params_count() -> Int32 {
   221
 }
 
 ///|
 /// Return the number of generated event parameter decoders.
-pub fn protocol_typed_event_decoder_count() -> Int {
+pub fn protocol_typed_event_decoder_count() -> Int32 {
   221
 }
 
 ///|
 /// Return the number of generated domain type structs.
-pub fn protocol_typed_domain_type_count() -> Int {
+pub fn protocol_typed_domain_type_count() -> Int32 {
   632
 }

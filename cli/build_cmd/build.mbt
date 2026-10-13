@@ -52,7 +52,7 @@ pub extend BuildPathError with Show::{to_string, output}
 ///|
 pub(all) suberror BuildProcessError {
   Start(command~ : String, detail~ : String)
-  Exit(command~ : String, code~ : Int)
+  Exit(command~ : String, code~ : Int32)
   InvalidOutput(command~ : String, detail~ : String)
 } derive(Debug, Eq)
 

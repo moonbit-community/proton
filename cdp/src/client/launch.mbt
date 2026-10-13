@@ -7,7 +7,7 @@
 /// browser WebSocket URL appeared before the timeout.
 pub(all) suberror BrowserLaunchError {
   BrowserNotFound
-  BrowserNotReady(Int)
+  BrowserNotReady(Int32)
 } derive(Eq, ToJson, Debug)
 
 ///|
@@ -44,11 +44,11 @@ pub extend BrowserLaunchError with ToJson::{to_json}
 /// ```
 pub(all) struct CdpLaunchOptions {
   browser_path : String?
-  port : Int
+  port : Int32
   user_data_dir : String
   headless : Bool
   url : String?
-  timeout_ms : Int
+  timeout_ms : Int32
   extra_args : Array[String]
   extensions : Array[String]
   proxy_server : String?
@@ -79,8 +79,8 @@ pub extend CdpLaunchOptions with ToJson::{to_json}
 /// Callers that need cleanup should close the browser through CDP or manage the
 /// process outside this helper.
 pub(all) struct CdpLaunchInfo {
-  pid : Int
-  port : Int
+  pid : Int32
+  port : Int32
   endpoint : String
   web_socket_url : String
   user_data_dir : String
@@ -98,7 +98,7 @@ pub extend CdpLaunchInfo with ToJson::{to_json}
 ///|
 // Parsed contents of Chrome's DevToolsActivePort file.
 priv struct DevToolsActivePort {
-  port : Int
+  port : Int32
   web_socket_path : String
 }
 
@@ -170,7 +170,7 @@ async fn resolve_launch_browser_path(options : CdpLaunchOptions) -> String {
 async fn launch_browser_with_spawn(
   options : CdpLaunchOptions,
   browser_path : String,
-  spawn_orphan : async (String, Array[String]) -> Int,
+  spawn_orphan : async (String, Array[String]) -> Int32,
 ) -> CdpLaunchInfo {
   if !@fs.exists(options.user_data_dir) {
     @fs.mkdir(options.user_data_dir, recursive=true)
@@ -210,7 +210,7 @@ async fn launch_browser_with_spawn(
 
 ///|
 // Start the browser process using the async process package.
-async fn spawn_browser_orphan(path : String, args : Array[String]) -> Int {
+async fn spawn_browser_orphan(path : String, args : Array[String]) -> Int32 {
   @process.spawn_orphan(path, args)
 }
 
@@ -306,7 +306,7 @@ fn strip_trailing_path_separator(path : String) -> String {
 // Poll until Chrome writes DevToolsActivePort or the timeout expires.
 async fn wait_for_devtools_active_port(
   user_data_dir : String,
-  timeout_ms~ : Int,
+  timeout_ms~ : Int32,
 ) -> DevToolsActivePort {
   let path = devtools_active_port_path(user_data_dir)
   let deadline = @env.now() + timeout_ms.to_uint64()
@@ -356,7 +356,7 @@ fn parse_devtools_active_port(raw : String) -> DevToolsActivePort? {
 
 ///|
 // Parse and validate a TCP debugging port number.
-fn parse_debugging_port(value : String) -> Int? {
+fn parse_debugging_port(value : String) -> Int32? {
   if value == "" {
     return None
   }
@@ -432,7 +432,7 @@ pub fn chrome_executable_candidates() -> Array[String] {
 /// ```
 pub async fn wait_for_browser_endpoint(
   endpoint : String,
-  timeout_ms~ : Int,
+  timeout_ms~ : Int32,
 ) -> String {
   let deadline = @env.now() + timeout_ms.to_uint64()
   for ;; {

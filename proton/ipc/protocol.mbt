@@ -3,14 +3,14 @@ let ipc_protocol_version = 2
 
 ///|
 /// Returns the protocol version used in all IPC envelopes and payloads.
-pub fn protocol_version() -> Int {
+pub fn protocol_version() -> Int32 {
   ipc_protocol_version
 }
 
 ///|
 /// One operation invocation sent from the JavaScript bridge to the user process.
 pub(all) struct IpcOpRequest {
-  version : Int
+  version : Int32
   id : String
   name : String
   payload : Json
@@ -49,9 +49,9 @@ pub extend IpcCommandError with FromJson::{from_json}
 /// `status == 0` means success. Any non-zero status means `body` contains a JSON
 /// object containing `code`, `message`, and optional `detail` for rejection.
 pub(all) struct IpcOpResponse {
-  version : Int
+  version : Int32
   id : String
-  status : Int
+  status : Int32
   body : Json
 } derive(ToJson, FromJson, Eq, Debug)
 
@@ -70,7 +70,7 @@ pub extend IpcOpResponse with FromJson::{from_json}
 ///|
 /// One extension event sent from the user process to JavaScript.
 pub(all) struct IpcExtensionEvent {
-  version : Int
+  version : Int32
   extension_namespace : String
   event_name : String
   payload : Json
@@ -220,7 +220,7 @@ pub fn IpcExtensionDescriptor::IpcExtensionDescriptor(
   id : String,
   js_namespace : String,
   apis : Array[IpcExtensionApi],
-  scripts? : Array[String] = [],
+  scripts~ : Array[String] = [],
 ) -> IpcExtensionDescriptor {
   IpcExtensionDescriptor::{
     id,

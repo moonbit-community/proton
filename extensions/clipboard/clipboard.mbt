@@ -9,7 +9,7 @@ fn ensure_supported() -> Unit raise ClipboardError {
 
 ///|
 /// Returns the string length when clipboard text is present.
-fn text_length(text : String?) -> Int? {
+fn text_length(text : String?) -> Int32? {
   match text {
     Some(text) => Some(text.length())
     None => None

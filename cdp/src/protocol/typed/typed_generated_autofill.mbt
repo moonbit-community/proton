@@ -370,7 +370,7 @@ pub fn AutofillFillingStrategy::from_json(
 /// let command = autofill_disable_command(id=1, session_id=None)
 /// ```
 pub fn autofill_disable_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(id~, method_name="Autofill.disable", session_id?)
@@ -388,7 +388,7 @@ pub fn autofill_disable_command(
 /// let command = autofill_enable_command(id=1, session_id=None)
 /// ```
 pub fn autofill_enable_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(id~, method_name="Autofill.enable", session_id?)
@@ -437,7 +437,7 @@ pub fn AutofillSetAddressesParams::to_json(
 /// let command = autofill_set_addresses_command(id=1, params, session_id=None)
 /// ```
 pub fn autofill_set_addresses_command(
-  id~ : Int,
+  id~ : Int32,
   params : AutofillSetAddressesParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -500,7 +500,7 @@ pub fn AutofillTriggerParams::to_json(self : AutofillTriggerParams) -> Json {
 /// let command = autofill_trigger_command(id=1, params, session_id=None)
 /// ```
 pub fn autofill_trigger_command(
-  id~ : Int,
+  id~ : Int32,
   params : AutofillTriggerParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {

@@ -15,7 +15,7 @@ fn is_monitor_name(name : String) -> Bool {
 
 ///|
 /// Build a parsed microphone device with the next stable listing id.
-fn parsed_device(name : String, id_number : Int) -> MicrophoneDevice {
+fn parsed_device(name : String, id_number : Int32) -> MicrophoneDevice {
   {
     id: "mic-\{id_number}",
     name,

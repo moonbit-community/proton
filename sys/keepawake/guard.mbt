@@ -47,8 +47,8 @@ pub let default_reason : String = "MoonBit keepawake request"
 /// guard.release()
 /// ```
 pub fn acquire(
-  reason? : String = default_reason,
-  scope? : Scope = Scope::PreventSystemSleep,
+  reason~ : String = default_reason,
+  scope~ : Scope = Scope::PreventSystemSleep,
 ) -> Guard raise KeepAwakeError {
   let handle = native_guard_create(
     @ffi.to_cstr(normalize_reason(reason)),
@@ -89,8 +89,8 @@ pub fn acquire(
 /// ```
 pub fn[T] with_keepawake(
   action : () -> T raise?,
-  reason? : String = default_reason,
-  scope? : Scope = Scope::PreventSystemSleep,
+  reason~ : String = default_reason,
+  scope~ : Scope = Scope::PreventSystemSleep,
 ) -> T raise {
   let handle = acquire(reason~, scope~)
   run_with_cleanup(fn() -> T raise { action() }, fn() -> Unit raise {

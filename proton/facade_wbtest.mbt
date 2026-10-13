@@ -245,9 +245,9 @@ async test "application context validates protocol declarations and relaunch opt
 ///|
 fn test_extension_capability(
   spec : @proton_command.AppCommandExtensionSpec,
-  scope? : Json = Json::empty_object(),
-  targets? : Array[RendererTarget] = [RendererTarget::entry()],
-  definition_id? : UInt64 = 1UL,
+  scope~ : Json = Json::empty_object(),
+  targets~ : Array[RendererTarget] = [RendererTarget::entry()],
+  definition_id~ : UInt64 = 1UL,
   event_source? : @proton_extension.EventSource,
 ) -> ExtensionCapabilityBinding {
   ExtensionCapabilityBinding::{
@@ -263,7 +263,7 @@ fn test_extension_capability(
 fn test_build_command_host(
   command_capabilities : Array[AppCommandCapability],
   extension_capabilities : Array[ExtensionCapabilityBinding],
-  titlebar_area_targets? : Array[RendererTarget] = [],
+  titlebar_area_targets~ : Array[RendererTarget] = [],
 ) -> CommandHostBuild raise AppRunError {
   let catalog = command_extension_catalog(extension_capabilities) catch {
     error => raise ConfigurationError(error)
@@ -276,10 +276,10 @@ fn test_command_spec(
   extension_id : String,
   js_namespace : String,
   api_names : Array[String],
-  dependencies? : Array[String] = [],
-  scripts? : Array[String] = [],
+  dependencies~ : Array[String] = [],
+  scripts~ : Array[String] = [],
   resolve_permission? : (Json, String) -> Json raise @proton_command.PermissionScopeValidationError,
-  on_destroy? : () -> Unit raise = fn() {  },
+  on_destroy~ : () -> Unit raise = fn() {  },
 ) -> @proton_command.AppCommandExtensionSpec {
   let contract = @proton_contract.extension(id=extension_id, js_namespace~)
   @proton_command.AppCommandExtensionSpec::typed(
@@ -306,7 +306,7 @@ fn test_tracking_command_spec(
   extension_id : String,
   js_namespace : String,
   registered : Array[String],
-  dependencies? : Array[String] = [],
+  dependencies~ : Array[String] = [],
 ) -> @proton_command.AppCommandExtensionSpec {
   let contract = @proton_contract.extension(id=extension_id, js_namespace~)
   @proton_command.AppCommandExtensionSpec::typed(
@@ -949,8 +949,8 @@ test "frontend event forwarding ignores only closing window errors" {
 
 ///|
 fn test_activation_window_state(
-  visible? : Bool = true,
-  minimized? : Bool = false,
+  visible~ : Bool = true,
+  minimized~ : Bool = false,
 ) -> @native.WindowState {
   @native.WindowState::{
     x: 0,
@@ -981,7 +981,7 @@ fn test_activation_window_state(
 
 ///|
 fn test_launch_activation_ignores_status(
-  status : Int,
+  status : Int32,
 ) -> Array[(Bool, Array[String])] {
   let results : Array[(Bool, Array[String])] = []
   for stage in ["state", "restore", "show", "focus"] {

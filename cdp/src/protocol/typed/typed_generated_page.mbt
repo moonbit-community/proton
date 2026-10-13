@@ -251,9 +251,9 @@ pub fn PageAdScriptId::from_json(
 /// gives a referenced type name.
 pub(all) struct PageAppManifestError {
   message : String
-  critical : Int
-  line : Int
-  column : Int
+  critical : Int32
+  line : Int32
+  column : Int32
 } derive(Eq, Debug)
 
 ///|
@@ -347,8 +347,8 @@ pub fn PageAppManifestParsedProperties::from_json(
 pub(all) struct PageBackForwardCacheBlockingDetails {
   url : String?
   function : String?
-  line_number : Int
-  column_number : Int
+  line_number : Int32
+  column_number : Int32
 } derive(Eq, Debug)
 
 ///|
@@ -1074,8 +1074,8 @@ pub fn PageFontFamilies::from_json(
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
 pub(all) struct PageFontSizes {
-  standard : Int?
-  fixed : Int?
+  standard : Int32?
+  fixed : Int32?
 } derive(Eq, Debug)
 
 ///|
@@ -1724,10 +1724,10 @@ pub fn PageLaunchHandler::from_json(
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
 pub(all) struct PageLayoutViewport {
-  page_x : Int
-  page_y : Int
-  client_width : Int
-  client_height : Int
+  page_x : Int32
+  page_y : Int32
+  client_width : Int32
+  client_height : Int32
 } derive(Eq, Debug)
 
 ///|
@@ -1779,7 +1779,7 @@ pub fn PageLayoutViewport::from_json(
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
 pub(all) struct PageNavigationEntry {
-  id : Int
+  id : Int32
   url : String
   user_typed_url : String
   title : String
@@ -3451,7 +3451,7 @@ pub fn PageAddCompilationCacheParams::to_json(
 /// let command = page_add_compilation_cache_command(id=1, params, session_id=None)
 /// ```
 pub fn page_add_compilation_cache_command(
-  id~ : Int,
+  id~ : Int32,
   params : PageAddCompilationCacheParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -3553,7 +3553,7 @@ pub fn PageAddScriptToEvaluateOnLoadResult::from_json(
 /// )
 /// ```
 pub fn page_add_script_to_evaluate_on_load_command(
-  id~ : Int,
+  id~ : Int32,
   params : PageAddScriptToEvaluateOnLoadParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -3673,7 +3673,7 @@ pub fn PageAddScriptToEvaluateOnNewDocumentResult::from_json(
 /// )
 /// ```
 pub fn page_add_script_to_evaluate_on_new_document_command(
-  id~ : Int,
+  id~ : Int32,
   params : PageAddScriptToEvaluateOnNewDocumentParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -3697,7 +3697,7 @@ pub fn page_add_script_to_evaluate_on_new_document_command(
 /// let command = page_bring_to_front_command(id=1, session_id=None)
 /// ```
 pub fn page_bring_to_front_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(
@@ -3715,7 +3715,7 @@ pub fn page_bring_to_front_command(
 /// gives a referenced type name.
 pub(all) struct PageCaptureScreenshotParams {
   format : String?
-  quality : Int?
+  quality : Int32?
   clip : PageViewport?
   from_surface : Bool?
   capture_beyond_viewport : Bool?
@@ -3811,7 +3811,7 @@ pub fn PageCaptureScreenshotResult::from_json(
 /// let command = page_capture_screenshot_command(id=1, params, session_id=None)
 /// ```
 pub fn page_capture_screenshot_command(
-  id~ : Int,
+  id~ : Int32,
   params : PageCaptureScreenshotParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -3907,7 +3907,7 @@ pub fn PageCaptureSnapshotResult::from_json(
 /// let command = page_capture_snapshot_command(id=1, params, session_id=None)
 /// ```
 pub fn page_capture_snapshot_command(
-  id~ : Int,
+  id~ : Int32,
   params : PageCaptureSnapshotParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -3931,7 +3931,7 @@ pub fn page_capture_snapshot_command(
 /// let command = page_clear_compilation_cache_command(id=1, session_id=None)
 /// ```
 pub fn page_clear_compilation_cache_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(
@@ -3953,7 +3953,7 @@ pub fn page_clear_compilation_cache_command(
 /// let command = page_clear_device_metrics_override_command(id=1, session_id=None)
 /// ```
 pub fn page_clear_device_metrics_override_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(
@@ -3978,7 +3978,7 @@ pub fn page_clear_device_metrics_override_command(
 /// )
 /// ```
 pub fn page_clear_device_orientation_override_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(
@@ -4000,7 +4000,7 @@ pub fn page_clear_device_orientation_override_command(
 /// let command = page_clear_geolocation_override_command(id=1, session_id=None)
 /// ```
 pub fn page_clear_geolocation_override_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(
@@ -4022,7 +4022,7 @@ pub fn page_clear_geolocation_override_command(
 /// let command = page_close_command(id=1, session_id=None)
 /// ```
 pub fn page_close_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(id~, method_name="Page.close", session_id?)
@@ -4040,7 +4040,7 @@ pub fn page_close_command(
 /// let command = page_crash_command(id=1, session_id=None)
 /// ```
 pub fn page_crash_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(id~, method_name="Page.crash", session_id?)
@@ -4140,7 +4140,7 @@ pub fn PageCreateIsolatedWorldResult::from_json(
 /// let command = page_create_isolated_world_command(id=1, params, session_id=None)
 /// ```
 pub fn page_create_isolated_world_command(
-  id~ : Int,
+  id~ : Int32,
   params : PageCreateIsolatedWorldParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -4193,7 +4193,7 @@ pub fn PageDeleteCookieParams::to_json(self : PageDeleteCookieParams) -> Json {
 /// let command = page_delete_cookie_command(id=1, params, session_id=None)
 /// ```
 pub fn page_delete_cookie_command(
-  id~ : Int,
+  id~ : Int32,
   params : PageDeleteCookieParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -4217,7 +4217,7 @@ pub fn page_delete_cookie_command(
 /// let command = page_disable_command(id=1, session_id=None)
 /// ```
 pub fn page_disable_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(id~, method_name="Page.disable", session_id?)
@@ -4264,7 +4264,7 @@ pub fn PageEnableParams::to_json(self : PageEnableParams) -> Json {
 /// let command = page_enable_command(id=1, params, session_id=None)
 /// ```
 pub fn page_enable_command(
-  id~ : Int,
+  id~ : Int32,
   params : PageEnableParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -4323,7 +4323,7 @@ pub fn PageGenerateTestReportParams::to_json(
 /// let command = page_generate_test_report_command(id=1, params, session_id=None)
 /// ```
 pub fn page_generate_test_report_command(
-  id~ : Int,
+  id~ : Int32,
   params : PageGenerateTestReportParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -4423,7 +4423,7 @@ pub fn PageGetAdScriptAncestryResult::from_json(
 /// let command = page_get_ad_script_ancestry_command(id=1, params, session_id=None)
 /// ```
 pub fn page_get_ad_script_ancestry_command(
-  id~ : Int,
+  id~ : Int32,
   params : PageGetAdScriptAncestryParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -4527,7 +4527,7 @@ pub fn PageGetAnnotatedPageContentResult::from_json(
 /// )
 /// ```
 pub fn page_get_annotated_page_content_command(
-  id~ : Int,
+  id~ : Int32,
   params : PageGetAnnotatedPageContentParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -4594,7 +4594,7 @@ pub fn PageGetAppIdResult::from_json(
 /// let command = page_get_app_id_command(id=1, session_id=None)
 /// ```
 pub fn page_get_app_id_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(id~, method_name="Page.getAppId", session_id?)
@@ -4704,7 +4704,7 @@ pub fn PageGetAppManifestResult::from_json(
 /// let command = page_get_app_manifest_command(id=1, params, session_id=None)
 /// ```
 pub fn page_get_app_manifest_command(
-  id~ : Int,
+  id~ : Int32,
   params : PageGetAppManifestParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -4769,7 +4769,7 @@ pub fn PageGetFrameTreeResult::from_json(
 /// let command = page_get_frame_tree_command(id=1, session_id=None)
 /// ```
 pub fn page_get_frame_tree_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(
@@ -4837,7 +4837,7 @@ pub fn PageGetInstallabilityErrorsResult::from_json(
 /// let command = page_get_installability_errors_command(id=1, session_id=None)
 /// ```
 pub fn page_get_installability_errors_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(
@@ -4922,7 +4922,7 @@ pub fn PageGetLayoutMetricsResult::from_json(
 /// let command = page_get_layout_metrics_command(id=1, session_id=None)
 /// ```
 pub fn page_get_layout_metrics_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(
@@ -4987,7 +4987,7 @@ pub fn PageGetManifestIconsResult::from_json(
 /// let command = page_get_manifest_icons_command(id=1, session_id=None)
 /// ```
 pub fn page_get_manifest_icons_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(
@@ -5004,7 +5004,7 @@ pub fn page_get_manifest_icons_command(
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
 pub(all) struct PageGetNavigationHistoryResult {
-  current_index : Int
+  current_index : Int32
   entries : Array[PageNavigationEntry]
 } derive(Eq, Debug)
 
@@ -5059,7 +5059,7 @@ pub fn PageGetNavigationHistoryResult::from_json(
 /// let command = page_get_navigation_history_command(id=1, session_id=None)
 /// ```
 pub fn page_get_navigation_history_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(
@@ -5158,7 +5158,7 @@ pub fn PageGetOriginTrialsResult::from_json(
 /// let command = page_get_origin_trials_command(id=1, params, session_id=None)
 /// ```
 pub fn page_get_origin_trials_command(
-  id~ : Int,
+  id~ : Int32,
   params : PageGetOriginTrialsParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -5263,7 +5263,7 @@ pub fn PageGetPermissionsPolicyStateResult::from_json(
 /// )
 /// ```
 pub fn page_get_permissions_policy_state_command(
-  id~ : Int,
+  id~ : Int32,
   params : PageGetPermissionsPolicyStateParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -5367,7 +5367,7 @@ pub fn PageGetResourceContentResult::from_json(
 /// let command = page_get_resource_content_command(id=1, params, session_id=None)
 /// ```
 pub fn page_get_resource_content_command(
-  id~ : Int,
+  id~ : Int32,
   params : PageGetResourceContentParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -5434,7 +5434,7 @@ pub fn PageGetResourceTreeResult::from_json(
 /// let command = page_get_resource_tree_command(id=1, session_id=None)
 /// ```
 pub fn page_get_resource_tree_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(
@@ -5495,7 +5495,7 @@ pub fn PageHandleJavaScriptDialogParams::to_json(
 /// )
 /// ```
 pub fn page_handle_java_script_dialog_command(
-  id~ : Int,
+  id~ : Int32,
   params : PageHandleJavaScriptDialogParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -5616,7 +5616,7 @@ pub fn PageNavigateResult::from_json(
 /// let command = page_navigate_command(id=1, params, session_id=None)
 /// ```
 pub fn page_navigate_command(
-  id~ : Int,
+  id~ : Int32,
   params : PageNavigateParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -5635,7 +5635,7 @@ pub fn page_navigate_command(
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
 pub(all) struct PageNavigateToHistoryEntryParams {
-  entry_id : Int
+  entry_id : Int32
 } derive(Eq, Debug)
 
 ///|
@@ -5675,7 +5675,7 @@ pub fn PageNavigateToHistoryEntryParams::to_json(
 /// )
 /// ```
 pub fn page_navigate_to_history_entry_command(
-  id~ : Int,
+  id~ : Int32,
   params : PageNavigateToHistoryEntryParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -5836,7 +5836,7 @@ pub fn PagePrintToPDFResult::from_json(
 /// let command = page_print_to_pdf_command(id=1, params, session_id=None)
 /// ```
 pub fn page_print_to_pdf_command(
-  id~ : Int,
+  id~ : Int32,
   params : PagePrintToPDFParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -5895,7 +5895,7 @@ pub fn PageProduceCompilationCacheParams::to_json(
 /// )
 /// ```
 pub fn page_produce_compilation_cache_command(
-  id~ : Int,
+  id~ : Int32,
   params : PageProduceCompilationCacheParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -5956,7 +5956,7 @@ pub fn PageReloadParams::to_json(self : PageReloadParams) -> Json {
 /// let command = page_reload_command(id=1, params, session_id=None)
 /// ```
 pub fn page_reload_command(
-  id~ : Int,
+  id~ : Int32,
   params : PageReloadParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -6015,7 +6015,7 @@ pub fn PageRemoveScriptToEvaluateOnLoadParams::to_json(
 /// )
 /// ```
 pub fn page_remove_script_to_evaluate_on_load_command(
-  id~ : Int,
+  id~ : Int32,
   params : PageRemoveScriptToEvaluateOnLoadParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -6077,7 +6077,7 @@ pub fn PageRemoveScriptToEvaluateOnNewDocumentParams::to_json(
 /// )
 /// ```
 pub fn page_remove_script_to_evaluate_on_new_document_command(
-  id~ : Int,
+  id~ : Int32,
   params : PageRemoveScriptToEvaluateOnNewDocumentParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -6101,7 +6101,7 @@ pub fn page_remove_script_to_evaluate_on_new_document_command(
 /// let command = page_reset_navigation_history_command(id=1, session_id=None)
 /// ```
 pub fn page_reset_navigation_history_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(
@@ -6118,7 +6118,7 @@ pub fn page_reset_navigation_history_command(
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
 pub(all) struct PageScreencastFrameAckParams {
-  session_id : Int
+  session_id : Int32
 } derive(Eq, Debug)
 
 ///|
@@ -6154,7 +6154,7 @@ pub fn PageScreencastFrameAckParams::to_json(
 /// let command = page_screencast_frame_ack_command(id=1, params, session_id=None)
 /// ```
 pub fn page_screencast_frame_ack_command(
-  id~ : Int,
+  id~ : Int32,
   params : PageScreencastFrameAckParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -6267,7 +6267,7 @@ pub fn PageSearchInResourceResult::from_json(
 /// let command = page_search_in_resource_command(id=1, params, session_id=None)
 /// ```
 pub fn page_search_in_resource_command(
-  id~ : Int,
+  id~ : Int32,
   params : PageSearchInResourceParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -6326,7 +6326,7 @@ pub fn PageSetAdBlockingEnabledParams::to_json(
 /// )
 /// ```
 pub fn page_set_ad_blocking_enabled_command(
-  id~ : Int,
+  id~ : Int32,
   params : PageSetAdBlockingEnabledParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -6377,7 +6377,7 @@ pub fn PageSetBypassCSPParams::to_json(self : PageSetBypassCSPParams) -> Json {
 /// let command = page_set_bypass_csp_command(id=1, params, session_id=None)
 /// ```
 pub fn page_set_bypass_csp_command(
-  id~ : Int,
+  id~ : Int32,
   params : PageSetBypassCSPParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -6396,15 +6396,15 @@ pub fn page_set_bypass_csp_command(
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
 pub(all) struct PageSetDeviceMetricsOverrideParams {
-  width : Int
-  height : Int
+  width : Int32
+  height : Int32
   device_scale_factor : Double
   mobile : Bool
   scale : Double?
-  screen_width : Int?
-  screen_height : Int?
-  position_x : Int?
-  position_y : Int?
+  screen_width : Int32?
+  screen_height : Int32?
+  position_x : Int32?
+  position_y : Int32?
   dont_set_visible_size : Bool?
   screen_orientation : EmulationScreenOrientation?
   viewport : PageViewport?
@@ -6474,7 +6474,7 @@ pub fn PageSetDeviceMetricsOverrideParams::to_json(
 /// )
 /// ```
 pub fn page_set_device_metrics_override_command(
-  id~ : Int,
+  id~ : Int32,
   params : PageSetDeviceMetricsOverrideParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -6537,7 +6537,7 @@ pub fn PageSetDeviceOrientationOverrideParams::to_json(
 /// )
 /// ```
 pub fn page_set_device_orientation_override_command(
-  id~ : Int,
+  id~ : Int32,
   params : PageSetDeviceOrientationOverrideParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -6594,7 +6594,7 @@ pub fn PageSetDocumentContentParams::to_json(
 /// let command = page_set_document_content_command(id=1, params, session_id=None)
 /// ```
 pub fn page_set_document_content_command(
-  id~ : Int,
+  id~ : Int32,
   params : PageSetDocumentContentParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -6653,7 +6653,7 @@ pub fn PageSetDownloadBehaviorParams::to_json(
 /// let command = page_set_download_behavior_command(id=1, params, session_id=None)
 /// ```
 pub fn page_set_download_behavior_command(
-  id~ : Int,
+  id~ : Int32,
   params : PageSetDownloadBehaviorParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -6712,7 +6712,7 @@ pub fn PageSetFontFamiliesParams::to_json(
 /// let command = page_set_font_families_command(id=1, params, session_id=None)
 /// ```
 pub fn page_set_font_families_command(
-  id~ : Int,
+  id~ : Int32,
   params : PageSetFontFamiliesParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -6763,7 +6763,7 @@ pub fn PageSetFontSizesParams::to_json(self : PageSetFontSizesParams) -> Json {
 /// let command = page_set_font_sizes_command(id=1, params, session_id=None)
 /// ```
 pub fn page_set_font_sizes_command(
-  id~ : Int,
+  id~ : Int32,
   params : PageSetFontSizesParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -6832,7 +6832,7 @@ pub fn PageSetGeolocationOverrideParams::to_json(
 /// )
 /// ```
 pub fn page_set_geolocation_override_command(
-  id~ : Int,
+  id~ : Int32,
   params : PageSetGeolocationOverrideParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -6895,7 +6895,7 @@ pub fn PageSetInterceptFileChooserDialogParams::to_json(
 /// )
 /// ```
 pub fn page_set_intercept_file_chooser_dialog_command(
-  id~ : Int,
+  id~ : Int32,
   params : PageSetInterceptFileChooserDialogParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -6954,7 +6954,7 @@ pub fn PageSetLifecycleEventsEnabledParams::to_json(
 /// )
 /// ```
 pub fn page_set_lifecycle_events_enabled_command(
-  id~ : Int,
+  id~ : Int32,
   params : PageSetLifecycleEventsEnabledParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -7013,7 +7013,7 @@ pub fn PageSetPrerenderingAllowedParams::to_json(
 /// )
 /// ```
 pub fn page_set_prerendering_allowed_command(
-  id~ : Int,
+  id~ : Int32,
   params : PageSetPrerenderingAllowedParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -7072,7 +7072,7 @@ pub fn PageSetRPHRegistrationModeParams::to_json(
 /// )
 /// ```
 pub fn page_set_rphregistration_mode_command(
-  id~ : Int,
+  id~ : Int32,
   params : PageSetRPHRegistrationModeParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -7131,7 +7131,7 @@ pub fn PageSetSPCTransactionModeParams::to_json(
 /// )
 /// ```
 pub fn page_set_spctransaction_mode_command(
-  id~ : Int,
+  id~ : Int32,
   params : PageSetSPCTransactionModeParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -7194,7 +7194,7 @@ pub fn PageSetTouchEmulationEnabledParams::to_json(
 /// )
 /// ```
 pub fn page_set_touch_emulation_enabled_command(
-  id~ : Int,
+  id~ : Int32,
   params : PageSetTouchEmulationEnabledParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -7253,7 +7253,7 @@ pub fn PageSetWebLifecycleStateParams::to_json(
 /// )
 /// ```
 pub fn page_set_web_lifecycle_state_command(
-  id~ : Int,
+  id~ : Int32,
   params : PageSetWebLifecycleStateParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -7273,10 +7273,10 @@ pub fn page_set_web_lifecycle_state_command(
 /// gives a referenced type name.
 pub(all) struct PageStartScreencastParams {
   format : String?
-  quality : Int?
-  max_width : Int?
-  max_height : Int?
-  every_nth_frame : Int?
+  quality : Int32?
+  max_width : Int32?
+  max_height : Int32?
+  every_nth_frame : Int32?
 } derive(Eq, Debug)
 
 ///|
@@ -7326,7 +7326,7 @@ pub fn PageStartScreencastParams::to_json(
 /// let command = page_start_screencast_command(id=1, params, session_id=None)
 /// ```
 pub fn page_start_screencast_command(
-  id~ : Int,
+  id~ : Int32,
   params : PageStartScreencastParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -7350,7 +7350,7 @@ pub fn page_start_screencast_command(
 /// let command = page_stop_loading_command(id=1, session_id=None)
 /// ```
 pub fn page_stop_loading_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(id~, method_name="Page.stopLoading", session_id?)
@@ -7368,7 +7368,7 @@ pub fn page_stop_loading_command(
 /// let command = page_stop_screencast_command(id=1, session_id=None)
 /// ```
 pub fn page_stop_screencast_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(
@@ -7390,7 +7390,7 @@ pub fn page_stop_screencast_command(
 /// let command = page_wait_for_debugger_command(id=1, session_id=None)
 /// ```
 pub fn page_wait_for_debugger_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(
@@ -9216,7 +9216,7 @@ pub fn page_navigated_within_document_event(
 pub(all) struct PageScreencastFrameEventParams {
   data : String
   metadata : PageScreencastFrameMetadata
-  session_id : Int
+  session_id : Int32
 } derive(Eq, Debug)
 
 ///|

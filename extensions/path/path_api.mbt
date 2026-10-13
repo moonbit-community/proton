@@ -19,7 +19,7 @@ fn prepare_native_path(path : String) -> String {
 
 ///|
 /// Returns the last path segment, optionally trimming a matching suffix.
-fn basename_path(path : String, suffix? : String? = None) -> String {
+fn basename_path(path : String, suffix~ : String? = None) -> String {
   let normalized = normalize_path(path)
   let name = native_path(normalized).basename().to_owned()
   match suffix {

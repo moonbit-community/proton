@@ -50,7 +50,7 @@ pub extend AppTaskMetric with Debug::{to_repr}
 
 ///|
 /// Decodes Proton-owned task type codes from proton_native.h.
-fn app_task_type_from_code(code : Int) -> AppTaskType {
+fn app_task_type_from_code(code : Int32) -> AppTaskType {
   match code {
     1 => Browser
     2 => Gpu
@@ -81,7 +81,7 @@ pub fn task_metrics() -> Array[AppTaskMetric] raise NativeError {
 }
 
 ///|
-fn task_metric_at(index : Int) -> AppTaskMetric raise NativeError {
+fn task_metric_at(index : Int32) -> AppTaskMetric raise NativeError {
   let task_id = Ref(0L)
   let task_type = Ref(0)
   let process_cpu_percent = Ref(0.0)

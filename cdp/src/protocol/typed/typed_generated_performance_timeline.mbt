@@ -329,7 +329,7 @@ pub fn PerformanceTimelineEnableParams::to_json(
 /// let command = performance_timeline_enable_command(id=1, params, session_id=None)
 /// ```
 pub fn performance_timeline_enable_command(
-  id~ : Int,
+  id~ : Int32,
   params : PerformanceTimelineEnableParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {

@@ -17,11 +17,11 @@ priv suberror CefFileSystemError {
 priv suberror CefDownloadError {
   CreateTemporaryDirectory(detail~ : String)
   Start(url~ : String, detail~ : String)
-  CurlExit(url~ : String, code~ : Int)
+  CurlExit(url~ : String, code~ : Int32)
   OpenArchive(path~ : String, detail~ : String)
   ChecksumMismatch(expected~ : String, actual~ : String)
   ExtractStart(path~ : String, detail~ : String)
-  ExtractExit(path~ : String, code~ : Int)
+  ExtractExit(path~ : String, code~ : Int32)
   ExtractedRootNotFound(path~ : String)
 }
 
@@ -42,7 +42,7 @@ priv suberror CefHelperError {
   NotInstalled(path~ : String)
   CreateTemporaryDirectory(detail~ : String)
   InstallStart(detail~ : String)
-  InstallExit(code~ : Int)
+  InstallExit(code~ : Int32)
   InstalledExecutableMissing(path~ : String)
 }
 

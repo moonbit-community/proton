@@ -22,7 +22,7 @@ pub extend Request with FromJson::{from_json}
 ///|
 /// The response returned from an HTTP request.
 pub(all) struct Response {
-  status : Int
+  status : Int32
   status_text : String
   headers : Map[String, String]
   body : String

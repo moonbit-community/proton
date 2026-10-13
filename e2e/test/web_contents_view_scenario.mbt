@@ -21,7 +21,7 @@ async fn run_web_contents_view_scenario_probe(
   target : String,
   browser_web_socket_url : String,
   event_path : String,
-  timeout : Int,
+  timeout : Int32,
 ) -> ShutdownProbeResult {
   let (host, left, right) = wait_for_web_contents_view_targets(
     app, target, timeout,
@@ -109,7 +109,7 @@ async fn run_web_contents_view_scenario_probe(
 async fn connect_web_contents_view_page(
   tasks : @async.TaskGroup[Unit],
   target : @client.CdpDiscoveredTarget,
-  timeout : Int,
+  timeout : Int32,
 ) -> @page.Page {
   match target.web_socket_debugger_url {
     Some(web_socket_url) =>
@@ -122,7 +122,7 @@ async fn connect_web_contents_view_page(
 async fn wait_for_web_contents_view_targets(
   app : SpawnedScenarioApp,
   target : String,
-  timeout : Int,
+  timeout : Int32,
 ) -> (
   @client.CdpDiscoveredTarget,
   @client.CdpDiscoveredTarget,

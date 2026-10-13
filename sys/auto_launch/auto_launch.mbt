@@ -121,9 +121,9 @@ fn new_with(
 pub fn new(
   name : String,
   path? : String,
-  launch_in_background? : Bool = false,
-  background_arg? : String = "--hidden",
-  extra_arguments? : Array[String] = [],
+  launch_in_background~ : Bool = false,
+  background_arg~ : String = "--hidden",
+  extra_arguments~ : Array[String] = [],
   identifier? : String,
 ) -> Result[AutoLaunch, AutoLaunchError] {
   new_with(

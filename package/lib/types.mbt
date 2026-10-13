@@ -83,7 +83,7 @@ pub extend Payload with Debug::{to_repr}
 pub fn Payload::Payload(
   source : String,
   destination : String,
-  location? : PayloadLocation = Resources,
+  location~ : PayloadLocation = Resources,
 ) -> Payload {
   Payload::{ source, destination, location, }
 }
@@ -106,7 +106,7 @@ pub extend DocumentType with Debug::{to_repr}
 pub fn DocumentType::DocumentType(
   name : String,
   extensions : Array[String],
-  role? : String = "Viewer",
+  role~ : String = "Viewer",
 ) -> DocumentType {
   DocumentType::{ name, extensions, role, }
 }
@@ -195,8 +195,8 @@ pub struct MacosSignTarget {
 ///|
 pub fn MacosSignTarget::MacosSignTarget(
   path : String,
-  runtime_options? : Bool = true,
-  entitlements? : Bool = false,
+  runtime_options~ : Bool = true,
+  entitlements~ : Bool = false,
   identifier? : String,
 ) -> MacosSignTarget {
   MacosSignTarget::{ path, runtime_options, entitlements, identifier, }
@@ -217,11 +217,11 @@ pub struct PackageCustomization {
 /// Set `windows_icon_embedded` when the executable already contains its icon.
 /// Package icon paths remain available without modifying the executable again.
 pub fn PackageCustomization::PackageCustomization(
-  windows_icon_embedded? : Bool = false,
-  macos_plist_strings? : Array[MacosPlistString] = [],
-  macos_sign_targets? : Array[MacosSignTarget] = [],
-  windows_sign_targets? : Array[String] = [],
-  windows_verify_targets? : Array[String] = [],
+  windows_icon_embedded~ : Bool = false,
+  macos_plist_strings~ : Array[MacosPlistString] = [],
+  macos_sign_targets~ : Array[MacosSignTarget] = [],
+  windows_sign_targets~ : Array[String] = [],
+  windows_verify_targets~ : Array[String] = [],
   linux_resources_path? : String,
 ) -> PackageCustomization {
   PackageCustomization::{
@@ -305,14 +305,14 @@ pub fn PackageSpec::PackageSpec(
   version : String,
   formats : Array[PackageFormat],
   output : String,
-  payloads? : Array[Payload] = [],
-  icons? : Array[String] = [],
-  url_schemes? : Array[String] = [],
-  document_types? : Array[DocumentType] = [],
+  payloads~ : Array[Payload] = [],
+  icons~ : Array[String] = [],
+  url_schemes~ : Array[String] = [],
+  document_types~ : Array[DocumentType] = [],
   macos_minimum_system_version? : String,
-  nsis_install_mode? : NsisInstallMode = CurrentUser,
-  sign? : Bool = false,
-  notarize? : Bool = false,
+  nsis_install_mode~ : NsisInstallMode = CurrentUser,
+  sign~ : Bool = false,
+  notarize~ : Bool = false,
 ) -> PackageSpec {
   PackageSpec::{
     executable,

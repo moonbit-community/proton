@@ -9,7 +9,7 @@
 /// gives a referenced type name.
 pub(all) struct HeadlessExperimentalScreenshotParams {
   format : String?
-  quality : Int?
+  quality : Int32?
   optimize_for_speed : Bool?
 } derive(Eq, Debug)
 
@@ -169,7 +169,7 @@ pub fn HeadlessExperimentalBeginFrameResult::from_json(
 /// )
 /// ```
 pub fn headless_experimental_begin_frame_command(
-  id~ : Int,
+  id~ : Int32,
   params : HeadlessExperimentalBeginFrameParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -193,7 +193,7 @@ pub fn headless_experimental_begin_frame_command(
 /// let command = headless_experimental_disable_command(id=1, session_id=None)
 /// ```
 pub fn headless_experimental_disable_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(
@@ -215,7 +215,7 @@ pub fn headless_experimental_disable_command(
 /// let command = headless_experimental_enable_command(id=1, session_id=None)
 /// ```
 pub fn headless_experimental_enable_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(

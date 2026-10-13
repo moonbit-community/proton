@@ -207,7 +207,7 @@ pub(all) struct CacheStorageDataEntry {
   request_method : String
   request_headers : Array[CacheStorageHeader]
   response_time : Double
-  response_status : Int
+  response_status : Int32
   response_status_text : String
   response_type : CacheStorageCachedResponseType
   response_headers : Array[CacheStorageHeader]
@@ -373,7 +373,7 @@ pub fn CacheStorageDeleteCacheParams::to_json(
 /// let command = cache_storage_delete_cache_command(id=1, params, session_id=None)
 /// ```
 pub fn cache_storage_delete_cache_command(
-  id~ : Int,
+  id~ : Int32,
   params : CacheStorageDeleteCacheParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -430,7 +430,7 @@ pub fn CacheStorageDeleteEntryParams::to_json(
 /// let command = cache_storage_delete_entry_command(id=1, params, session_id=None)
 /// ```
 pub fn cache_storage_delete_entry_command(
-  id~ : Int,
+  id~ : Int32,
   params : CacheStorageDeleteEntryParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -538,7 +538,7 @@ pub fn CacheStorageRequestCachedResponseResult::from_json(
 /// )
 /// ```
 pub fn cache_storage_request_cached_response_command(
-  id~ : Int,
+  id~ : Int32,
   params : CacheStorageRequestCachedResponseParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -653,7 +653,7 @@ pub fn CacheStorageRequestCacheNamesResult::from_json(
 /// )
 /// ```
 pub fn cache_storage_request_cache_names_command(
-  id~ : Int,
+  id~ : Int32,
   params : CacheStorageRequestCacheNamesParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -673,8 +673,8 @@ pub fn cache_storage_request_cache_names_command(
 /// gives a referenced type name.
 pub(all) struct CacheStorageRequestEntriesParams {
   cache_id : CacheStorageCacheId
-  skip_count : Int?
-  page_size : Int?
+  skip_count : Int32?
+  page_size : Int32?
   path_filter : String?
 } derive(Eq, Debug)
 
@@ -774,7 +774,7 @@ pub fn CacheStorageRequestEntriesResult::from_json(
 /// )
 /// ```
 pub fn cache_storage_request_entries_command(
-  id~ : Int,
+  id~ : Int32,
   params : CacheStorageRequestEntriesParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {

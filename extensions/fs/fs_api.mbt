@@ -31,7 +31,7 @@ fn option_bool(value : Bool?, default_value : Bool) -> Bool {
 }
 
 ///|
-fn bytes_written_for_text(content : String) -> Int {
+fn bytes_written_for_text(content : String) -> Int32 {
   @utf8.encode(content).length()
 }
 

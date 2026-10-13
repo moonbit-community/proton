@@ -10,7 +10,7 @@
 pub(all) struct InputDragData {
   items : Array[InputDragDataItem]
   files : Array[String]?
-  drag_operations_mask : Int
+  drag_operations_mask : Int32
 } derive(Eq, Debug)
 
 ///|
@@ -259,7 +259,7 @@ pub(all) struct InputTouchPoint {
   tangential_pressure : Double?
   tilt_x : Double?
   tilt_y : Double?
-  twist : Int?
+  twist : Int32?
   id : Double?
 } derive(Eq, Debug)
 
@@ -349,7 +349,7 @@ pub fn InputTouchPoint::from_json(
 /// let command = input_cancel_dragging_command(id=1, session_id=None)
 /// ```
 pub fn input_cancel_dragging_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(
@@ -370,7 +370,7 @@ pub(all) struct InputDispatchDragEventParams {
   x : Double
   y : Double
   data : InputDragData
-  modifiers : Int?
+  modifiers : Int32?
 } derive(Eq, Debug)
 
 ///|
@@ -412,7 +412,7 @@ pub fn InputDispatchDragEventParams::to_json(
 /// let command = input_dispatch_drag_event_command(id=1, params, session_id=None)
 /// ```
 pub fn input_dispatch_drag_event_command(
-  id~ : Int,
+  id~ : Int32,
   params : InputDispatchDragEventParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -432,19 +432,19 @@ pub fn input_dispatch_drag_event_command(
 /// gives a referenced type name.
 pub(all) struct InputDispatchKeyEventParams {
   type_ : String
-  modifiers : Int?
+  modifiers : Int32?
   timestamp : InputTimeSinceEpoch?
   text : String?
   unmodified_text : String?
   key_identifier : String?
   code : String?
   key : String?
-  windows_virtual_key_code : Int?
-  native_virtual_key_code : Int?
+  windows_virtual_key_code : Int32?
+  native_virtual_key_code : Int32?
   auto_repeat : Bool?
   is_keypad : Bool?
   is_system_key : Bool?
-  location : Int?
+  location : Int32?
   commands : Array[String]?
 } derive(Eq, Debug)
 
@@ -523,7 +523,7 @@ pub fn InputDispatchKeyEventParams::to_json(
 /// let command = input_dispatch_key_event_command(id=1, params, session_id=None)
 /// ```
 pub fn input_dispatch_key_event_command(
-  id~ : Int,
+  id~ : Int32,
   params : InputDispatchKeyEventParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -545,16 +545,16 @@ pub(all) struct InputDispatchMouseEventParams {
   type_ : String
   x : Double
   y : Double
-  modifiers : Int?
+  modifiers : Int32?
   timestamp : InputTimeSinceEpoch?
   button : InputMouseButton?
-  buttons : Int?
-  click_count : Int?
+  buttons : Int32?
+  click_count : Int32?
   force : Double?
   tangential_pressure : Double?
   tilt_x : Double?
   tilt_y : Double?
-  twist : Int?
+  twist : Int32?
   delta_x : Double?
   delta_y : Double?
   pointer_type : String?
@@ -634,7 +634,7 @@ pub fn InputDispatchMouseEventParams::to_json(
 /// let command = input_dispatch_mouse_event_command(id=1, params, session_id=None)
 /// ```
 pub fn input_dispatch_mouse_event_command(
-  id~ : Int,
+  id~ : Int32,
   params : InputDispatchMouseEventParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -655,7 +655,7 @@ pub fn input_dispatch_mouse_event_command(
 pub(all) struct InputDispatchTouchEventParams {
   type_ : String
   touch_points : Array[InputTouchPoint]
-  modifiers : Int?
+  modifiers : Int32?
   timestamp : InputTimeSinceEpoch?
 } derive(Eq, Debug)
 
@@ -701,7 +701,7 @@ pub fn InputDispatchTouchEventParams::to_json(
 /// let command = input_dispatch_touch_event_command(id=1, params, session_id=None)
 /// ```
 pub fn input_dispatch_touch_event_command(
-  id~ : Int,
+  id~ : Int32,
   params : InputDispatchTouchEventParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -721,14 +721,14 @@ pub fn input_dispatch_touch_event_command(
 /// gives a referenced type name.
 pub(all) struct InputEmulateTouchFromMouseEventParams {
   type_ : String
-  x : Int
-  y : Int
+  x : Int32
+  y : Int32
   button : InputMouseButton
   timestamp : InputTimeSinceEpoch?
   delta_x : Double?
   delta_y : Double?
-  modifiers : Int?
-  click_count : Int?
+  modifiers : Int32?
+  click_count : Int32?
 } derive(Eq, Debug)
 
 ///|
@@ -786,7 +786,7 @@ pub fn InputEmulateTouchFromMouseEventParams::to_json(
 /// )
 /// ```
 pub fn input_emulate_touch_from_mouse_event_command(
-  id~ : Int,
+  id~ : Int32,
   params : InputEmulateTouchFromMouseEventParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -806,10 +806,10 @@ pub fn input_emulate_touch_from_mouse_event_command(
 /// gives a referenced type name.
 pub(all) struct InputImeSetCompositionParams {
   text : String
-  selection_start : Int
-  selection_end : Int
-  replacement_start : Int?
-  replacement_end : Int?
+  selection_start : Int32
+  selection_end : Int32
+  replacement_start : Int32?
+  replacement_end : Int32?
 } derive(Eq, Debug)
 
 ///|
@@ -853,7 +853,7 @@ pub fn InputImeSetCompositionParams::to_json(
 /// let command = input_ime_set_composition_command(id=1, params, session_id=None)
 /// ```
 pub fn input_ime_set_composition_command(
-  id~ : Int,
+  id~ : Int32,
   params : InputImeSetCompositionParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -904,7 +904,7 @@ pub fn InputInsertTextParams::to_json(self : InputInsertTextParams) -> Json {
 /// let command = input_insert_text_command(id=1, params, session_id=None)
 /// ```
 pub fn input_insert_text_command(
-  id~ : Int,
+  id~ : Int32,
   params : InputInsertTextParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -963,7 +963,7 @@ pub fn InputSetIgnoreInputEventsParams::to_json(
 /// )
 /// ```
 pub fn input_set_ignore_input_events_command(
-  id~ : Int,
+  id~ : Int32,
   params : InputSetIgnoreInputEventsParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -1018,7 +1018,7 @@ pub fn InputSetInterceptDragsParams::to_json(
 /// let command = input_set_intercept_drags_command(id=1, params, session_id=None)
 /// ```
 pub fn input_set_intercept_drags_command(
-  id~ : Int,
+  id~ : Int32,
   params : InputSetInterceptDragsParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -1040,7 +1040,7 @@ pub(all) struct InputSynthesizePinchGestureParams {
   x : Double
   y : Double
   scale_factor : Double
-  relative_speed : Int?
+  relative_speed : Int32?
   gesture_source_type : InputGestureSourceType?
 } derive(Eq, Debug)
 
@@ -1089,7 +1089,7 @@ pub fn InputSynthesizePinchGestureParams::to_json(
 /// )
 /// ```
 pub fn input_synthesize_pinch_gesture_command(
-  id~ : Int,
+  id~ : Int32,
   params : InputSynthesizePinchGestureParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -1115,10 +1115,10 @@ pub(all) struct InputSynthesizeScrollGestureParams {
   x_overscroll : Double?
   y_overscroll : Double?
   prevent_fling : Bool?
-  speed : Int?
+  speed : Int32?
   gesture_source_type : InputGestureSourceType?
-  repeat_count : Int?
-  repeat_delay_ms : Int?
+  repeat_count : Int32?
+  repeat_delay_ms : Int32?
   interaction_marker_name : String?
 } derive(Eq, Debug)
 
@@ -1190,7 +1190,7 @@ pub fn InputSynthesizeScrollGestureParams::to_json(
 /// )
 /// ```
 pub fn input_synthesize_scroll_gesture_command(
-  id~ : Int,
+  id~ : Int32,
   params : InputSynthesizeScrollGestureParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -1211,8 +1211,8 @@ pub fn input_synthesize_scroll_gesture_command(
 pub(all) struct InputSynthesizeTapGestureParams {
   x : Double
   y : Double
-  duration : Int?
-  tap_count : Int?
+  duration : Int32?
+  tap_count : Int32?
   gesture_source_type : InputGestureSourceType?
 } derive(Eq, Debug)
 
@@ -1263,7 +1263,7 @@ pub fn InputSynthesizeTapGestureParams::to_json(
 /// )
 /// ```
 pub fn input_synthesize_tap_gesture_command(
-  id~ : Int,
+  id~ : Int32,
   params : InputSynthesizeTapGestureParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {

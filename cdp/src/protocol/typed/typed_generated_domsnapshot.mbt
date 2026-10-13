@@ -233,7 +233,7 @@ pub fn DOMSnapshotDocumentSnapshot::from_json(
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
 pub(all) struct DOMSnapshotDOMNode {
-  node_type : Int
+  node_type : Int32
   node_name : String
   node_value : String
   text_value : String?
@@ -241,10 +241,10 @@ pub(all) struct DOMSnapshotDOMNode {
   input_checked : Bool?
   option_selected : Bool?
   backend_node_id : DOMBackendNodeId
-  child_node_indexes : Array[Int]?
+  child_node_indexes : Array[Int32]?
   attributes : Array[DOMSnapshotNameValue]?
-  pseudo_element_indexes : Array[Int]?
-  layout_node_index : Int?
+  pseudo_element_indexes : Array[Int32]?
+  layout_node_index : Int32?
   document_url : String?
   base_url : String?
   content_language : String?
@@ -252,7 +252,7 @@ pub(all) struct DOMSnapshotDOMNode {
   public_id : String?
   system_id : String?
   frame_id : PageFrameId?
-  content_document_index : Int?
+  content_document_index : Int32?
   pseudo_type : DOMPseudoType?
   shadow_root_type : DOMShadowRootType?
   is_clickable : Bool?
@@ -491,8 +491,8 @@ pub fn DOMSnapshotDOMNode::from_json(
 /// gives a referenced type name.
 pub(all) struct DOMSnapshotInlineTextBox {
   bounding_box : DOMRect
-  start_character_index : Int
-  num_characters : Int
+  start_character_index : Int32
+  num_characters : Int32
 } derive(Eq, Debug)
 
 ///|
@@ -550,12 +550,12 @@ pub fn DOMSnapshotInlineTextBox::from_json(
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
 pub(all) struct DOMSnapshotLayoutTreeNode {
-  dom_node_index : Int
+  dom_node_index : Int32
   bounding_box : DOMRect
   layout_text : String?
   inline_text_nodes : Array[DOMSnapshotInlineTextBox]?
-  style_index : Int?
-  paint_order : Int?
+  style_index : Int32?
+  paint_order : Int32?
   is_stacking_context : Bool?
 } derive(Eq, Debug)
 
@@ -644,12 +644,12 @@ pub fn DOMSnapshotLayoutTreeNode::from_json(
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
 pub(all) struct DOMSnapshotLayoutTreeSnapshot {
-  node_index : Array[Int]
+  node_index : Array[Int32]
   styles : Array[DOMSnapshotArrayOfStrings]
   bounds : Array[DOMSnapshotRectangle]
   text : Array[DOMSnapshotStringIndex]
   stacking_contexts : DOMSnapshotRareBooleanData
-  paint_orders : Array[Int]?
+  paint_orders : Array[Int32]?
   offset_rects : Array[DOMSnapshotRectangle]?
   scroll_rects : Array[DOMSnapshotRectangle]?
   client_rects : Array[DOMSnapshotRectangle]?
@@ -866,8 +866,8 @@ pub fn DOMSnapshotNameValue::from_json(
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
 pub(all) struct DOMSnapshotNodeTreeSnapshot {
-  parent_index : Array[Int]?
-  node_type : Array[Int]?
+  parent_index : Array[Int32]?
+  node_type : Array[Int32]?
   shadow_root_type : DOMSnapshotRareStringData?
   node_name : Array[DOMSnapshotStringIndex]?
   node_value : Array[DOMSnapshotStringIndex]?
@@ -1084,7 +1084,7 @@ pub fn DOMSnapshotNodeTreeSnapshot::from_json(
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
 pub(all) struct DOMSnapshotRareBooleanData {
-  index : Array[Int]
+  index : Array[Int32]
 } derive(Eq, Debug)
 
 ///|
@@ -1137,8 +1137,8 @@ pub fn DOMSnapshotRareBooleanData::from_json(
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
 pub(all) struct DOMSnapshotRareIntegerData {
-  index : Array[Int]
-  value : Array[Int]
+  index : Array[Int32]
+  value : Array[Int32]
 } derive(Eq, Debug)
 
 ///|
@@ -1200,7 +1200,7 @@ pub fn DOMSnapshotRareIntegerData::from_json(
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
 pub(all) struct DOMSnapshotRareStringData {
-  index : Array[Int]
+  index : Array[Int32]
   value : Array[DOMSnapshotStringIndex]
 } derive(Eq, Debug)
 
@@ -1302,7 +1302,7 @@ pub fn DOMSnapshotRectangle::from_json(
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
 pub(all) struct DOMSnapshotStringIndex {
-  value : Int
+  value : Int32
 } derive(Eq, Debug)
 
 ///|
@@ -1349,10 +1349,10 @@ pub fn DOMSnapshotStringIndex::from_json(
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
 pub(all) struct DOMSnapshotTextBoxSnapshot {
-  layout_index : Array[Int]
+  layout_index : Array[Int32]
   bounds : Array[DOMSnapshotRectangle]
-  start : Array[Int]
-  length : Array[Int]
+  start : Array[Int32]
+  length : Array[Int32]
 } derive(Eq, Debug)
 
 ///|
@@ -1545,7 +1545,7 @@ pub fn DOMSnapshotCaptureSnapshotResult::from_json(
 /// )
 /// ```
 pub fn domsnapshot_capture_snapshot_command(
-  id~ : Int,
+  id~ : Int32,
   params : DOMSnapshotCaptureSnapshotParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -1569,7 +1569,7 @@ pub fn domsnapshot_capture_snapshot_command(
 /// let command = domsnapshot_disable_command(id=1, session_id=None)
 /// ```
 pub fn domsnapshot_disable_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(
@@ -1591,7 +1591,7 @@ pub fn domsnapshot_disable_command(
 /// let command = domsnapshot_enable_command(id=1, session_id=None)
 /// ```
 pub fn domsnapshot_enable_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(
@@ -1718,7 +1718,7 @@ pub fn DOMSnapshotGetSnapshotResult::from_json(
 /// let command = domsnapshot_get_snapshot_command(id=1, params, session_id=None)
 /// ```
 pub fn domsnapshot_get_snapshot_command(
-  id~ : Int,
+  id~ : Int32,
   params : DOMSnapshotGetSnapshotParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {

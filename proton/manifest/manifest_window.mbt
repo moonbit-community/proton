@@ -81,12 +81,12 @@ pub impl Show for WindowSizeHint with fn output(self, logger) {
 /// Declarative window settings consumed by runtime manifests.
 pub struct WindowManifest {
   title : String
-  width : Int
-  height : Int
+  width : Int32
+  height : Int32
   size_hint : WindowSizeHint
   titlebar_style : TitlebarStyle
   theme_preference : WindowThemePreference
-  traffic_light_position : (Int, Int)?
+  traffic_light_position : (Int32, Int32)?
 } derive(Debug, Eq)
 
 ///|
@@ -160,12 +160,12 @@ pub impl Show for AppWindowManifest with fn output(self, logger) {
 /// into runtime `WindowConfig` values.
 pub fn WindowManifest::WindowManifest(
   title : String,
-  width : Int,
-  height : Int,
-  size_hint? : WindowSizeHint = WindowSizeHint::None,
-  titlebar_style? : TitlebarStyle = TitlebarStyle::Default,
-  theme? : WindowThemePreference = WindowThemePreference::System,
-  traffic_light_position? : (Int, Int),
+  width : Int32,
+  height : Int32,
+  size_hint~ : WindowSizeHint = WindowSizeHint::None,
+  titlebar_style~ : TitlebarStyle = TitlebarStyle::Default,
+  theme~ : WindowThemePreference = WindowThemePreference::System,
+  traffic_light_position? : (Int32, Int32),
 ) -> WindowManifest {
   WindowManifest::{
     title,
@@ -186,7 +186,7 @@ pub fn AppWindowManifest::AppWindowManifest(
   id : String,
   window : WindowManifest,
   entry : AppEntry,
-  open_on_start? : Bool = true,
+  open_on_start~ : Bool = true,
 ) -> AppWindowManifest {
   AppWindowManifest::{ id, window, entry, open_on_start, }
 }

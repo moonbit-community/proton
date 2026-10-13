@@ -2,7 +2,7 @@
 priv suberror StagingPlanError {
   UnsupportedResourceGlob(path~ : String)
   MissingInput(path~ : String)
-  NotLaunchableMachO(path~ : String, filetype~ : Int)
+  NotLaunchableMachO(path~ : String, filetype~ : Int32)
   InputOutsideBase(path~ : String)
 }
 
@@ -23,7 +23,7 @@ priv suberror StagingFileSystemError {
 
 ///|
 priv suberror StagingToolError {
-  Exit(tool~ : String, code~ : Int, detail~ : String)
+  Exit(tool~ : String, code~ : Int32, detail~ : String)
 }
 
 ///|

@@ -153,7 +153,7 @@ test "NSIS install modes belong only to the Windows package configuration" {
           "package": {
             "product_name": "Demo",
             "version": "1.0.0",
-            "platforms": platforms.to_json(),
+            "platforms": Json(platforms),
           },
         }),
       )

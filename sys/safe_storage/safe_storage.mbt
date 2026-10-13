@@ -1,5 +1,5 @@
 ///|
-extern "C" fn is_available_ffi() -> Int = "mb_safe_storage_is_available"
+extern "C" fn is_available_ffi() -> Int32 = "mb_safe_storage_is_available"
 
 ///|
 #borrow(value)
@@ -13,7 +13,7 @@ extern "C" fn decrypt_ffi(value : Bytes) -> Bytes = "mb_safe_storage_decrypt"
 extern "C" fn last_error_ffi() -> Bytes = "mb_safe_storage_last_error"
 
 ///|
-extern "C" fn operation_ok_ffi() -> Int = "mb_safe_storage_operation_ok"
+extern "C" fn operation_ok_ffi() -> Int32 = "mb_safe_storage_operation_ok"
 
 ///|
 fn error_message(default : String) -> String {

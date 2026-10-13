@@ -43,7 +43,7 @@ fn resource_document_url_is_supported(url : String) -> Bool {
 
 ///|
 fn resource_response(
-  status : Int,
+  status : Int32,
   mime_type : String,
   body : Bytes,
 ) -> ResourceResponse {
@@ -51,7 +51,7 @@ fn resource_response(
 }
 
 ///|
-fn resource_text_response(status : Int, body : String) -> ResourceResponse {
+fn resource_text_response(status : Int32, body : String) -> ResourceResponse {
   resource_response(status, "text/plain", @utf8.encode(body))
 }
 
@@ -107,7 +107,7 @@ fn resource_percent_decode_path(encoded : BytesView) -> String? {
 }
 
 ///|
-fn resource_hex_value(byte : Byte) -> Int? {
+fn resource_hex_value(byte : Byte) -> Int32? {
   if byte >= b'0' && byte <= b'9' {
     Some(byte.to_int() - b'0'.to_int())
   } else if byte >= b'a' && byte <= b'f' {

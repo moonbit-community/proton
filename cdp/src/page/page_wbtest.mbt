@@ -1,6 +1,6 @@
 ///|
 fn execution_context_created_params(
-  id : Int,
+  id : Int32,
   unique_id : String,
   frame_id : String,
 ) -> Json {
@@ -16,7 +16,7 @@ fn execution_context_created_params(
 }
 
 ///|
-fn execution_context_destroyed_params(id : Int, unique_id : String) -> Json {
+fn execution_context_destroyed_params(id : Int32, unique_id : String) -> Json {
   { "executionContextId": id, "executionContextUniqueId": unique_id }
 }
 

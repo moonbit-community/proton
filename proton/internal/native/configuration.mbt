@@ -143,11 +143,14 @@ fn validate_web_request_config(
 }
 
 ///|
-fn parse_color_argb(text : String, context : String) -> UInt raise NativeError {
+fn parse_color_argb(
+  text : String,
+  context : String,
+) -> UInt32 raise NativeError {
   if (text.length() != 7 && text.length() != 9) || !text.has_prefix("#") {
     raise invalid_argument(context + " must be #RRGGBB or #AARRGGBB")
   }
-  let mut color : UInt = if text.length() == 7 { 0xff } else { 0 }
+  let mut color : UInt32 = if text.length() == 7 { 0xff } else { 0 }
   for i = 1; i < text.length(); i = i + 1 {
     let c = text[i].to_int()
     let digit = if c >= 48 && c <= 57 {

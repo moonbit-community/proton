@@ -1,7 +1,7 @@
 ///|
 fn test_staging_plan(
   root : String,
-  sign_binaries? : Array[String] = [],
+  sign_binaries~ : Array[String] = [],
 ) -> PackagePlan {
   PackagePlan::{
     root,

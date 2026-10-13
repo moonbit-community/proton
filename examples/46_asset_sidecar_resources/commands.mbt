@@ -1,7 +1,7 @@
 ///|
 struct AddRequest {
-  left : Int
-  right : Int
+  left : Int32
+  right : Int32
 } derive(ToJson, FromJson)
 
 ///|
@@ -22,12 +22,12 @@ pub extend ReportProbeRequest with ToJson::{to_json}
 pub extend ReportProbeRequest with FromJson::{from_json}
 
 ///|
-let add_command : @proton_contract.Command[AddRequest, Int] = generated_extension_contract.command(
+let add_command : @proton_contract.Command[AddRequest, Int32] = generated_extension_contract.command(
   "add",
 )
 
 ///|
-let add_later_command : @proton_contract.Command[AddRequest, Int] = generated_extension_contract.command(
+let add_later_command : @proton_contract.Command[AddRequest, Int32] = generated_extension_contract.command(
   "addLater",
 )
 
@@ -38,13 +38,13 @@ let report_probe_command : @proton_contract.Command[ReportProbeRequest, Unit] = 
 
 ///|
 #proton.command(contract=add_command)
-fn add(request : AddRequest) -> Int {
+fn add(request : AddRequest) -> Int32 {
   request.left + request.right
 }
 
 ///|
 #proton.command(contract=add_later_command)
-async fn add_later(request : AddRequest) -> Int {
+async fn add_later(request : AddRequest) -> Int32 {
   @async.sleep(800)
   request.left + request.right
 }

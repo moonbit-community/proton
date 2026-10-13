@@ -22,7 +22,7 @@ fn decode_native_detail(detail : Bytes) -> String {
 ///|
 /// Raises a public keep-awake error from raw native status and detail bytes.
 fn[T] raise_native_error(
-  status~ : Int,
+  status~ : Int32,
   operation~ : String,
   detail~ : Bytes,
 ) -> T raise KeepAwakeError {
@@ -49,7 +49,7 @@ fn finish_acquire(handle : Guard) -> Guard raise KeepAwakeError {
 
 ///|
 /// Raises a release failure if the native backend did not report success.
-fn finish_release(status : Int, detail : Bytes) -> Unit raise KeepAwakeError {
+fn finish_release(status : Int32, detail : Bytes) -> Unit raise KeepAwakeError {
   if status == native_status_ok {
     ()
   } else {
@@ -74,7 +74,7 @@ fn[T] run_with_cleanup(
 ///|
 /// Maps native backend status codes into public MoonBit errors.
 fn classify_native_error(
-  status~ : Int,
+  status~ : Int32,
   operation~ : String,
   detail~ : String,
 ) -> KeepAwakeError {

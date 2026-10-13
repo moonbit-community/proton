@@ -19,7 +19,7 @@ pub(all) struct LayerTreeLayer {
   anchor_x : Double?
   anchor_y : Double?
   anchor_z : Double?
-  paint_count : Int
+  paint_count : Int32
   draws_content : Bool
   invisible : Bool?
   scroll_rects : Array[LayerTreeScrollRect]?
@@ -534,7 +534,7 @@ pub fn LayerTreeCompositingReasonsResult::from_json(
 /// )
 /// ```
 pub fn layer_tree_compositing_reasons_command(
-  id~ : Int,
+  id~ : Int32,
   params : LayerTreeCompositingReasonsParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -558,7 +558,7 @@ pub fn layer_tree_compositing_reasons_command(
 /// let command = layer_tree_disable_command(id=1, session_id=None)
 /// ```
 pub fn layer_tree_disable_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(
@@ -580,7 +580,7 @@ pub fn layer_tree_disable_command(
 /// let command = layer_tree_enable_command(id=1, session_id=None)
 /// ```
 pub fn layer_tree_enable_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(id~, method_name="LayerTree.enable", session_id?)
@@ -672,7 +672,7 @@ pub fn LayerTreeLoadSnapshotResult::from_json(
 /// let command = layer_tree_load_snapshot_command(id=1, params, session_id=None)
 /// ```
 pub fn layer_tree_load_snapshot_command(
-  id~ : Int,
+  id~ : Int32,
   params : LayerTreeLoadSnapshotParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -770,7 +770,7 @@ pub fn LayerTreeMakeSnapshotResult::from_json(
 /// let command = layer_tree_make_snapshot_command(id=1, params, session_id=None)
 /// ```
 pub fn layer_tree_make_snapshot_command(
-  id~ : Int,
+  id~ : Int32,
   params : LayerTreeMakeSnapshotParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -790,7 +790,7 @@ pub fn layer_tree_make_snapshot_command(
 /// gives a referenced type name.
 pub(all) struct LayerTreeProfileSnapshotParams {
   snapshot_id : LayerTreeSnapshotId
-  min_repeat_count : Int?
+  min_repeat_count : Int32?
   min_duration : Double?
   clip_rect : DOMRect?
 } derive(Eq, Debug)
@@ -883,7 +883,7 @@ pub fn LayerTreeProfileSnapshotResult::from_json(
 /// let command = layer_tree_profile_snapshot_command(id=1, params, session_id=None)
 /// ```
 pub fn layer_tree_profile_snapshot_command(
-  id~ : Int,
+  id~ : Int32,
   params : LayerTreeProfileSnapshotParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -938,7 +938,7 @@ pub fn LayerTreeReleaseSnapshotParams::to_json(
 /// let command = layer_tree_release_snapshot_command(id=1, params, session_id=None)
 /// ```
 pub fn layer_tree_release_snapshot_command(
-  id~ : Int,
+  id~ : Int32,
   params : LayerTreeReleaseSnapshotParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -958,8 +958,8 @@ pub fn layer_tree_release_snapshot_command(
 /// gives a referenced type name.
 pub(all) struct LayerTreeReplaySnapshotParams {
   snapshot_id : LayerTreeSnapshotId
-  from_step : Int?
-  to_step : Int?
+  from_step : Int32?
+  to_step : Int32?
   scale : Double?
 } derive(Eq, Debug)
 
@@ -1048,7 +1048,7 @@ pub fn LayerTreeReplaySnapshotResult::from_json(
 /// let command = layer_tree_replay_snapshot_command(id=1, params, session_id=None)
 /// ```
 pub fn layer_tree_replay_snapshot_command(
-  id~ : Int,
+  id~ : Int32,
   params : LayerTreeReplaySnapshotParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -1191,7 +1191,7 @@ pub fn LayerTreeSnapshotCommandLogResult::from_json(
 /// )
 /// ```
 pub fn layer_tree_snapshot_command_log_command(
-  id~ : Int,
+  id~ : Int32,
   params : LayerTreeSnapshotCommandLogParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {

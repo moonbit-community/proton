@@ -80,7 +80,7 @@ async fn app_cleanup(
   windows : Array[RunningWindow],
   command_host : CommandHostRuntime?,
   wakeup : RuntimeWakeup,
-  lifecycle_failures? : Array[AppCleanupError] = [],
+  lifecycle_failures~ : Array[AppCleanupError] = [],
 ) -> Array[AppCleanupError] noraise {
   lifecycle.begin_draining()
   let failures = lifecycle_failures.copy()

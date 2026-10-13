@@ -47,10 +47,10 @@ pub extend ProtocolSchemaDiffItem with ToJson::{to_json}
 /// against the bundled schema.
 pub(all) struct ProtocolRemoteSummary {
   version : ProtocolVersion
-  domain_count : Int
-  command_count : Int
-  event_count : Int
-  type_count : Int
+  domain_count : Int32
+  command_count : Int32
+  event_count : Int32
+  type_count : Int32
   domains : Array[ProtocolDomainSummary]
 } derive(Eq, ToJson, Debug)
 
@@ -77,14 +77,14 @@ pub extend ProtocolRemoteSummary with ToJson::{to_json}
 pub(all) struct ProtocolSchemaDiffReport {
   local_version : ProtocolVersion
   remote_version : ProtocolVersion
-  local_domain_count : Int
-  remote_domain_count : Int
-  local_command_count : Int
-  remote_command_count : Int
-  local_event_count : Int
-  remote_event_count : Int
-  local_type_count : Int
-  remote_type_count : Int
+  local_domain_count : Int32
+  remote_domain_count : Int32
+  local_command_count : Int32
+  remote_command_count : Int32
+  local_event_count : Int32
+  remote_event_count : Int32
+  local_type_count : Int32
+  remote_type_count : Int32
   remote_only_domains : Array[String]
   local_only_domains : Array[String]
   remote_only_commands : Array[String]

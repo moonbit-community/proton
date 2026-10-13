@@ -15,7 +15,7 @@ fn vector_signature() -> Bytes raise {
 
 ///|
 /// Replaces one byte, for producing a signature that is well formed but wrong.
-fn with_byte(source : Bytes, index : Int, value : Byte) -> Bytes {
+fn with_byte(source : Bytes, index : Int32, value : Byte) -> Bytes {
   let out : Array[Byte] = []
   for position in 0..<source.length() {
     out.push(if position == index { value } else { source[position] })

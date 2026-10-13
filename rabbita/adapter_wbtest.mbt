@@ -1,6 +1,6 @@
 ///|
 struct TestScheduler {
-  queued_commands : Ref[Int]
+  queued_commands : Ref[Int32]
 }
 
 ///|
@@ -54,7 +54,7 @@ impl @cmd.Scheduler for TestScheduler with fn set_url_request_injector(
 fn test_event_payload(
   client : @proton_client.Client,
   received : (String) -> @cmd.Cmd,
-  failure? : (@proton_client.ClientFailure) -> @cmd.Cmd = _ => @cmd.none,
+  failure~ : (@proton_client.ClientFailure) -> @cmd.Cmd = _ => @cmd.none,
 ) -> Error {
   EventSubscription(
     route="app:changed",

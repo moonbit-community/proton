@@ -52,7 +52,7 @@ fn create_status_result(
 ///|
 /// Converts a native register status code into the package's public result shape.
 fn register_status_result(
-  status : Int,
+  status : Int32,
   error_message : Bytes,
   accelerator : String,
 ) -> Result[Bool, String] {
@@ -68,7 +68,7 @@ fn register_status_result(
 ///|
 /// Converts a native unregister status code into the package's public result shape.
 fn unregister_status_result(
-  status : Int,
+  status : Int32,
   error_message : Bytes,
   accelerator : String,
 ) -> Result[Bool, String] {

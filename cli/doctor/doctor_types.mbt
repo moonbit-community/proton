@@ -85,11 +85,11 @@ fn DoctorReport::has_errors(self : DoctorReport) -> Bool {
 
 ///|
 priv struct DoctorSummary {
-  total : Int
-  passed : Int
-  warnings : Int
-  errors : Int
-  neutral : Int
+  total : Int32
+  passed : Int32
+  warnings : Int32
+  errors : Int32
+  neutral : Int32
 }
 
 ///|

@@ -273,7 +273,7 @@ pub fn FileSystemGetDirectoryResult::from_json(
 /// let command = file_system_get_directory_command(id=1, params, session_id=None)
 /// ```
 pub fn file_system_get_directory_command(
-  id~ : Int,
+  id~ : Int32,
   params : FileSystemGetDirectoryParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {

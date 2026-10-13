@@ -1,7 +1,7 @@
 ///|
 struct MultiWindowIdentifyPayload {
   label : String
-  delay_ms : Int?
+  delay_ms : Int32?
 } derive(FromJson)
 
 ///|
@@ -35,7 +35,7 @@ let multi_window_hold : @proton_contract.Command[Unit, Unit] = multi_window_cont
 )
 
 ///|
-let multi_window_pending : @proton_contract.Command[Unit, Int] = multi_window_contract.command(
+let multi_window_pending : @proton_contract.Command[Unit, Int32] = multi_window_contract.command(
   "pending",
 )
 

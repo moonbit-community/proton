@@ -11,36 +11,36 @@
 /// assert_true(report.complete)
 /// ```
 pub(all) struct ProtocolTypedCoverageReport {
-  domain_count : Int
-  source_count : Int
-  command_count : Int
-  command_registry_count : Int
-  command_registry_missing_count : Int
-  event_count : Int
-  event_registry_count : Int
-  event_registry_missing_count : Int
-  type_count : Int
-  type_registry_count : Int
-  type_registry_missing_count : Int
-  command_with_params_count : Int
-  typed_command_params_count : Int
-  typed_command_params_missing_count : Int
-  command_with_returns_count : Int
-  typed_command_result_count : Int
-  typed_command_result_missing_count : Int
-  typed_command_result_decoder_count : Int
-  typed_command_result_decoder_missing_count : Int
-  event_with_params_count : Int
-  typed_event_params_count : Int
-  typed_event_params_missing_count : Int
-  typed_event_decoder_count : Int
-  typed_event_decoder_missing_count : Int
-  typed_command_builder_count : Int
-  typed_command_builder_missing_count : Int
-  typed_event_builder_count : Int
-  typed_event_builder_missing_count : Int
-  typed_domain_type_count : Int
-  typed_domain_type_missing_count : Int
+  domain_count : Int32
+  source_count : Int32
+  command_count : Int32
+  command_registry_count : Int32
+  command_registry_missing_count : Int32
+  event_count : Int32
+  event_registry_count : Int32
+  event_registry_missing_count : Int32
+  type_count : Int32
+  type_registry_count : Int32
+  type_registry_missing_count : Int32
+  command_with_params_count : Int32
+  typed_command_params_count : Int32
+  typed_command_params_missing_count : Int32
+  command_with_returns_count : Int32
+  typed_command_result_count : Int32
+  typed_command_result_missing_count : Int32
+  typed_command_result_decoder_count : Int32
+  typed_command_result_decoder_missing_count : Int32
+  event_with_params_count : Int32
+  typed_event_params_count : Int32
+  typed_event_params_missing_count : Int32
+  typed_event_decoder_count : Int32
+  typed_event_decoder_missing_count : Int32
+  typed_command_builder_count : Int32
+  typed_command_builder_missing_count : Int32
+  typed_event_builder_count : Int32
+  typed_event_builder_missing_count : Int32
+  typed_domain_type_count : Int32
+  typed_domain_type_missing_count : Int32
   complete : Bool
 } derive(Eq, ToJson, Debug)
 
@@ -169,7 +169,7 @@ pub fn protocol_typed_coverage_report() -> ProtocolTypedCoverageReport {
 
 ///|
 // Return how many expected entries are missing, clamped at zero.
-fn missing_count(expected : Int, actual : Int) -> Int {
+fn missing_count(expected : Int32, actual : Int32) -> Int32 {
   if actual >= expected {
     0
   } else {

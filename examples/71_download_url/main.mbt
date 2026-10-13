@@ -42,7 +42,7 @@ let cancel_command : @proton_contract.Command[Unit, Reply] = contract.command(
 let browser_slot : Ref[@proton.WebContentsHandle?] = { val: None, }
 
 ///|
-let last_download_id : Ref[Int?] = { val: None, }
+let last_download_id : Ref[Int32?] = { val: None, }
 
 ///|
 let show_dialog : Ref[Bool] = { val: false, }

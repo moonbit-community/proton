@@ -1,10 +1,10 @@
 ///|
 /// The only manifest schema this client understands.
-pub let supported_schema_version : Int = 2
+pub let supported_schema_version : Int32 = 2
 
 ///|
 /// Number of hexadecimal characters in a SHA-256 digest.
-let sha256_hex_length : Int = 64
+let sha256_hex_length : Int32 = 64
 
 ///|
 /// One platform's full-artifact update.
@@ -277,7 +277,7 @@ fn required_int(
   fields : Map[String, Json],
   name : String,
   path : String,
-) -> Int raise ManifestError {
+) -> Int32 raise ManifestError {
   match fields.get(name) {
     None => raise MissingField(path="\{path}.\{name}")
     Some(Number(value, ..)) => {

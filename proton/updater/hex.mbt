@@ -31,7 +31,7 @@ fn decode_hex_body_text(text : String, url : String) -> Bytes raise UpdateError 
 }
 
 ///|
-fn hex_digit(digit : Char, url : String) -> Int raise UpdateError {
+fn hex_digit(digit : Char, url : String) -> Int32 raise UpdateError {
   let code = digit.to_int()
   if code >= '0'.to_int() && code <= '9'.to_int() {
     return code - '0'.to_int()

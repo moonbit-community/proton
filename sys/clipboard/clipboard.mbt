@@ -9,11 +9,11 @@ extern "C" fn read_text_ffi() -> Bytes = "mb_clipboard_read_text"
 ///|
 /// Writes UTF-8 encoded text bytes to the native backend.
 #borrow(text)
-extern "C" fn write_text_ffi(text : Bytes) -> Int = "mb_clipboard_write_text"
+extern "C" fn write_text_ffi(text : Bytes) -> Int32 = "mb_clipboard_write_text"
 
 ///|
 /// Returns the last backend error code.
-extern "C" fn last_error_code_ffi() -> Int = "mb_clipboard_last_error_code"
+extern "C" fn last_error_code_ffi() -> Int32 = "mb_clipboard_last_error_code"
 
 ///|
 /// Returns the last backend error message.
@@ -65,7 +65,7 @@ fn ensure_supported_result(
 fn read_text_result(
   supported : Bool,
   bytes : Bytes,
-  error_code : Int,
+  error_code : Int32,
   error_message : Bytes,
 ) -> Result[String?, String] {
   if !supported {
@@ -81,7 +81,7 @@ fn read_text_result(
 /// Converts raw write outputs into the public write result.
 fn write_text_result(
   supported : Bool,
-  status : Int,
+  status : Int32,
   error_message : Bytes,
 ) -> Result[Unit, String] {
   if !supported {
@@ -98,7 +98,7 @@ fn write_text_result(
 fn read_text_with(
   supported : Bool,
   read : () -> Bytes,
-  get_error_code : () -> Int,
+  get_error_code : () -> Int32,
   get_error_message : () -> Bytes,
 ) -> Result[String?, String] {
   if supported {
@@ -113,7 +113,7 @@ fn read_text_with(
 fn write_text_with(
   supported : Bool,
   text : String,
-  write : (Bytes) -> Int,
+  write : (Bytes) -> Int32,
   get_error_message : () -> Bytes,
 ) -> Result[Unit, String] {
   if supported {

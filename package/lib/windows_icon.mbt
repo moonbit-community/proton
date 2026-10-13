@@ -7,12 +7,12 @@ let windows_icon_error_buffer_length = 1024
 #borrow(executable, icon, error_buffer)
 extern "C" fn set_windows_executable_icon_ffi(
   executable : Bytes,
-  executable_length : Int,
+  executable_length : Int32,
   icon : Bytes,
-  icon_length : Int,
+  icon_length : Int32,
   error_buffer : FixedArray[Byte],
-  error_buffer_length : Int,
-) -> Int = "proton_package_set_windows_executable_icon"
+  error_buffer_length : Int32,
+) -> Int32 = "proton_package_set_windows_executable_icon"
 
 ///|
 fn first_windows_icon(icons : Array[String]) -> String? {
@@ -29,7 +29,7 @@ fn first_windows_icon(icons : Array[String]) -> String? {
 async fn stage_windows_icon(
   spec : PackageSpec,
   executable : String,
-  embedded? : Bool = false,
+  embedded~ : Bool = false,
 ) -> Unit {
   guard !embedded else { return }
   guard first_windows_icon(spec.icons) is Some(icon) else { return }
@@ -67,7 +67,7 @@ async fn stage_windows_icon(
 fn stage_windows_icon(
   spec : PackageSpec,
   _executable : String,
-  embedded? : Bool = false,
+  embedded~ : Bool = false,
 ) -> Unit raise WindowsPackagingError {
   guard !embedded else { return }
   guard first_windows_icon(spec.icons) is Some(_) else { return }

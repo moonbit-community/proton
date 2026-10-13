@@ -6,7 +6,7 @@
 pub(all) suberror ManifestError {
   NotJson
   NotAnObject(path~ : String)
-  UnknownSchemaVersion(found~ : Int)
+  UnknownSchemaVersion(found~ : Int32)
   UnknownField(path~ : String)
   MissingField(path~ : String)
   InvalidField(path~ : String, expectation~ : String)

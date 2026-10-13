@@ -23,7 +23,7 @@ fn decode_hex(text : String) -> Bytes raise KeyError {
 }
 
 ///|
-fn hex_digit_value(digit : Char) -> Int raise KeyError {
+fn hex_digit_value(digit : Char) -> Int32 raise KeyError {
   let code = digit.to_int()
   if code >= '0'.to_int() && code <= '9'.to_int() {
     return code - '0'.to_int()

@@ -623,7 +623,7 @@ fn RuntimeSession::read_window_content_size(
   self : RuntimeSession,
   id : String,
   native_id : Int64,
-) -> (Int, Int) raise WindowSessionError {
+) -> (Int32, Int32) raise WindowSessionError {
   let running = self.resolve_window(id, native_id)
   running.window.content_size() catch {
     error =>
@@ -1164,7 +1164,7 @@ pub fn WindowHandle::set_icon(
 pub fn WindowHandle::set_parent(
   self : WindowHandle,
   parent : WindowHandle?,
-  modal? : Bool = false,
+  modal~ : Bool = false,
 ) -> Unit raise WindowSessionError {
   let parent_native_id = parent.map(parent => parent.native_id)
   self.session.set_window_parent(
@@ -1178,8 +1178,8 @@ pub fn WindowHandle::set_parent(
 ///|
 pub fn WindowHandle::set_size(
   self : WindowHandle,
-  width : Int,
-  height : Int,
+  width : Int32,
+  height : Int32,
 ) -> Unit raise WindowSessionError {
   self.with_window("set size", window => window.set_size(width, height))
 }
@@ -1188,8 +1188,8 @@ pub fn WindowHandle::set_size(
 /// Sets the renderer content area in logical pixels.
 pub fn WindowHandle::set_content_size(
   self : WindowHandle,
-  width : Int,
-  height : Int,
+  width : Int32,
+  height : Int32,
 ) -> Unit raise WindowSessionError {
   self.with_window("set content size", window => {
     window.set_content_size(width, height)
@@ -1200,7 +1200,7 @@ pub fn WindowHandle::set_content_size(
 /// Returns the renderer content area in logical pixels.
 pub fn WindowHandle::content_size(
   self : WindowHandle,
-) -> (Int, Int) raise WindowSessionError {
+) -> (Int32, Int32) raise WindowSessionError {
   self.session.read_window_content_size(self.id, self.native_id)
 }
 
@@ -1209,7 +1209,7 @@ pub fn WindowHandle::content_size(
 /// Electron's `getBounds` coordinate order.
 pub fn WindowHandle::bounds(
   self : WindowHandle,
-) -> (Int, Int, Int, Int) raise WindowSessionError {
+) -> (Int32, Int32, Int32, Int32) raise WindowSessionError {
   let state = self.state()
   (state.x, state.y, state.width, state.height)
 }
@@ -1218,7 +1218,7 @@ pub fn WindowHandle::bounds(
 /// Returns the window's `(x, y)` position in logical screen pixels.
 pub fn WindowHandle::position(
   self : WindowHandle,
-) -> (Int, Int) raise WindowSessionError {
+) -> (Int32, Int32) raise WindowSessionError {
   let state = self.state()
   (state.x, state.y)
 }
@@ -1227,7 +1227,7 @@ pub fn WindowHandle::position(
 /// Returns the window's `(width, height)` frame size in logical pixels.
 pub fn WindowHandle::size(
   self : WindowHandle,
-) -> (Int, Int) raise WindowSessionError {
+) -> (Int32, Int32) raise WindowSessionError {
   let state = self.state()
   (state.width, state.height)
 }
@@ -1237,10 +1237,10 @@ pub fn WindowHandle::size(
 /// `setBounds` coordinate order.
 pub fn WindowHandle::set_bounds(
   self : WindowHandle,
-  x~ : Int,
-  y~ : Int,
-  width~ : Int,
-  height~ : Int,
+  x~ : Int32,
+  y~ : Int32,
+  width~ : Int32,
+  height~ : Int32,
 ) -> Unit raise WindowSessionError {
   self.set_position(x, y)
   self.set_size(width, height)
@@ -1322,8 +1322,8 @@ pub fn WindowHandle::set_kiosk(
 ///|
 pub fn WindowHandle::set_position(
   self : WindowHandle,
-  x : Int,
-  y : Int,
+  x : Int32,
+  y : Int32,
 ) -> Unit raise WindowSessionError {
   self.with_window("set position", window => window.set_position(x, y))
 }
@@ -1342,7 +1342,7 @@ pub fn WindowHandle::center(
 }
 
 ///|
-fn WindowState::center_position(self : WindowState) -> (Int, Int) {
+fn WindowState::center_position(self : WindowState) -> (Int32, Int32) {
   let monitor = self.monitor
   let (width, height) = @native.window_size_in_screen_coordinates(
     self.width,
@@ -1386,8 +1386,8 @@ pub fn WindowHandle::set_resizable(
 /// Headless runtimes raise `WindowSessionError`.
 pub fn WindowHandle::set_minimum_size(
   self : WindowHandle,
-  width : Int,
-  height : Int,
+  width : Int32,
+  height : Int32,
 ) -> Unit raise WindowSessionError {
   self.with_window("set minimum size", window => {
     window.set_minimum_size(width, height)
@@ -1402,8 +1402,8 @@ pub fn WindowHandle::set_minimum_size(
 /// Headless runtimes raise `WindowSessionError`.
 pub fn WindowHandle::set_maximum_size(
   self : WindowHandle,
-  width : Int,
-  height : Int,
+  width : Int32,
+  height : Int32,
 ) -> Unit raise WindowSessionError {
   self.with_window("set maximum size", window => {
     window.set_maximum_size(width, height)
@@ -1676,7 +1676,7 @@ pub fn WindowHandle::set_menu(
 /// Returns the main browser zoom percentage.
 pub fn WindowHandle::zoom_percent(
   self : WindowHandle,
-) -> Int raise WindowSessionError {
+) -> Int32 raise WindowSessionError {
   self.state().zoom_percent
 }
 
@@ -1696,7 +1696,7 @@ pub fn WindowHandle::zoom_percent(
 pub fn WindowHandle::set_progress_bar(
   self : WindowHandle,
   progress : Double,
-  mode? : ProgressBarMode = ProgressBarMode::Automatic,
+  mode~ : ProgressBarMode = ProgressBarMode::Automatic,
 ) -> Unit raise WindowSessionError {
   self.with_window("set progress bar", window => {
     window.set_progress_bar(progress, mode.to_native())
@@ -1785,8 +1785,8 @@ pub fn WindowHandle::state(
 fn WindowHandle::popup_menu(
   self : WindowHandle,
   menu : Menu,
-  x : Int,
-  y : Int,
+  x : Int32,
+  y : Int32,
 ) -> Unit raise WindowSessionError {
   self.with_window("popup menu in", window => {
     window.popup_menu(@native.MenuBar(menus=[menu.to_native()]), x, y)
@@ -1855,10 +1855,10 @@ pub fn ViewHandle::window_id(self : ViewHandle) -> String {
 /// window's content coordinate space, matching Electron's `setBounds`.
 pub fn ViewHandle::set_bounds(
   self : ViewHandle,
-  x~ : Int,
-  y~ : Int,
-  width~ : Int,
-  height~ : Int,
+  x~ : Int32,
+  y~ : Int32,
+  width~ : Int32,
+  height~ : Int32,
 ) -> Unit raise WindowSessionError {
   self.with_view("set bounds of", view => {
     view.set_bounds(x~, y~, width~, height~)
@@ -1878,7 +1878,7 @@ pub fn ViewHandle::set_visible(
 /// renders above lower values.
 pub fn ViewHandle::set_z_order(
   self : ViewHandle,
-  z_order : Int,
+  z_order : Int32,
 ) -> Unit raise WindowSessionError {
   self.with_view("set z-order of", view => view.set_z_order(z_order))
 }
@@ -1957,7 +1957,7 @@ fn[T] WebContentsHandle::with_target(
 fn WebContentsHandle::browser_command(
   self : WebContentsHandle,
   command : String,
-  download_id : Int?,
+  download_id : Int32?,
 ) -> Unit raise WindowSessionError {
   self.with_target(command + " in", target => {
     match target {
@@ -2038,10 +2038,10 @@ pub fn WebContentsHandle::eval(
 pub fn WebContentsHandle::find_in_page(
   self : WebContentsHandle,
   text : String,
-  forward? : Bool = true,
-  match_case? : Bool = false,
-  find_next? : Bool = false,
-) -> Int raise WindowSessionError {
+  forward~ : Bool = true,
+  match_case~ : Bool = false,
+  find_next~ : Bool = false,
+) -> Int32 raise WindowSessionError {
   self.with_target("find in", target => {
     match target {
       PrimaryPage(window) =>
@@ -2056,7 +2056,7 @@ pub fn WebContentsHandle::find_in_page(
 /// current match highlight.
 pub fn WebContentsHandle::stop_find_in_page(
   self : WebContentsHandle,
-  clear_selection? : Bool = true,
+  clear_selection~ : Bool = true,
 ) -> Unit raise WindowSessionError {
   self.with_target("stop find in", target => {
     match target {
@@ -2102,7 +2102,7 @@ pub fn WebContentsHandle::print(
 pub async fn WebContentsHandle::print_to_pdf(
   self : WebContentsHandle,
   path : String,
-  options? : PdfPrintOptions = PdfPrintOptions(),
+  options~ : PdfPrintOptions = PdfPrintOptions(),
 ) -> Unit {
   let request_id = self.with_target("print to PDF in", target => {
     target.print_to_pdf(path, options.to_native())
@@ -2137,7 +2137,7 @@ pub fn WebContentsHandle::forward(
 /// Sets the main browser zoom from 25% through 500%.
 pub fn WebContentsHandle::set_zoom_percent(
   self : WebContentsHandle,
-  zoom_percent : Int,
+  zoom_percent : Int32,
 ) -> Unit raise WindowSessionError {
   self.with_target("set zoom of", target => {
     match target {
@@ -2151,7 +2151,7 @@ pub fn WebContentsHandle::set_zoom_percent(
 /// Returns the main browser zoom percentage.
 pub fn WebContentsHandle::zoom_percent(
   self : WebContentsHandle,
-) -> Int raise WindowSessionError {
+) -> Int32 raise WindowSessionError {
   self.with_target("read zoom of", target => {
     match target {
       PrimaryPage(window) => window.state().zoom_percent
@@ -2286,7 +2286,7 @@ pub fn WebContentsHandle::session(self : WebContentsHandle) -> SessionHandle {
 ///|
 pub fn WebContentsHandle::reload(
   self : WebContentsHandle,
-  ignore_cache? : Bool = false,
+  ignore_cache~ : Bool = false,
 ) -> Unit raise WindowSessionError {
   self.browser_command(
     if ignore_cache {
@@ -2441,7 +2441,7 @@ pub fn WebContentsHandle::is_devtools_opened(
 ///|
 pub fn WebContentsHandle::cancel_download(
   self : WebContentsHandle,
-  download_id : Int,
+  download_id : Int32,
 ) -> Unit raise WindowSessionError {
   self.browser_command("cancel_download", Some(download_id))
 }
@@ -2454,7 +2454,7 @@ fn RuntimeSession::command_host(self : RuntimeSession) -> @core.AppCommandHost? 
 ///|
 async fn RuntimeSession::wait_for_bridge_startup(
   self : RuntimeSession,
-  timeout_ms : Int,
+  timeout_ms : Int32,
 ) -> Unit {
   let completed = @async.with_timeout_opt(timeout_ms, () => {
     drive_wakeup_until(
@@ -2534,7 +2534,7 @@ async fn RuntimeSession::drive_until_complete(
 ///|
 fn RuntimeSession::pump_once(
   self : RuntimeSession,
-  monitor_bridge? : Bool = true,
+  monitor_bridge~ : Bool = true,
 ) -> Bool raise AppRunError {
   let mut did_work = self.process_window_commands()
   if self.drain_runtime_events() {
@@ -3993,7 +3993,10 @@ fn should_continue_quit(decision : ApplicationQuitDecision) -> Bool {
 }
 
 ///|
-fn RuntimeSession::request_quit(self : RuntimeSession, exit_code : Int) -> Unit {
+fn RuntimeSession::request_quit(
+  self : RuntimeSession,
+  exit_code : Int32,
+) -> Unit {
   let accepted = self.close_coordinator.begin_exit(Quit(exit_code))
   if accepted {
     self.wakeup.signal.notify()
@@ -4042,7 +4045,10 @@ fn RuntimeSession::request_update_install(
 }
 
 ///|
-fn RuntimeSession::request_exit(self : RuntimeSession, exit_code : Int) -> Unit {
+fn RuntimeSession::request_exit(
+  self : RuntimeSession,
+  exit_code : Int32,
+) -> Unit {
   if self.close_coordinator.begin_exit(ForceExit(exit_code)) {
     self.wakeup.signal.notify()
   }
@@ -4560,7 +4566,7 @@ fn runtime_session_cancel_bridge_request(
 /// Names the CEF renderer termination status the way Electron names render
 /// process gone reasons. CEF reports only unexpected terminations, so
 /// Electron's `clean-exit` and `memory-eviction` never appear here.
-fn render_process_gone_reason(status : Int) -> RenderProcessGoneReason {
+fn render_process_gone_reason(status : Int32) -> RenderProcessGoneReason {
   match status {
     0 => RenderProcessGoneReason::AbnormalExit
     1 => RenderProcessGoneReason::Killed
@@ -4697,7 +4703,7 @@ fn CloseCoordinator::is_forced(self : CloseCoordinator) -> Bool {
 }
 
 ///|
-fn CloseCoordinator::exit_code(self : CloseCoordinator) -> Int {
+fn CloseCoordinator::exit_code(self : CloseCoordinator) -> Int32 {
   match self.purpose {
     Quit(code) | ForceExit(code) => code
     InstallUpdate => 0

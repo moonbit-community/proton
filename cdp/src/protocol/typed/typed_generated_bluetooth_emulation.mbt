@@ -323,7 +323,7 @@ pub fn BluetoothEmulationGATTOperationType::from_json(
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
 pub(all) struct BluetoothEmulationManufacturerData {
-  key : Int
+  key : Int32
   data : String
 } derive(Eq, Debug)
 
@@ -373,7 +373,7 @@ pub fn BluetoothEmulationManufacturerData::from_json(
 /// gives a referenced type name.
 pub(all) struct BluetoothEmulationScanEntry {
   device_address : String
-  rssi : Int
+  rssi : Int32
   scan_record : BluetoothEmulationScanRecord
 } derive(Eq, Debug)
 
@@ -430,8 +430,8 @@ pub fn BluetoothEmulationScanEntry::from_json(
 pub(all) struct BluetoothEmulationScanRecord {
   name : String?
   uuids : Array[String]?
-  appearance : Int?
-  tx_power : Int?
+  appearance : Int32?
+  tx_power : Int32?
   manufacturer_data : Array[BluetoothEmulationManufacturerData]?
 } derive(Eq, Debug)
 
@@ -599,7 +599,7 @@ pub fn BluetoothEmulationAddCharacteristicResult::from_json(
 /// )
 /// ```
 pub fn bluetooth_emulation_add_characteristic_command(
-  id~ : Int,
+  id~ : Int32,
   params : BluetoothEmulationAddCharacteristicParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -703,7 +703,7 @@ pub fn BluetoothEmulationAddDescriptorResult::from_json(
 /// )
 /// ```
 pub fn bluetooth_emulation_add_descriptor_command(
-  id~ : Int,
+  id~ : Int32,
   params : BluetoothEmulationAddDescriptorParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -807,7 +807,7 @@ pub fn BluetoothEmulationAddServiceResult::from_json(
 /// )
 /// ```
 pub fn bluetooth_emulation_add_service_command(
-  id~ : Int,
+  id~ : Int32,
   params : BluetoothEmulationAddServiceParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -831,7 +831,7 @@ pub fn bluetooth_emulation_add_service_command(
 /// let command = bluetooth_emulation_disable_command(id=1, session_id=None)
 /// ```
 pub fn bluetooth_emulation_disable_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(
@@ -886,7 +886,7 @@ pub fn BluetoothEmulationEnableParams::to_json(
 /// let command = bluetooth_emulation_enable_command(id=1, params, session_id=None)
 /// ```
 pub fn bluetooth_emulation_enable_command(
-  id~ : Int,
+  id~ : Int32,
   params : BluetoothEmulationEnableParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -948,7 +948,7 @@ pub fn BluetoothEmulationRemoveCharacteristicParams::to_json(
 /// )
 /// ```
 pub fn bluetooth_emulation_remove_characteristic_command(
-  id~ : Int,
+  id~ : Int32,
   params : BluetoothEmulationRemoveCharacteristicParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -1007,7 +1007,7 @@ pub fn BluetoothEmulationRemoveDescriptorParams::to_json(
 /// )
 /// ```
 pub fn bluetooth_emulation_remove_descriptor_command(
-  id~ : Int,
+  id~ : Int32,
   params : BluetoothEmulationRemoveDescriptorParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -1066,7 +1066,7 @@ pub fn BluetoothEmulationRemoveServiceParams::to_json(
 /// )
 /// ```
 pub fn bluetooth_emulation_remove_service_command(
-  id~ : Int,
+  id~ : Int32,
   params : BluetoothEmulationRemoveServiceParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -1128,7 +1128,7 @@ pub fn BluetoothEmulationSetSimulatedCentralStateParams::to_json(
 /// )
 /// ```
 pub fn bluetooth_emulation_set_simulated_central_state_command(
-  id~ : Int,
+  id~ : Int32,
   params : BluetoothEmulationSetSimulatedCentralStateParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -1190,7 +1190,7 @@ pub fn BluetoothEmulationSimulateAdvertisementParams::to_json(
 /// )
 /// ```
 pub fn bluetooth_emulation_simulate_advertisement_command(
-  id~ : Int,
+  id~ : Int32,
   params : BluetoothEmulationSimulateAdvertisementParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -1211,7 +1211,7 @@ pub fn bluetooth_emulation_simulate_advertisement_command(
 pub(all) struct BluetoothEmulationSimulateCharacteristicOperationResponseParams {
   characteristic_id : String
   type_ : BluetoothEmulationCharacteristicOperationType
-  code : Int
+  code : Int32
   data : String?
 } derive(Eq, Debug)
 
@@ -1260,7 +1260,7 @@ pub fn BluetoothEmulationSimulateCharacteristicOperationResponseParams::to_json(
 /// )
 /// ```
 pub fn bluetooth_emulation_simulate_characteristic_operation_response_command(
-  id~ : Int,
+  id~ : Int32,
   params : BluetoothEmulationSimulateCharacteristicOperationResponseParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -1281,7 +1281,7 @@ pub fn bluetooth_emulation_simulate_characteristic_operation_response_command(
 pub(all) struct BluetoothEmulationSimulateDescriptorOperationResponseParams {
   descriptor_id : String
   type_ : BluetoothEmulationDescriptorOperationType
-  code : Int
+  code : Int32
   data : String?
 } derive(Eq, Debug)
 
@@ -1330,7 +1330,7 @@ pub fn BluetoothEmulationSimulateDescriptorOperationResponseParams::to_json(
 /// )
 /// ```
 pub fn bluetooth_emulation_simulate_descriptor_operation_response_command(
-  id~ : Int,
+  id~ : Int32,
   params : BluetoothEmulationSimulateDescriptorOperationResponseParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -1392,7 +1392,7 @@ pub fn BluetoothEmulationSimulateGATTDisconnectionParams::to_json(
 /// )
 /// ```
 pub fn bluetooth_emulation_simulate_gattdisconnection_command(
-  id~ : Int,
+  id~ : Int32,
   params : BluetoothEmulationSimulateGATTDisconnectionParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -1413,7 +1413,7 @@ pub fn bluetooth_emulation_simulate_gattdisconnection_command(
 pub(all) struct BluetoothEmulationSimulateGATTOperationResponseParams {
   address : String
   type_ : BluetoothEmulationGATTOperationType
-  code : Int
+  code : Int32
 } derive(Eq, Debug)
 
 ///|
@@ -1458,7 +1458,7 @@ pub fn BluetoothEmulationSimulateGATTOperationResponseParams::to_json(
 /// )
 /// ```
 pub fn bluetooth_emulation_simulate_gattoperation_response_command(
-  id~ : Int,
+  id~ : Int32,
   params : BluetoothEmulationSimulateGATTOperationResponseParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -1530,7 +1530,7 @@ pub fn BluetoothEmulationSimulatePreconnectedPeripheralParams::to_json(
 /// )
 /// ```
 pub fn bluetooth_emulation_simulate_preconnected_peripheral_command(
-  id~ : Int,
+  id~ : Int32,
   params : BluetoothEmulationSimulatePreconnectedPeripheralParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {

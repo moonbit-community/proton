@@ -176,7 +176,7 @@ test "browser scalar helpers reject missing and invalid fields" {
     fail("expected invalid optional bool")
   }
   inspect(checked_duration(1, "timeout_ms"), content="1")
-  let bad_duration : Result[Int, Error] = try_result_client_browser_wbtest(() => {
+  let bad_duration : Result[Int32, Error] = try_result_client_browser_wbtest(() => {
     checked_duration(0, "timeout_ms")
   })
   guard bad_duration is Err(BrowserError::InvalidField("timeout_ms")) else {

@@ -21,7 +21,7 @@ async fn reload_page_and_wait(
   page : @page.Page,
   expression : String,
   description : String,
-  timeout : Int,
+  timeout : Int32,
 ) -> Unit {
   let navigation = page.reload()
   ignore(

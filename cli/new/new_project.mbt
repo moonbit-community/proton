@@ -29,8 +29,8 @@ struct NewProjectOptions {
   author : String
   project_name : String
   identifier : String
-  width : Int
-  height : Int
+  width : Int32
+  height : Int32
   run_check : Bool
   yes : Bool
   git : Bool?
@@ -351,7 +351,7 @@ async fn nearest_existing_ancestor(path : String) -> String {
 }
 
 ///|
-fn staging_directory_name(target_dir : String, attempt : Int) -> String {
+fn staging_directory_name(target_dir : String, attempt : Int32) -> String {
   "." +
   path_basename(target_dir) +
   ".proton-new-" +

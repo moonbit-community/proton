@@ -5,7 +5,7 @@
 /// floor in every serious guideline. Refusing a short key is a security control
 /// in its own right: a key that is too small verifies signatures perfectly well
 /// and offers no protection.
-pub let minimum_modulus_bits : Int = 2048
+pub let minimum_modulus_bits : Int32 = 2048
 
 ///|
 let algorithm_tag : String = "rsa-sha256"
@@ -17,7 +17,7 @@ pub struct PublicKey {
   exponent : @bigint.BigInt
   /// Length of the modulus in bytes. This is `k` in RFC 8017 and fixes the
   /// exact length every signature and encoded message must have.
-  size : Int
+  size : Int32
 }
 
 ///|
@@ -63,13 +63,13 @@ pub fn PublicKey::parse(text : String) -> PublicKey raise KeyError {
 
 ///|
 /// Returns the modulus length in bytes.
-pub fn PublicKey::size(self : PublicKey) -> Int {
+pub fn PublicKey::size(self : PublicKey) -> Int32 {
   self.size
 }
 
 ///|
 /// Returns the modulus length in bits.
-pub fn PublicKey::bits(self : PublicKey) -> Int {
+pub fn PublicKey::bits(self : PublicKey) -> Int32 {
   self.modulus.bit_length()
 }
 

@@ -13,8 +13,8 @@ pub extend AspectRequest with FromJson::{from_json}
 struct AspectReply {
   applied : Bool
   ratio : Double
-  width : Int
-  height : Int
+  width : Int32
+  height : Int32
   message : String
 } derive(ToJson, FromJson)
 

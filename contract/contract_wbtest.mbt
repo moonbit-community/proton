@@ -1,7 +1,7 @@
 ///|
 test "application descriptors preserve typed stable names" {
-  let ping : Command[String, Int] = command("ping")
-  let changed : Event[Int] = event("changed")
+  let ping : Command[String, Int32] = command("ping")
+  let changed : Event[Int32] = event("changed")
   assert_eq(ping.name(), "ping")
   assert_eq(ping.contract_route().operation_name(), "app:ping")
   assert_true(ping.contract_route().is_application())
@@ -50,8 +50,8 @@ test "descriptor validation reports empty extension members" {
 
 ///|
 test "event descriptors can be reconstructed without registration state" {
-  let first : Event[Int] = event("duplicate_event_route")
-  let repeated : Event[Int] = event("duplicate_event_route")
+  let first : Event[Int32] = event("duplicate_event_route")
+  let repeated : Event[Int32] = event("duplicate_event_route")
   first.validate()
   repeated.validate()
   assert_eq(

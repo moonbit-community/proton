@@ -2,7 +2,7 @@
 /// A browser-session operation failed. `status` and `detail` preserve the
 /// native diagnostic, including calls after the application runtime has ended.
 pub(all) suberror SessionError {
-  OperationFailed(action~ : String, status~ : Int, detail~ : String)
+  OperationFailed(action~ : String, status~ : Int32, detail~ : String)
 } derive(Debug)
 
 ///|
@@ -153,7 +153,7 @@ fn cookies_from_native(
 pub async fn SessionHandle::get_cookies(
   self : SessionHandle,
   url? : String,
-  include_http_only? : Bool = false,
+  include_http_only~ : Bool = false,
 ) -> Array[Cookie] {
   (self.read_cookies)(url, include_http_only)
 }
@@ -167,9 +167,9 @@ pub fn SessionHandle::set_cookie(
   value : String,
   domain? : String,
   path? : String,
-  secure? : Bool = false,
-  http_only? : Bool = false,
-  same_site? : CookieSameSite = Unspecified,
+  secure~ : Bool = false,
+  http_only~ : Bool = false,
+  same_site~ : CookieSameSite = Unspecified,
 ) -> Unit raise SessionError {
   (self.write_cookie)(
     url, name, value, domain, path, secure, http_only, same_site,

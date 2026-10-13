@@ -2,7 +2,7 @@
 /// Failures while validating or delivering native notifications.
 suberror NotificationError {
   EmptyBody
-  InvalidBadgeCount(Int)
+  InvalidBadgeCount(Int32)
   UnsupportedPlatform
   NativeOperation(detail~ : String)
 } derive(Debug, Eq)

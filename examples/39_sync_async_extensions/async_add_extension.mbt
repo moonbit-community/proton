@@ -1,8 +1,8 @@
 ///|
 struct SlowAddPayload {
-  left : Int
-  right : Int
-  delay_ms : Int?
+  left : Int32
+  right : Int32
+  delay_ms : Int32?
 } derive(ToJson, FromJson)
 
 ///|
@@ -13,8 +13,8 @@ pub extend SlowAddPayload with FromJson::{from_json}
 
 ///|
 struct SlowAddReply {
-  total : Int
-  waited_ms : Int
+  total : Int32
+  waited_ms : Int32
   source : String
 } derive(ToJson, FromJson)
 

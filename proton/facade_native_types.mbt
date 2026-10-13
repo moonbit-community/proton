@@ -139,7 +139,7 @@ pub(all) struct JumpListItem {
   title : String
   description : String
   icon_path : String
-  icon_index : Int
+  icon_index : Int32
   working_directory : String
 }
 
@@ -328,15 +328,15 @@ pub extend WindowSizeHint with Debug::{to_repr}
 ///|
 /// Geometry and scaling information for the monitor containing a window.
 pub(all) struct WindowMonitor {
-  x : Int
-  y : Int
-  width : Int
-  height : Int
-  work_x : Int
-  work_y : Int
-  work_width : Int
-  work_height : Int
-  scale_factor_percent : Int
+  x : Int32
+  y : Int32
+  width : Int32
+  height : Int32
+  work_x : Int32
+  work_y : Int32
+  work_width : Int32
+  work_height : Int32
+  scale_factor_percent : Int32
 } derive(Debug, Eq)
 
 ///|
@@ -366,12 +366,12 @@ fn WindowMonitor::from_native(monitor : @native.WindowMonitor) -> WindowMonitor 
 /// `theme` is the effective `Light` or `Dark` theme after resolving the
 /// window's configured `WindowThemePreference`.
 pub(all) struct WindowState {
-  x : Int
-  y : Int
-  width : Int
-  height : Int
+  x : Int32
+  y : Int32
+  width : Int32
+  height : Int32
   monitor : WindowMonitor
-  zoom_percent : Int
+  zoom_percent : Int32
   visible : Bool
   focused : Bool
   minimized : Bool
@@ -455,16 +455,16 @@ fn FindInPageResult::from_native(
 ///|
 /// Information about one connected display.
 pub(all) struct ScreenInfo {
-  id : Int
-  x : Int
-  y : Int
-  width : Int
-  height : Int
-  work_x : Int
-  work_y : Int
-  work_width : Int
-  work_height : Int
-  scale_factor_percent : Int
+  id : Int32
+  x : Int32
+  y : Int32
+  width : Int32
+  height : Int32
+  work_x : Int32
+  work_y : Int32
+  work_width : Int32
+  work_height : Int32
+  scale_factor_percent : Int32
   is_primary : Bool
 } derive(Debug, Eq)
 
@@ -494,7 +494,7 @@ fn ScreenInfo::from_native(screen : @native.ScreenInfo) -> ScreenInfo {
 ///|
 /// Failures while querying connected displays.
 pub(all) suberror ScreenQueryError {
-  QueryFailed(status~ : Int, detail~ : String)
+  QueryFailed(status~ : Int32, detail~ : String)
 } derive(Debug)
 
 ///|
@@ -512,12 +512,12 @@ pub fn screens() -> Array[ScreenInfo] raise ScreenQueryError {
 ///|
 /// A point-in-time web contents view state snapshot.
 pub(all) struct ViewState {
-  x : Int
-  y : Int
-  width : Int
-  height : Int
+  x : Int32
+  y : Int32
+  width : Int32
+  height : Int32
   visible : Bool
-  z_order : Int
+  z_order : Int32
 } derive(Debug, Eq)
 
 ///|
@@ -567,7 +567,7 @@ pub extend SystemAppearance with Debug::{to_repr}
 ///|
 /// Raised when system appearance cannot be read.
 pub(all) suberror SystemAppearanceError {
-  SystemAppearanceUnavailable(status~ : Int, detail~ : String)
+  SystemAppearanceUnavailable(status~ : Int32, detail~ : String)
 }
 
 ///|
@@ -602,25 +602,25 @@ pub fn system_appearance() -> SystemAppearance raise SystemAppearanceError {
 ///|
 /// Configuration for a web contents view hosted inside a window.
 pub struct ViewConfig {
-  x : Int
-  y : Int
-  width : Int
-  height : Int
+  x : Int32
+  y : Int32
+  width : Int32
+  height : Int32
   visible : Bool
-  z_order : Int
+  z_order : Int32
   initial_url : String
   background_color : String?
 }
 
 ///|
 pub fn ViewConfig::ViewConfig(
-  width~ : Int,
-  height~ : Int,
-  x? : Int = 0,
-  y? : Int = 0,
-  visible? : Bool = true,
-  z_order? : Int = 0,
-  initial_url? : String = "about:blank",
+  width~ : Int32,
+  height~ : Int32,
+  x~ : Int32 = 0,
+  y~ : Int32 = 0,
+  visible~ : Bool = true,
+  z_order~ : Int32 = 0,
+  initial_url~ : String = "about:blank",
   background_color? : String,
 ) -> ViewConfig {
   { x, y, width, height, visible, z_order, initial_url, background_color, }
@@ -641,16 +641,16 @@ fn ViewConfig::to_native(self : ViewConfig) -> @native.ViewConfig {
 }
 
 ///|
-let menu_item_command : Int = 0
+let menu_item_command : Int32 = 0
 
 ///|
-let menu_item_separator : Int = 1
+let menu_item_separator : Int32 = 1
 
 ///|
-let menu_item_role : Int = 2
+let menu_item_role : Int32 = 2
 
 ///|
-let menu_item_submenu : Int = 3
+let menu_item_submenu : Int32 = 3
 
 ///|
 /// A standard top-level application menu role.
@@ -727,7 +727,7 @@ fn MenuItemRole::to_native(self : MenuItemRole) -> @native.MenuItemRole {
 ///|
 /// A command, separator, or platform role in a native application menu.
 pub struct MenuItem {
-  kind : Int
+  kind : Int32
   id : String?
   label : String?
   key : String?
@@ -746,8 +746,8 @@ pub fn MenuItem::command(
   id : String,
   label : String,
   key? : String,
-  enabled? : Bool = true,
-  visible? : Bool = true,
+  enabled~ : Bool = true,
+  visible~ : Bool = true,
   checked? : Bool,
 ) -> MenuItem {
   {
@@ -910,10 +910,10 @@ pub(all) struct BridgeDiagnostic {
   owner : String?
   source_url : String?
   source_line : String?
-  line : Int?
-  column : Int?
+  line : Int32?
+  column : Int32?
   stack : String?
-  additional_failure_count : Int?
+  additional_failure_count : Int32?
   details_truncated : Bool
 } derive(Debug, Eq)
 
@@ -947,8 +947,8 @@ fn BridgeDiagnostic::from_native(
 ///|
 /// Top-left position of the native button group, in window-local logical pixels.
 pub(all) struct WindowButtonPosition {
-  x : Int
-  y : Int
+  x : Int32
+  y : Int32
 } derive(Debug, Eq)
 
 ///|

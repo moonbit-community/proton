@@ -2,7 +2,7 @@
 /// Closes the X11 connection used by the native manager so the disconnect path
 /// can be exercised without terminating the test's X server.
 #cfg(platform="linux")
-extern "C" fn test_disconnect_ffi(state : GlobalHotkeyState) -> Int = "mb_global_hotkey_test_disconnect"
+extern "C" fn test_disconnect_ffi(state : GlobalHotkeyState) -> Int32 = "mb_global_hotkey_test_disconnect"
 
 ///|
 test "decode_error_message falls back when ffi output is empty" {

@@ -45,10 +45,10 @@ pub fn watch_status() -> WatchStatus {
 
 ///|
 fn ensure_monitor(
-  create? : () -> @sys_screen_monitor.ScreenMonitor raise @sys_screen_monitor.ScreenMonitorError = () => {
+  create~ : () -> @sys_screen_monitor.ScreenMonitor raise @sys_screen_monitor.ScreenMonitorError = () => {
     @sys_screen_monitor.ScreenMonitor()
   },
-  watch? : (@sys_screen_monitor.ScreenMonitor) -> Unit raise @sys_screen_monitor.ScreenMonitorError = monitor => {
+  watch~ : (@sys_screen_monitor.ScreenMonitor) -> Unit raise @sys_screen_monitor.ScreenMonitorError = monitor => {
     monitor.start_watching()
   },
 ) -> @sys_screen_monitor.ScreenMonitor raise ScreenMonitorError {
@@ -174,11 +174,11 @@ async fn get_display_nearest_point(
 
 ///|
 fn overlap_length(
-  a_start : Int,
-  a_size : Int,
-  b_start : Int,
-  b_size : Int,
-) -> Int {
+  a_start : Int32,
+  a_size : Int32,
+  b_start : Int32,
+  b_size : Int32,
+) -> Int32 {
   let a_end = a_start + a_size
   let b_end = b_start + b_size
   let start = if a_start > b_start { a_start } else { b_start }

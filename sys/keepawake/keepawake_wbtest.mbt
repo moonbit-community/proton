@@ -81,9 +81,9 @@ test "run_with_cleanup returns action result after cleanup" {
 ///|
 test "run_with_cleanup preserves action error and suppresses cleanup error" {
   let mut cleanup_calls = 0
-  let result : Result[Int, Error] = Ok(
+  let result : Result[Int32, Error] = Ok(
     run_with_cleanup(
-      fn() -> Int raise { raise BackendUnavailable(detail="action failed") },
+      fn() -> Int32 raise { raise BackendUnavailable(detail="action failed") },
       fn() -> Unit raise {
         cleanup_calls += 1
         raise OperationFailed(operation="release", detail="cleanup failed")
