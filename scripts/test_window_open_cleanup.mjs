@@ -32,9 +32,9 @@ try {
   }
   let status = @native_ffi.proton_window_destroy_ffi(self.handle)`);
   writeFileSync(path.join(temporary, "proton/internal/native/cleanup_probe.mbt"), `///|
-let cleanup_test_destroy_calls : Ref[Int] = Ref(0)
+let cleanup_test_destroy_calls : Ref[Int32] = Ref(0)
 ///|
-pub fn cleanup_test_destroy_count() -> Int { cleanup_test_destroy_calls.val }
+pub fn cleanup_test_destroy_count() -> Int32 { cleanup_test_destroy_calls.val }
 `);
   replace("proton/facade_lifecycle.mbt", "  for running in windows {", `  assert_eq(windows.length(), 1) catch { _ => abort("failed window was unregistered") }
   assert_true(windows[0].is_closed()) catch { _ => abort("window was not marked closed") }
@@ -57,8 +57,8 @@ pub fn cleanup_test_destroy_count() -> Int { cleanup_test_destroy_calls.val }
   } noraise { _ => fail("destroy failure did not escape the session") }
   assert_false(main_ready.val)
   if @env.get_env_var("CLEANUP_TEST_PRIMARY") != Some("1") { assert_true(cancellation_seen.val) }`);
-  replace(fixture, 'error => assert_true(@async.is_cancellation_error(error))', `error => {
-          assert_true(@async.is_cancellation_error(error))
+  replace(fixture, `      opening.wait() catch {\n        error => assert_true(error is @async.WaitedTaskAlreadyCancelled)`, `      opening.wait() catch {\n        error => {
+          assert_true(error is @async.WaitedTaskAlreadyCancelled)
           cancellation_seen.val = true
         }`);
   const cancellationFixture = readFileSync(path.join(temporary, fixture), "utf8");

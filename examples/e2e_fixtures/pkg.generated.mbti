@@ -9,11 +9,25 @@ import {
 // Values
 pub fn register_commands(@command.CommandRegistrar) -> Unit raise
 
+pub async fn run_app_cancellation_regression(AppCancellationStage) -> Unit
+
+pub async fn run_app_control_regression() -> Unit
+
 pub async fn run_asset_sidecar() -> Unit
 
 pub async fn run_async_extension_add() -> Unit
 
 pub async fn run_attribute_codegen_commands() -> Unit
+
+pub async fn run_cancel_during_startup_regression() -> Unit
+
+pub async fn run_cancel_open_regression() -> Unit
+
+pub async fn run_cancel_sleep_regression() -> Unit
+
+pub async fn run_close_decision_regression() -> Unit
+
+pub async fn run_closed_record_churn_regression() -> Unit
 
 pub async fn run_devtools() -> Unit
 
@@ -21,19 +35,49 @@ pub async fn run_event_broadcast() -> Unit
 
 pub async fn run_i18n() -> Unit
 
-pub async fn run_lifecycle_regression(String) -> Unit
+pub async fn run_initial_open_regression() -> Unit
 
 pub async fn run_multi_window() -> Unit
 
+pub async fn run_page_control_regression() -> Unit
+
+pub async fn run_page_recovery_regression(PageRecoveryCase) -> Unit
+
+pub async fn run_parent_view_close_regression() -> Unit
+
 pub async fn run_pdf_regression() -> Unit
+
+pub async fn run_process_events_regression() -> Unit
+
+pub async fn run_process_lifetime_regression() -> Unit
+
+pub async fn run_proxy_regression(ProxySource) -> Unit
 
 pub async fn run_quit_chain() -> Unit
 
+pub async fn run_renderer_without_bridge_regression() -> Unit
+
+pub async fn run_session_lifetime_regression() -> Unit
+
 pub async fn run_single_instance() -> Unit
+
+pub async fn run_startup_quit_regression(StartupQuitCase) -> Unit
+
+pub async fn run_startup_update_regression(StartupUpdateOutcome) -> Unit
 
 pub async fn run_sync_async_extensions() -> Unit
 
+pub async fn run_task_metrics_regression() -> Unit
+
+pub async fn run_view_close_regression(ViewCloseCase) -> Unit
+
+pub async fn run_web_contents_regression() -> Unit
+
 pub async fn run_web_contents_view() -> Unit
+
+pub async fn run_window_config_regression() -> Unit
+
+pub async fn run_window_task_regression(WindowTaskOutcome) -> Unit
 
 pub async fn run_windowed_close() -> Unit
 
@@ -51,6 +95,11 @@ pub fn AddReply::to_json(Self) -> Json
 type AddRequest derive(ToJson, @json.FromJson)
 pub fn AddRequest::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
 pub fn AddRequest::to_json(Self) -> Json
+
+pub(all) enum AppCancellationStage {
+  Startup
+  Running
+}
 
 type AssetSidecarAddPayload derive(ToJson, @json.FromJson)
 pub fn AssetSidecarAddPayload::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
@@ -98,6 +147,30 @@ type PageControlReport derive(ToJson, @json.FromJson)
 pub fn PageControlReport::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
 pub fn PageControlReport::to_json(Self) -> Json
 
+pub(all) enum PageRecoveryCase {
+  Renderer
+  Bridge
+  StartupFailure
+}
+
+pub(all) enum ProxySource {
+  Explicit
+  Environment
+}
+
+pub(all) enum StartupQuitCase {
+  DuringStartup
+  WithWindow
+  DenyFirst
+  Allow
+  DuringActivation
+}
+
+pub(all) enum StartupUpdateOutcome {
+  Quit
+  Fail
+}
+
 type SyncDoublePayload derive(ToJson, @json.FromJson)
 pub fn SyncDoublePayload::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
 pub fn SyncDoublePayload::to_json(Self) -> Json
@@ -105,6 +178,19 @@ pub fn SyncDoublePayload::to_json(Self) -> Json
 type SyncDoubleReply derive(ToJson, @json.FromJson)
 pub fn SyncDoubleReply::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
 pub fn SyncDoubleReply::to_json(Self) -> Json
+
+pub(all) enum ViewCloseCase {
+  BeforeLoad
+  AfterLoad
+  StaleHandle
+  Remove
+  Page
+}
+
+pub(all) enum WindowTaskOutcome {
+  Success
+  Failure
+}
 
 // Type aliases
 
