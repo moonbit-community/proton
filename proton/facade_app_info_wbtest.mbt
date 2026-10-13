@@ -5,7 +5,7 @@ test "complete configuration provides product metadata and frontend settings" {
       #|{"identifier":"com.example.notes","frontend":{"dev_url":"http://localhost:4300"},"package":{"product_name":"Notes","version":"1.2.3"}}
     ),
   )
-  let app = html("Test", "").config(config)
+  let app = html("Test", "")..config(config)
   assert_eq(app.name(), "Notes")
   assert_eq(app.version(), "1.2.3")
   assert_eq(config.frontend.unwrap().dev_url, Some("http://localhost:4300"))
@@ -19,7 +19,7 @@ test "project application metadata uses package configuration" {
       @proton_config.PackageConfig("  Proton Notes  ", " 1.2.3 "),
     ),
   )
-  let app = html("Test", "").config(config)
+  let app = html("Test", "")..config(config)
   assert_eq(app.name(), "Proton Notes")
   assert_eq(app.version(), "1.2.3")
 }
@@ -47,7 +47,7 @@ test "packaged resource roots follow each bundle layout" {
 ///|
 test "project application metadata requires package configuration" {
   let config = @proton_config.AppConfig("dev.proton.notes")
-  try html("Test", "").config(config).name() catch {
+  try html("Test", "")..config(config).name() catch {
     @proton_config.MissingField(path="package.product_name") => ()
     _ => fail("expected missing package metadata")
   } noraise {
@@ -170,15 +170,15 @@ test "platform-specific standard paths report availability" {
 
 ///|
 test "path overrides preserve dependent application paths" {
-  let app = html("Paths", "<main>Paths</main>").identifier(
+  let app = html("Paths", "<main>Paths</main>")..identifier(
     "dev.proton.path-overrides",
   )
   let root = app.path(AppPathKind::Temp)
-  let overridden = app.set_path(AppPathKind::UserData, root)
-  assert_eq(overridden.path(AppPathKind::UserData), root)
-  assert_eq(overridden.data_dir(), root)
+  app.set_path(AppPathKind::UserData, root)
+  assert_eq(app.path(AppPathKind::UserData), root)
+  assert_eq(app.data_dir(), root)
   assert_eq(
-    overridden.path(AppPathKind::SessionData),
+    app.path(AppPathKind::SessionData),
     @mbpath.Path(root).join("browser").normalize().to_string(),
   )
 }
@@ -186,10 +186,10 @@ test "path overrides preserve dependent application paths" {
 ///|
 test "session data overrides are consumed by single-instance runtime config" {
   let app = html("Paths", "<main>Paths</main>")
-    .identifier("dev.proton.session-override")
-    .single_instance()
+    ..identifier("dev.proton.session-override")
+    ..single_instance()
   let root = app.path(AppPathKind::Temp)
-  let app = app.set_path(AppPathKind::SessionData, root)
+  app.set_path(AppPathKind::SessionData, root)
   assert_eq(
     resolve_browser_data_dir(app, app.resolved_app_config()),
     Some(root),
@@ -198,7 +198,7 @@ test "session data overrides are consumed by single-instance runtime config" {
 
 ///|
 test "application log path supports custom and Electron defaults" {
-  let custom = html("Paths", "<main>Paths</main>").identifier(
+  let custom = html("Paths", "<main>Paths</main>")..identifier(
     "dev.proton.log-override",
   )
   let temp = custom.path(AppPathKind::Temp)
@@ -206,14 +206,14 @@ test "application log path supports custom and Electron defaults" {
     .join("proton-custom-log-path")
     .normalize()
     .to_string()
-  let custom = custom.set_app_logs_path(path=custom_path)
+  custom.set_app_logs_path(path=custom_path)
   assert_eq(custom.path(AppPathKind::Logs), custom_path)
   assert_true(custom.create_logs_path)
 
   let defaults = html("Paths", "<main>Paths</main>")
-    .identifier("dev.proton.default-logs")
-    .set_path(AppPathKind::UserData, temp)
-    .set_app_logs_path()
+    ..identifier("dev.proton.default-logs")
+    ..set_path(AppPathKind::UserData, temp)
+    ..set_app_logs_path()
   let platform = @native.runtime_info().platform
   let expected = if platform == "macos" {
     app_log_dir_for_platform(
@@ -232,7 +232,7 @@ test "application log path supports custom and Electron defaults" {
 ///|
 test "path overrides reject relative and missing paths" {
   let app = html("Paths", "<main>Paths</main>")
-  try app.set_path(AppPathKind::Home, "relative/path") catch {
+  try app..set_path(AppPathKind::Home, "relative/path") catch {
     InvalidPathOverride(kind="home", reason="path must be absolute", ..) => ()
     _ => fail("expected a relative path validation error")
   } noraise {
@@ -241,14 +241,14 @@ test "path overrides reject relative and missing paths" {
   let missing = @mbpath.Path(app.path(AppPathKind::Executable))
     .join("missing-path")
     .to_string()
-  try app.set_path(AppPathKind::Home, missing) catch {
+  try app..set_path(AppPathKind::Home, missing) catch {
     InvalidPathOverride(kind="home", reason="path does not exist", ..) => ()
     _ => fail("expected a missing path validation error")
   } noraise {
     _ => fail("expected missing path override to fail")
   }
   let executable = app.path(AppPathKind::Executable)
-  try app.set_path(AppPathKind::Home, executable) catch {
+  try app..set_path(AppPathKind::Home, executable) catch {
     InvalidPathOverride(kind="home", reason="path is not a directory", ..) => ()
     _ => fail("expected a directory path validation error")
   } noraise {

@@ -170,9 +170,9 @@ fn html() -> String {
 ///|
 async fn main {
   @proton.html("Window Aspect Ratio", html(), width=900, height=620, debug=true)
-  .identifier("dev.proton.window-aspect-ratio")
-  .commands(register_commands)
-  .window_lifecycle(
+  ..identifier("dev.proton.window-aspect-ratio")
+  ..commands(register_commands)
+  ..window_lifecycle(
     on_ready=context => {
       let window = context.handle()
       window_slot.val = Some(window)

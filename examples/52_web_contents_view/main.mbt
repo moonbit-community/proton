@@ -321,9 +321,9 @@ async fn main {
       height=720,
     ),
   )
-  .debug(enabled=true)
-  .capability(@proton_extension.capability(browser_extension()))
-  .on_window_event(async fn(window, event) noraise {
+  ..debug(enabled=true)
+  ..capability(@proton_extension.capability(browser_extension()))
+  ..on_window_event(async fn(window, event) noraise {
     match event {
       StateChanged(_) => {
         let (width, height) = window.content_size() catch { _ => return }
@@ -348,7 +348,7 @@ async fn main {
       _ => ()
     }
   })
-  .on_web_contents_event(async fn(_view, event) noraise {
+  ..on_web_contents_event(async fn(_view, event) noraise {
     if _view.view_id() is None {
       return
     }
@@ -372,7 +372,7 @@ async fn main {
       _ => ()
     }
   })
-  .window_lifecycle(
+  ..window_lifecycle(
     on_ready=async fn(context) {
       let window = context.handle()
       host_slot.val = Some(window)
@@ -383,6 +383,6 @@ async fn main {
       host_slot.val = None
     },
   )
-  .identifier("dev.proton.52-web-contents-view")
+  ..identifier("dev.proton.52-web-contents-view")
   .run_or_abort()
 }

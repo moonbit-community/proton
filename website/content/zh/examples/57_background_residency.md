@@ -15,10 +15,10 @@ KeepRunning 保留进程。再次启动发送 Reopen，处理器仅在 main 不�
 ```moonbit
 async fn main {
   @proton.html("Background Residency", page, width=760, height=480)
-  .identifier("com.example.proton.background-residency")
-  .single_instance()
-  .last_window_closed_policy(@proton.LastWindowClosedPolicy::KeepRunning)
-  .on_launch_input(async fn(context, input) noraise {
+  ..identifier("com.example.proton.background-residency")
+  ..single_instance()
+  ..last_window_closed_policy(@proton.LastWindowClosedPolicy::KeepRunning)
+  ..on_launch_input(async fn(context, input) noraise {
     if input is Reopen && context.windows().find("main") is None {
       ignore(context.windows().open("main")) catch {
         error => println("failed to reopen main window: " + error.to_string())

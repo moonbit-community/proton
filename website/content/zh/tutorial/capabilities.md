@@ -59,8 +59,8 @@ async fn main {
     #|</script>
     #|</html>
   @proton.html("Read a file", html)
-  .config(@proton.load_config())
-  .capability(
+  ..config(@proton.load_config())
+  ..capability(
     @fs.capability([
       @fs.PermissionRoot("./workspace", ["read_file"]),
     ]),
@@ -87,7 +87,7 @@ async fn main {
 
 将请求路径改为 `workspace` 中不存在的文件，调用应失败，catch 分支会显示错误。再改为允许根目录之外的文件，此授权应拒绝访问。
 
-删除 `.capability(...)` 不会阻止应用启动，但路由变得不可用。仅添加扩展依赖并不等于授予权限。
+删除 `..capability(...)` 不会阻止应用启动，但路由变得不可用。仅添加扩展依赖并不等于授予权限。
 
 ## 多窗口与持久化文件
 

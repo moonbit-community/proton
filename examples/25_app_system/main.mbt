@@ -7,8 +7,8 @@ async fn main {
       height=760,
       debug=true,
     )
-    .capability(@tray.capability())
-    .capability(@notification.capability())
-    .capability(@global_hotkey.capability())
-  app.identifier("dev.proton.25-app-system").run_or_abort()
+    ..capability(@tray.capability())
+    ..capability(@notification.capability())
+    ..capability(@global_hotkey.capability())
+  app..identifier("dev.proton.25-app-system").run_or_abort()
 }

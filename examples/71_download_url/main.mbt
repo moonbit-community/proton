@@ -153,8 +153,8 @@ async fn main {
     height=620,
     debug=true,
   )
-  .commands(register_commands)
-  .on_download_request(fn(_browser, request) {
+  ..commands(register_commands)
+  ..on_download_request(fn(_browser, request) {
     last_download_id.val = Some(request.id)
     let destination = if show_dialog.val {
       "system save dialog"
@@ -170,13 +170,13 @@ async fn main {
       @proton.DownloadDecision::SaveTo(automatic_download_path)
     }
   })
-  .on_download_event(fn(_browser, event) {
+  ..on_download_event(fn(_browser, event) {
     last_download_id.val = Some(event.id)
     show_status(
       "Download \{event.id}: \{event.state}\nProgress: \{event.percent}%\nReceived: \{event.received_bytes} / \{event.total_bytes} bytes\nAutomatic path: \{automatic_download_path}",
     )
   })
-  .window_lifecycle(
+  ..window_lifecycle(
     on_ready=context => {
       let window = context.handle()
       browser_slot.val = Some(window.web_contents())
@@ -187,6 +187,6 @@ async fn main {
       last_download_id.val = None
     },
   )
-  .identifier("dev.proton.71-download-url")
+  ..identifier("dev.proton.71-download-url")
   .run_or_abort()
 }

@@ -244,9 +244,9 @@ fn page() -> String {
 async fn main {
   log_app_step("is_ready before App::run = " + @proton.is_ready().to_string())
   @proton.html("Application Control", page(), width=880, height=620)
-  .identifier("com.example.proton.app-control")
-  .commands(register_commands)
-  .app_lifecycle(
+  ..identifier("com.example.proton.app-control")
+  ..commands(register_commands)
+  ..app_lifecycle(
     on_start=context => {
       application_slot.val = Some(context)
       log_app_step(

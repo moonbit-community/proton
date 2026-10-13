@@ -1,12 +1,9 @@
 ///|
 /// Sets the canonical identifier for an application without project metadata.
-pub fn App::identifier(self : App, identifier : String) -> App {
+pub fn App::identifier(self : App, identifier : String) -> Unit {
   match resolve_explicit_application_identifier(identifier) {
     Ok(identifier) => self.set_application_identity(Explicit(identifier))
-    Err(error) => {
-      self.validation_errors.push(error)
-      self
-    }
+    Err(error) => self.validation_errors.push(error)
   }
 }
 
@@ -51,7 +48,7 @@ fn verify_packaged_application_identifier(
 fn App::set_application_identity(
   self : App,
   identity : ApplicationIdentitySource,
-) -> App {
+) -> Unit {
   match self.application_identity {
     Some(_) =>
       self.validation_errors.push(
@@ -62,7 +59,6 @@ fn App::set_application_identity(
       )
     None => self.application_identity = Some(identity)
   }
-  self
 }
 
 ///|

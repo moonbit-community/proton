@@ -21,10 +21,10 @@ async fn main {
     height=640,
     debug=true,
   )
-  .menu(menu_bar())
-  .identifier("dev.proton.49-app-menu")
-  .commands(register_commands)
-  .window_lifecycle(
+  ..menu(menu_bar())
+  ..identifier("dev.proton.49-app-menu")
+  ..commands(register_commands)
+  ..window_lifecycle(
     on_ready=context => {
       let window = context.handle()
       window_slot.val = Some(window)

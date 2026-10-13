@@ -189,9 +189,9 @@ fn html() -> String {
 ///|
 async fn main {
   @proton.html("Window Opacity", html(), width=880, height=620, debug=true)
-  .identifier("dev.proton.window-opacity")
-  .commands(register_commands)
-  .window_lifecycle(
+  ..identifier("dev.proton.window-opacity")
+  ..commands(register_commands)
+  ..window_lifecycle(
     on_ready=context => {
       let window = context.handle()
       window_slot.val = Some(window)

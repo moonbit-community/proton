@@ -138,8 +138,8 @@ fn page() -> String {
 ///|
 async fn main {
   @proton.html("Print and PDF", page(), width=1040, height=760, debug=true)
-  .commands(register_commands)
-  .window_lifecycle(
+  ..commands(register_commands)
+  ..window_lifecycle(
     on_ready=context => {
       let window = context.handle()
       browser_slot.val = Some(window.web_contents())
@@ -147,6 +147,6 @@ async fn main {
     },
     on_close=fn(_window) { browser_slot.val = None },
   )
-  .identifier("dev.proton.72-print-pdf")
+  ..identifier("dev.proton.72-print-pdf")
   .run_or_abort()
 }

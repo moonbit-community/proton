@@ -16,7 +16,7 @@ let greeted : @proton_contract.Event[String] =
 
 ## 发送给调用方
 
-在 `.commands(...)` 中，将已有的 `registrar.bind(greet, ...)` 调用替换为：
+在 `..commands(...)` 中，将已有的 `registrar.bind(greet, ...)` 调用替换为：
 
 ```moonbit
 registrar.bind(greet, (context, request) => {

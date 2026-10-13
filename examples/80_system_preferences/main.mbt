@@ -363,7 +363,7 @@ fn html() -> String {
 ///|
 async fn main {
   @proton.html("System Preferences", html(), width=980, height=780, debug=true)
-  .identifier("dev.proton.system-preferences")
-  .commands(register_commands)
+  ..identifier("dev.proton.system-preferences")
+  ..commands(register_commands)
   .run_or_abort()
 }

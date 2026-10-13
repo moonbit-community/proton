@@ -7,6 +7,6 @@ async fn main {
     height=600,
     debug=true,
   )
-  .identifier("dev.proton.03-remote")
+  ..identifier("dev.proton.03-remote")
   .run_or_abort()
 }

@@ -59,8 +59,8 @@ async fn main {
     #|</script>
     #|</html>
   @proton.html("Read a file", html)
-  .config(@proton.load_config())
-  .capability(
+  ..config(@proton.load_config())
+  ..capability(
     @fs.capability([
       @fs.PermissionRoot("./workspace", ["read_file"]),
     ]),
@@ -87,7 +87,7 @@ Relative roots and requests resolve against `@proton.resource_dir()`, which the 
 
 Change the request path to a missing file within `workspace`: the call should fail and the catch block should show the error. Change it to a file outside the allowed root: the grant should reject access.
 
-Removing `.capability(...)` does not stop the app from starting, but the route becomes unavailable. Adding an extension dependency alone is not a permission grant.
+Removing `..capability(...)` does not stop the app from starting, but the route becomes unavailable. Adding an extension dependency alone is not a permission grant.
 
 ## Multiple windows and persistent files
 

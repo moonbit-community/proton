@@ -33,15 +33,15 @@ pub async fn run_quit_chain() -> Unit {
   let prevents_before_quit = mode == "prevent-before-quit"
   let prevents_will_quit = mode == "prevent-will-quit"
   @proton.html("Quit chain", "<h1>Quit chain</h1>")
-  .identifier("dev.proton.e2e-quit-chain")
-  .app_lifecycle(
+  ..identifier("dev.proton.e2e-quit-chain")
+  ..app_lifecycle(
     on_start=context => {
       quit_chain_application.val = Some(context)
       context
     },
     on_shutdown=fn(_) { () },
   )
-  .on_before_quit(fn(context) {
+  ..on_before_quit(fn(context) {
     quit_chain_log("before-quit")
     if mode == "exit-before-quit" {
       context.exit(exit_code=7)
@@ -52,7 +52,7 @@ pub async fn run_quit_chain() -> Unit {
       @proton.ApplicationQuitDecision::Allow
     }
   })
-  .on_will_quit(async fn(context) noraise {
+  ..on_will_quit(async fn(context) noraise {
     quit_chain_log("will-quit")
     if mode == "exit-will-quit" || mode == "exit-pending-will-quit" {
       context.exit(exit_code=7)
@@ -68,10 +68,10 @@ pub async fn run_quit_chain() -> Unit {
       @proton.ApplicationQuitDecision::Allow
     }
   })
-  .on_quit(fn(_context, exit_code) {
+  ..on_quit(fn(_context, exit_code) {
     quit_chain_log("quit " + exit_code.to_string())
   })
-  .window_lifecycle(
+  ..window_lifecycle(
     on_ready=context => {
       @mbfs.write_string_to_file(ready, "ready") catch {
         _ => ()

@@ -11,7 +11,7 @@ Run the first instance from a terminal:
 moon -C examples run 84_single_instance_lock --target native
 ```
 
-The example owns the application identity (`.single_instance()`), prints the
+The example owns the application identity (`..single_instance()`), prints the
 session partition it uses, and releases the identity when you press **Release
 lock**. Nothing outside the application data directory changes, and the only
 cleanup is closing every instance you started.
@@ -54,7 +54,7 @@ the browser profile exclusively and refuses to initialize a second process on
 the same session data directory, so a side-by-side successor uses a different
 `App::session_partition`. The identity lock is independent of the profile: a
 successor with its own partition still acquires the released identity. Running
-without `.single_instance()` is the other way to allow side-by-side instances;
+without `..single_instance()` is the other way to allow side-by-side instances;
 Proton then uses a temporary profile.
 
 ## Platform matrix

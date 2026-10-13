@@ -1,8 +1,8 @@
 # Process-Level Events
 
 Manual review for Proton's process-level application events:
-`.on_session_created(...)`, `.on_window_created(...)`,
-`.on_web_contents_created(...)`, and `.on_render_process_gone(...)`, matching
+`..on_session_created(...)`, `..on_window_created(...)`,
+`..on_web_contents_created(...)`, and `..on_render_process_gone(...)`, matching
 Electron's `session-created`, `browser-window-created`,
 `web-contents-created`, and `render-process-gone`.
 
@@ -12,7 +12,7 @@ Run it from a terminal so every event stays visible:
 moon -C examples run 83_process_events --target native
 ```
 
-The example uses `.single_instance()` with `.session_partition("process-events")`,
+The example uses `..single_instance()` with `..session_partition("process-events")`,
 so the session review also shows a persistent profile instead of a temporary
 one. Nothing else in this example changes system state; the only cleanup is
 closing the window.

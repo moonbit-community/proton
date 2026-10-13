@@ -185,9 +185,9 @@ async fn main {
     height=590,
     debug=true,
   )
-  .identifier("dev.proton.window-skip-taskbar")
-  .commands(register_commands)
-  .window_lifecycle(
+  ..identifier("dev.proton.window-skip-taskbar")
+  ..commands(register_commands)
+  ..window_lifecycle(
     on_ready=context => {
       let window = context.handle()
       window_slot.val = Some(window)

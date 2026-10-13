@@ -22,8 +22,8 @@ async fn main {
       height=520,
     ),
   )
-  .identifier("dev.proton.repro-fullscreen-close")
-  .on_web_contents_event(fn(contents, event) noraise {
+  ..identifier("dev.proton.repro-fullscreen-close")
+  ..on_web_contents_event(fn(contents, event) noraise {
     if contents.view_id() is None {
       return
     }
@@ -31,7 +31,7 @@ async fn main {
       loaded.val += 1
     }
   })
-  .window_lifecycle(
+  ..window_lifecycle(
     on_ready=context => {
       let window = context.handle()
       let views = Array::makei(child_count, i => {

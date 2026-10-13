@@ -9,7 +9,7 @@ async fn main {
       height=520,
     ),
   )
-  .debug(enabled=true)
-  .identifier("dev.proton.48-titlebar-overlay")
+  ..debug(enabled=true)
+  ..identifier("dev.proton.48-titlebar-overlay")
   .run_or_abort()
 }

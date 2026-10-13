@@ -228,10 +228,10 @@ fn page() -> String {
 ///|
 async fn main {
   @proton.html("Process Events", page(), width=880, height=640)
-  .identifier("com.example.proton.process-events")
-  .single_instance()
-  .session_partition("process-events")
-  .on_session_created(fn(session) {
+  ..identifier("com.example.proton.process-events")
+  ..single_instance()
+  ..session_partition("process-events")
+  ..on_session_created(fn(session) {
     log_process_step(
       "session-created partition=" +
       session.partition.unwrap_or("default") +
@@ -239,16 +239,16 @@ async fn main {
       session.data_path.unwrap_or("temporary"),
     )
   })
-  .on_window_created(fn(window) {
+  ..on_window_created(fn(window) {
     created_windows.push(window.id())
     log_process_step("browser-window-created " + window.id())
   })
-  .on_web_contents_created(fn(contents) {
+  ..on_web_contents_created(fn(contents) {
     let label = web_contents_label(contents)
     created_contents.push(label)
     log_process_step("web-contents-created " + label)
   })
-  .on_render_process_gone(fn(contents, details) {
+  ..on_render_process_gone(fn(contents, details) {
     let line = web_contents_label(contents) +
       " reason=" +
       render_process_reason_name(details.reason) +
@@ -257,8 +257,8 @@ async fn main {
     gone_contents.push(line)
     log_process_step("render-process-gone " + line)
   })
-  .commands(register_commands)
-  .app_lifecycle(
+  ..commands(register_commands)
+  ..app_lifecycle(
     on_start=context => {
       application_slot.val = Some(context)
       context

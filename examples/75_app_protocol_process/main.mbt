@@ -137,11 +137,11 @@ async fn main {
     width=960,
     height=620,
   )
-  .config(@proton.load_config())
-  .single_instance()
-  .url_scheme(scheme)
-  .commands(register_commands)
-  .app_lifecycle(
+  ..config(@proton.load_config())
+  ..single_instance()
+  ..url_scheme(scheme)
+  ..commands(register_commands)
+  ..app_lifecycle(
     on_start=context => {
       application_slot.val = Some(context)
       context

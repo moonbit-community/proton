@@ -292,7 +292,7 @@ section exists:
 Trusting a list instead of a single key removes both:
 
 ```moonbit
-app.update_channel(
+app..update_channel(
   "https://example.com/updates/latest.json",
   [
     "rsa-sha256:94c05429a8686a46...:010001",
@@ -532,7 +532,7 @@ outside this mechanism. Their package manager or installer owns replacement.
 
 ```moonbit
 @proton.asset("My App", "frontend/dist/index.html")
-.update_channel(
+..update_channel(
   "https://example.com/updates/latest.json",
   [
     "rsa-sha256:94c05429a8686a46...:010001",
@@ -544,7 +544,7 @@ outside this mechanism. Their package manager or installer owns replacement.
 ```
 
 `public_keys` must contain at least one key. An application that omits
-`.update_channel(...)` has no updater channel; an empty list is a configuration
+`..update_channel(...)` has no updater channel; an empty list is a configuration
 error, not an invitation to skip verification.
 
 ## Automatic check
@@ -586,8 +586,8 @@ selected renderer targets:
 
 ```moonbit
 @proton.asset("My App", "frontend/dist/index.html")
-.update_channel(endpoint, public_keys)
-.capability(@updater.capability())
+..update_channel(endpoint, public_keys)
+..capability(@updater.capability())
 ```
 
 The logical-window grant is only one half of the decision. The native bridge

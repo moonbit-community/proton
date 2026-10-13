@@ -31,6 +31,29 @@ For the complete set of methods, overloads, typed errors and defaults, use the [
 
 Each returns an `App` builder. Shared options include width, height, debug mode and resizability. `entry_html`, `entry_url`, `entry_file` and `entry_asset` configure the entry on an existing builder.
 
+**Configuring an application**
+
+Configuration methods, including `config`, `debug`, `add_window`, and `on_*` hook
+registration, modify the existing `App` and return `Unit`. Use `..` to retain the
+application value across configuration calls:
+
+```moonbit
+let app = @proton.html("Hello", "<h1>Hello</h1>")
+  ..config(@proton.load_config())
+  ..debug()
+
+app.single_instance()
+app.run()
+```
+
+A direct call such as `app.single_instance()` returns `Unit`. Constructors still
+return `App`; queries such as `app.name()` retain their result types. `run()` and
+`run_or_abort()` remain ordinary async calls.
+
+To migrate an existing builder chain, change its configuration calls from `.` to
+`..`. Keep `.` for queries and the final `run()` / `run_or_abort()`. Configuration
+validation, registration order, and lifecycle behavior are unchanged.
+
 **Identity**
 
 `@proton.load_config()` returns the complete typed `AppConfig` and reports loading errors immediately. Read `identifier`, `backend`, `frontend`, and `package_config` directly from this value. Install it with `app.config(config)`, which is mutually exclusive with `app.identifier(...)`. The identifier is stable application identity, distinct from the window title, product name, and version.

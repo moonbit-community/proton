@@ -7,6 +7,6 @@ async fn main {
     height=600,
     debug=true,
   )
-  .identifier("dev.proton.02-local")
+  ..identifier("dev.proton.02-local")
   .run_or_abort()
 }

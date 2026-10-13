@@ -1,7 +1,7 @@
 # Quit Event Chain
 
 Manual review for Proton's Electron-style quit chain:
-`.on_before_quit(...)`, `.on_will_quit(...)`, and `.on_quit(...)`, together
+`..on_before_quit(...)`, `..on_will_quit(...)`, and `..on_quit(...)`, together
 with the exit code adopted by `ApplicationContext::quit(exit_code=...)` and
 `ApplicationContext::exit(exit_code=...)`.
 

@@ -56,7 +56,7 @@ async fn main {
     height=700,
     debug=true,
   )
-  .config(@proton.load_config())
+  ..config(@proton.load_config())
   .run_or_abort()
 }
 ```
@@ -70,9 +70,9 @@ An isomorphic backend registers commands defined by the shared contract:
 async fn main {
   let backend = @todo.Backend()
   @proton.asset("My App", "frontend/dist/index.html")
-  .config(@proton.load_config())
-  .single_instance()
-  .commands(fn(registrar) raise { backend.register_commands(registrar) })
+  ..config(@proton.load_config())
+  ..single_instance()
+  ..commands(fn(registrar) raise { backend.register_commands(registrar) })
   .run_or_abort()
 }
 ```
@@ -92,7 +92,7 @@ Filesystem access must declare both allowed roots and commands:
 
 ```moonbit
 @proton.html("Files", html)
-.capability(
+..capability(
   @fs.capability([
     @fs.PermissionRoot("./workspace", [
       "read_file",
@@ -124,8 +124,8 @@ Window creation, state changes, and close interception are integrated with the
 managed async runtime. By default the application quits after its final window
 closes. Use `LastWindowClosedPolicy::KeepRunning` for tray or background
 applications. An orderly quit follows Electron's quit event chain:
-`.on_before_quit(...)` runs before windows start closing, `.on_will_quit(...)`
-runs after the last window has closed, and `.on_quit(...)` observes the process
+`..on_before_quit(...)` runs before windows start closing, `..on_will_quit(...)`
+runs after the last window has closed, and `..on_quit(...)` observes the process
 exit code. Both cancelable steps answer with
 `ApplicationQuitDecision::Allow` or `ApplicationQuitDecision::Prevent`, and
 `ApplicationContext::quit(exit_code=...)` or
@@ -141,9 +141,9 @@ focuses its first visible window on Windows and Linux. `hide`, `show`,
 from. `@proton.is_ready()` reports the startup boundary, corresponding to
 `app.isReady()`. See `examples/82_app_control`.
 
-Process-level events follow the same style: `.on_session_created(...)`,
-`.on_window_created(...)`, `.on_web_contents_created(...)`, and
-`.on_render_process_gone(...)` mirror Electron's `session-created`,
+Process-level events follow the same style: `..on_session_created(...)`,
+`..on_window_created(...)`, `..on_web_contents_created(...)`, and
+`..on_render_process_gone(...)` mirror Electron's `session-created`,
 `browser-window-created`, `web-contents-created`, and `render-process-gone`,
 including Electron's renderer termination reasons. Killed renderers are events
 rather than fatal errors, so an application decides whether to reload, replace,
@@ -155,7 +155,7 @@ Application windows can host independent web contents views with explicit
 bounds, visibility, z-order, navigation, DevTools, and lifecycle events. See
 `examples/45_bridge_multi_window` and `examples/52_web_contents_view`.
 
-Single-instance apps declare ownership with `.single_instance()` and can inspect
+Single-instance apps declare ownership with `..single_instance()` and can inspect
 or give it up at runtime: `ApplicationContext::has_single_instance_lock()` and
 `ApplicationContext::release_single_instance_lock()` mirror Electron's
 `app.hasSingleInstanceLock()` and `app.releaseSingleInstanceLock()`. After a
@@ -186,7 +186,7 @@ Windows, and Linux.
 Web accessibility uses Chromium's native accessibility tree. Applications
 should express semantics with HTML, ARIA, keyboard navigation, and visible
 focus. Proton follows each platform's accessibility policy by default; use
-`.accessibility(@proton.AccessibilityMode::AlwaysEnabled)` when the tree must
+`..accessibility(@proton.AccessibilityMode::AlwaysEnabled)` when the tree must
 remain available for the whole runtime, including automation.
 
 Titlebar overlay uses `TitlebarStyle::Overlay` on macOS, Windows, and Linux.
@@ -235,10 +235,10 @@ controls. See [examples/Readme.md](examples/Readme.md).
 
 `identifier` is the stable application identity used by the runtime and
 packaging tools. `@proton.load_config()` reads the complete configuration during
-development or from packaged metadata after installation. `.config(@proton.load_config())`
+development or from packaged metadata after installation. `..config(@proton.load_config())`
 installs this configuration on the application. Applications that
 do not use `proton.project.json` must call
-`.identifier("com.example.my-app")` instead.
+`..identifier("com.example.my-app")` instead.
 
 `backend.path` is the exact working directory passed to Moon and
 `backend.package` selects the executable package. Proton does not scan parent
@@ -348,7 +348,7 @@ or assemble CEF. See [package/README.md](package/README.md).
 
 ## Runtime options
 
-Enable operating-system single-instance routing with `.single_instance()`.
+Enable operating-system single-instance routing with `..single_instance()`.
 Later launches forward protocol URLs, document paths, and reopen activation to
 the primary process.
 
@@ -356,8 +356,8 @@ Headless mode uses CEF off-screen rendering without native top-level windows:
 
 ```moonbit
 @proton.html("Automation", html)
-.config(@proton.load_config())
-.headless()
+..config(@proton.load_config())
+..headless()
 .run_or_abort()
 ```
 

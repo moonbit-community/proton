@@ -192,10 +192,10 @@ fn page() -> String {
 async fn main {
   let partition = demo_partition()
   @proton.html("Single-Instance Lock", page(), width=880, height=620)
-  .identifier("com.example.proton.single-instance-lock")
-  .single_instance()
-  .session_partition(partition)
-  .on_launch_input(fn(context, input) noraise {
+  ..identifier("com.example.proton.single-instance-lock")
+  ..single_instance()
+  ..session_partition(partition)
+  ..on_launch_input(fn(context, input) noraise {
     if input is @proton.RuntimeLaunchInput::Reopen {
       activations.val = activations.val + 1
       log_lock_step(
@@ -209,8 +209,8 @@ async fn main {
       }
     }
   })
-  .commands(register_commands)
-  .app_lifecycle(
+  ..commands(register_commands)
+  ..app_lifecycle(
     on_start=context => {
       application_slot.val = Some(context)
       log_lock_step(

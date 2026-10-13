@@ -237,11 +237,11 @@ fn page() -> String {
 ///|
 async fn main {
   @proton.html("Quit Event Chain", page(), width=900, height=700)
-  .identifier("com.example.proton.quit-event-chain")
-  .single_instance()
+  ..identifier("com.example.proton.quit-event-chain")
+  ..single_instance()
   // A prevented `will-quit` leaves the application running without windows.
   // Launching the same application again must reopen the main window.
-  .on_launch_input(async fn(context, input) noraise {
+  ..on_launch_input(async fn(context, input) noraise {
     if input is @proton.RuntimeLaunchInput::Reopen &&
       context.windows().find("main") is None {
       ignore(context.windows().open("main")) catch {
@@ -249,8 +249,8 @@ async fn main {
       }
     }
   })
-  .commands(register_commands)
-  .app_lifecycle(
+  ..commands(register_commands)
+  ..app_lifecycle(
     on_start=context => {
       application_slot.val = Some(context)
       context
@@ -260,7 +260,7 @@ async fn main {
       log_chain_step("lifecycle shutdown")
     },
   )
-  .on_before_quit(fn(_context) {
+  ..on_before_quit(fn(_context) {
     log_chain_step("before-quit blocked=" + block_before_quit.val.to_string())
     if block_before_quit.val {
       @proton.ApplicationQuitDecision::Prevent
@@ -268,7 +268,7 @@ async fn main {
       @proton.ApplicationQuitDecision::Allow
     }
   })
-  .on_will_quit(fn(_context) {
+  ..on_will_quit(fn(_context) {
     log_chain_step("will-quit blocked=" + block_will_quit.val.to_string())
     if block_will_quit.val {
       @proton.ApplicationQuitDecision::Prevent
@@ -276,7 +276,7 @@ async fn main {
       @proton.ApplicationQuitDecision::Allow
     }
   })
-  .on_quit(fn(_context, exit_code) {
+  ..on_quit(fn(_context, exit_code) {
     log_chain_step("quit exit_code=" + exit_code.to_string())
   })
   .run_or_abort()

@@ -6,11 +6,11 @@ async fn main {
       width=1180,
       height=780,
     )
-    .config(@proton.load_config())
-    .debug()
-    .capability(@dialog.capability())
-    .capability(@clipboard.capability())
-    .capability(@notification.capability())
-    .capability(@tray.capability())
+    ..config(@proton.load_config())
+    ..debug()
+    ..capability(@dialog.capability())
+    ..capability(@clipboard.capability())
+    ..capability(@notification.capability())
+    ..capability(@tray.capability())
   app.run_or_abort()
 }

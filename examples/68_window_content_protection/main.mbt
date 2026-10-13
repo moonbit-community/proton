@@ -100,9 +100,9 @@ async fn main {
     height=560,
     debug=true,
   )
-  .identifier("dev.proton.window-content-protection")
-  .commands(register_commands)
-  .window_lifecycle(
+  ..identifier("dev.proton.window-content-protection")
+  ..commands(register_commands)
+  ..window_lifecycle(
     on_ready=context => {
       let window = context.handle()
       window_slot.val = Some(window)

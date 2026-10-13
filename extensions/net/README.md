@@ -10,7 +10,7 @@ Grant the capability to a selected renderer target:
 ```moonbit
 let app = @proton
   .html("Network", html)
-  .capability(@proton_ext_net.capability())
+  ..capability(@proton_ext_net.capability())
 ```
 
 The generated renderer proxy accepts an HTTP method, an absolute `http://` or

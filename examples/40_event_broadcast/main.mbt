@@ -120,6 +120,6 @@ async fn main {
     width=900,
     height=620,
     debug=true,
-  ).capability(@proton_extension.capability(ticker_extension()))
-  app.identifier("dev.proton.40-event-broadcast").run_or_abort()
+  )..capability(@proton_extension.capability(ticker_extension()))
+  app..identifier("dev.proton.40-event-broadcast").run_or_abort()
 }

@@ -160,7 +160,7 @@ async test "facade command reporter preserves decoding and handler diagnostics" 
   let command : @proton_contract.Command[Int32, Int32] = @proton_contract.command(
     "diagnostic",
   )
-  let configured = html("Diagnostics", "").commands(registrar => {
+  let configured = html("Diagnostics", "")..commands(registrar => {
     registrar.bind(command, (_context, _value) => {
       fail("handler diagnostic sentinel")
     })

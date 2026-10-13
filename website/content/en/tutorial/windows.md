@@ -10,8 +10,8 @@ Replace **`app/main.mbt`** with:
 ///|
 async fn main {
   @proton.html("Main", "<h1>Main window</h1>", width=900, height=700)
-  .config(@proton.load_config())
-  .add_window(
+  ..config(@proton.load_config())
+  ..add_window(
     "help",
     @proton.WindowConfig(
       "Help",
@@ -20,7 +20,7 @@ async fn main {
       height=320,
     ),
   )
-  .window_lifecycle(
+  ..window_lifecycle(
     on_ready=context => {
       let id = context.handle().id()
       println("Ready: " + id)
@@ -43,7 +43,7 @@ The primary window's ID is `main`. Secondary IDs must be nonempty, unique, and d
 For example, add `open_on_start=false` to the Help declaration above, and add this builder call before `.run_or_abort()` to open it from the application startup hook:
 
 ```moonbit
-.app_lifecycle(
+..app_lifecycle(
   on_start=context => { ignore(context.windows().open("help")) },
   on_shutdown=_ => (),
 )
@@ -62,7 +62,7 @@ A lifecycle callback's return value becomes the corresponding `on_close` argumen
 The default last-window policy quits the application. Tray and background applications can add:
 
 ```moonbit
-.last_window_closed_policy(@proton.LastWindowClosedPolicy::KeepRunning)
+..last_window_closed_policy(@proton.LastWindowClosedPolicy::KeepRunning)
 ```
 
 With that policy, closing all windows does not stop the process. Provide an explicit quit action before using it in a real application.

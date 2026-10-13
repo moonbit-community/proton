@@ -14,7 +14,7 @@ async test "loaded configuration remains a complete independent snapshot" {
   })
   let config = load_config()
   @mbfs.remove_file(path)
-  let app = html("Test", "").config(config)
+  let app = html("Test", "")..config(config)
   assert_true(app.validation_errors.is_empty())
   assert_eq(app.name(), "Snapshot")
   assert_eq(app.version(), "1.2.3")
@@ -42,19 +42,19 @@ test "explicit configuration is copied and conflicts with another identity" {
       PackageConfig("Explicit", "1.0.0", resources=["assets"]),
     ),
   )
-  let app = html("Test", "").config(config)
+  let app = html("Test", "")..config(config)
   config.package_config.unwrap().resources.clear()
   assert_eq(app.configured_config().package_config.unwrap().resources, [
     "assets",
   ])
-  ignore(app.identifier("com.example.other"))
+  app.identifier("com.example.other")
   assert_eq(app.application_identifier(), "com.example.explicit")
   assert_eq(app.validation_errors.length(), 1)
 }
 
 ///|
 test "invalid explicit configuration prevents startup" {
-  let app = html("Test", "").config(AppConfig("invalid"))
+  let app = html("Test", "")..config(AppConfig("invalid"))
   assert_eq(app.validation_errors.length(), 1)
   assert_true(app.validation_errors[0].message().contains("identifier"))
   assert_true(app.application_identity is None)
@@ -83,9 +83,9 @@ test "explicit configuration must match bundled identity" {
   )
   defer @mbfs.remove_file(path)
   assert_eq(load_config().identifier, "com.example.packaged")
-  let matching = html("Test", "").config(AppConfig("com.example.packaged"))
+  let matching = html("Test", "")..config(AppConfig("com.example.packaged"))
   assert_true(matching.validation_errors.is_empty())
-  let mismatching = html("Test", "").config(AppConfig("com.example.other"))
+  let mismatching = html("Test", "")..config(AppConfig("com.example.other"))
   assert_eq(mismatching.validation_errors.length(), 1)
   assert_true(
     mismatching.validation_errors[0].message().contains("com.example.packaged"),

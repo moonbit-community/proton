@@ -172,7 +172,7 @@ Moon 默认将构建产物写入 _build/。前端输出位置取决于前端构�
 
 ```moonbit
 let config = @proton.load_config()
-let app = @proton.html("Hello", "<h1>Hello</h1>").config(config)
+let app = @proton.html("Hello", "<h1>Hello</h1>")..config(config)
 
 if config.frontend is Some(frontend) {
   if frontend.dev_url is Some(url) {
@@ -195,7 +195,7 @@ JSON 中的 `package` 对应 `config.package_config`，`backend.package`
 `--package` 覆盖的生效配置。打包也会嵌入生效配置，包括格式和平台选项的
 命令行覆盖值。相对路径保持原样；读取字段不会解析路径或执行命令。
 
-`app.config(config)` 安装独立副本，与 `app.identifier(...)` 互斥。
+`app..config(config)` 安装独立副本，与 `app..identifier(...)` 互斥。
 无效配置或与包内身份不一致的 identifier 会阻止启动。保留 `config` 即可查询
 配置，应用不再提供配置 getter。`app.name()` 和 `app.version()` 读取安装的
 快照，不再访问文件。

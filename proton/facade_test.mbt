@@ -19,7 +19,7 @@ test "public system language query returns canonical locales" {
 
 ///|
 test "explicit applications report missing managed package metadata" {
-  let app = @proton.html("Direct", "<main>Direct</main>").identifier(
+  let app = @proton.html("Direct", "<main>Direct</main>")..identifier(
     "dev.proton.direct",
   )
   try app.version() catch {
@@ -52,16 +52,15 @@ test "public common user paths are absolute" {
 }
 
 ///|
-test "public path override builders update resolved paths" {
-  let app = @proton.html("Paths", "<main>Paths</main>").identifier(
+test "public configuration supports cascades and direct Unit calls" {
+  let app = @proton.html("Paths", "<main>Paths</main>")..identifier(
     "dev.proton.public-path-overrides",
   )
   let temp = app.path(@proton.AppPathKind::Temp)
-  let app = app
-    .set_path(@proton.AppPathKind::UserData, temp)
-    .set_app_logs_path(
-      path=@mbpath.Path(temp).join("proton-public-logs").normalize().to_string(),
-    )
+  let _ : Unit = app.set_path(@proton.AppPathKind::UserData, temp)
+  app.set_app_logs_path(
+    path=@mbpath.Path(temp).join("proton-public-logs").normalize().to_string(),
+  )
   assert_eq(app.data_dir(), temp)
   assert_eq(
     app.path(@proton.AppPathKind::SessionData),
@@ -80,7 +79,7 @@ test "public typed configuration exposes all sections through the root facade" {
       #|{"identifier":"com.example.public-config","frontend":{"dev_url":"http://localhost:4300"},"package":{"product_name":"Public","version":"1.0.0"}}
     ),
   )
-  let app = @proton.html("Config", "").config(config)
+  let app = @proton.html("Config", "")..config(config)
   assert_eq(config.frontend.unwrap().dev_url, Some("http://localhost:4300"))
   assert_eq(app.name(), "Public")
   assert_eq(app.version(), "1.0.0")

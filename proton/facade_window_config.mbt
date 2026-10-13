@@ -48,9 +48,8 @@ pub fn WindowConfig::WindowConfig(
 ///|
 /// Replaces the primary window's startup configuration without changing
 /// application settings, command registrations or lifecycle hooks.
-pub fn App::main_window(self : App, config : WindowConfig) -> App {
+pub fn App::main_window(self : App, config : WindowConfig) -> Unit {
   self.main_window_config = config.snapshot()
-  self
 }
 
 ///|

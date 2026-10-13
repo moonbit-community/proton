@@ -93,8 +93,8 @@ pub async fn run_lifecycle_regression(name : String) -> Unit {
   let close_error = Ref("")
   let cleaned = Ref(false)
   let app = @proton.html("Lifecycle regression", "<h1>Lifecycle</h1>")
-    .identifier("dev.proton.e2e-lifecycle")
-    .app_lifecycle(
+    ..identifier("dev.proton.e2e-lifecycle")
+    ..app_lifecycle(
       on_start=context => {
         application.val = Some(context)
         if name == "task-failure" {
@@ -116,7 +116,7 @@ pub async fn run_lifecycle_regression(name : String) -> Unit {
       },
       on_shutdown=_ => (),
     )
-    .add_window(
+    ..add_window(
       "secondary",
       @proton.WindowConfig(
         "Secondary",
@@ -124,7 +124,7 @@ pub async fn run_lifecycle_regression(name : String) -> Unit {
       ),
       open_on_start=false,
     )
-    .on_web_contents_event((view, event) => {
+    ..on_web_contents_event((view, event) => {
       if view.view_id() is None {
         return
       }
@@ -142,7 +142,7 @@ pub async fn run_lifecycle_regression(name : String) -> Unit {
         loaded_views.push(view.view_id().unwrap())
       }
     })
-    .window_lifecycle(
+    ..window_lifecycle(
       on_ready=context => {
         if context.handle().id() == "secondary" {
           secondary_started.val = true
@@ -330,7 +330,7 @@ pub async fn run_lifecycle_regression(name : String) -> Unit {
       },
     )
   let app = if name == "close-decision" {
-    app.on_window_close_request(window => {
+    app..on_window_close_request(window => {
       window.web_contents().eval("void 0") catch {
         error => close_error.val = error.message()
       }
@@ -384,8 +384,8 @@ async fn run_startup_quit_regression(name : String) -> Unit {
   let confirm_quit = name == "startup-quit-denied" ||
     name == "startup-quit-allowed"
   let app = @proton.html("Startup quit", "<h1>Startup quit</h1>")
-    .identifier("dev.proton.startup-quit")
-    .add_window(
+    ..identifier("dev.proton.startup-quit")
+    ..add_window(
       "secondary",
       @proton.WindowConfig(
         "Secondary",
@@ -393,10 +393,10 @@ async fn run_startup_quit_regression(name : String) -> Unit {
       ),
       open_on_start=false,
     )
-    .app_lifecycle(on_start=context => application.val = Some(context), on_shutdown=_ => {
+    ..app_lifecycle(on_start=context => application.val = Some(context), on_shutdown=_ => {
       completed_hook_cleanup.val += 1
     })
-    .app_lifecycle(
+    ..app_lifecycle(
       on_start=context => {
         if name == "initial-ready-quit" {
           return
@@ -417,10 +417,10 @@ async fn run_startup_quit_regression(name : String) -> Unit {
       },
       on_shutdown=_ => pending_hook_cleanup.val += 1,
     )
-    .app_lifecycle(on_start=_ => later_hook_started.val = true, on_shutdown=_ => {
+    ..app_lifecycle(on_start=_ => later_hook_started.val = true, on_shutdown=_ => {
       ()
     })
-    .window_lifecycle(
+    ..window_lifecycle(
       on_ready=context => {
         window_ready.val += 1
         if name == "startup-quit-denied" && context.handle().id() == "main" {
@@ -440,7 +440,7 @@ async fn run_startup_quit_regression(name : String) -> Unit {
       on_close=_ => window_closed.val += 1,
     )
   let app = if confirm_quit {
-    app.on_window_close_request(_ => {
+    app..on_window_close_request(_ => {
       close_requests.val += 1
       if close_requests.val == 1 {
         @async.sleep(300)
@@ -504,8 +504,8 @@ async fn run_app_cancellation_regression(name : String) -> Unit {
         views=[("child", @proton.ViewConfig(width=100, height=100))],
       ),
     )
-    .identifier("dev.proton.e2e-app-cancel")
-    .app_lifecycle(
+    ..identifier("dev.proton.e2e-app-cancel")
+    ..app_lifecycle(
       on_start=context => {
         application.val = Some(context)
         if name == "cancel-app-startup" {
@@ -521,7 +521,7 @@ async fn run_app_cancellation_regression(name : String) -> Unit {
         shutdown_count.val = shutdown_count.val + 1
       },
     )
-    .window_lifecycle(
+    ..window_lifecycle(
       on_ready=context => {
         window.val = Some(context.handle())
         view.val = context.handle().view("child")
@@ -580,9 +580,9 @@ async fn run_cancel_during_startup_regression() -> Unit {
   let main_ready = Ref(false)
 
   @proton.html("Startup cancellation", "<h1>Main</h1>")
-  .identifier("dev.proton.e2e-startup-cancel")
-  .last_window_closed_policy(@proton.LastWindowClosedPolicy::KeepRunning)
-  .add_window(
+  ..identifier("dev.proton.e2e-startup-cancel")
+  ..last_window_closed_policy(@proton.LastWindowClosedPolicy::KeepRunning)
+  ..add_window(
     "secondary",
     @proton.WindowConfig(
       "Secondary",
@@ -590,7 +590,7 @@ async fn run_cancel_during_startup_regression() -> Unit {
     ),
     open_on_start=false,
   )
-  .app_lifecycle(
+  ..app_lifecycle(
     on_start=context => {
       application.val = Some(context)
       lifecycle_probe_gate()
@@ -608,7 +608,7 @@ async fn run_cancel_during_startup_regression() -> Unit {
     },
     on_shutdown=_ => (),
   )
-  .window_lifecycle(
+  ..window_lifecycle(
     on_ready=context => {
       if context.handle().id() == "secondary" {
         secondary_ready.val = true
@@ -694,15 +694,15 @@ async fn run_task_metrics_regression() -> Unit {
       #|</script>
     ),
   )
-  .identifier("dev.proton.e2e-task-metrics")
-  .app_lifecycle(
+  ..identifier("dev.proton.e2e-task-metrics")
+  ..app_lifecycle(
     on_start=context => {
       application.val = Some(context)
       context
     },
     on_shutdown=_ => (),
   )
-  .window_lifecycle(
+  ..window_lifecycle(
     on_ready=context => {
       lifecycle_probe_gate()
       ignore(
@@ -853,18 +853,18 @@ async fn run_page_control_regression() -> Unit {
   @proton.html(
     "Page control", "<title>Page control</title><h1>Page control</h1>",
   )
-  .identifier("dev.proton.e2e-page-control")
-  .commands(registrar => {
+  ..identifier("dev.proton.e2e-page-control")
+  ..commands(registrar => {
     registrar.bind(report_command, (_context, report) => reported.push(report))
   })
-  .app_lifecycle(
+  ..app_lifecycle(
     on_start=context => {
       application.val = Some(context)
       context
     },
     on_shutdown=_ => (),
   )
-  .window_lifecycle(
+  ..window_lifecycle(
     on_ready=context => {
       lifecycle_probe_gate()
       ignore(
@@ -1003,8 +1003,8 @@ async fn run_process_events_regression() -> Unit {
   let main_loaded = Ref(false)
 
   @proton.html("Process events", "<h1>Process events</h1>")
-  .identifier("dev.proton.e2e-process-events")
-  .on_session_created(fn(session) {
+  ..identifier("dev.proton.e2e-process-events")
+  ..on_session_created(fn(session) {
     session_events.push(
       "partition=" +
       session.partition.unwrap_or("default") +
@@ -1012,8 +1012,8 @@ async fn run_process_events_regression() -> Unit {
       session.data_path.unwrap_or("temporary"),
     )
   })
-  .on_window_created(fn(window) { created_windows.push(window.id()) })
-  .on_web_contents_created(fn(contents) {
+  ..on_window_created(fn(window) { created_windows.push(window.id()) })
+  ..on_web_contents_created(fn(contents) {
     created_contents.push(
       match contents.view_id() {
         None => "browser:" + contents.window_id()
@@ -1021,7 +1021,7 @@ async fn run_process_events_regression() -> Unit {
       },
     )
   })
-  .on_render_process_gone(fn(contents, details) {
+  ..on_render_process_gone(fn(contents, details) {
     gone_contents.push(
       (match contents.view_id() {
         None => "browser:" + contents.window_id()
@@ -1033,7 +1033,7 @@ async fn run_process_events_regression() -> Unit {
       details.exit_code.to_string(),
     )
   })
-  .on_web_contents_event(fn(_browser, event) {
+  ..on_web_contents_event(fn(_browser, event) {
     if _browser.view_id() is Some(_) {
       return
     }
@@ -1041,7 +1041,7 @@ async fn run_process_events_regression() -> Unit {
       main_loaded.val = true
     }
   })
-  .window_lifecycle(
+  ..window_lifecycle(
     on_ready=context => {
       ignore(
         context
@@ -1121,8 +1121,8 @@ async fn run_app_control_regression() -> Unit {
   let hidden = Ref(false)
 
   @proton.html("Application control", "<h1>Application control</h1>")
-  .identifier("dev.proton.e2e-app-control")
-  .app_lifecycle(
+  ..identifier("dev.proton.e2e-app-control")
+  ..app_lifecycle(
     on_start=context => {
       application.val = Some(context)
       // Startup hooks run before readiness, like Electron code before `ready`.
@@ -1131,7 +1131,7 @@ async fn run_app_control_regression() -> Unit {
     },
     on_shutdown=_ => (),
   )
-  .window_lifecycle(
+  ..window_lifecycle(
     on_ready=context => {
       lifecycle_probe_gate()
       ignore(
@@ -1196,19 +1196,19 @@ async fn run_process_lifetime_regression() -> Unit {
     "finish",
   )
   @proton.html("Process lifetime", "<h1>Process lifetime</h1>")
-  .identifier("dev.proton.process-lifetime")
-  .capability(@process_extension.capability())
-  .commands(registrar => {
+  ..identifier("dev.proton.process-lifetime")
+  ..capability(@process_extension.capability())
+  ..commands(registrar => {
     registrar.bind(finish, (_context, exit_code) => {
       assert_eq(exit_code, 7)
       completed.val = true
       application.val.unwrap().quit()
     })
   })
-  .app_lifecycle(on_start=context => application.val = Some(context), on_shutdown=_ => {
+  ..app_lifecycle(on_start=context => application.val = Some(context), on_shutdown=_ => {
     ()
   })
-  .window_lifecycle(
+  ..window_lifecycle(
     on_ready=context => {
       lifecycle_probe_gate()
       context
@@ -1240,8 +1240,8 @@ async fn run_renderer_without_bridge_regression() -> Unit {
   let terminations = Ref(0)
   let valid_termination = Ref(false)
   @proton.html("No bridge", "<title>No Bridge</title>")
-  .identifier("dev.proton.no-bridge")
-  .on_web_contents_event(fn(_browser, event) {
+  ..identifier("dev.proton.no-bridge")
+  ..on_web_contents_event(fn(_browser, event) {
     if _browser.view_id() is Some(_) {
       return
     }
@@ -1254,7 +1254,7 @@ async fn run_renderer_without_bridge_regression() -> Unit {
       _ => ()
     }
   })
-  .app_lifecycle(
+  ..app_lifecycle(
     on_start=context => {
       ignore(
         context
@@ -1299,8 +1299,8 @@ async fn run_proxy_regression(name : String) -> Unit {
   let loaded = Ref(false)
   let page_title = "Proton Proxy Response"
   let app = @proton.url("Proxy", "http://proton-proxy.invalid:8080/probe")
-    .identifier("dev.proton.proxy")
-    .on_web_contents_event((browser, event) => {
+    ..identifier("dev.proton.proxy")
+    ..on_web_contents_event((browser, event) => {
       if browser.view_id() is Some(_) {
         return
       }
@@ -1313,7 +1313,7 @@ async fn run_proxy_regression(name : String) -> Unit {
         }
       eprintln("PROXY_STATE " + state)
     })
-    .app_lifecycle(
+    ..app_lifecycle(
       on_start=context => {
         ignore(
           context
@@ -1380,7 +1380,7 @@ async fn run_proxy_regression(name : String) -> Unit {
       on_shutdown=_ => (),
     )
   if configured {
-    ignore(app.proxy(proxy))
+    app.proxy(proxy)
   }
   app.run()
   assert_eq(@env.get_env_var("PROTON_PROXY_SERVER"), Some(environment_proxy))
@@ -1426,16 +1426,16 @@ async fn run_page_recovery_regression(name : String) -> Unit {
     ],
   )
   let app = @proton.html("Recovery", "<title>Recovery Main</title>")
-    .identifier("dev.proton.recovery")
-    .add_window(
+    ..identifier("dev.proton.recovery")
+    ..add_window(
       "secondary",
       @proton.WindowConfig(
         "Survivor",
         @proton.AppEntry::Html("<title>Survivor</title>"),
       ),
     )
-    .capability(@proton_extension.capability(extension))
-    .commands(registrar => {
+    ..capability(@proton_extension.capability(extension))
+    ..commands(registrar => {
       registrar.bind(slow, (_context, _payload) => {
         slow_started.val = true
         defer {
@@ -1445,7 +1445,7 @@ async fn run_page_recovery_regression(name : String) -> Unit {
       })
       registrar.bind(ping, (_context, _payload) => pinged.val += 1)
     })
-    .on_web_contents_event(fn(browser, event) {
+    ..on_web_contents_event(fn(browser, event) {
       if browser.view_id() is Some(_) {
         return
       }
@@ -1456,10 +1456,10 @@ async fn run_page_recovery_regression(name : String) -> Unit {
         }
       }
     })
-    .on_render_process_gone(fn(contents, _details) {
+    ..on_render_process_gone(fn(contents, _details) {
       renderer_failures.push(contents.window_id())
     })
-    .app_lifecycle(
+    ..app_lifecycle(
       on_start=context => {
         application.val = Some(context)
         if name == "bridge-startup-failure" {
@@ -1468,7 +1468,7 @@ async fn run_page_recovery_regression(name : String) -> Unit {
       },
       on_shutdown=_ => (),
     )
-    .window_lifecycle(
+    ..window_lifecycle(
       on_ready=context => {
         ready_windows.val += 1
         if context.handle().id() != "main" {
@@ -1584,8 +1584,8 @@ async fn run_closed_record_churn_regression() -> Unit {
   let old_views : Array[@proton.ViewHandle] = []
   let old_windows : Array[@proton.WindowHandle] = []
   @proton.html("Churn", "<title>Churn</title>")
-  .identifier("dev.proton.closed-record-churn")
-  .add_window(
+  ..identifier("dev.proton.closed-record-churn")
+  ..add_window(
     "secondary",
     @proton.WindowConfig(
       "Temporary",
@@ -1593,10 +1593,10 @@ async fn run_closed_record_churn_regression() -> Unit {
     ),
     open_on_start=false,
   )
-  .app_lifecycle(on_start=context => application.val = Some(context), on_shutdown=_ => {
+  ..app_lifecycle(on_start=context => application.val = Some(context), on_shutdown=_ => {
     ()
   })
-  .on_web_contents_event(fn(_view, event) {
+  ..on_web_contents_event(fn(_view, event) {
     if _view.view_id() is None {
       return
     }
@@ -1607,7 +1607,7 @@ async fn run_closed_record_churn_regression() -> Unit {
       loaded.val += 1
     }
   })
-  .window_lifecycle(
+  ..window_lifecycle(
     on_ready=context => {
       if context.handle().id() != "main" {
         return
@@ -1679,13 +1679,13 @@ async fn run_startup_update_regression(name : String) -> Unit {
   let checked = Ref(0)
   let failed_startup = name == "startup-update-failure"
   let app = @proton.html("Startup update", "<html></html>")
-    .identifier("com.example.startup-update")
-    .update_channel(
+    ..identifier("com.example.startup-update")
+    ..update_channel(
       "https://127.0.0.1:1/latest.json",
       ["rsa-sha256:ab:010001"],
       check_on_launch=false,
     )
-    .app_lifecycle(
+    ..app_lifecycle(
       on_start=application => {
         context.val = Some(application)
         lifecycle_probe_gate()
@@ -1728,12 +1728,12 @@ async fn run_window_config_regression() -> Unit {
     views=[("child", @proton.view("about:blank", width=100, height=100))],
   )
   @proton.App(config)
-  .identifier("dev.proton.window-config")
-  .add_window("secondary", config, open_on_start=false)
-  .app_lifecycle(on_start=context => application.val = Some(context), on_shutdown=_ => {
+  ..identifier("dev.proton.window-config")
+  ..add_window("secondary", config, open_on_start=false)
+  ..app_lifecycle(on_start=context => application.val = Some(context), on_shutdown=_ => {
     ()
   })
-  .window_lifecycle(
+  ..window_lifecycle(
     on_ready=context => {
       let window = context.handle()
       assert_eq(window.views().length(), 1)
@@ -1816,9 +1816,9 @@ async fn run_web_contents_regression() -> Unit {
       ],
     ),
   )
-  .identifier("dev.proton.web-contents")
-  .web_request_cancel_prefix("https://proton.test/blocked")
-  .on_download_request((contents, request) => {
+  ..identifier("dev.proton.web-contents")
+  ..web_request_cancel_prefix("https://proton.test/blocked")
+  ..on_download_request((contents, request) => {
     if request.url.has_suffix("hold") {
       pending_started.val = true
       defer {
@@ -1833,12 +1833,12 @@ async fn run_web_contents_regression() -> Unit {
       pdf_root + "." + contents.view_id().unwrap_or("main") + ".txt",
     )
   })
-  .on_download_event((contents, event) => {
+  ..on_download_event((contents, event) => {
     if event.state == "complete" {
       completed_downloads.push(contents.view_id().unwrap_or("main"))
     }
   })
-  .on_web_contents_event((contents, event) => {
+  ..on_web_contents_event((contents, event) => {
     let id = contents.view_id().unwrap_or("main")
     match event {
       DidFinishLoad => loaded.push(id)
@@ -1849,10 +1849,10 @@ async fn run_web_contents_regression() -> Unit {
       _ => ()
     }
   })
-  .app_lifecycle(on_start=context => application.val = Some(context), on_shutdown=_ => {
+  ..app_lifecycle(on_start=context => application.val = Some(context), on_shutdown=_ => {
     ()
   })
-  .window_lifecycle(
+  ..window_lifecycle(
     on_ready=context => {
       assert_eq(context.locale(), application.val.unwrap().locale())
       assert_eq(
@@ -2025,10 +2025,10 @@ async fn run_session_lifetime_regression() -> Unit {
     views=[("child", @proton.view("about:blank", width=100, height=100))],
   )
   @proton.App(config)
-  .identifier("dev.proton.session-lifetime")
-  .last_window_closed_policy(@proton.LastWindowClosedPolicy::KeepRunning)
-  .add_window("secondary", config, open_on_start=false)
-  .app_lifecycle(
+  ..identifier("dev.proton.session-lifetime")
+  ..last_window_closed_policy(@proton.LastWindowClosedPolicy::KeepRunning)
+  ..add_window("secondary", config, open_on_start=false)
+  ..app_lifecycle(
     on_start=context => {
       let session = context.session()
       retained.push(session)

@@ -208,9 +208,9 @@ async fn main {
       ],
     ),
   )
-  .debug(enabled=true)
-  .commands(register_commands)
-  .on_web_contents_event(async fn(_browser, event) noraise {
+  ..debug(enabled=true)
+  ..commands(register_commands)
+  ..on_web_contents_event(async fn(_browser, event) noraise {
     if _browser.view_id() is Some(_) {
       return
     }
@@ -218,7 +218,7 @@ async fn main {
       show_result("host", result)
     }
   })
-  .on_web_contents_event(async fn(_view, event) noraise {
+  ..on_web_contents_event(async fn(_view, event) noraise {
     if _view.view_id() is None {
       return
     }
@@ -226,7 +226,7 @@ async fn main {
       show_result("view", result)
     }
   })
-  .window_lifecycle(
+  ..window_lifecycle(
     on_ready=context => {
       let window = context.handle()
       window_slot.val = Some(window)
@@ -238,6 +238,6 @@ async fn main {
       window_slot.val = None
     },
   )
-  .identifier("dev.proton.70-find-in-page")
+  ..identifier("dev.proton.70-find-in-page")
   .run_or_abort()
 }

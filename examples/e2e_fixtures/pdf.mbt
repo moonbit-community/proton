@@ -29,13 +29,13 @@ pub async fn run_pdf_regression() -> Unit {
       ],
     ),
   )
-  .identifier("dev.proton.pdf-regression")
-  .add_window(
+  ..identifier("dev.proton.pdf-regression")
+  ..add_window(
     "pdf-secondary",
     @proton.WindowConfig("PDF lifecycle", @proton.AppEntry::Url(url + "/main")),
     open_on_start=false,
   )
-  .app_lifecycle(
+  ..app_lifecycle(
     on_start=context => {
       application.val = Some(context)
       context
@@ -93,7 +93,7 @@ pub async fn run_pdf_regression() -> Unit {
     },
     on_shutdown=_ => (),
   )
-  .window_lifecycle(
+  ..window_lifecycle(
     on_ready=context => {
       if context.id() != "main" {
         return
