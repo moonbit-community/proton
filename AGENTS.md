@@ -31,10 +31,9 @@ developer must perform them.
   isolated macOS Objective-C stubs in `proton/internal/native/ffi_mac/`.
 - `proton/internal/cef_process/`: source-built MoonBit executable used as CEF's
   subprocess helper. It is packaged beside the application executable.
-- `proton/manifest/`, `proton/bootstrap/`, `proton/catalog/`,
-  `proton/core/`, `proton/command/`, `proton/ipc/`: supporting packages for
-  metadata, tooling, command bridge wiring, and transport-neutral IPC protocol
-  helpers. Do not reintroduce the old app runtime route without an explicit
+- `proton/manifest/`, `proton/core/`, `proton/command/`, `proton/ipc/`:
+  supporting packages for metadata, command bridge wiring, and transport-neutral
+  IPC protocol helpers. Do not reintroduce the old app runtime route without an explicit
   design decision.
 - `codegen/`: `moonbit-community/proton_codegen`; WASM executable invoked through
   `moonx` by application prebuild rules, plus its reusable parser/renderer library.
