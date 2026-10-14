@@ -76,27 +76,30 @@ async fn window_cleanup_failure(startup_failure~ : Bool) -> Unit {
     )
   try
     app.run_with_destroy(window => {
-      destroy_calls.val += 1
       if destroy_calls.val == 1 {
-        window.destroy(destroy=fn() raise @native.NativeError {
+        let windows = session.val.unwrap().windows
+        if windows.length() != 1 ||
+          !windows[0].is_closed() ||
+          !physical_equal(windows[0].window, window) {
+          abort("failed window was not retained for cleanup retry")
+        }
+      }
+      window.destroy(before_destroy=fn() raise @native.NativeError {
+        destroy_calls.val += 1
+        if destroy_calls.val == 1 {
           raise @native.NativeError::Status(
             status=-1,
             message="INJECTED_WINDOW_DESTROY_FAILURE",
           )
-        })
-      } else {
-        let windows = session.val.unwrap().windows
-        if destroy_calls.val != 2 ||
-          windows.length() != 1 ||
-          !windows[0].is_closed() ||
-          !physical_equal(windows[0].window, window) {
-          abort("failed window was not retained for one cleanup retry")
         }
-        window.destroy()
-        if window.id() != 0L {
-          abort("cleanup retry did not destroy window")
+        if destroy_calls.val != 2 {
+          abort("unexpected native destroy attempt")
         }
-      }
+      })
+      // A completed destroy must be idempotent; Destroying alone is insufficient.
+      window.destroy(before_destroy=() => {
+        abort("successfully destroyed window entered native destruction again")
+      })
     })
   catch {
     CleanupFailed(primary~, failures~) => {
