@@ -89,6 +89,8 @@ struct proton_engine_window {
   int maximizable;
   int closable;
   int focusable;
+  /* Zero selects the main browser; view ids avoid retaining a closed HWND. */
+  uint64_t focused_view_id;
   int fullscreenable;
   int ignore_mouse_events;
   int ignore_mouse_forward;

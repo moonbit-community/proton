@@ -1,6 +1,7 @@
 #if defined(_WIN32)
 
 #include <stdlib.h>
+#include <string.h>
 
 #include "../../src/engine/cef_win/win_geometry.h"
 #include "../../src/engine/cef_win/win_internal.h"
@@ -521,6 +522,158 @@ cleanup:
   }
   if (menu != NULL && IsMenu(menu)) DestroyMenu(menu);
   if (parent != NULL) DestroyWindow(parent);
+  return result;
+}
+
+
+/* Real hidden HWNDs and the production window procedure, with only CEF's
+ * browser/host interface substituted. This tests the embedder handoff, not NVDA
+ * or Chromium's implementation of SetFocus. */
+typedef struct {
+  cef_browser_host_t host;
+  HWND content;
+  int focus_calls;
+  int acquired;
+  int released;
+} focus_test_host_t;
+
+typedef struct {
+  cef_browser_t browser;
+  focus_test_host_t host;
+  int id;
+} focus_test_browser_t;
+
+static void CEF_CALLBACK focus_test_add_ref(cef_base_ref_counted_t *base) {
+  (void)base;
+}
+
+static int CEF_CALLBACK focus_test_release(cef_base_ref_counted_t *base) {
+  (void)base;
+  return 0;
+}
+
+static int CEF_CALLBACK focus_test_host_release(cef_base_ref_counted_t *base) {
+  ((focus_test_host_t *)base)->released++;
+  return 0;
+}
+
+static int CEF_CALLBACK focus_test_identifier(cef_browser_t *self) {
+  return ((focus_test_browser_t *)self)->id;
+}
+
+static cef_browser_host_t *CEF_CALLBACK focus_test_get_host(cef_browser_t *self) {
+  focus_test_host_t *host = &((focus_test_browser_t *)self)->host;
+  host->acquired++;
+  return &host->host;
+}
+
+static void CEF_CALLBACK focus_test_set_focus(cef_browser_host_t *self, int focus) {
+  focus_test_host_t *host = (focus_test_host_t *)self;
+  if (focus) {
+    host->focus_calls++;
+    SetFocus(host->content);
+  }
+}
+
+static void focus_test_init(focus_test_browser_t *browser, int id, HWND content) {
+  memset(browser, 0, sizeof(*browser));
+  browser->browser.base.size = sizeof(browser->browser);
+  browser->browser.base.add_ref = focus_test_add_ref;
+  browser->browser.base.release = focus_test_release;
+  browser->browser.get_identifier = focus_test_identifier;
+  browser->browser.get_host = focus_test_get_host;
+  browser->host.host.base.size = sizeof(browser->host.host);
+  browser->host.host.base.release = focus_test_host_release;
+  browser->host.host.set_focus = focus_test_set_focus;
+  browser->host.content = content;
+  browser->id = id;
+}
+
+int32_t proton_test_window_browser_focus(void) {
+  int result = 0;
+  HWND frame = NULL;
+  proton_engine_window_t window = {0};
+  proton_engine_view_t view = {0};
+  proton_browser_registry_t *registry = proton_browser_registry_create(NULL, NULL);
+  CHECK(registry != NULL);
+  proton_engine_register_window_class();
+  frame = CreateWindowExW(0, PROTON_ENGINE_WINDOW_CLASS, L"Focus handoff test",
+                          WS_OVERLAPPEDWINDOW, 0, 0, 400, 300, NULL, NULL,
+                          GetModuleHandleW(NULL), &window);
+  CHECK(frame != NULL);
+  CHECK(!IsWindowVisible(frame));
+  // Activation may precede browser creation, leaving focus on the frame.
+  SetFocus(frame);
+  CHECK(GetFocus() == frame);
+  HWND main_content = CreateWindowExW(0, L"STATIC", L"Main", WS_CHILD,
+      0, 0, 200, 200, frame, NULL, GetModuleHandleW(NULL), NULL);
+  view.hwnd = CreateWindowExW(0, L"STATIC", L"View", WS_CHILD,
+      0, 0, 100, 100, frame, NULL, GetModuleHandleW(NULL), NULL);
+  HWND view_content = CreateWindowExW(0, L"STATIC", L"View content", WS_CHILD,
+      0, 0, 100, 100, view.hwnd, NULL, GetModuleHandleW(NULL), NULL);
+  CHECK(main_content != NULL && view.hwnd != NULL && view_content != NULL);
+  focus_test_browser_t main_browser;
+  focus_test_browser_t view_browser;
+  focus_test_init(&main_browser, 1, main_content);
+  focus_test_init(&view_browser, 2, view_content);
+  window.focusable = 1;
+  window.views = &view;
+  view.window = &window;
+  view.native_id = 42;
+  view.visible = 1;
+  window.browser_lifecycle = proton_browser_lifecycle_create(
+      registry, PROTON_BROWSER_ROLE_MAIN, &window, NULL);
+  view.browser_lifecycle = proton_browser_lifecycle_create(
+      registry, PROTON_BROWSER_ROLE_VIEW, &view, NULL);
+  CHECK(window.browser_lifecycle != NULL && view.browser_lifecycle != NULL);
+  proton_browser_lifecycle_on_after_created(window.browser_lifecycle,
+                                            &main_browser.browser);
+  proton_browser_lifecycle_on_after_created(view.browser_lifecycle,
+                                            &view_browser.browser);
+
+  char error[256] = {0};
+  CHECK(proton_engine_window_focus(&window, error, sizeof(error)) == PROTON_OK);
+  CHECK(main_browser.host.focus_calls == 1 && GetFocus() == main_content);
+  SetFocus(view_content);
+  SendMessageW(frame, WM_ACTIVATE, WA_INACTIVE, 0);
+  SetFocus(NULL);
+  SetFocus(frame);
+  CHECK(view_browser.host.focus_calls == 1 && GetFocus() == view_content);
+  CHECK(main_browser.host.focus_calls == 1);
+
+  // An explicit window focus must also preserve a focused child browser.
+  CHECK(proton_engine_window_focus(&window, error, sizeof(error)) == PROTON_OK);
+  CHECK(view_browser.host.focus_calls == 2 && GetFocus() == view_content);
+
+  view.visible = 0;
+  SetFocus(NULL);
+  SetFocus(frame);
+  CHECK(main_browser.host.focus_calls == 2 && GetFocus() == main_content);
+  view.visible = 1;
+  SetFocus(view_content);
+  SendMessageW(frame, WM_ACTIVATE, WA_INACTIVE, 0);
+  view.closed = 1;
+  SetFocus(NULL);
+  SetFocus(frame);
+  CHECK(main_browser.host.focus_calls == 3 && GetFocus() == main_content);
+
+  // Focus messages can arrive for a disabled frame during modal shutdown.
+  EnableWindow(frame, FALSE);
+  SendMessageW(frame, WM_SETFOCUS, 0, 0);
+  CHECK(main_browser.host.focus_calls == 3);
+  EnableWindow(frame, TRUE);
+  window.focusable = 0;
+  SendMessageW(frame, WM_SETFOCUS, 0, 0);
+  CHECK(main_browser.host.focus_calls == 3);
+  window.focusable = 1;
+  window.destroy_requested = 1;
+  SendMessageW(frame, WM_SETFOCUS, 0, 0);
+  CHECK(main_browser.host.focus_calls == 3);
+  CHECK(main_browser.host.acquired == main_browser.host.released);
+  CHECK(view_browser.host.acquired == view_browser.host.released);
+cleanup:
+  if (frame != NULL) DestroyWindow(frame);
+  proton_browser_registry_destroy(registry);
   return result;
 }
 

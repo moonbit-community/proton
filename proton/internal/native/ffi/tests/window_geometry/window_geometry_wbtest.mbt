@@ -108,3 +108,13 @@ extern "C" fn closed_modal_collection_test() -> Int32 = "proton_test_closed_moda
 test "closed modal records survive collection until native destruction" {
   assert_eq(closed_modal_collection_test(), 0)
 }
+
+///|
+#cfg(platform="windows")
+extern "C" fn browser_focus_test() -> Int32 = "proton_test_window_browser_focus"
+
+///|
+#cfg(platform="windows")
+test "frame focus reaches CEF and restores the previously focused view" {
+  assert_eq(browser_focus_test(), 0)
+}
