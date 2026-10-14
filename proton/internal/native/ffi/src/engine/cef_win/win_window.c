@@ -232,6 +232,51 @@ static void proton_engine_window_refresh_non_client_theme(
   }
 }
 
+static void proton_engine_window_remember_browser_focus(
+    proton_engine_window_t *window) {
+  HWND focused = GetFocus();
+  if (focused == NULL || !IsChild(window->hwnd, focused)) {
+    return;
+  }
+  window->focused_view_id = 0;
+  for (proton_engine_view_t *view = window->views; view != NULL;
+       view = view->next) {
+    if (!view->closed && view->hwnd != NULL &&
+        (focused == view->hwnd || IsChild(view->hwnd, focused))) {
+      window->focused_view_id = view->native_id;
+      break;
+    }
+  }
+}
+
+static void proton_engine_window_restore_browser_focus(
+    proton_engine_window_t *window) {
+  if (window == NULL || !window->focusable || window->closed ||
+      window->destroy_requested || !IsWindowEnabled(window->hwnd) ||
+      proton_browser_lifecycle_state(window->browser_lifecycle) !=
+          PROTON_BROWSER_LIVE) {
+    return;
+  }
+  cef_browser_t *browser = proton_engine_window_browser(window);
+  for (proton_engine_view_t *view = window->views; view != NULL;
+       view = view->next) {
+    if (view->native_id == window->focused_view_id && !view->closed &&
+        view->visible && view->hwnd != NULL &&
+        proton_browser_lifecycle_state(view->browser_lifecycle) ==
+            PROTON_BROWSER_LIVE) {
+      browser = proton_engine_view_browser(view);
+      break;
+    }
+  }
+  if (browser != NULL) {
+    cef_browser_host_t *host = browser->get_host(browser);
+    if (host != NULL) {
+      host->set_focus(host, 1);
+      host->base.release((cef_base_ref_counted_t *)host);
+    }
+  }
+}
+
 static LRESULT CALLBACK proton_engine_window_proc(HWND hwnd,
                                                   UINT msg,
                                                   WPARAM wparam,
@@ -353,7 +398,14 @@ static LRESULT CALLBACK proton_engine_window_proc(HWND hwnd,
       proton_engine_overlay_subclass_browser(window, (HWND)lparam);
     }
     break;
+  case WM_SETFOCUS:
+    // CEF must restore native input/IME focus as well as DOM focus.
+    proton_engine_window_restore_browser_focus(window);
+    return 0;
   case WM_ACTIVATE:
+    if (window != NULL && LOWORD(wparam) == WA_INACTIVE) {
+      proton_engine_window_remember_browser_focus(window);
+    }
     if (window != NULL) {
       proton_engine_signal_wait_source(window->runtime,
                                        PROTON_WAIT_PLATFORM);
@@ -1459,8 +1511,14 @@ int32_t proton_engine_window_focus(proton_engine_window_t *window,
       }
     }
   } else {
+    proton_engine_window_remember_browser_focus(window);
     SetForegroundWindow(window->hwnd);
     SetFocus(window->hwnd);
+    // SetFocus sends no WM_SETFOCUS if the frame already owns focus (e.g.
+    // it was activated before the browser was created).
+    if (GetFocus() == window->hwnd) {
+      proton_engine_window_restore_browser_focus(window);
+    }
   }
   return PROTON_OK;
 }
