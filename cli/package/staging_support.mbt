@@ -254,13 +254,10 @@ fn helper_info_plist(
 }
 
 ///|
-async fn stage_update_revision(
-  spec : PackagePlan,
-  destination : String,
-) -> Unit {
+async fn stage_update_version(spec : PackagePlan, destination : String) -> Unit {
   write_text(
-    resolve_path(destination, "proton-update-revision"),
-    "\{spec.update_revision}\n",
+    resolve_path(destination, "proton-update-version"),
+    "\{spec.version}\n",
   )
 }
 

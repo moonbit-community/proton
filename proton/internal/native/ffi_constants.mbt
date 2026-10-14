@@ -30,7 +30,7 @@ let proton_thumbar_max_buttons = 7
 let proton_err_update_rollback = -16
 
 ///|
-let proton_err_update_revision_mismatch = -17
+let proton_err_update_version_mismatch = -17
 
 ///|
 let proton_err_stale_resource_request = -18

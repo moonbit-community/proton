@@ -1655,15 +1655,15 @@ pub extern "C" fn proton_image_to_bitmap_ffi(
 ) -> Int32 = "proton_image_to_bitmap"
 
 ///|
-#borrow(parent_dir, out_stage, error)
+#borrow(parent_dir, target_version, out_stage, error)
 pub extern "C" fn proton_update_stage_begin_ffi(
   parent_dir : Bytes,
   expected_size : Int64,
-  target_revision : Int64,
+  target_version : Bytes,
   out_stage : Ref[Int64],
   error : FixedArray[Byte],
   error_len : Int32,
-) -> Int32 = "proton_update_stage_begin_revision"
+) -> Int32 = "proton_update_stage_begin_version"
 
 ///|
 #borrow(chunk, error)
@@ -1685,12 +1685,13 @@ pub extern "C" fn proton_update_stage_install_ffi(
 ) -> Int32 = "proton_update_stage_install_outcome"
 
 ///|
-#borrow(out_revision, error)
-pub extern "C" fn proton_update_current_revision_ffi(
-  out_revision : Ref[Int64],
+#borrow(out_version, error)
+pub extern "C" fn proton_update_current_version_ffi(
+  out_version : FixedArray[Byte],
+  version_len : Int32,
   error : FixedArray[Byte],
   error_len : Int32,
-) -> Int32 = "proton_update_current_revision"
+) -> Int32 = "proton_update_current_version"
 
 ///|
 #borrow(error)
@@ -1708,11 +1709,12 @@ pub extern "C" fn proton_update_stage_abort_ffi(
 ) -> Int32 = "proton_update_stage_abort"
 
 ///|
-#borrow(archive, parent_dir, error)
+#borrow(archive, parent_dir, target_version, error)
 pub extern "C" fn proton_update_install_ffi(
   archive : Bytes,
   archive_len : Int32,
   parent_dir : Bytes,
+  target_version : Bytes,
   error : FixedArray[Byte],
   error_len : Int32,
 ) -> Int32 = "proton_update_install"

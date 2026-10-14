@@ -81,8 +81,8 @@ pub fn NativeError::is_update_rollback(self : NativeError) -> Bool {
 }
 
 ///|
-pub fn NativeError::is_update_revision_mismatch(self : NativeError) -> Bool {
-  self.status() == proton_err_update_revision_mismatch
+pub fn NativeError::is_update_version_mismatch(self : NativeError) -> Bool {
+  self.status() == proton_err_update_version_mismatch
 }
 
 ///|

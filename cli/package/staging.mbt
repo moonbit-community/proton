@@ -172,12 +172,6 @@ fn package_customization(
 ) -> @packager.PackageCustomization raise StagingPlanError {
   @packager.PackageCustomization(
     windows_icon_embedded=true,
-    macos_plist_strings=[
-      @packager.MacosPlistString(
-        "ProtonUpdateRevision",
-        spec.update_revision.to_string(),
-      ),
-    ],
     macos_sign_targets=macos_package_sign_targets(spec),
     windows_sign_targets=windows_package_sign_targets(spec),
     windows_verify_targets=["d3dcompiler_47.dll", "dxil.dll"],
@@ -254,7 +248,10 @@ async fn stage_proton_runtime(
     Windows => layout.root()
     Macos | Linux => layout.resources()
   }
-  stage_update_revision(spec, metadata_root)
+  match host {
+    Macos => () // Info.plist already carries the signed application version.
+    Windows | Linux => stage_update_version(spec, metadata_root)
+  }
   write_package_manifest(spec, metadata_root)
   match host {
     Macos => stage_macos_helpers(spec, cef_process, layout)

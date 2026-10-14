@@ -5,8 +5,6 @@ pub(all) suberror UpdaterMetadataError {
   UnreadableArtifact(path~ : String, detail~ : String)
   InvalidBaseUrl(url~ : String)
   MissingPublishedAt
-  MissingRevision
-  InvalidRevision(value~ : String)
   UndecodableFragment(detail~ : String)
 } derive(Eq)
 
@@ -58,14 +56,6 @@ pub fn UpdaterMetadataError::message(self : UpdaterMetadataError) -> String {
         $|
         $|  --updater-published-at "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
       )
-    MissingRevision =>
-      (
-        $|--updater-revision is required with --updater-base-url
-        $|
-        $|Use a positive release sequence that never decreases or resets.
-      )
-    InvalidRevision(value~) =>
-      "updater revision must be a positive unsigned 64-bit integer: \{value}"
     UndecodableFragment(detail~) =>
       "the emitted manifest fragment does not decode: \{detail}"
   }
@@ -119,18 +109,6 @@ async fn artifact_digest_and_size(
 }
 
 ///|
-/// The updater's anti-rollback anchor. Written into the package metadata
-/// directory and read back by the native updater to decide whether an offered
-/// revision moves forward.
-///
-/// macOS has no need of it -- its revision lives in the code-signed
-/// `Info.plist`. The other two hosts have no signature to carry it, so the
-/// value lands in a plain file that is still awkward to forge in place: an
-/// AppImage's squashfs is read-only, and a Windows install tree sits under
-/// Program Files.
-///
-/// Held as a decimal string for the same reason macOS holds one: it preserves
-/// the full uint64 range that plist integers and JSON doubles do not.
 /// Returns the artifact an update would download.
 ///
 /// Always exactly one file, so a staged directory is never a candidate. Where
@@ -171,7 +149,6 @@ fn updater_artifact_path(
 fn updater_fragment_json(
   platform : String,
   version : String,
-  revision : UInt64,
   published_at : String,
   url : String,
   size : Int64,
@@ -180,9 +157,8 @@ fn updater_fragment_json(
   let builder = StringBuilder()
   builder <+
     $|{
-    $|  "schema_version": 2,
+    $|  "schema_version": 3,
     $|  "version": "\{version}",
-    $|  "revision": \{revision},
     $|  "published_at": "\{published_at}",
     $|  "platforms": {
     $|    "\{platform}": {
@@ -212,7 +188,6 @@ async fn write_updater_metadata(
   base_url : String,
   published_at : String,
 ) -> Unit raise UpdaterMetadataError {
-  guard plan.update_revision > 0UL else { raise MissingRevision }
   guard base_url.has_prefix("https://") else {
     raise InvalidBaseUrl(url=base_url)
   }
@@ -226,7 +201,6 @@ async fn write_updater_metadata(
   let fragment = updater_fragment_json(
     platform,
     plan.version,
-    plan.update_revision,
     published_at,
     "\{trimmed}/\{name}",
     size,

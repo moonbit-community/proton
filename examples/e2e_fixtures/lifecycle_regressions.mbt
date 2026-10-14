@@ -1858,7 +1858,7 @@ pub async fn run_startup_update_regression(case : StartupUpdateOutcome) -> Unit 
       on_start=application => {
         context.val = Some(application)
         lifecycle_probe_gate()
-        // Invalid test keys/absent installed revision fail locally. Reaching
+        // Invalid test keys/absent installed version fail locally. Reaching
         // that check proves the configured channel was present before startup.
         ignore(application.check_for_update()) catch {
           _ => checked.val = checked.val + 1

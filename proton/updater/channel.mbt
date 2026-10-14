@@ -42,7 +42,7 @@ pub struct UpdateChannel {
   endpoint : String
   trusted_keys : Array[@rsa.PublicKey]
   platform : String
-  current_revision : UInt64
+  current_version : @manifest.Version
 }
 
 ///|
@@ -55,7 +55,7 @@ pub fn UpdateChannel::UpdateChannel(
   endpoint : String,
   public_keys : Array[String],
   platform : String,
-  current_revision : UInt64,
+  current_version : @manifest.Version,
 ) -> UpdateChannel raise UpdateError {
   let trusted_keys : Array[@rsa.PublicKey] = []
   for text in public_keys {
@@ -64,7 +64,7 @@ pub fn UpdateChannel::UpdateChannel(
     }
     trusted_keys.push(key)
   }
-  UpdateChannel::{ endpoint, trusted_keys, platform, current_revision, }
+  UpdateChannel::{ endpoint, trusted_keys, platform, current_version, }
 }
 
 ///|
@@ -86,7 +86,6 @@ pub extend CheckOutcome with Debug::{to_repr}
 /// A release that passed every check short of being downloaded.
 pub struct AvailableUpdate {
   version : @manifest.Version
-  revision : UInt64
   notes_url : String?
   url : String
   size : Int64
@@ -103,11 +102,6 @@ pub extend AvailableUpdate with Debug::{to_repr}
 ///|
 pub fn AvailableUpdate::version(self : AvailableUpdate) -> @manifest.Version {
   self.version
-}
-
-///|
-pub fn AvailableUpdate::revision(self : AvailableUpdate) -> UInt64 {
-  self.revision
 }
 
 ///|
@@ -136,7 +130,7 @@ pub fn AvailableUpdate::size(self : AvailableUpdate) -> Int64 {
 ///
 /// The order of the steps is the point. The signature is checked before the
 /// document is parsed, so no attacker-supplied structure is interpreted until
-/// it is known to come from a trusted key. Freshness and revision are checked
+/// it is known to come from a trusted key. Freshness and version are checked
 /// after, because both read fields that only the signature makes trustworthy.
 pub async fn UpdateChannel::check(
   self : UpdateChannel,
@@ -160,13 +154,14 @@ pub async fn UpdateChannel::check(
       oldest_accepted=oldest_accepted.to_text(),
     )
   }
-  guard manifest.revision() > self.current_revision else { return UpToDate }
+  guard manifest.version().is_newer_than(self.current_version) else {
+    return UpToDate
+  }
   match manifest.platform(self.platform) {
     None => UpToDate
     Some(update) =>
       Available(AvailableUpdate::{
         version: manifest.version(),
-        revision: manifest.revision(),
         notes_url: manifest.notes_url(),
         url: update.url(),
         size: update.size(),

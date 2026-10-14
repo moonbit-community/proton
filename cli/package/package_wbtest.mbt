@@ -153,35 +153,10 @@ test "parse package args rejects unsupported format" {
 }
 
 ///|
-test "updater revision is explicit, positive and full width" {
-  assert_eq(parse_package_args([]).update_revision, 0UL)
-  let maximum = "18446744073709551615"
-  assert_eq(
-    parse_package_args(["--updater-revision", maximum]).update_revision,
-    18446744073709551615UL,
-  )
-  try
-    parse_package_args(["--updater-base-url", "https://example.com/releases"])
-  catch {
-    error => assert_true(error.to_string().contains("updater-revision"))
-  } noraise {
-    _ => abort("expected the updater revision to be required")
-  }
-  for expected in ["0", "-1", "1.5", "not-a-number"] {
-    try parse_package_args(["--updater-revision", expected]) catch {
-      InvalidRevision(value~) => assert_eq(value, expected)
-      _ => abort("expected an invalid updater revision")
-    } noraise {
-      _ => abort("expected the updater revision to be rejected")
-    }
-  }
-}
-
-///|
 test "updater metadata options form one complete value" {
   let raw = parse_package_args([
     "--updater-base-url", "https://example.com/releases", "--updater-published-at",
-    "2026-08-25T00:00:00Z", "--updater-revision", "42",
+    "2026-08-25T00:00:00Z",
   ])
   assert_eq(
     raw.updater_metadata,
@@ -190,12 +165,8 @@ test "updater metadata options form one complete value" {
       published_at: "2026-08-25T00:00:00Z",
     }),
   )
-  assert_eq(raw.update_revision, 42UL)
   try
-    parse_package_args([
-      "--updater-base-url", "https://example.com/releases", "--updater-revision",
-      "42",
-    ])
+    parse_package_args(["--updater-base-url", "https://example.com/releases"])
   catch {
     error => assert_true(error.to_string().contains("updater-published-at"))
   } noraise {
@@ -264,14 +235,12 @@ async test "macOS minimum resolves project configuration and CLI override" {
     parse_package_args([]),
     "proton.project.json",
     project,
-    0UL,
   )
   assert_eq(configured.macos_minimum_system_version, Some("15.0"))
   let overridden = build_package_plan(
     parse_package_args(["--macos-minimum-system-version", "16.0"]),
     "proton.project.json",
     project,
-    0UL,
   )
   assert_eq(overridden.macos_minimum_system_version, Some("16.0"))
 }

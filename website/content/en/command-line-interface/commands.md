@@ -138,9 +138,8 @@ Builds and assembles the application, frontend assets, CEF runtime, matching hel
 | `--macos-minimum-system-version <version>` | Override `package.platforms.macos.minimum_system_version` |
 | `--sign` | Sign the application; disabled by default |
 | `--notarize` | macOS signing, notarization and stapling; implies `--sign` |
-| `--updater-base-url <https-url>` | Emit update metadata using this artifact base URL; requires publication instant and revision |
+| `--updater-base-url <https-url>` | Emit update metadata using this artifact base URL; requires publication instant; uses `package.version`, overridden by `--version` |
 | `--updater-published-at <instant>` | Publication instant in `YYYY-MM-DDTHH:MM:SSZ`; requires base URL |
-| `--updater-revision <integer>` | Monotonic release sequence embedded in the app and update metadata |
 
 CLI lists such as `--format` override configured lists. Application identity comes from the top-level configuration `identifier`; `package` has no `--identifier` option. `--release` does not imply signing. A successful dry run does not verify artifact creation or runtime behavior. See [packaging](packaging.md) for platform formats, configuration defaults and resource rules.
 

@@ -16,7 +16,6 @@ struct RawPackageOptions {
   config_path : String?
   package_args : @package_args.PackageArguments
   updater_metadata : UpdaterMetadataOptions?
-  update_revision : UInt64
   release : Bool
   dry_run : Bool
 } derive(Debug, Eq)
@@ -36,7 +35,6 @@ struct PackagePlan {
   product_name : String
   identifier : String
   version : String
-  update_revision : UInt64
   formats : Array[@packager.PackageFormat]
   output : String
   release : Bool
@@ -91,18 +89,13 @@ pub fn command() -> @argparse.Command {
   options.append([
     @argparse.OptionArg(
       "updater-base-url",
-      about="Emit update metadata with artifacts served from this https base URL",
-      requires=["updater-published-at", "updater-revision"],
+      about="Emit update metadata using the application version and this https artifact base URL",
+      requires=["updater-published-at"],
     ),
     @argparse.OptionArg(
       "updater-published-at",
       about="Publication instant for the manifest fragment (YYYY-MM-DDTHH:MM:SSZ)",
       requires=["updater-base-url"],
-    ),
-    @argparse.OptionArg(
-      "updater-revision",
-      allow_hyphen_values=true,
-      about="Monotonic release sequence embedded in the app and signed manifest",
     ),
   ])
   @argparse.Command(
@@ -126,7 +119,7 @@ pub async fn run(cwd : String, matches : @argparse.Matches) -> Unit {
     error => raise PackageConfigError::Invalid(path=config_path, error~)
   }
   let project = loaded.config
-  let plan = build_package_plan(raw, config_path, project, raw.update_revision)
+  let plan = build_package_plan(raw, config_path, project)
   print_package_plan(plan, raw.dry_run)
   if raw.dry_run {
     return
@@ -146,20 +139,6 @@ pub async fn run(cwd : String, matches : @argparse.Matches) -> Unit {
 }
 
 ///|
-fn parse_updater_revision(value : String?) -> UInt64 raise UpdaterMetadataError {
-  match value {
-    Some(value) => {
-      let revision = @string.parse_uint64(value[:]) catch {
-        _ => raise InvalidRevision(value~)
-      }
-      guard revision > 0UL else { raise InvalidRevision(value~) }
-      revision
-    }
-    None => 0UL
-  }
-}
-
-///|
 fn package_options_from_matches(
   matches : @argparse.Matches,
 ) -> RawPackageOptions raise {
@@ -173,8 +152,6 @@ fn package_options_from_matches(
       | (None with updater_base_url = []),
       "updater-published-at"? : Some(updater_published_at)
       | (None with updater_published_at = []),
-      "updater-revision"? : Some(updater_revision)
-      | (None with updater_revision = []),
       ..
     }
   guard matches.flags
@@ -195,7 +172,6 @@ fn package_options_from_matches(
         Some(UpdaterMetadataOptions::{ base_url, published_at, })
       _ => None
     },
-    update_revision: parse_updater_revision(updater_revision.get(0)),
     release,
     dry_run,
   }
@@ -206,7 +182,6 @@ async fn build_package_plan(
   raw : RawPackageOptions,
   config_path : String,
   project : @proton_config.AppConfig,
-  update_revision : UInt64,
 ) -> PackagePlan {
   let package_config = match project.package_config {
     Some(package_config) => package_config
@@ -351,7 +326,6 @@ async fn build_package_plan(
     product_name,
     identifier,
     version,
-    update_revision,
     formats,
     output,
     release: raw.release,
@@ -446,7 +420,6 @@ fn print_package_plan(plan : PackagePlan, dry_run : Bool) -> Unit {
   println("  product: " + plan.product_name)
   println("  identifier: " + plan.identifier)
   println("  version: " + plan.version)
-  println("  update revision: " + plan.update_revision.to_string())
   println(
     "  formats: " + plan.formats.map(format => format.to_string()).join(", "),
   )

@@ -138,9 +138,8 @@ proton_cli package [options]
 | `--macos-minimum-system-version <version>` | 覆盖 `package.platforms.macos.minimum_system_version` |
 | `--sign` | 签名应用，默认关闭 |
 | `--notarize` | macOS 签名、公证和 stapling；隐含 `--sign` |
-| `--updater-base-url <https-url>` | 使用此产物地址生成更新元数据；要求同时提供发布时间和 revision |
+| `--updater-base-url <https-url>` | 使用此产物地址生成更新元数据；要求同时提供发布时间；版本取自 `package.version`，可用 `--version` 覆盖 |
 | `--updater-published-at <instant>` | `YYYY-MM-DDTHH:MM:SSZ` 格式的发布时间；要求提供 base URL |
-| `--updater-revision <integer>` | 写入应用与更新元数据的单调递增发布序号 |
 
 `--format` 等命令行列表覆盖对应配置列表。应用标识来自配置顶层的 `identifier`，`package` 没有 `--identifier` 选项。`--release` 不隐含签名；dry run 成功不代表产物创建或运行验证成功。平台格式、配置默认值和资源规则见[打包](packaging.md)。
 

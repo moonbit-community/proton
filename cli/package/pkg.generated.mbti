@@ -31,8 +31,6 @@ pub(all) suberror UpdaterMetadataError {
   UnreadableArtifact(path~ : String, detail~ : String)
   InvalidBaseUrl(url~ : String)
   MissingPublishedAt
-  MissingRevision
-  InvalidRevision(value~ : String)
   UndecodableFragment(detail~ : String)
 } derive(Eq)
 pub fn UpdaterMetadataError::equal(Self, Self) -> Bool

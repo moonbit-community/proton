@@ -211,15 +211,15 @@ pub fn proton_task_metrics_count_ffi(@ref.Ref[Int]) -> Int
 
 pub fn proton_update_cleanup_previous_ffi(FixedArray[Byte], Int) -> Int
 
-pub fn proton_update_current_revision_ffi(@ref.Ref[Int64], FixedArray[Byte], Int) -> Int
+pub fn proton_update_current_version_ffi(FixedArray[Byte], Int, FixedArray[Byte], Int) -> Int
 
-pub fn proton_update_install_ffi(Bytes, Int, Bytes, FixedArray[Byte], Int) -> Int
+pub fn proton_update_install_ffi(Bytes, Int, Bytes, Bytes, FixedArray[Byte], Int) -> Int
 
 pub fn proton_update_relaunch_ffi(FixedArray[Byte], Int) -> Int
 
 pub fn proton_update_stage_abort_ffi(Int64, FixedArray[Byte], Int) -> Int
 
-pub fn proton_update_stage_begin_ffi(Bytes, Int64, Int64, @ref.Ref[Int64], FixedArray[Byte], Int) -> Int
+pub fn proton_update_stage_begin_ffi(Bytes, Int64, Bytes, @ref.Ref[Int64], FixedArray[Byte], Int) -> Int
 
 pub fn proton_update_stage_install_ffi(Int64, @ref.Ref[Int], FixedArray[Byte], Int) -> Int
 

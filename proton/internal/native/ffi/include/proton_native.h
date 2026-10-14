@@ -63,7 +63,7 @@ enum {
   PROTON_ERR_STALE_BROWSER_REQUEST = -14,
   PROTON_ERR_UPDATE_BUSY = -15,
   PROTON_ERR_UPDATE_ROLLBACK = -16,
-  PROTON_ERR_UPDATE_REVISION_MISMATCH = -17,
+  PROTON_ERR_UPDATE_VERSION_MISMATCH = -17,
   PROTON_ERR_STALE_RESOURCE_REQUEST = -18,
   PROTON_ERR_BUSY = -19
 };
@@ -611,11 +611,8 @@ int32_t proton_screen_enumerate(int32_t *out_fields,
    Linux artifacts, or in the per-user temporary directory for a Windows
    installer that later elevates. An explicit absolute parent is kept for
    low-level hosts and tests. */
-int32_t proton_update_stage_begin(
-    const char *parent_dir, int64_t expected_size,
-    proton_update_stage_id_t *out_stage, char *error, int32_t error_len);
-int32_t proton_update_stage_begin_revision(
-    const char *parent_dir, int64_t expected_size, uint64_t target_revision,
+int32_t proton_update_stage_begin_version(
+    const char *parent_dir, int64_t expected_size, const char *target_version,
     proton_update_stage_id_t *out_stage, char *error, int32_t error_len);
 int32_t proton_update_stage_write(
     proton_update_stage_id_t stage, const char *chunk, int32_t chunk_len,
@@ -628,18 +625,18 @@ int32_t proton_update_stage_install_outcome(
 int32_t proton_update_stage_abort(
     proton_update_stage_id_t stage, char *error, int32_t error_len);
 
-/* Reads the monotonic update revision embedded in the installed application.
+/* Reads the application version embedded in the installed application.
 
    This is an optimistic process-local check used to avoid downloading an
    update another task already installed. The install transaction repeats the
    comparison while holding the cross-process commit lock. */
-int32_t proton_update_current_revision(
-    uint64_t *out_revision, char *error, int32_t error_len);
+int32_t proton_update_current_version(
+    char *out_version, int32_t version_len, char *error, int32_t error_len);
 
 /* Removes older application artifacts retained by successful update swaps.
 
    Hosts call this only after the replacement has completed application
-   startup. macOS validates a retained bundle's signing identity and revision;
+   startup. macOS validates a retained bundle's signing identity and version;
    Linux removes the reserved previous AppImage. Windows leaves its
    administrator-owned previous tree for the next elevated update. A cleanup
    failure must not make an otherwise healthy application fail to start. */
@@ -654,7 +651,7 @@ int32_t proton_update_cleanup_previous(char *error,
    report PROTON_ERR_UNSUPPORTED. */
 int32_t proton_update_install(const char *archive,
                                          int32_t archive_len,
-                                         const char *parent_dir, char *error,
+                                         const char *parent_dir, const char *target_version, char *error,
                                          int32_t error_len);
 
 /* Asks the system to finish the prepared replacement and start it. The caller
