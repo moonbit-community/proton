@@ -1532,7 +1532,13 @@ pub fn Window::Window(
 }
 
 ///|
-pub fn Window::destroy(self : Window) -> Unit raise NativeError {
+/// Retains the destroying state on failure so destruction can be retried.
+pub fn Window::destroy(
+  self : Window,
+  destroy~ : () -> Unit raise NativeError = () => {
+    check_status(@native_ffi.proton_window_destroy_ffi(self.handle))
+  },
+) -> Unit raise NativeError {
   if !(self.runtime.lifecycle is RuntimeActive) {
     self.handle = @native_ffi.window_null()
     self.lifecycle = WindowDestroyed
@@ -1543,13 +1549,9 @@ pub fn Window::destroy(self : Window) -> Unit raise NativeError {
     WindowLive | WindowCloseRequested | WindowDestroying =>
       self.lifecycle = WindowDestroying
   }
-  let status = @native_ffi.proton_window_destroy_ffi(self.handle)
-  if status < 0 {
-    raise native_error(status)
-  } else {
-    self.handle = @native_ffi.window_null()
-    self.lifecycle = WindowDestroyed
-  }
+  destroy()
+  self.handle = @native_ffi.window_null()
+  self.lifecycle = WindowDestroyed
 }
 
 ///|

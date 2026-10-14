@@ -123,6 +123,13 @@ startup or after a window and child view are ready.
 They are included in `--self-hosted`. Set `PROTON_E2E_LIFECYCLE_CASE` to a case name
 from `test/lifecycle_regressions.mbt` to run one scenario.
 
+The `window-cleanup-cancel` and `window-cleanup-startup` cases run isolated
+facade white-box tests with a native destroy failure. They check that the failed
+instance remains registered until cleanup retries destruction, cancellation is
+preserved, and simultaneous startup/cleanup failures retain both diagnostics.
+They are part of `--self-hosted`; the white-box tests are skipped by ordinary
+`moon test` and selected explicitly by the lifecycle runner.
+
 ## Quit event chain
 
 Run the isolated quit-chain probe, which starts one headless application per

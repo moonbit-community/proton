@@ -193,6 +193,22 @@ async fn[X] spawn_scenario_app(
     isolated_app_command("moon", [
       "-C", "proton", "run", "internal/bridge_admission_test", "--target", "native",
     ])
+  } else if scenario == "lifecycle:window-cleanup-cancel" ||
+    scenario == "lifecycle:window-cleanup-startup" {
+    isolated_app_command("moon", [
+      "-C",
+      "proton",
+      "test",
+      "facade_window_cleanup_wbtest.mbt",
+      "--target",
+      "native",
+      "--index",
+      if scenario == "lifecycle:window-cleanup-cancel" {
+        "0"
+      } else {
+        "1"
+      },
+    ])
   } else {
     scenario_app_command()
   }

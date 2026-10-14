@@ -40,15 +40,18 @@ node ./scripts/verify_release_metadata.mjs
 ## `e2e_scaffold_source_smoke.mjs`
 
 Generates the default three-module Todo project outside the repository and
-checks its explicit command bindings, local-source compilation, Warren
-frontend build, native backend build, ad-hoc signed macOS app package, typed
-commands, typed business errors, independent window invalidations, cancelled
-searches, the shared internal query module in a real directory browser (navigation,
-errors, retry, retained data, and component disposal), ordinary-browser
-`BridgeUnavailable` state, and clean
-process shutdown. This is a source-integration test: it replaces unpublished
-registry dependencies in the temporary project with modules from this checkout.
-It does not prove that the generated registry dependencies are published.
+checks the unmodified scaffold's explicit command bindings, local-source
+compilation, Warren frontend, native backend, typed commands, business errors,
+and ad-hoc signed macOS packaging. A resource marker verifies that repackaging
+ships rebuilt frontend assets.
+
+A separate fixed backend fixture then exercises independent window invalidations,
+cancelled searches, and the generated internal query module in a real directory
+browser (navigation, errors, retry, retained data, and component disposal), plus
+ordinary-browser `BridgeUnavailable` state and clean process shutdown. The fixture
+is installed as an additional application package; generated application source
+is not rewritten. This is a source-integration test: its temporary workspace
+resolves Proton modules from this checkout, not the registry.
 
 The script installs the pinned Warren version with `moon install`. The
 script configures the shared CEF runtime itself:

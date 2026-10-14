@@ -81,6 +81,9 @@ async fn app_cleanup(
   command_host : CommandHostRuntime?,
   wakeup : RuntimeWakeup,
   lifecycle_failures~ : Array[AppCleanupError] = [],
+  destroy_window~ : (@native.Window) -> Unit raise @native.NativeError = window => {
+    window.destroy()
+  },
 ) -> Array[AppCleanupError] noraise {
   lifecycle.begin_draining()
   let failures = lifecycle_failures.copy()
@@ -95,7 +98,7 @@ async fn app_cleanup(
   }
   lifecycle.begin_destroying()
   for running in windows {
-    running.window.destroy() catch {
+    destroy_window(running.window) catch {
       error =>
         failures.push(
           WindowDestroy(status=error.status(), detail=error.message()),

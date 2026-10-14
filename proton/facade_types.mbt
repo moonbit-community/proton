@@ -550,6 +550,7 @@ priv struct WindowPermissionPolicy {
 /// are non-owning capabilities that route operations back through the session
 /// instead of duplicating native lifecycle state.
 priv struct RuntimeSession {
+  destroy_window : (@native.Window) -> Unit raise @native.NativeError
   config : ResolvedAppConfig
   environment : RuntimeEnvironment
   updates : ApplicationUpdates

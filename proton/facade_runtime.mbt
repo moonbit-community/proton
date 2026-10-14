@@ -1,6 +1,14 @@
 ///|
 /// Runs the configured app through the native Proton runtime.
 pub async fn App::run(self : App) -> Unit raise AppRunError {
+  self.run_with_destroy(window => window.destroy())
+}
+
+///|
+async fn App::run_with_destroy(
+  self : App,
+  destroy_window : (@native.Window) -> Unit raise @native.NativeError,
+) -> Unit raise AppRunError {
   require_event_loop()
   match self.validation_error() {
     Some(error) => raise ConfigurationError(error)
@@ -69,6 +77,7 @@ pub async fn App::run(self : App) -> Unit raise AppRunError {
       environment,
       app_instance~,
       failure_log~,
+      destroy_window~,
     )
     defer (if outcome.update is Some(update) {
       update.discard() catch {
@@ -201,6 +210,9 @@ pub async fn App::run_or_abort(self : App) -> Unit {
 async fn run_manifest(
   config : ResolvedAppConfig,
   environment : RuntimeEnvironment,
+  destroy_window~ : (@native.Window) -> Unit raise @native.NativeError = window => {
+    window.destroy()
+  },
   app_instance~ : @native.AppInstance? = None,
   failure_log~ : RuntimeFailureLog = RuntimeFailureLog::{
     primary_logged: false,
@@ -277,6 +289,7 @@ async fn run_manifest(
         command_host,
         wakeup,
         lifecycle_failures~,
+        destroy_window~,
       )
     })
     if cleanup_run_error(None, failures) is Some(error) {
@@ -292,7 +305,7 @@ async fn run_manifest(
           let failure = cleanup_run_error(
             Some(attach_error),
             try! @async.protect_from_cancel(async fn() noraise {
-              app_cleanup(lifecycle, runtime, [], None, wakeup)
+              app_cleanup(lifecycle, runtime, [], None, wakeup, destroy_window~)
             }),
           )
           match failure {
@@ -460,7 +473,7 @@ async fn run_manifest(
         let session = RuntimeSession(
           config, environment, updates, close_coordinator, runtime, event_pump, definitions,
           windows, command_host, wakeup, forward_menu_events, bridge_enabled, app_instance,
-          application_tasks, window_tasks, lifecycle_failures,
+          application_tasks, window_tasks, lifecycle_failures, destroy_window,
         )
         let application_context = session.application_context()
         // Electron reports the session as soon as it exists, before the
@@ -562,6 +575,7 @@ async fn run_manifest(
             command_host,
             wakeup,
             lifecycle_failures~,
+            destroy_window~,
           )
         }),
       )
@@ -583,6 +597,7 @@ async fn run_manifest(
           command_host,
           wakeup,
           lifecycle_failures~,
+          destroy_window~,
         )
       }),
     ) {
