@@ -1,0 +1,10 @@
+import {
+  "e2e/todo_shared" @shared,
+  "moonbit-community/rabbita",
+  "moonbit-community/rabbita/html",
+  "e2e/todo_frontend/internal/query",
+}
+
+supported_targets = "js"
+
+pkgtype(kind: "executable")

@@ -69,5 +69,6 @@ options(
     "facade_types.mbt": [ "native" ],
     "facade_updater.mbt": [ "native" ],
     "facade_wbtest.mbt": [ "native" ],
+    "facade_window_cleanup_wbtest.mbt": [ "native" ],
   },
 )

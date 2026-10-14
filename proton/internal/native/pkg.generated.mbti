@@ -936,7 +936,7 @@ pub fn Window::browser_state(Self) -> BrowserState raise NativeError
 pub fn Window::button_position(Self) -> (Int, Int)? raise NativeError
 pub fn Window::close(Self) -> Unit raise NativeError
 pub fn Window::content_size(Self) -> (Int, Int) raise NativeError
-pub fn Window::destroy(Self) -> Unit raise NativeError
+pub fn Window::destroy(Self, before_destroy? : () -> Unit raise NativeError) -> Unit raise NativeError
 pub fn Window::download_url(Self, String) -> Unit raise NativeError
 pub fn Window::emit_bridge_event_json(Self, String) -> Unit raise NativeError
 pub fn Window::eval(Self, String) -> Unit raise NativeError

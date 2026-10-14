@@ -16,8 +16,10 @@ fn RuntimeSession::RuntimeSession(
   application_tasks : @async.TaskGroup[Unit],
   window_tasks : @async.TaskGroup[Unit],
   lifecycle_failures : Array[AppCleanupError],
+  destroy_window : (@native.Window) -> Unit raise @native.NativeError,
 ) -> RuntimeSession {
   RuntimeSession::{
+    destroy_window,
     config,
     environment,
     updates,
@@ -3953,7 +3955,7 @@ fn RuntimeSession::retire_window(
 ) -> Unit raise AppCleanupError {
   running.state = WindowClosed
   running.lifetime.close()
-  running.window.destroy() catch {
+  (self.destroy_window)(running.window) catch {
     error =>
       raise WindowDestroy(
         status=error.status(),
@@ -4334,7 +4336,7 @@ fn RuntimeSession::begin_forced_close(
   self.close_coordinator.last_window_quit_handled = true
   for running in self.windows {
     guard running.is_active() else { continue }
-    running.window.destroy() catch {
+    (self.destroy_window)(running.window) catch {
       error => raise native_run_error("destroy window " + running.id, error)
     }
     running.state = WindowCloseRequested
