@@ -274,6 +274,14 @@ on_render_process_gone 同时覆盖主页面和子视图，无需额外订阅 on
 
 `WindowThemePreference` 控制窗口主题，`system_appearance()` 返回系统外观，二者是不同概念。标题栏样式和原生控件因平台而异。红绿灯位置设置适用于 macOS；使用叠加标题栏时，前端布局需要考虑原生控件占用的空间。
 
+`TitlebarStyle::Overlay` 适用于 macOS、Windows 和 Linux。叠加标题栏页面通过 `await window.__MoonBit__.getTitlebarArea()` 查询可用区域，返回 CSS 像素单位的 `{ x, y, width, height }`，不可用时返回 `null`。在布局时及窗口缩放后查询，由应用将结果应用到 CSS。拖动区域内的交互控件需要设置 `-webkit-app-region: no-drag`。
+
+**无障碍与无窗口执行**
+
+Web 内容使用 Chromium 原生无障碍树。页面应提供语义化 HTML、ARIA、键盘导航和可见焦点。默认遵循平台无障碍策略；`App.accessibility(AccessibilityMode::AlwaysEnabled)` 使无障碍树在整个运行期间保持可用。参见[各平台无障碍行为](https://github.com/moonbit-community/proton/blob/main/proton/README.md#accessibility)。
+
+`App.headless()` 或 `PROTON_HEADLESS=1` 使用离屏渲染，不创建原生顶层窗口。原生对话框、菜单、标题栏等依赖窗口的 UI 不可用。Linux 仍需要 X11 display，例如 Xvfb。因此，浏览器自动化与原生窗口行为需要不同的验证环境。
+
 ## 扩展与能力
 
 扩展注册可复用的宿主操作。渲染器能力安装扩展后端，并向指定渲染器目标授予权限范围。添加 `proton_ext` 模块依赖仅使代码可用，不安装处理器，也不授予访问权限。
@@ -400,6 +408,10 @@ ApplicationContext.has_single_instance_lock() 查询所有权，release_single_i
 **应用状态与窗口状态**
 
 应用的 focus、hide/show、active/hidden 查询及 readiness 描述整个应用；窗口句柄控制一个窗口。隐藏窗口仍然存活，KeepRunning 应用也能在没有窗口时继续运行。后台应用必须提供明确的退出入口。
+
+`ApplicationContext.focus(steal=...)` 在 macOS 激活应用，`steal` 决定是否允许替换另一个前台应用；在 Windows 和 Linux 聚焦第一个可见窗口。应用级 `hide`、`show`、`is_active` 和 `is_hidden` 仅适用于 macOS，其它平台抛出 `AppControlError::UnsupportedPlatform`。`@proton.is_ready()` 报告应用就绪状态。
+
+CEF 通过 `on_render_process_gone` 报告 renderer 终止，但不提供同等的其它子进程退出通知，因此不支持 Electron 的 `child-process-gone`。浏览器操作映射及其它不支持的 Electron 对应项见[页面控制参考](https://github.com/moonbit-community/proton/blob/main/proton/README.md#page-history-and-inserted-css)。
 
 **任务指标**
 

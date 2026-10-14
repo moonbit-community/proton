@@ -284,6 +284,14 @@ A view declaration sets initial geometry; it does not provide automatic layout. 
 
 `WindowThemePreference` controls a window's theme; `system_appearance()` reports system appearance. These are separate concerns. Titlebar styles and native controls differ by platform. Traffic-light positioning applies to macOS; the frontend layout must account for native controls when using an overlay titlebar.
 
+`TitlebarStyle::Overlay` is available on macOS, Windows and Linux. In an overlay page, `await window.__MoonBit__.getTitlebarArea()` returns the usable titlebar area as `{ x, y, width, height }` in CSS pixels, or `null` when unavailable. Query it during layout and after resizing; the application applies the result to its CSS. Interactive controls inside draggable regions need `-webkit-app-region: no-drag`.
+
+**Accessibility and headless execution**
+
+Web content uses Chromium's native accessibility tree. Use semantic HTML, ARIA, keyboard navigation and visible focus. Accessibility follows the platform's policy by default; `App.accessibility(AccessibilityMode::AlwaysEnabled)` keeps the tree available throughout the runtime. See [platform accessibility behavior](https://github.com/moonbit-community/proton/blob/main/proton/README.md#accessibility).
+
+`App.headless()` or `PROTON_HEADLESS=1` selects off-screen rendering without native top-level windows. Native dialogs, menus, titlebars and other window-bound UI are unavailable. Linux still requires an X11 display, such as Xvfb. Browser automation and native-window behavior therefore require different validation environments.
+
 ## Extensions and capabilities
 
 Extensions register reusable host operations. A renderer capability installs an extension's backend and grants a permission scope to selected renderer targets. Adding `proton_ext` as a module dependency only makes code available; it does not install handlers or grant access.
@@ -410,6 +418,10 @@ Application process control determines which instance owns the runtime and how l
 **App state versus window state**
 
 Application focus, hide/show, active/hidden queries and readiness describe the application. A window handle controls one window. A hidden window remains alive, and an application with KeepRunning can remain alive with no windows. Always provide an explicit exit path for background applications.
+
+`ApplicationContext.focus(steal=...)` activates the application on macOS; `steal` controls whether another foreground application may be displaced. On Windows and Linux it focuses the first visible window. The application-level `hide`, `show`, `is_active` and `is_hidden` methods are macOS-only and raise `AppControlError::UnsupportedPlatform` elsewhere. `@proton.is_ready()` reports application readiness.
+
+CEF reports renderer termination through `on_render_process_gone`, but does not expose equivalent non-renderer child-process exit notifications. Electron's `child-process-gone` is therefore unsupported. Browser-operation mappings and other unsupported Electron equivalents are listed in the [page-control reference](https://github.com/moonbit-community/proton/blob/main/proton/README.md#page-history-and-inserted-css).
 
 **Task metrics**
 

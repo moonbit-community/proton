@@ -30,11 +30,15 @@ The default scaffold does not provide icons. On Linux, missing PNG validation fa
 
 | Value | Behavior |
 | --- | --- |
-| `currentUser` | Default; current user, no administrator installation required |
-| `perMachine` | All users, elevation required |
+| `currentUser` | Default; current user, no administrator installation required; installs under `%LOCALAPPDATA%` with current-user registration |
+| `perMachine` | All users, elevation required; installs under Program Files with machine-wide registration |
 | `both` | Installer offers a scope choice; may prompt for elevation even for current-user installation |
 
 Changing the mode is not an installation-scope migration. Updates to an existing machine-wide installation should retain its intended scope.
+
+**Upgrading older Proton installers:** older Proton releases always generated machine-wide NSIS installers. Applications distributed that way must explicitly set `package.platforms.windows.nsis_install_mode` to `perMachine` in subsequent releases. The current `currentUser` default targets a different installation scope. Existing installation paths are reused within the selected scope; fixed modes do not move installations between scopes.
+
+`both` uses NSIS MultiUser and requests the highest available privileges. Its scope selector can therefore follow a UAC prompt even when the user chooses a per-user installation. `--nsis-install-mode` overrides the project setting; see the [CLI reference](commands.md#package).
 
 ## Minimum macOS version
 
@@ -50,4 +54,25 @@ An unsigned or locally signed artifact does not establish a trusted publisher id
 
 Packaged frontend files load without the development server. Backend resource paths resolve through `resource_dir()`. Installed resources may be read-only; persistent application data belongs outside them.
 
+`package.resources` supplies shared sidecar files; platform-specific resources are appended. `package.sign.binaries` and its platform override select additional executables for signing. Explicit CLI options take precedence over configuration. Field types and merge rules are listed in [Configuration](../configuration/project.md#package).
+
 `--dry-run` validates and displays the packaging plan. It does not prove that packaging, signing or the packaged runtime works. The [Todo tutorial](../tutorial/isomorphic.md) includes the application build and package exercise.
+
+## Package preparation
+
+`package.prepare` runs once from the project configuration directory after the frontend and native executable have been built, before resources are assembled. Use it to generate declared package-only resources or additional binaries. A nonzero exit stops packaging.
+
+`proton_cli build` and `proton_cli package --dry-run` do not execute this hook. The standalone `proton_package` tool packages already-built executables and supplied payloads; it does not discover projects, run build/preparation commands or assemble CEF. See the [standalone packager](https://github.com/moonbit-community/proton/blob/main/package/README.md).
+
+## URL schemes and document types
+
+`package.url_schemes` and `package.document_types` describe operating-system launch associations. Their effects depend on the artifact:
+
+| Artifact | Behavior |
+| --- | --- |
+| macOS app | Writes URL schemes and document types into application metadata |
+| Windows NSIS | Registers URL schemes in the selected installation scope and removes owned registrations on uninstall; document-type associations are not implemented |
+| Windows app / zip | Does not install operating-system associations |
+| Linux AppImage | Declares URL schemes in the bundled desktop entry; desktop integration is still needed to register it with the system. Document-type associations are not implemented |
+
+Declaring an association does not implement application handling. Register launch-input handlers as described in [application lifecycle](../introduction/application-api.md#application-lifecycle).
