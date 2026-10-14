@@ -1,6 +1,6 @@
 # Release Notes
 
-## 0.4.0 (Unreleased)
+## 0.4.0
 
 0.4.0 unifies window and browser APIs, shares typed configuration between the application and CLI, and coordinates update installation with application shutdown. This release includes breaking API changes.
 

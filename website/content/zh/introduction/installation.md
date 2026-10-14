@@ -1,6 +1,6 @@
 # 运行环境要求
 
-以下安装命令面向尚未在 Mooncakes 发布的 0.4.0。API 迁移方法见 [Release Notes](../release-notes/releases.md)。
+以下安装命令面向 Proton 0.4.0。API 迁移方法见 [Release Notes](../release-notes/releases.md)。
 
 Proton 0.4.0 支持以下宿主构建环境。原生构建与打包面向当前操作系统，Proton CLI 不提供跨操作系统交叉编译流程。
 

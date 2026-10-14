@@ -1,392 +1,115 @@
 # Proton
 
 Proton is a MoonBit framework for building native desktop applications with a
-web frontend.
+web frontend. It embeds Chromium through CEF and bundles the browser engine
+with the application on each supported platform.
 
-Supported source-built native backends:
+- Native windows, embedded browser views, menus and application lifecycle.
+- Typed commands and events between the frontend and native MoonBit code.
+- Operating-system capabilities through extensions, with explicit permissions.
+- Development tooling and packaging for macOS Apple Silicon, Windows x64 and
+  Linux x64.
 
-- Windows x64
-- macOS Apple Silicon
-- Linux x64
-
-[English guides](website/content/en/introduction/index.md) · [中文指南](website/content/zh/introduction/index.md)
+[English documentation](https://moonbit-community.github.io/proton/) ·
+[中文文档](https://moonbit-community.github.io/proton/zh/)
 
 ## Quick start
 
-Install the CLI and create a project:
+Install [MoonBit and the native build prerequisites](website/content/en/introduction/installation.md)
+for your platform. The default template uses Rabbita for its MoonBit frontend
+and Warren to serve and build it; install Node.js/npm as described in the
+prerequisites. Run these commands outside another MoonBit workspace:
 
 ```sh
-moon install moonbit-community/proton_cli
+moon install moonbit-community/proton_cli@0.4.0
+moon install moonbit-community/warren@0.4.5
 proton_cli new my-app --yes
 cd my-app
 moon update
-moon install moonbit-community/warren@0.4.5
 proton_cli cef setup
 proton_cli dev
 ```
 
-The default `isomorphic` template contains a shared command contract, a Rabbita
-frontend, and a Proton backend. Use `--template minimal` for a single MoonBit
-module with inline HTML:
+The default `isomorphic` template creates a working Todo application with three
+modules: a shared command contract, a Rabbita frontend and a native backend.
+`dev` starts the configured frontend server and opens the desktop application.
+The list is held in memory and resets when the application restarts.
 
-```sh
-proton_cli new my-app --template minimal --yes
-```
+`cef setup` downloads the release-matched Chromium runtime and subprocess
+helper into a shared user-level store. Its first run requires network access
+and can take several minutes. Keep the CLI and application dependencies on the
+same Proton release.
 
-`cef setup` installs the CEF runtime and subprocess helper required by the
-current Proton release. Installations are immutable and shared by all projects
-under `~/.proton/store` and `~/.proton/helpers`. Set `PROTON_RUNTIME_STORE` to
-an absolute path to relocate the runtime store.
+Follow the [Todo tutorial](website/content/en/tutorial/isomorphic.md) to extend
+the generated application. For a smaller app with inline HTML and no frontend
+tooling, use `--template minimal` and follow the
+[minimal application tutorial](website/content/en/tutorial/first-app.md).
 
-All published Proton modules use one lockstep version. The CLI, framework,
-extensions, packager, code generator, and CEF setup tool must come from the same
-release.
+## Application API
 
-## Application entry
-
-Applications are defined with the `App` builder. A small application can use
-inline HTML:
+An application's native entry point configures an `App` and runs it. For
+example, an inline-HTML app inside a generated 0.4.0 minimal project can use:
 
 ```moonbit
 async fn main {
-  @proton.html(
-    "Hello Proton",
-    "<h1>Hello from MoonBit</h1>",
-    width=900,
-    height=700,
-    debug=true,
-  )
-  ..config(@proton.load_config())
+  @proton.html("Hello Proton", "<h1>Hello from MoonBit</h1>")
+  .config(@proton.load_config())
   .run_or_abort()
 }
 ```
 
-Proton also supports URL, file, and packaged asset entries through
-`@proton.url`, `@proton.file`, and `@proton.asset`.
+`config` applies the project's configuration before `run_or_abort()`.
+Entries can also load URLs, files or bundled assets. Applications register
+commands explicitly; shared contracts describe their payloads and results.
+See the [application API reference](website/content/en/introduction/application-api.md)
+for lifecycle, windows, browser contents, commands, events and capabilities.
 
-An isomorphic backend registers commands defined by the shared contract:
+## Build and package
 
-```moonbit
-async fn main {
-  let backend = @todo.Backend()
-  @proton.asset("My App", "frontend/dist/index.html")
-  ..config(@proton.load_config())
-  ..single_instance()
-  ..commands(fn(registrar) raise { backend.register_commands(registrar) })
-  .run_or_abort()
-}
-```
-
-The frontend invokes these commands through `proton_client` or the typed
-Rabbita integration. Application command bindings are explicit and need no
-code-generation rule. Response enums model expected business outcomes.
-
-## Capabilities
-
-Extensions expose typed capabilities. Adding a capability installs its backend
-handlers and grants access to selected renderer targets. Omitting a capability
-is valid; an unavailable operation is rejected by the bridge without preventing
-the application from starting.
-
-Filesystem access must declare both allowed roots and commands:
-
-```moonbit
-@proton.html("Files", html)
-..capability(
-  @fs.capability([
-    @fs.PermissionRoot("./workspace", [
-      "read_file",
-      "write_file",
-      "readdir",
-    ]),
-  ]),
-)
-```
-
-The default target is the primary window entry. Multi-window applications can
-grant a capability to explicit `RendererTarget::entry` or
-`RendererTarget::bundled` targets. Relative filesystem roots and requests are
-anchored to `@proton.resource_dir()`.
-
-## Application windows
-
-Additional windows are declared with `add_window` before startup, then created
-through `WindowManager::open`. `WindowHandle` provides lifecycle and native
-window operations including:
-
-- show, hide, focus, close, minimize, maximize, restore, and fullscreen
-- title, size, position, centering, always-on-top, and zoom
-- resizable, movable, minimizable, maximizable, opacity, and aspect ratio
-- minimum and maximum size constraints
-- taskbar visibility, progress, attention, and content capture protection
-
-Window creation, state changes, and close interception are integrated with the
-managed async runtime. By default the application quits after its final window
-closes. Use `LastWindowClosedPolicy::KeepRunning` for tray or background
-applications. An orderly quit follows Electron's quit event chain:
-`..on_before_quit(...)` runs before windows start closing, `..on_will_quit(...)`
-runs after the last window has closed, and `..on_quit(...)` observes the process
-exit code. Both cancelable steps answer with
-`ApplicationQuitDecision::Allow` or `ApplicationQuitDecision::Prevent`, and
-`ApplicationContext::quit(exit_code=...)` or
-`ApplicationContext::exit(exit_code=...)` selects the status Proton adopts.
-See [proton/README.md](proton/README.md) and
-`examples/81_quit_event_chain`.
-
-Application-level control follows Electron's `app` object:
-`ApplicationContext::focus(steal=...)` activates the application on macOS and
-focuses its first visible window on Windows and Linux. `hide`, `show`,
-`is_active`, and `is_hidden` cover the macOS AppKit group and raise
-`AppControlError::UnsupportedPlatform` on the platforms Electron omits them
-from. `@proton.is_ready()` reports the startup boundary, corresponding to
-`app.isReady()`. See `examples/82_app_control`.
-
-Process-level events follow the same style: `..on_session_created(...)`,
-`..on_window_created(...)`, `..on_web_contents_created(...)`, and
-`..on_render_process_gone(...)` mirror Electron's `session-created`,
-`browser-window-created`, `web-contents-created`, and `render-process-gone`,
-including Electron's renderer termination reasons. Killed renderers are events
-rather than fatal errors, so an application decides whether to reload, replace,
-or close the affected page. CEF does not expose non-renderer child process
-exits, so Electron's `child-process-gone` stays documented as unsupported. See
-`examples/83_process_events`.
-
-Application windows can host independent web contents views with explicit
-bounds, visibility, z-order, navigation, DevTools, and lifecycle events. See
-`examples/45_bridge_multi_window` and `examples/52_web_contents_view`.
-
-Single-instance apps declare ownership with `..single_instance()` and can inspect
-or give it up at runtime: `ApplicationContext::has_single_instance_lock()` and
-`ApplicationContext::release_single_instance_lock()` mirror Electron's
-`app.hasSingleInstanceLock()` and `app.releaseSingleInstanceLock()`. After a
-release the next launch becomes primary instead of forwarding. CEF owns the
-browser profile exclusively, so a side-by-side successor needs its own
-`App::session_partition`. See `examples/84_single_instance_lock`.
-
-`ApplicationContext::task_metrics()` returns browser tasks with the CPU and
-memory usage of their hosting processes. Several tasks can share one process
-and repeat its full usage, so values must not be summed across records.
-`task_id` identifies a task, not an operating-system PID. The first call starts
-sampling and later calls report measured values. See
-[proton/README.md](proton/README.md) and `examples/85_task_metrics`.
-
-Page-level control follows `webContents`:
-`WebContentsHandle::navigation_history()` report the
-session history with the active entry and Chromium's page-transition types,
-matching Electron's `webContents.navigationHistory`.
-`WebContentsHandle::insert_css()` and `WebContentsHandle::remove_inserted_css()` inject
-and remove a stylesheet in the current document, matching
-`webContents.insertCSS` and `removeInsertedCSS`. [proton/README.md](proton/README.md)
-lists the `webContents` calls CEF has no equivalent for, such as `capturePage`,
-`setUserAgent`, and `isCurrentlyAudible`. See `examples/86_page_control`.
-
-Native application menus and native context menus are available on macOS,
-Windows, and Linux.
-
-Web accessibility uses Chromium's native accessibility tree. Applications
-should express semantics with HTML, ARIA, keyboard navigation, and visible
-focus. Proton follows each platform's accessibility policy by default; use
-`..accessibility(@proton.AccessibilityMode::AlwaysEnabled)` when the tree must
-remain available for the whole runtime, including automation.
-
-Titlebar overlay uses `TitlebarStyle::Overlay` on macOS, Windows, and Linux.
-Overlay pages can query the current usable area with
-`await window.__MoonBit__.getTitlebarArea()`. It returns an
-`{ x, y, width, height }` object in CSS pixels, or `null` while no overlay area
-is available. Query it when laying out the titlebar and after window resize;
-the application remains responsible for applying the result to its CSS.
-Interactive controls inside a draggable region must use
-`-webkit-app-region: no-drag`. See `examples/48_titlebar_overlay`.
-
-The runnable examples cover the full window API, including context menus,
-progress, attention, resizing, content protection, and minimize/maximize
-controls. See [examples/Readme.md](examples/Readme.md).
-
-## Project configuration
-
-`proton.project.json` configures CLI orchestration and packaging:
-
-```json
-{
-  "identifier": "com.example.my-app",
-  "backend": {
-    "path": ".",
-    "package": "backend/app"
-  },
-  "frontend": {
-    "path": "frontend",
-    "dev_url": "http://127.0.0.1:4300",
-    "before_dev": "npm run dev -- --port 4300",
-    "before_build": "npm run build",
-    "dist": "dist"
-  },
-  "package": {
-    "product_name": "My App",
-    "version": "1.0.0",
-    "platforms": {
-      "macos": { "formats": ["app", "dmg"] },
-      "windows": { "formats": ["app", "zip", "nsis"] },
-      "linux": { "formats": ["appimage"] }
-    },
-    "output": "dist"
-  }
-}
-```
-
-`identifier` is the stable application identity used by the runtime and
-packaging tools. `@proton.load_config()` reads the complete configuration during
-development or from packaged metadata after installation. `..config(@proton.load_config())`
-installs this configuration on the application. Applications that
-do not use `proton.project.json` must call
-`..identifier("com.example.my-app")` instead.
-
-`backend.path` is the exact working directory passed to Moon and
-`backend.package` selects the executable package. Proton does not scan parent
-directories for `moon.work`, `moon.mod`, or another project configuration.
-Project paths must be relative and use `/` separators.
-
-The frontend command is entirely project-defined; Proton does not embed Warren,
-Vite, or another frontend server. `proton_cli dev` runs `before_dev`, waits for
-`dev_url`, and then starts the native application. It rejects an already
-occupied development endpoint before starting the configured command. Use
-`--no-frontend` when the frontend is managed separately.
-
-The Proton bridge exists only inside the CEF renderer. Opening the development
-URL in a regular browser can preview the page, but native commands and events
-are unavailable there.
-
-## Build and diagnose
+From the generated project directory, stop the development app, then build:
 
 ```sh
-proton_cli build
 proton_cli build -- --release
-proton_cli doctor
 ```
 
-`build` runs `frontend.before_build`, validates `frontend.dist`, and builds the
-configured MoonBit package for the native target. Arguments after `--` are
-passed to `moon build`.
-
-`doctor` checks project configuration, the MoonBit toolchain, and the required
-CEF runtime and helper without changing the project.
-
-## Packaging
-
-Create native artifacts with:
+Packaging assembles the executable, frontend assets, browser runtime and helper
+into a distribution for the current host platform. Review the
+[packaging prerequisites](website/content/en/command-line-interface/packaging.md#icon-and-tool-prerequisites)
+before running:
 
 ```sh
 proton_cli package --dry-run
 proton_cli package --release
 ```
 
-Supported host-native formats are:
+The default scaffold has no icons. Linux AppImage packaging requires a PNG
+icon and `appimagetool`; NSIS output on Windows requires NSIS. The
+[packaging reference](website/content/en/command-line-interface/packaging.md)
+explains formats, installation scope, resources, signing and notarization.
+`--release` does not enable signing, and a dry run does not create an artifact.
 
-- macOS: `app`, `zip`, and `dmg`
-- Windows: `app`, `zip`, and `nsis`
-- Linux: `appimage`
-
-Use repeated `--format` options, the shared `package.formats` field, or
-`package.platforms.<platform>.formats` in `proton.project.json`. A platform
-format list replaces the shared list; omitting both selects the current host's
-defaults. Output is written to `dist` by default.
-
-`package.resources` copies sidecar files into the application resources
-directory. Backend code resolves the same files before and after packaging with
-`@proton.resource_dir()`. Platform resources are appended from
-`package.platforms.<platform>.resources`. `package.sign.binaries` names copied
-executables that must be included in platform signing, and platform-specific
-signing targets can be appended under the matching platform block. Supported
-platform keys are `macos`, `windows`, and `linux`; platform blocks accept
-`formats`, `resources`, and `sign`. The Windows block also accepts
-`nsis_install_mode`. Explicit command-line options retain the highest priority.
-
-Windows NSIS installers default to `currentUser`: no administrator privileges,
-installation under `%LOCALAPPDATA%`, and registration for the current user.
-Set `package.platforms.windows.nsis_install_mode` to `perMachine` for an
-administrator-only installation under Program Files with machine-wide
-registration, or to `both` to let the installer user choose. Like Tauri, `both`
-uses NSIS MultiUser and requests the highest available privileges, so it can
-show a UAC prompt even when the user chooses a per-user installation.
-`--nsis-install-mode currentUser|perMachine|both` overrides the project setting.
-
-**Existing releases:** Proton previously always generated machine-wide NSIS
-installers. Applications already distributed that way must explicitly retain
-`perMachine` in subsequent releases to update the existing installation:
-
-```json
-{
-  "package": {
-    "platforms": {
-      "windows": {
-        "formats": ["nsis"],
-        "nsis_install_mode": "perMachine"
-      }
-    }
-  }
-}
-```
-
-This is a fragment to merge into the existing project configuration. Fixed
-installation modes do not migrate installations between user and machine
-scope. Existing installation paths are reused within the selected scope.
-
-Use `package.prepare` when the application must generate package-only resources
-or additional binaries. Proton runs this command once from the project root
-after building the frontend and application executable, then validates and
-packages the declared inputs. The command is not run by `proton_cli build` or
-`proton_cli package --dry-run`; the generic `proton_package` tool never runs
-project commands.
-
-On macOS, `--sign` signs the application and `--notarize` submits, staples, and
-validates distributable artifacts. URL schemes and document types are written
-to the macOS application metadata. Current Windows and Linux packages do not
-install operating-system URL or document associations.
-
-`moonbit-community/proton_package` is also available as a generic packager for
-already-built executables. It does not discover Proton projects, build source,
-or assemble CEF. See [package/README.md](package/README.md).
-
-## Runtime options
-
-Enable operating-system single-instance routing with `..single_instance()`.
-Later launches forward protocol URLs, document paths, and reopen activation to
-the primary process.
-
-Headless mode uses CEF off-screen rendering without native top-level windows:
-
-```moonbit
-@proton.html("Automation", html)
-..config(@proton.load_config())
-..headless()
-.run_or_abort()
-```
-
-`PROTON_HEADLESS=1` forces the same mode for automation. Native dialogs, menus,
-titlebars, and other native window operations are unavailable in headless mode.
-Linux still requires an X11 display, such as Xvfb in CI.
-
-Development and explicit debug mode use an ephemeral remote-debugging port by
-default. Set `PROTON_REMOTE_DEBUGGING_PORT` to a fixed port from `1024` through
-`65535` only when an external tool requires one.
-
-## Logging
-
-Applications use `tonyfettes/xlog` directly. Proton reserves `proton.*` log
-categories; applications should use their own categories such as `app.*`.
-Direct runs and `proton_cli dev` write to stderr. Packaged applications default
-to platform log files. `MOON_XLOG` controls xlog filtering and
-`PROTON_LOG_OUTPUT` selects `stderr` or `file`.
-
-CEF diagnostics are disabled by default. Use `PROTON_CEF_LOG` only while
-investigating browser-runtime failures.
+For configuration or startup problems, run `proton_cli doctor` and consult the
+[diagnostics reference](website/content/en/command-line-interface/debugging.md).
 
 ## Documentation
 
-- [Examples](examples/Readme.md)
-- [Proton facade](proton/README.md)
-- [Extensions](extensions/README.md)
-- [Generic packager](package/README.md)
-- [Maintainer guide](AGENTS.md)
+| Topic | Reference |
+| --- | --- |
+| Architecture and processes | [How Proton runs an application](website/content/en/introduction/architecture.md) |
+| Tutorials | [Minimal app](website/content/en/tutorial/first-app.md), [complete Todo app](website/content/en/tutorial/isomorphic.md) |
+| Command Line Interface | [All commands and options](website/content/en/command-line-interface/commands.md) |
+| Configuration | [All `proton.project.json` fields](website/content/en/configuration/project.md) |
+| Application API | [Types, lifecycle and platform behavior](website/content/en/introduction/application-api.md) |
+| Examples | [Runnable examples](examples/Readme.md) |
+| Release notes | [Changes and migration guidance](website/content/en/release-notes/releases.md) |
+| Extensions | [Available capability modules](extensions/README.md) |
+| Standalone packaging | [Package prebuilt executables](package/README.md) |
+| CDP automation | [Connect external automation clients](cdp/README.mbt.md) |
+
+## Contributing
+
+See the [maintainer guide](AGENTS.md) for repository structure, build and test
+commands, native ownership rules and contribution requirements.
 
 ## License
 

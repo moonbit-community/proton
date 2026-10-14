@@ -30,11 +30,15 @@ Proton CLI 将项目组装为分发产物，包含可执行文件、前端资源
 
 | 值 | 行为 |
 | --- | --- |
-| `currentUser` | 默认；当前用户，不要求管理员安装 |
-| `perMachine` | 所有用户，需要提权 |
+| `currentUser` | 默认；当前用户，不要求管理员安装；安装到 `%LOCALAPPDATA%` 下，使用当前用户注册 |
+| `perMachine` | 所有用户，需要提权；安装到 Program Files 下，使用机器级注册 |
 | `both` | 安装器提供范围选择；即使选择当前用户也可能提示提权 |
 
 修改模式不是安装范围迁移。更新已有的机器级安装时，应保持其预期安装范围。
+
+**升级旧版 Proton 安装器：** 旧版 Proton 始终生成机器级 NSIS 安装器。已采用该方式分发的应用，后续版本必须显式将 `package.platforms.windows.nsis_install_mode` 设为 `perMachine`。当前默认的 `currentUser` 面向另一种安装范围。同一范围内会复用已有安装路径；固定模式不会将安装从用户级迁移到机器级，反之亦然。
+
+`both` 使用 NSIS MultiUser，并请求最高可用权限。因此，即使用户选择当前用户安装，也可能先看到 UAC 提示。`--nsis-install-mode` 覆盖项目配置，参见 [CLI 命令参考](commands.md#package)。
 
 ## macOS 最低版本
 
@@ -50,4 +54,25 @@ minimum_system_version 只写 macOS 的 LSMinimumSystemVersion 元数据，不�
 
 打包前端资源不依赖开发服务器。后端资源路径通过 `resource_dir()` 解析。安装资源可能只读，持久应用数据不应写入其中。
 
+`package.resources` 提供共享的附加资源，平台资源会追加到共享列表。`package.sign.binaries` 及其平台覆盖指定额外参与签名的可执行文件。显式 CLI 选项优先于配置。字段类型和合并规则见 [Configuration](../configuration/project.md#package)。
+
 `--dry-run` 校验并展示打包计划，不证明实际打包、签名或产物运行成功。[Todo 教程](../tutorial/isomorphic.md)包含应用构建与打包练习。
+
+## 打包准备命令
+
+`package.prepare` 在前端和原生可执行文件构建完成后、资源组装前，从项目配置文件目录执行一次。它用于生成已声明的打包专用资源或额外二进制。命令以非零状态退出会中止打包。
+
+`proton_cli build` 和 `proton_cli package --dry-run` 不执行此命令。独立的 `proton_package` 工具只打包已有可执行文件与提供的资源，不发现项目、不执行构建或准备命令，也不组装 CEF。参见[独立打包器](https://github.com/moonbit-community/proton/blob/main/package/README.md)。
+
+## URL 协议与文档类型
+
+`package.url_schemes` 和 `package.document_types` 描述操作系统的启动关联。具体效果取决于产物：
+
+| 产物 | 行为 |
+| --- | --- |
+| macOS app | 将 URL 协议和文档类型写入应用元数据 |
+| Windows NSIS | 在所选安装范围注册 URL 协议，卸载时移除仍属于该应用的注册；尚未实现文档类型关联 |
+| Windows app / zip | 不安装操作系统关联 |
+| Linux AppImage | 在内置 desktop entry 中声明 URL 协议，仍需桌面集成将其注册到系统；尚未实现文档类型关联 |
+
+声明关联并不实现应用侧处理。启动输入处理器的注册方法见[应用生命周期](../introduction/application-api.md#应用生命周期)。
