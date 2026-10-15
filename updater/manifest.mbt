@@ -92,9 +92,13 @@ pub fn Manifest::platforms(self : Manifest) -> Array[String] {
 ///|
 /// Decodes a manifest document.
 pub fn Manifest::parse(text : String) -> Manifest raise ManifestError {
-  let json = @json.parse(text, preserve_number_repr=true) catch {
-    _ => raise NotJson
-  }
+  let json = @json.parse(text) catch { _ => raise NotJson }
+  Manifest::from_json(json)
+}
+
+///|
+/// Decodes a manifest from an already parsed JSON value.
+pub fn Manifest::from_json(json : Json) -> Manifest raise ManifestError {
   guard json is Object(fields) else { raise NotAnObject(path="manifest") }
   for key, _ in fields {
     guard key
@@ -187,14 +191,23 @@ fn parse_platform(
   }
   let size = match fields.get("size") {
     None => raise MissingField(path="\{path}.size")
-    Some(Number(_, repr=Some(text))) =>
-      @string.parse_int64(text[:]) catch {
+    Some(Number(value, repr~)) => {
+      // TODO(#468): Use preserve_number_repr once available in stable core.
+      // This guard cannot reject fractions already rounded to safe integers.
+      guard repr is Some(_) || (value >= 1.0 && value <= 9007199254740991.0) else {
+        raise InvalidField(
+          path="\{path}.size",
+          expectation="must be an exact signed 64-bit integer",
+        )
+      }
+      @string.parse_int64(repr.unwrap_or(value.to_string())[:]) catch {
         _ =>
           raise InvalidField(
             path="\{path}.size",
             expectation="must be a signed 64-bit integer",
           )
       }
+    }
     Some(_) =>
       raise InvalidField(path="\{path}.size", expectation="must be a number")
   }
@@ -242,14 +255,16 @@ fn required_int(
 ) -> Int32 raise ManifestError {
   match fields.get(name) {
     None => raise MissingField(path="\{path}.\{name}")
-    Some(Number(_, repr=Some(text))) =>
-      @string.parse_int(text[:]) catch {
-        _ =>
-          raise InvalidField(
-            path="\{path}.\{name}",
-            expectation="must be a signed 32-bit integer",
-          )
+    Some(Number(value, ..)) => {
+      let rounded = value.to_int()
+      guard rounded.to_double() == value else {
+        raise InvalidField(
+          path="\{path}.\{name}",
+          expectation="must be a whole number",
+        )
       }
+      rounded
+    }
     Some(_) =>
       raise InvalidField(path="\{path}.\{name}", expectation="must be a number")
   }
