@@ -31,7 +31,6 @@ pub struct Manifest {
   notes_url : String?
   platforms : Map[String, PlatformUpdate]
 }
-pub fn Manifest::from_json(Json) -> Self raise ManifestError
 pub fn Manifest::notes_url(Self) -> String?
 pub fn Manifest::parse(String) -> Self raise ManifestError
 pub fn Manifest::platform(Self, String) -> PlatformUpdate?

@@ -100,7 +100,10 @@ Rules:
   Adding another artifact form requires a new schema and an implementation that
   validates it explicitly.
 - `size` is a positive signed 64-bit JSON integer, decoded from its original
-  decimal text without an Int32 or floating-point conversion.
+  decimal text without an Int32 or floating-point conversion. The JSON parser
+  preserves every number token before decoding. Decimal and exponent notation
+  are rejected for `size` and `schema_version`. Manifest decoding accepts source
+  text rather than an already-parsed `Json` that may have lost precision.
 - `sha256` and `signature` are lowercase hexadecimal. Public keys use standard
   PEM encoding independently of these manifest fields.
 - `sha256` is for integrity and resumable download bookkeeping. It is **not** a

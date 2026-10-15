@@ -194,7 +194,7 @@ test "artifact sizes preserve Int64 values without a floating-point round trip" 
       new="\"size\":\{size}",
     )
   }
-  for size in [2147483648L, 9007199254740993L, 9223372036854775807L] {
+  for size in [1L, 1024L, 2147483648L, 9007199254740993L, 9223372036854775807L] {
     let update = Manifest::parse(with_size(size.to_string()))
       .platform("darwin-arm64")
       .unwrap()
@@ -206,5 +206,31 @@ test "artifact sizes preserve Int64 values without a floating-point round trip" 
       "9007199254740993e0",
     ] {
     assert_true(parse_failure(with_size(size)) is InvalidField(_))
+  }
+}
+
+///|
+test "rejects non-integer size tokens even when Double rounds them to integers" {
+  for
+    size in [
+      "1.0000000000000001", "1024.0000000000000001", "9007199254740990.5", "1.0000000000000001e0",
+      "1.0", "1e0",
+    ] {
+    let text = manifest_json(platform_json("")).replace(
+      old="\"size\":1024",
+      new="\"size\":\{size}",
+    )
+    assert_true(parse_failure(text) is InvalidField(_))
+  }
+}
+
+///|
+test "schema version is decoded from its original integer token" {
+  for version in ["3.0000000000000001", "3.0", "3e0", "2147483648"] {
+    let text = manifest_json(platform_json("")).replace(
+      old="\"schema_version\":3",
+      new="\"schema_version\":\{version}",
+    )
+    assert_true(parse_failure(text) is InvalidField(_))
   }
 }
