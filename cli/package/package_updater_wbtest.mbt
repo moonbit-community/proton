@@ -50,7 +50,7 @@ test "the emitted fragment decodes with the runtime parser" {
   verify_fragment_decodes(
     updater_fragment_json(
       "darwin-arm64", "0.2.0", "2026-08-01T00:00:00Z", "https://example.com/releases/Draw.app.zip",
-      234881024L, "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08",
+      4294967296L, "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08",
     ),
   )
 }
@@ -98,6 +98,10 @@ test "updater metadata selects an artifact returned by the packager" {
       "win32-x64",
     ),
     Some("C:\\dist\\draw-setup.exe"),
+  )
+  assert_eq(
+    updater_artifact_path(["/tmp/Draw.app", "/tmp/Draw.dmg"], "darwin-arm64"),
+    None,
   )
   assert_eq(updater_artifact_path(["C:\\dist\\draw.zip"], "win32-x64"), None)
   assert_eq(

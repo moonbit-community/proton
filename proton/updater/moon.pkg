@@ -1,5 +1,6 @@
 import {
   "moonbitlang/async/http",
+  "marianoguerra/uri",
   "moonbit-community/proton_rsa" @rsa,
   "moonbit-community/proton/internal/native",
   "moonbit-community/proton_updater" @manifest,

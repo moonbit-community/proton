@@ -189,7 +189,19 @@ fn parse_platform(
   guard url.has_prefix("https://") else {
     raise InvalidField(path="\{path}.url", expectation="must be an https URL")
   }
-  let size = required_int(fields, "size", path).to_int64()
+  let size = match fields.get("size") {
+    None => raise MissingField(path="\{path}.size")
+    Some(Number(value, repr~)) =>
+      @string.parse_int64(repr.unwrap_or(value.to_string())[:]) catch {
+        _ =>
+          raise InvalidField(
+            path="\{path}.size",
+            expectation="must be a signed 64-bit integer",
+          )
+      }
+    Some(_) =>
+      raise InvalidField(path="\{path}.size", expectation="must be a number")
+  }
   guard size > 0L else {
     raise InvalidField(path="\{path}.size", expectation="must be positive")
   }

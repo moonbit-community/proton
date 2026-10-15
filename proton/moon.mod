@@ -12,6 +12,7 @@ import {
   "moonbitlang/x@0.5.5",
   "moonbitlang/lexer@0.4.2",
   "tonyfettes/xlog@0.4.2",
+  "marianoguerra/uri@0.1.2",
 }
 
 readme = "README.md"

@@ -46,4 +46,5 @@ using a separate schema 3 endpoint.
 
 `sha256` and `signature` must be lowercase hexadecimal.
 
-Artifact URLs must use `https`.
+Artifact URLs must use `https`. Artifact `size` is a positive signed 64-bit
+JSON integer; it is read from the original decimal text without rounding.

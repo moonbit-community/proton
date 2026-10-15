@@ -99,6 +99,8 @@ Rules:
 - `kind` must be `"full"`. Other values are invalid for this schema version.
   Adding another artifact form requires a new schema and an implementation that
   validates it explicitly.
+- `size` is a positive signed 64-bit JSON integer, decoded from its original
+  decimal text without an Int32 or floating-point conversion.
 - `sha256` and `signature` are lowercase hexadecimal. Public keys use standard
   PEM encoding independently of these manifest fields.
 - `sha256` is for integrity and resumable download bookkeeping. It is **not** a
@@ -327,7 +329,9 @@ signature, not for the updater manifest or artifact signature.
 1. **Check.** Fetch the manifest and its detached signature. Verify the
    signature before parsing anything. Reject unknown `schema_version`. Reject a
    manifest whose `published_at` is older than the configured freshness window.
-   Select the entry for the running platform.
+   Select the entry for the running platform. Metadata, signature and artifact
+   downloads follow at most five HTTP redirects, including relative locations,
+   while requiring every redirect target to remain HTTPS.
 2. **Compare.** Offer the update only when the signed manifest version is
    strictly greater than the installed app version. This check avoids work;
    native code repeats it at commit time because another process may install
@@ -604,7 +608,7 @@ design.
 `proton_cli package` gains the ability to emit update metadata alongside the
 artifacts it already produces:
 
-- the artifact — whichever single file the host builds: `zip` or `dmg` on
+- the artifact — the installable update format for the host: `zip` on
   macOS, `nsis` on Windows, `appimage` on Linux. A staged `app`
   directory is never a candidate, because an update is fetched as one file,
 - a detached `.sig`,
@@ -612,7 +616,8 @@ artifacts it already produces:
 
 Where a host builds more than one candidate the tie goes to what the apply path
 wants: on Windows the installer, because applying an update re-runs it; on
-macOS the zip, which is smaller than the dmg and needs no mounting to expand.
+macOS only the app ZIP matches the native installer. A DMG can be distributed
+for manual installation, but cannot be used as an update artifact.
 
 Signing runs where the private key lives — a maintainer machine or CI with the
 key held as a secret — never as part of an ordinary build, and never through
