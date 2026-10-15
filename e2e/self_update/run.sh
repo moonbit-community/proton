@@ -47,7 +47,41 @@ fi
 python3 - "$work" > "$work/server.log" 2>&1 <<'SERVER' &
 import functools, http.server, pathlib, ssl, sys
 root = pathlib.Path(sys.argv[1])
-handler = functools.partial(http.server.SimpleHTTPRequestHandler, directory=str(root / 'server'))
+class Handler(http.server.SimpleHTTPRequestHandler):
+    def do_GET(self):
+        host = f"localhost:{self.server.server_port}"
+        redirects = {
+            '/latest.json': (301, 'metadata/latest.json'),
+            '/metadata/latest.json': (307, f'https://{host}?token=absolute%2Froot'),
+            '/?token=absolute%2Froot': (302, f'//{host}?token=relative%2Froot'),
+            '/?token=relative%2Froot': (307, 'signed/%2E/latest.json?channel=stable'),
+            '/latest.json.sig': (302, '/signed/latest.json.sig'),
+            '/Updatee-0.2.0.zip': (303, f'https://{host}/downloads/%2E/update.zip'),
+            '/downloads/%2E/update.zip': (308, f'//{host}/signed/%2e%2E/Updatee-0.2.0.zip?token=a%2Fb&part=1#not-sent'),
+            '/loop': (302, '/loop'),
+            '/downgrade': (302, 'http://127.0.0.1:1/should-not-request'),
+            '/missing-location': (302, None),
+        }
+        if self.path in redirects:
+            status, location = redirects[self.path]
+            self.send_response(status)
+            if location is not None:
+                self.send_header('Location', location)
+            self.send_header('Content-Length', '0')
+            self.end_headers()
+            return
+        signed_paths = {
+            '/signed/%2E/latest.json?channel=stable': '/latest.json',
+            '/signed/%2e%2E/Updatee-0.2.0.zip?token=a%2Fb&part=1': '/Updatee-0.2.0.zip',
+            '/signed/latest.json.sig': '/latest.json.sig',
+        }
+        if self.path in signed_paths:
+            self.path = signed_paths[self.path]
+        else:
+            self.send_error(400, 'unexpected request path or query')
+            return
+        super().do_GET()
+handler = functools.partial(Handler, directory=str(root / 'server'))
 server = http.server.ThreadingHTTPServer(('127.0.0.1', 0), handler)
 context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
 context.load_cert_chain(root / 'keys/tls.pem', root / 'keys/tls.key')

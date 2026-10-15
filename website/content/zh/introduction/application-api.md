@@ -375,6 +375,8 @@ PendingUpdate 表示 manifest 已通过信任、新鲜度和版本检查。它�
 
 `PendingUpdate.download()` 将产物写入私有暂存区域，并校验大小、摘要和签名。所有平台上都不会替换应用文件或退出。相同版本的下载已准备好时，重复调用不会再次下载。
 
+元数据、签名和产物下载最多跟随五次重定向，支持相对地址，所有目标必须保持 HTTPS。产物大小按正的 64 位整数处理。自更新产物在 macOS 必须为应用 ZIP，Windows 为 NSIS 安装器，Linux 为 AppImage；DMG 仍可用于手动安装。
+
 下载完成后，在用户选择应用更新时调用 `ApplicationContext.quit_and_install()`：
 
 ```moonbit

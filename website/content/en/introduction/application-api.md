@@ -385,6 +385,8 @@ An offered `PendingUpdate` has passed manifest trust, freshness and version chec
 
 `PendingUpdate.download()` writes the artifact into a private stage and verifies its size, digest and signature. It does not replace application files or exit on any platform. Repeated downloads of the same prepared version are a no-op.
 
+Metadata, signature and artifact downloads follow at most five redirects, resolving relative locations and requiring HTTPS for every target. Artifact sizes are positive 64-bit integers. Self-update artifacts must be an app ZIP on macOS, an NSIS installer on Windows, or an AppImage on Linux. DMGs remain available for manual installation.
+
 After downloading, call `ApplicationContext.quit_and_install()` when the user chooses to apply the update:
 
 ```moonbit

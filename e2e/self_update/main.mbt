@@ -64,6 +64,25 @@ async fn main {
     )
     ..app_lifecycle(
       on_start=context => {
+        if mode == "install" {
+          for
+            (path, expected) in [
+              ("loop", "redirect limit"),
+              ("downgrade", "https"),
+              ("missing-location", "Location"),
+            ] {
+            let url = require_env("PROTON_E2E_ENDPOINT").replace(
+              old="latest.json",
+              new=path,
+            )
+            try ignore(@updater.http_fetch(url)) catch {
+              error => assert_true(error.message().contains(expected))
+            } noraise {
+              _ => fail("expected redirect refusal: \{path}")
+            }
+          }
+          record("redirect-checks")
+        }
         let unavailable = try {
           context.quit_and_install()
           false

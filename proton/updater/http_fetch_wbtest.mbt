@@ -76,3 +76,37 @@ async test "metadata cancellation closes the streaming connection" {
     })
   })
 }
+
+///|
+test "redirect resolution preserves encoded paths and supplies empty root paths" {
+  let base = "https://example.com/releases/latest.json?old=1"
+  for
+    (location, expected) in [
+      (
+        "https://cdn.example.com/signed/%2E/file?token=a%2Fb#omit", "https://cdn.example.com/signed/%2E/file?token=a%2Fb",
+      ),
+      (
+        "//cdn.example.com/signed/%2e%2E/file?token=a%2Fb", "https://cdn.example.com/signed/%2e%2E/file?token=a%2Fb",
+      ),
+      (
+        "../signed/%2E/file?token=a%2Fb", "https://example.com/signed/%2E/file?token=a%2Fb",
+      ),
+      ("/signed/%2e%2e/file", "https://example.com/signed/%2e%2e/file"),
+      (
+        "https://cdn.example.com?token=a%2Fb", "https://cdn.example.com/?token=a%2Fb",
+      ),
+      ("//cdn.example.com?token=a%2Fb", "https://cdn.example.com/?token=a%2Fb"),
+      ("?token=a%2Fb", "https://example.com/releases/latest.json?token=a%2Fb"),
+      ("#omit", "https://example.com/releases/latest.json?old=1"),
+      ("../downloads/./nested/../file", "https://example.com/downloads/file"),
+      ("../downloads/..", "https://example.com/"),
+      ("../../file", "https://example.com/file"),
+      ("../downloads//file", "https://example.com/downloads//file"),
+    ] {
+    assert_eq(update_redirect_url(base, location), expected)
+  }
+  assert_eq(
+    update_redirect_url("https://example.com/signed/%2E/latest.json", "file"),
+    "https://example.com/signed/%2E/file",
+  )
+}

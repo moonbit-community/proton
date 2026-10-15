@@ -185,3 +185,26 @@ test "accepts an optional notes url and rejects a non-string one" {
   )
   assert_true(parse_failure(bad) is InvalidField(_))
 }
+
+///|
+test "artifact sizes preserve Int64 values without a floating-point round trip" {
+  let with_size = fn(size : String) {
+    manifest_json(platform_json("")).replace(
+      old="\"size\":1024",
+      new="\"size\":\{size}",
+    )
+  }
+  for size in [2147483648L, 9007199254740993L, 9223372036854775807L] {
+    let update = Manifest::parse(with_size(size.to_string()))
+      .platform("darwin-arm64")
+      .unwrap()
+    assert_eq(update.size(), size)
+  }
+  for
+    size in [
+      "9223372036854775808", "18446744073709551616", "1.5", "1e100", "9007199254740993.0",
+      "9007199254740993e0",
+    ] {
+    assert_true(parse_failure(with_size(size)) is InvalidField(_))
+  }
+}

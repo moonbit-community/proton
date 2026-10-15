@@ -189,7 +189,28 @@ fn parse_platform(
   guard url.has_prefix("https://") else {
     raise InvalidField(path="\{path}.url", expectation="must be an https URL")
   }
-  let size = required_int(fields, "size", path).to_int64()
+  let size = match fields.get("size") {
+    None => raise MissingField(path="\{path}.size")
+    Some(Number(value, repr~)) => {
+      // TODO(#468): Use preserve_number_repr once available in stable core.
+      // This guard cannot reject fractions already rounded to safe integers.
+      guard repr is Some(_) || (value >= 1.0 && value <= 9007199254740991.0) else {
+        raise InvalidField(
+          path="\{path}.size",
+          expectation="must be an exact signed 64-bit integer",
+        )
+      }
+      @string.parse_int64(repr.unwrap_or(value.to_string())[:]) catch {
+        _ =>
+          raise InvalidField(
+            path="\{path}.size",
+            expectation="must be a signed 64-bit integer",
+          )
+      }
+    }
+    Some(_) =>
+      raise InvalidField(path="\{path}.size", expectation="must be a number")
+  }
   guard size > 0L else {
     raise InvalidField(path="\{path}.size", expectation="must be positive")
   }
