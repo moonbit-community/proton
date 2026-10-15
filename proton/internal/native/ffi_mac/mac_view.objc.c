@@ -555,8 +555,12 @@ int32_t proton_engine_view_create(
                                 "failed to copy initial browser url");
       return PROTON_ERR_ENGINE;
     }
+    proton_browser_policy_t policy =
+        *proton_browser_session_policy(window->browser_session);
+    policy.navigation = config.navigation_policy;
+    policy.new_window = config.new_window_policy;
     view->browser_session = proton_browser_session_create(
-        proton_browser_session_policy(window->browser_session),
+        &policy,
         proton_browser_session_web_request_config(window->browser_session),
         proton_engine_browser_signal, NULL);
     view->events = proton_view_events_create();

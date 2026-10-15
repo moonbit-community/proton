@@ -248,7 +248,7 @@ async fn run_quit_chain_probe(root : String, timeout : Int32) -> Unit {
       output_root,
       "exit-before-quit",
       Some(7),
-      ["before-quit", "quit 7"],
+      ["before-quit", "quit 7", "second quit observer 7", "shutdown"],
       timeout,
     )
     run_quit_chain_case(
@@ -256,7 +256,9 @@ async fn run_quit_chain_probe(root : String, timeout : Int32) -> Unit {
       output_root,
       "exit-will-quit",
       Some(7),
-      ["before-quit", "will-quit", "quit 7"],
+      [
+        "before-quit", "will-quit", "quit 7", "second quit observer 7", "shutdown",
+      ],
       timeout,
     )
     run_quit_chain_case(
@@ -264,7 +266,10 @@ async fn run_quit_chain_probe(root : String, timeout : Int32) -> Unit {
       output_root,
       "exit-pending-will-quit",
       Some(7),
-      ["before-quit", "will-quit", "will-quit-cancelled", "quit 7"],
+      [
+        "before-quit", "will-quit", "will-quit-cancelled", "quit 7", "second quit observer 7",
+        "shutdown",
+      ],
       timeout,
     )
     run_quit_chain_case(
@@ -272,7 +277,10 @@ async fn run_quit_chain_probe(root : String, timeout : Int32) -> Unit {
       output_root,
       "quit0",
       Some(0),
-      ["before-quit", "will-quit", "quit 0", "run-returned"],
+      [
+        "before-quit", "will-quit", "quit 0", "second quit observer 0", "shutdown",
+        "run-returned",
+      ],
       timeout,
     )
     run_quit_chain_case(
@@ -280,7 +288,7 @@ async fn run_quit_chain_probe(root : String, timeout : Int32) -> Unit {
       output_root,
       "exit0",
       Some(0),
-      ["quit 0"],
+      ["quit 0", "second quit observer 0", "shutdown"],
       timeout,
     )
     run_quit_chain_case(
@@ -288,7 +296,9 @@ async fn run_quit_chain_probe(root : String, timeout : Int32) -> Unit {
       output_root,
       "quit3",
       Some(3),
-      ["before-quit", "will-quit", "quit 3"],
+      [
+        "before-quit", "will-quit", "quit 3", "second quit observer 3", "shutdown",
+      ],
       timeout,
     )
     run_quit_chain_case(
@@ -296,7 +306,7 @@ async fn run_quit_chain_probe(root : String, timeout : Int32) -> Unit {
       output_root,
       "exit7",
       Some(7),
-      ["quit 7"],
+      ["quit 7", "second quit observer 7", "shutdown"],
       timeout,
     )
     run_quit_chain_case(

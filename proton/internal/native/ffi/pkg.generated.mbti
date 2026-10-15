@@ -461,7 +461,7 @@ pub fn thumbar_builder_add(ThumbarBuilderHandle, Bytes, ImageHandle, Bytes, Int)
 
 pub fn thumbar_builder_create() -> ThumbarBuilderHandle
 
-pub fn view_create(WindowHandle, Int, Int, Int, Int, Int, Int, Bytes, Int, UInt, @ref.Ref[ViewHandle]) -> Int
+pub fn view_create(WindowHandle, Int, Int, Int, Int, Int, Int, Bytes, Int, UInt, Int, Int, @ref.Ref[ViewHandle]) -> Int
 
 pub fn view_logical_id(ViewHandle) -> Int64
 

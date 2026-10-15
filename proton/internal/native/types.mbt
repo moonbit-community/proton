@@ -2191,6 +2191,8 @@ struct ViewConfig {
   z_order : Int32
   initial_url : String
   background_color : String?
+  navigation : BrowserPolicyMode
+  new_window : BrowserPolicyMode
 } derive(Debug, Eq)
 
 ///|
@@ -2209,8 +2211,21 @@ pub fn ViewConfig::ViewConfig(
   z_order~ : Int32 = 0,
   initial_url~ : String = "about:blank",
   background_color? : String,
+  navigation~ : BrowserPolicyMode = Allow,
+  new_window~ : BrowserPolicyMode = Deny,
 ) -> ViewConfig {
-  { x, y, width, height, visible, z_order, initial_url, background_color, }
+  {
+    x,
+    y,
+    width,
+    height,
+    visible,
+    z_order,
+    initial_url,
+    background_color,
+    navigation,
+    new_window,
+  }
 }
 
 ///|

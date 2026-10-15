@@ -458,20 +458,6 @@ test "session partitions validate and resolve beneath session data" {
 }
 
 ///|
-test "permission requests expose a unified certificate and media policy" {
-  let certificate = PermissionRequest::Certificate({
-    url: "https://example.test",
-    error_code: -200,
-  })
-  let media = PermissionRequest::Media({
-    origin: "https://example.test",
-    permissions: 3,
-  })
-  assert_true(certificate is PermissionRequest::Certificate(_))
-  assert_true(media is PermissionRequest::Media(_))
-}
-
-///|
 test "storage data kinds are stable and explicit" {
   assert_eq(StorageDataKind::Cookies, StorageDataKind::Cookies)
   assert_eq(StorageDataKind::HttpCache, StorageDataKind::HttpCache)
@@ -2953,11 +2939,11 @@ test "window view declarations validate ids within each window" {
     ..add_window("other", config)
   assert_true(app.validation_error() is None)
   assert_eq(
-    app.resolved_app_config().window_views.get("main").unwrap().length(),
+    app.resolved_app_config().window_configs.get("main").unwrap().views.length(),
     1,
   )
   assert_eq(
-    app.resolved_app_config().window_views.get("other").unwrap().length(),
+    app.resolved_app_config().window_configs.get("other").unwrap().views.length(),
     1,
   )
   let duplicate = { ..config, views: [("browser", child), ("browser", child)], }
@@ -3349,8 +3335,8 @@ test "primary and secondary registrations lower the same configuration" {
   @debug.assert_eq(manifest.entry, manifest.windows[0].entry)
   assert_false(manifest.windows[0].open_on_start)
   let resolved = app.resolved_app_config()
-  assert_eq(resolved.window_views.get("main").unwrap().length(), 1)
-  assert_eq(resolved.window_views.get("secondary").unwrap().length(), 1)
+  assert_eq(resolved.window_configs.get("main").unwrap().views.length(), 1)
+  assert_eq(resolved.window_configs.get("secondary").unwrap().views.length(), 1)
 }
 
 ///|
@@ -3370,7 +3356,7 @@ test "replacing the primary configuration keeps application registrations" {
   assert_eq(app.inline_manifest().debug, 1)
   assert_eq(app.inline_manifest().windows.length(), 1)
   assert_eq(
-    app.resolved_app_config().window_views.get("main").unwrap().length(),
+    app.resolved_app_config().window_configs.get("main").unwrap().views.length(),
     1,
   )
 }
@@ -3477,4 +3463,37 @@ async test "cookie first completion survives shutdown and duplicate delivery bef
     })
     assert_true(store.pending.is_empty())
   }
+}
+
+///|
+async test "notifications append while quit decisions replace" {
+  let events : Array[String] = []
+  let app = html("Callbacks", "")
+    ..identifier("dev.proton.callbacks")
+    ..on_session_created(_ => events.push("first"))
+    ..on_session_created(_ => events.push("second"))
+    ..set_before_quit_handler(_ => ApplicationQuitDecision::Prevent)
+    ..set_before_quit_handler(_ => ApplicationQuitDecision::Allow)
+    ..set_will_quit_handler(_ => ApplicationQuitDecision::Allow)
+    ..set_will_quit_handler(_ => ApplicationQuitDecision::Prevent)
+  for handler in app.resolved_app_config().session_created_handlers {
+    handler({ partition: None, data_path: None, })
+  }
+  assert_eq(events, ["first", "second"])
+  @async.with_task_group(group => {
+    let context = ApplicationContext(
+      session=test_session_handle(),
+      group,
+      test_window_manager(),
+      @locale.LocalePreferences::resolve(None, []),
+    )
+    assert_eq(
+      app.before_quit_handler.unwrap()(context),
+      ApplicationQuitDecision::Allow,
+    )
+    assert_eq(
+      app.will_quit_handler.unwrap()(context),
+      ApplicationQuitDecision::Prevent,
+    )
+  })
 }

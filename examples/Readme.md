@@ -75,15 +75,17 @@ moon -C examples run 01_run --target native
   controls and compact web-rendered application chrome.
 - `49_app_menu`: app-level typed native menu roles, dynamic command states, and menu command events with
   the optional focused window id.
-- `50_browser_control`: asynchronous navigation, new-window, download, certificate,
-  media-permission, download-progress policy handlers, plus observable main
+- [50_browser_control](50_browser_control/README.md): page-local new-window
+  policy, replacement of session download/certificate/media decision handlers,
+  appended browser observers, download progress, plus observable main
   browser page events, state snapshots, cookie-store access, and cache control.
 - `51_child_process_close_repro`: long-lived child process and pending bridge
   request for macOS close-lifecycle regression testing.
-- `52_web_contents_view`: Codex-style built-in browser: an asset-loaded
+- [52_web_contents_view](52_web_contents_view/README.md): Codex-style built-in browser: an asset-loaded
   sidebar host page drives an embedded web contents view through a command
   extension, with independent zoom/audio controls and view events keeping the
-  sidebar in sync. The manual review tones verify main-browser and view mute.
+  sidebar in sync. Host and dynamically added child have separate popup
+  policies. The manual review tones verify main-browser and view mute.
 - `53_view_minimal`: the minimal declarative web contents view example:
   `with_view` plus `@proton.view`, no lifecycle hooks required.
 - `54_devtools`: manual Electron-style focus and DevTools review for both the
@@ -175,6 +177,29 @@ moon -C examples run 01_run --target native
   control review covering `webContents.navigationHistory` entries and page
   transitions, plus `insertCSS`/`removeInsertedCSS` for window and view
   browsers.
+
+## Callback API examples
+
+| Contract | Example |
+| --- | --- |
+| Session decision setters replace their previous handler; specific certificate and media decisions | [50 Browser control](50_browser_control/README.md) |
+| Main-page and dynamic child popup policies are independent | [52 Web contents view](52_web_contents_view/README.md) |
+| Per-window close decisions; replaceable quit decisions; synchronous final observers and async shutdown | [81 Quit event chain](81_quit_event_chain/README.md) |
+| Synchronous session/window/contents creation notifications append in registration order | [83 Process events](83_process_events/README.md) |
+| Initial child navigation denial, declared/reopened windows, dynamic views, and overlapping async notifications | `e2e_fixtures/lifecycle_regressions.mbt`, `run_window_config_regression` |
+
+The shared fixtures run without opening desktop windows:
+
+```sh
+PROTON_E2E_LIFECYCLE_CASE=window-config moon -C e2e run test --target native -- --lifecycle-regressions
+PROTON_E2E_LIFECYCLE_CASE=web-contents moon -C e2e run test --target native -- --lifecycle-regressions
+moon -C e2e run test --target native -- --quit-chain
+```
+
+The browser-control certificate and media steps require their documented
+network/platform preconditions; a successful build does not verify those OS
+interactions. Navigation `Allow` has a [known replay limitation](https://github.com/moonbit-community/proton/issues/469)
+and is not claimed as a passing initial-navigation regression.
 
 All runnable examples should import `moonbit-community/proton`. Runtime behavior
 is configured through the App builder; `proton.project.json` is present only

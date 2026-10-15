@@ -180,6 +180,37 @@ async fn run_lifecycle_regressions(root : String, timeout : Int32) -> Unit {
         }
         let snapshot = snapshot_scenario_process_tree(app)
         @mbfs.write_string_to_file(gate, "go")
+        if name == "window-config" {
+          // A trusted gesture lets these requests reach Proton rather than
+          // being suppressed by Chromium's popup blocker before interception.
+          for title in ["Window Config", "Dynamic policy ready"] {
+            let ready = @async.with_timeout_opt(timeout, () => {
+              while !discover_targets_for_poll(cdp_target_from(target)).any(item => {
+                      item.target_type == "page" && item.title == title
+                    }) {
+                @async.sleep(25)
+              }
+            })
+            assert_true(
+              ready is Some(_),
+              msg="popup target did not become ready: " + title,
+            )
+            let client = @client.connect_cdp_page_target_with_timeout(
+              group,
+              cdp_target_from(target),
+              title~,
+              timeout_ms=timeout,
+            )
+            ignore(
+              client.send_schema_command("Runtime.evaluate", params={
+                "expression": "window.open('about:blank'); void 0",
+                "userGesture": true,
+                "returnByValue": true,
+              }),
+            )
+            client.close()
+          }
+        }
         if name == "process-events" || name == "process-events-no-bridge" {
           kill_renderer_helpers(snapshot)
         }

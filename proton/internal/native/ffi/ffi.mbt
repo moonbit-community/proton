@@ -1352,6 +1352,8 @@ pub extern "C" fn view_create(
   initial_url : Bytes,
   has_background_color : Int32,
   background_color : UInt32,
+  navigation_policy : Int32,
+  new_window_policy : Int32,
   out_view : Ref[ViewHandle],
 ) -> Int32 = "proton_internal_view_create"
 

@@ -610,6 +610,7 @@ pub struct ViewConfig {
   z_order : Int32
   initial_url : String
   background_color : String?
+  web_contents_policy : WebContentsPolicy
 }
 
 ///|
@@ -622,8 +623,19 @@ pub fn ViewConfig::ViewConfig(
   z_order~ : Int32 = 0,
   initial_url~ : String = "about:blank",
   background_color? : String,
+  web_contents_policy~ : WebContentsPolicy = WebContentsPolicy(),
 ) -> ViewConfig {
-  { x, y, width, height, visible, z_order, initial_url, background_color, }
+  {
+    x,
+    y,
+    width,
+    height,
+    visible,
+    z_order,
+    initial_url,
+    background_color,
+    web_contents_policy,
+  }
 }
 
 ///|
@@ -637,6 +649,16 @@ fn ViewConfig::to_native(self : ViewConfig) -> @native.ViewConfig {
     z_order=self.z_order,
     initial_url=self.initial_url,
     background_color?=self.background_color,
+    navigation=if self.web_contents_policy.navigation_handler is Some(_) {
+      Ask
+    } else {
+      Allow
+    },
+    new_window=if self.web_contents_policy.new_window_handler is Some(_) {
+      Ask
+    } else {
+      Deny
+    },
   )
 }
 

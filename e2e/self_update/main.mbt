@@ -149,7 +149,7 @@ async fn main {
         }
       },
     )
-    ..on_before_quit(fn(context) {
+    ..set_before_quit_handler(fn(context) {
       before_count.val = before_count.val + 1
       record("before-quit")
       if mode == "force-exit" {
@@ -162,7 +162,7 @@ async fn main {
         @proton.ApplicationQuitDecision::Allow
       }
     })
-    ..on_will_quit(fn(_context) {
+    ..set_will_quit_handler(fn(_context) {
       will_count.val = will_count.val + 1
       record("will-quit")
       if mode == "prevent-will" && will_count.val == 1 {

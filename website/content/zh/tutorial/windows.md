@@ -67,7 +67,7 @@ async fn main {
 
 此时关闭全部窗口不会结束进程。在实际应用采用该策略前，应先提供明确的退出操作。
 
-需要异步决定是否允许关闭时，使用 `on_window_close_request`，返回 `WindowCloseDecision::Allow` 继续关闭，返回 `Deny` 保持窗口打开。确认对话框或未保存文档检查应放在这里，`on_close` 则用于关闭后的清理。
+需要异步决定是否允许关闭时，设置 `WindowConfig.close_handler`，返回 `WindowCloseDecision::Allow` 继续关闭，返回 `Deny` 保持窗口打开。确认对话框或未保存文档检查应放在这里，`on_close` 则用于关闭后的清理。
 
 ## 平台相关的窗口行为
 

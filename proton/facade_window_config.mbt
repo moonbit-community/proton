@@ -16,6 +16,10 @@ pub(all) struct WindowConfig {
   traffic_light_position : WindowButtonPosition?
   /// Initial child views, with ids scoped to this window.
   views : Array[(String, ViewConfig)]
+  /// Reviews this window's close requests, including application quit.
+  close_handler : (async (WindowHandle) -> WindowCloseDecision noraise)?
+  /// Policy installed on this window's main page before its first load.
+  web_contents_policy : WebContentsPolicy
 }
 
 ///|
@@ -31,6 +35,8 @@ pub fn WindowConfig::WindowConfig(
   theme~ : WindowThemePreference = System,
   traffic_light_position? : WindowButtonPosition,
   views~ : Array[(String, ViewConfig)] = [],
+  close_handler? : async (WindowHandle) -> WindowCloseDecision noraise,
+  web_contents_policy~ : WebContentsPolicy = WebContentsPolicy(),
 ) -> WindowConfig {
   {
     title,
@@ -42,6 +48,8 @@ pub fn WindowConfig::WindowConfig(
     theme,
     traffic_light_position,
     views: views.copy(),
+    close_handler,
+    web_contents_policy,
   }
 }
 
@@ -71,13 +79,6 @@ fn WindowConfig::to_manifest(self : WindowConfig) -> @manifest.WindowManifest {
 }
 
 ///|
-fn WindowConfig::native_views(
-  self : WindowConfig,
-) -> Array[(String, @native.ViewConfig)] {
-  self.views.map(view => (view.0, view.1.to_native()))
-}
-
-///|
 fn WindowConfig::validation_error(
   self : WindowConfig,
 ) -> AppConfigurationError? {
@@ -94,4 +95,41 @@ fn WindowConfig::validation_error(
     ids.add(id) |> ignore
   }
   None
+}
+
+///|
+/// Decisions belonging to one page. Sharing this value is explicit; a child
+/// view does not inherit its parent window's navigation or new-window policy.
+pub(all) struct WebContentsPolicy {
+  navigation_handler : (async (WebContentsHandle, NavigationRequest) -> NavigationDecision noraise)?
+  new_window_handler : (async (WebContentsHandle, NewWindowRequest) -> NewWindowDecision noraise)?
+}
+
+///|
+/// Allows navigation and denies new windows when no handler is supplied.
+pub fn WebContentsPolicy::WebContentsPolicy(
+  navigation_handler? : async (WebContentsHandle, NavigationRequest) -> NavigationDecision noraise,
+  new_window_handler? : async (WebContentsHandle, NewWindowRequest) -> NewWindowDecision noraise,
+) -> WebContentsPolicy {
+  { navigation_handler, new_window_handler, }
+}
+
+///|
+fn WebContentsPolicy::to_native(
+  self : WebContentsPolicy,
+  session : @native.BrowserPolicy,
+) -> @native.BrowserPolicy {
+  {
+    ..session,
+    navigation: if self.navigation_handler is Some(_) {
+      Ask
+    } else {
+      Allow
+    },
+    new_window: if self.new_window_handler is Some(_) {
+      Ask
+    } else {
+      Deny
+    },
+  }
 }

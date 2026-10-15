@@ -140,7 +140,7 @@ chain steps and the process exit status:
 moon -C e2e run test --target native -- --quit-chain
 ```
 
-The probe requires `on_before_quit` -> `on_will_quit` -> `on_quit` for orderly
+The probe requires `set_before_quit_handler` -> `set_will_quit_handler` -> `on_quit` for orderly
 quits with exit code `0` and `3`, requires a forced exit to skip the cancelable
 steps while still reporting `quit 7`, and requires a prevented `before-quit` or
 `will-quit` to leave the application running.

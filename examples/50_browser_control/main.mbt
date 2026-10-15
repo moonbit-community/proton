@@ -11,13 +11,21 @@ let page =
   #|    <p><a href="https://example.com/">Navigate to example.com</a></p>
   #|    <p><button id="popup">Open popup in this window</button></p>
   #|    <p><a download="proton.txt" href="data:text/plain,Hello%20from%20Proton">Download file</a></p>
+  #|    <p><a href="https://expired.badssl.com/">Test certificate rejection (network required)</a></p>
   #|    <p><button id="media">Request microphone</button></p>
+  #|    <p id="status">Decisions and observers are printed in the terminal.</p>
   #|    <script>
   #|      document.querySelector("#popup").onclick = () => {
   #|        window.open("https://example.com/popup", "_blank");
   #|      };
   #|      document.querySelector("#media").onclick = async () => {
-  #|        await navigator.mediaDevices.getUserMedia({ audio: true });
+  #|        try {
+  #|          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+  #|          stream.getTracks().forEach(track => track.stop());
+  #|          document.querySelector("#status").textContent = "Microphone allowed";
+  #|        } catch (error) {
+  #|          document.querySelector("#status").textContent = `Microphone rejected: ${error.name}`;
+  #|        }
   #|      };
   #|    </script>
   #|  </body>
@@ -65,24 +73,42 @@ async fn review_session(browser : @proton.WebContentsHandle) -> Unit noraise {
 
 ///|
 async fn main {
-  @proton.html("Browser Control", page, debug=true)
-  ..on_navigation_request(fn(_browser, request) {
-    println("navigation: \{request.http_method} \{request.url}")
-    @proton.NavigationDecision::Allow
+  @proton.App(
+    @proton.WindowConfig(
+      "Browser Control",
+      @proton.AppEntry::Html(page),
+      web_contents_policy=@proton.WebContentsPolicy(new_window_handler=fn(
+        _browser,
+        request,
+      ) {
+        println("new window: \{request.url}")
+        @proton.NewWindowDecision::OpenInCurrent
+      }),
+    ),
+  )
+  ..debug()
+  // These initial decisions are replaced below, not combined with the replacements.
+  ..set_download_handler(fn(_, _) {
+    println("ERROR: replaced download handler ran")
+    @proton.DownloadDecision::Deny
   })
-  ..on_new_window_request(fn(_browser, request) {
-    println("new window: \{request.url}")
-    @proton.NewWindowDecision::OpenInCurrent
+  ..set_certificate_error_handler(fn(_, _) {
+    println("ERROR: replaced certificate handler ran")
+    @proton.BrowserPermissionDecision::Deny
   })
-  ..on_download_request(fn(_browser, request) {
+  ..set_media_permission_handler(fn(_, _) {
+    println("ERROR: replaced media handler ran")
+    @proton.BrowserPermissionDecision::Deny
+  })
+  ..set_download_handler(fn(_browser, request) {
     println("download: \{request.suggested_name}")
     @proton.DownloadDecision::ShowSaveDialog
   })
-  ..on_certificate_error(fn(_browser, request) {
+  ..set_certificate_error_handler(fn(_browser, request) {
     println("certificate error: \{request.error_code} \{request.url}")
     @proton.BrowserPermissionDecision::Deny
   })
-  ..on_media_permission_request(fn(_browser, request) {
+  ..set_media_permission_handler(fn(_browser, request) {
     println("media permission: \{request.origin}")
     @proton.BrowserPermissionDecision::Deny
   })
@@ -109,6 +135,10 @@ async fn main {
       session_review_started.val = true
       review_session(browser)
     }
+  })
+  // Both observers receive the event; registration does not replace the first.
+  ..on_web_contents_event(fn(browser, event) {
+    println("second observer [\{browser.window_id()}]: \{Repr(event)}")
   })
   ..identifier("dev.proton.50-browser-control")
   .run_or_abort()
