@@ -6,7 +6,6 @@ import {
   "moonbit-community/proton_config@0.4.0",
   "moonbit-community/proton_package@0.4.0",
   "moonbit-community/proton_cefsetup@0.4.0",
-  "moonbit-community/proton_rsa@0.4.0",
   "moonbit-community/proton_updater@0.4.0",
   "moonbitlang/x@0.5.5",
   "moonbitlang/moon_config@0.4.3",

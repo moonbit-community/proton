@@ -14,7 +14,7 @@ pub extend InstallOutcome with Debug::{to_repr}
 /// An authenticated artifact retained until installation or explicit discard.
 pub struct PreparedUpdate {
   priv mut stage : @native.UpdateStage?
-  priv revision : UInt64
+  priv version : @manifest.Version
 }
 
 ///|
@@ -35,7 +35,7 @@ pub fn PreparedUpdate::discard(self : PreparedUpdate) -> Unit raise UpdateError 
 ///|
 /// Consumes the download, applying the replacement or preparing its installer.
 /// Application callers use `ApplicationContext::quit_and_install` so this runs
-/// only after application cleanup. The native commit lock rechecks revision.
+/// only after application cleanup. The native commit lock rechecks version.
 pub fn PreparedUpdate::install(
   self : PreparedUpdate,
 ) -> InstallOutcome raise UpdateError {
@@ -52,13 +52,10 @@ pub fn PreparedUpdate::install(
         raise InstallBusy
       }
       if error.is_update_rollback() {
-        raise RollbackRejected(
-          target=self.revision,
-          installed=current_revision(),
-        )
+        raise RollbackRejected(target=self.version, installed=current_version())
       }
-      if error.is_update_revision_mismatch() {
-        raise RevisionMismatch(detail=error.message())
+      if error.is_update_version_mismatch() {
+        raise VersionMismatch(detail=error.message())
       }
       raise InstallFailed(
         step="validate and replace the application",
@@ -81,13 +78,13 @@ pub async fn UpdateChannel::download(
   update : AvailableUpdate,
   on_progress~ : async (Int64) -> Unit noraise = _ => (),
 ) -> PreparedUpdate raise UpdateError {
-  let installed = current_revision()
-  if update.revision < installed {
-    raise RollbackRejected(target=update.revision, installed~)
+  let installed = current_version()
+  if installed.is_newer_than(update.version) {
+    raise RollbackRejected(target=update.version, installed~)
   }
   let stage = @native.update_stage_begin_for_current_app(
     update.size,
-    update.revision,
+    update.version.to_string(),
   ) catch {
     error =>
       raise InstallFailed(
@@ -97,7 +94,7 @@ pub async fn UpdateChannel::download(
   }
   let prepared = PreparedUpdate::{
     stage: Some(stage),
-    revision: update.revision,
+    version: update.version,
   }
   let transferred = Ref(false)
   defer (if !transferred.val { prepared.discard() catch { _ => () } })
@@ -137,15 +134,16 @@ pub fn relaunch() -> Unit raise UpdateError {
 }
 
 ///|
-/// Returns the revision recorded by the running application artifact.
-pub fn current_revision() -> UInt64 raise UpdateError {
-  @native.update_current_revision() catch {
+/// Returns the version recorded by the running application artifact.
+pub fn current_version() -> @manifest.Version raise UpdateError {
+  let text = @native.update_current_version() catch {
     error =>
       raise InstallFailed(
-        step="read the installed update revision",
+        step="read the installed update version",
         detail=error.message(),
       )
   }
+  @manifest.Version::parse(text).unwrap()
 }
 
 ///|

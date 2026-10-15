@@ -75,7 +75,7 @@ fn update_check(
 pub fn update_stage_begin(
   parent_dir : String,
   expected_size : Int64,
-  target_revision : UInt64,
+  target_version : String,
 ) -> UpdateStage raise NativeError {
   let message = FixedArray::make(update_message_capacity, b'\x00')
   let handle = Ref(0L)
@@ -83,7 +83,7 @@ pub fn update_stage_begin(
     @native_ffi.proton_update_stage_begin_ffi(
       @ffi.to_cstr(parent_dir),
       expected_size,
-      target_revision.reinterpret_as_int64(),
+      @ffi.to_cstr(target_version),
       handle,
       message,
       message.length(),
@@ -102,28 +102,29 @@ pub fn update_stage_begin(
 /// elevation.
 pub fn update_stage_begin_for_current_app(
   expected_size : Int64,
-  target_revision : UInt64,
+  target_version : String,
 ) -> UpdateStage raise NativeError {
-  update_stage_begin("", expected_size, target_revision)
+  update_stage_begin("", expected_size, target_version)
 }
 
 ///|
-/// Reads the installed application's monotonic update revision.
+/// Reads the installed application's application version.
 ///
 /// This is an optimistic check for process-local coordination. Installation
 /// repeats it while holding the native cross-process commit lock.
-pub fn update_current_revision() -> UInt64 raise NativeError {
+pub fn update_current_version() -> String raise NativeError {
   let message = FixedArray::make(update_message_capacity, b'\x00')
-  let revision = Ref(0L)
+  let version = FixedArray::make(64, b'\x00')
   update_check(
-    @native_ffi.proton_update_current_revision_ffi(
-      revision,
+    @native_ffi.proton_update_current_version_ffi(
+      version,
+      version.length(),
       message,
       message.length(),
     ),
     message,
   )
-  revision.val.reinterpret_as_uint64()
+  update_text(version)
 }
 
 ///|
@@ -131,7 +132,7 @@ pub fn update_current_revision() -> UInt64 raise NativeError {
 ///
 /// Call this only after the replacement has completed application startup.
 /// Native code restricts deletion to Proton-reserved sibling names. Platforms
-/// with a code-signed bundle also validate its identity and revision.
+/// with a code-signed bundle also validate its identity and version.
 pub fn update_cleanup_previous() -> Unit raise NativeError {
   let message = FixedArray::make(update_message_capacity, b'\x00')
   update_check(
@@ -208,6 +209,7 @@ pub fn UpdateStage::abort(self : UpdateStage) -> Unit raise NativeError {
 pub fn update_install(
   archive : Bytes,
   parent_dir : String,
+  target_version : String,
 ) -> Unit raise NativeError {
   let message = FixedArray::make(update_message_capacity, b'\x00')
   update_check(
@@ -215,6 +217,7 @@ pub fn update_install(
       archive,
       archive.length(),
       @ffi.to_cstr(parent_dir),
+      @ffi.to_cstr(target_version),
       message,
       message.length(),
     ),

@@ -31,7 +31,7 @@ async fn main {
     record("obsolete-rejected")
     return
   }
-  if @updater.current_revision() != 1UL {
+  if @updater.current_version().to_string() != "0.1.0" {
     @proton.html("Updated application", "<h1>Updated</h1>")
     ..identifier("com.example.proton-updater-e2e")
     ..headless()
@@ -75,7 +75,7 @@ async fn main {
           fail("expected an authenticated update")
         }
         update.download()
-        assert_eq(@updater.current_revision(), 1UL)
+        assert_eq(@updater.current_version().to_string(), "0.1.0")
         assert_eq(
           @mbfs.read_file_to_string("\{bundle}/Contents/Resources/version"),
           "0.1.0",
@@ -119,7 +119,7 @@ async fn main {
           assert_true(refused)
           assert_true(context.has_single_instance_lock())
         }
-        assert_eq(@updater.current_revision(), 1UL)
+        assert_eq(@updater.current_version().to_string(), "0.1.0")
         assert_eq(
           @mbfs.read_file_to_string("\{bundle}/Contents/Resources/version"),
           "0.1.0",
@@ -166,7 +166,7 @@ async fn main {
   guard mode == "ordinary-quit" || mode == "cleanup-failure" else {
     fail("update installation or forced exit returned from App::run")
   }
-  assert_eq(@updater.current_revision(), 1UL)
+  assert_eq(@updater.current_version().to_string(), "0.1.0")
   record("run-returned")
 }
 

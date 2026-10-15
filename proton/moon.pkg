@@ -19,6 +19,7 @@ import {
   "moonbit-community/proton/manifest",
   "moonbit-community/proton/internal/native",
   "moonbit-community/proton/updater",
+  "moonbit-community/proton_updater" @update_manifest,
   "moonbit-community/proton_contract",
   "moonbit-community/proton_config",
 }

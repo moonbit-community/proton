@@ -10,7 +10,7 @@ import {
 // Values
 pub fn cleanup_previous() -> Unit raise UpdateError
 
-pub fn current_revision() -> UInt64 raise UpdateError
+pub fn current_version() -> @proton_updater.Version raise UpdateError
 
 pub async fn http_fetch(String) -> Bytes raise UpdateError
 
@@ -35,8 +35,8 @@ pub(all) suberror UpdateError {
   ArtifactSignatureInvalid
   ClockUnusable(detail~ : String)
   InstallBusy
-  RollbackRejected(target~ : UInt64, installed~ : UInt64)
-  RevisionMismatch(detail~ : String)
+  RollbackRejected(target~ : @proton_updater.Version, installed~ : @proton_updater.Version)
+  VersionMismatch(detail~ : String)
   InstallInterrupted(detail~ : String)
   InstallFailed(step~ : String, detail~ : String)
 } derive(Eq, @debug.Debug)
@@ -50,7 +50,6 @@ pub fn UpdateError::to_string(Self) -> String
 // Types and methods
 pub struct AvailableUpdate {
   version : @proton_updater.Version
-  revision : UInt64
   notes_url : String?
   url : String
   size : Int64
@@ -60,7 +59,6 @@ pub struct AvailableUpdate {
 pub fn AvailableUpdate::equal(Self, Self) -> Bool
 pub fn AvailableUpdate::not_equal(Self, Self) -> Bool
 pub fn AvailableUpdate::notes_url(Self) -> String?
-pub fn AvailableUpdate::revision(Self) -> UInt64
 pub fn AvailableUpdate::size(Self) -> Int64
 pub fn AvailableUpdate::to_repr(Self) -> @debug.Repr
 pub fn AvailableUpdate::url(Self) -> String
@@ -92,9 +90,9 @@ pub struct UpdateChannel {
   endpoint : String
   trusted_keys : Array[@proton_rsa.PublicKey]
   platform : String
-  current_revision : UInt64
+  current_version : @proton_updater.Version
 }
-pub fn UpdateChannel::UpdateChannel(String, Array[String], String, UInt64) -> Self raise UpdateError
+pub fn UpdateChannel::UpdateChannel(String, Array[String], String, @proton_updater.Version) -> Self raise UpdateError
 pub async fn UpdateChannel::check(Self, async (String) -> Bytes raise UpdateError, @proton_updater.Timestamp) -> CheckOutcome raise UpdateError
 pub async fn UpdateChannel::download(Self, async (String, Int64, async (Bytes) -> Unit raise UpdateError) -> Unit raise UpdateError, AvailableUpdate, on_progress? : async (Int64) -> Unit noraise) -> PreparedUpdate raise UpdateError
 

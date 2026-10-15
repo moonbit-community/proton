@@ -12,7 +12,6 @@ import {
   "moonbitlang/async/process",
   "moonbitlang/core/argparse",
   "moonbitlang/core/debug",
-  "moonbitlang/core/string",
   "moonbitlang/x/crypto",
   "moonbitlang/x/path",
 }

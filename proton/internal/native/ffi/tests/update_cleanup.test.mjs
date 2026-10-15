@@ -14,14 +14,14 @@ function run(program, args, options = {}) {
 function ok(result) {
   assert.equal(result.status, 0, `${result.error || ''}${result.stdout}${result.stderr}`);
 }
-function bundle(location, revision) {
+function bundle(location, version) {
   mkdirSync(path.join(location, 'Contents/MacOS'), { recursive: true });
   copyFileSync('/usr/bin/true', path.join(location, 'Contents/MacOS/app'));
   writeFileSync(path.join(location, 'Contents/Info.plist'), `<?xml version="1.0"?><plist version="1.0"><dict>
 <key>CFBundleExecutable</key><string>app</string>
 <key>CFBundleIdentifier</key><string>com.example.proton-cleanup</string>
 <key>CFBundlePackageType</key><string>APPL</string>
-<key>ProtonUpdateRevision</key><string>${revision}</string></dict></plist>`);
+<key>CFBundleShortVersionString</key><string>0.${version}.0</string></dict></plist>`);
   ok(run('codesign', ['--force', '--sign', '-', '--identifier', 'com.example.proton-cleanup', location]));
 }
 
@@ -106,7 +106,26 @@ test('macOS retained update ownership and cleanup', { skip: process.platform !==
     assert.equal(f.invoke('cleanup').status, 1);
     assert.equal(readFileSync(path.join(outside, 'keep'), 'utf8'), 'untouched');
   });
-  await t.test('does not discard a recovery copy of the same revision', () => {
+  await t.test('orders application versions numerically and refuses mismatched manifests', () => {
+    const f = fixture();
+    bundle(f.app, 9);
+    bundle(path.join(f.root, 'release/App.app'), 10);
+    ok(run('/usr/bin/ditto', ['-c', '-k', '--keepParent', path.join(f.root, 'release/App.app'), f.archive]));
+    const mismatch = f.invoke('install', [f.archive, '0.11.0']);
+    assert.equal(mismatch.status, 1, mismatch.stdout);
+    assert.match(mismatch.stdout, /does not match the signed manifest/);
+    ok(f.invoke('install', [f.archive, '0.10.0']));
+    ok(f.invoke('cleanup'));
+    // Equal versions are a no-op, without retaining another backup.
+    ok(f.invoke('install', [f.archive, '0.10.0']));
+    assert.ok(!existsSync(path.join(f.store, 'previous.app')));
+    bundle(path.join(f.root, 'release/App.app'), 9);
+    ok(run('/usr/bin/ditto', ['-c', '-k', '--keepParent', path.join(f.root, 'release/App.app'), f.archive]));
+    const rollback = f.invoke('install', [f.archive, '0.9.0']);
+    assert.equal(rollback.status, 1, rollback.stdout);
+    assert.match(rollback.stdout, /older than the installed application/);
+  });
+  await t.test('does not discard a recovery copy of the same version', () => {
     const f = fixture();
     ok(f.invoke('install', [f.archive]));
     bundle(f.app, 1);
@@ -117,7 +136,7 @@ test('macOS retained update ownership and cleanup', { skip: process.platform !==
     const f = fixture();
     const result = f.invoke('install', [f.archive], { PROTON_TEST_INSTALL_FAILURE: '1' });
     assert.equal(result.status, 1, result.stdout);
-    assert.match(readFileSync(path.join(f.app, 'Contents/Info.plist'), 'utf8'), /<string>1<\/string>/);
+    assert.match(readFileSync(path.join(f.app, 'Contents/Info.plist'), 'utf8'), /<string>0.1.0<\/string>/);
     assert.ok(!existsSync(path.join(f.store, 'previous.app')));
     ok(run('codesign', ['--verify', '--strict', f.app]));
     ok(f.invoke('install', [f.archive]));
@@ -128,13 +147,13 @@ test('macOS retained update ownership and cleanup', { skip: process.platform !==
     bundle(path.join(f.root, 'release/App.app'), 3);
     const nextArchive = path.join(f.root, 'next.zip');
     ok(run('/usr/bin/ditto', ['-c', '-k', '--keepParent', path.join(f.root, 'release/App.app'), nextArchive]));
-    assert.equal(f.invoke('install', [nextArchive]).status, 1);
+    assert.equal(f.invoke('install', [nextArchive, '0.3.0']).status, 1);
     assert.equal(f.invoke('cleanup', [], { PROTON_TEST_DELETE_FAULT: 'interrupt' }).status, 77);
-    assert.equal(f.invoke('install', [nextArchive]).status, 1);
+    assert.equal(f.invoke('install', [nextArchive, '0.3.0']).status, 1);
     ok(f.invoke('cleanup'));
-    ok(f.invoke('install', [nextArchive]));
+    ok(f.invoke('install', [nextArchive, '0.3.0']));
   });
-  await t.test('continues to reject invalid signatures and downgrade revisions', () => {
+  await t.test('continues to reject invalid signatures and downgrade versions', () => {
     const f = fixture();
     writeFileSync(path.join(f.root, 'release/App.app/Contents/Info.plist'), 'tampered');
     ok(run('/usr/bin/ditto', ['-c', '-k', '--keepParent', path.join(f.root, 'release/App.app'), f.archive]));

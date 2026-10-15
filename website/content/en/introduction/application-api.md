@@ -375,15 +375,15 @@ Application updates replace the distributed application, not the development CLI
 
 **Channel and checks**
 
-The endpoint must use HTTPS and there must be at least one trusted RSA public key. Automatic checking defaults to enabled; manifest freshness defaults to 30 days and must be positive. Keys use the format validated by [`updater public-key`](../command-line-interface/commands.md#updater-public-key).
+The endpoint must use HTTPS and there must be at least one trusted RSA public key. Automatic checking defaults to enabled; manifest freshness defaults to 30 days and must be positive. Pass each public key as PEM text (`PUBLIC KEY` or `RSA PUBLIC KEY`), not as a file path. The runtime parses the PEM and validates the RSA key; private keys and certificates are rejected. The public-key array allows more than one trusted signing key during rotation.
 
 The automatic check runs after successful startup and reports failures through logging without making startup fail. For explicit checks, use `ApplicationContext.check_for_update()` and handle its result and errors. `NotConfigured` is distinct from `UpToDate`; a context used after its application ends no longer has an active channel.
 
-An offered `PendingUpdate` has passed manifest trust, freshness and revision checks. It exposes version, revision, size and optional notes URL, but the artifact has not yet been downloaded.
+An offered `PendingUpdate` has passed manifest trust, freshness and version checks. It exposes version, size and optional notes URL, but the artifact has not yet been downloaded.
 
 **Download and installation**
 
-`PendingUpdate.download()` writes the artifact into a private stage and verifies its size, digest and signature. It does not replace application files or exit on any platform. Repeated downloads of the same prepared revision are a no-op.
+`PendingUpdate.download()` writes the artifact into a private stage and verifies its size, digest and signature. It does not replace application files or exit on any platform. Repeated downloads of the same prepared version are a no-op.
 
 After downloading, call `ApplicationContext.quit_and_install()` when the user chooses to apply the update:
 
@@ -403,7 +403,18 @@ The method returns when the request is accepted, not when the new version is rea
 
 **Publisher responsibilities**
 
-Package a stable application identifier with a monotonically increasing revision. The updater metadata options in [CLI package](../command-line-interface/commands.md#package) describe the artifact location, publication instant and revision. `updater public-key` only formats a public key; it does not generate keys, sign an update manifest or host an endpoint. OS signing/notarization and updater signature verification serve different checks; configuring one does not configure the other.
+Keep the application identifier stable and increase `package.version` for every update. Versions use three numeric components (`major.minor.patch`); pre-release and build suffixes are not supported. A rebuild with the same version is not an update. The updater metadata options in [CLI package](../command-line-interface/commands.md#package) describe the artifact location and publication instant; the manifest uses the packaged application version.
+
+Schema 3 replaces the old revision-based schema 2: retain the old endpoint for existing clients. Those installations require a manual upgrade or an explicitly prepared transition release before using a separate schema 3 endpoint.
+
+Generate the signing key outside Proton and export its public key as standard PEM:
+
+```sh
+openssl genrsa -out updater-private.pem 2048
+openssl pkey -in updater-private.pem -pubout -out updater-public.pem
+```
+
+Embed the contents of `updater-public.pem` in the application and pass that string to `App.update_channel`. Keep `updater-private.pem` in your signing environment; never package it with the app. Proton does not generate keys, sign release files or host an update endpoint. OS signing/notarization and updater signature verification serve different checks; configuring one does not configure the other.
 
 ## Process control and metrics
 

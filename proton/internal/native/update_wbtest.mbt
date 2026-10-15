@@ -42,9 +42,9 @@ async test "Linux updater replaces AppImages transactionally" {
   let root = update_test_temp_dir("proton-update-linux-")
   defer (@async_fs.rmdir(root, recursive=true) catch { _ => () })
   let appimage = update_test_path(root, "Demo.AppImage")
-  let revision = appimage + ".proton-revision"
+  let version = appimage + ".proton-version"
   @async_fs.write_file(appimage, "release-1", create_mode=CreateOrTruncate)
-  @async_fs.write_file(revision, "1\n", create_mode=CreateOrTruncate)
+  @async_fs.write_file(version, "0.1.0\n", create_mode=CreateOrTruncate)
   update_test_set_current_bundle(appimage)
   update_test_set_medium("appimage")
   defer update_test_reset()
@@ -54,14 +54,14 @@ async test "Linux updater replaces AppImages transactionally" {
     let stage = update_stage_begin(
       root,
       bytes.length().to_int64(),
-      target.to_uint64(),
+      "0.\{target}.0",
     )
     stage.write(bytes)
     assert_eq(stage.install(), Installed)
     assert_eq(@async_fs.read_file(appimage).binary(), bytes)
     let previous = appimage + ".proton-previous"
     assert_true(@async_fs.exists(previous))
-    assert_eq(update_current_revision(), target.to_uint64())
+    assert_eq(update_current_version(), "0.\{target}.0")
     update_cleanup_previous()
     assert_false(@async_fs.exists(previous))
   }
@@ -74,10 +74,10 @@ async test "Windows updater prepares NSIS installers" {
   defer (@async_fs.rmdir(root, recursive=true) catch { _ => () })
   let executable = update_test_path(root, "Demo.exe")
   let uninstaller = update_test_path(root, "Uninstall.exe")
-  let revision = update_test_path(root, "proton-update-revision")
+  let version = update_test_path(root, "proton-update-version")
   @async_fs.write_file(executable, "application", create_mode=CreateOrTruncate)
   @async_fs.write_file(uninstaller, "uninstaller", create_mode=CreateOrTruncate)
-  @async_fs.write_file(revision, "1\n", create_mode=CreateOrTruncate)
+  @async_fs.write_file(version, "0.1.0\n", create_mode=CreateOrTruncate)
   update_test_set_current_bundle(executable)
   defer {
     update_test_discard_pending_ffi()
@@ -85,14 +85,14 @@ async test "Windows updater prepares NSIS installers" {
   }
 
   let bytes = b"signed-installer"
-  let stage = update_stage_begin(root, bytes.length().to_int64(), 2UL)
+  let stage = update_stage_begin(root, bytes.length().to_int64(), "0.2.0")
   stage.write(bytes)
   assert_eq(stage.install(), Installed)
-  assert_eq(update_current_revision(), 2UL)
+  assert_eq(update_current_version(), "0.2.0")
   update_test_discard_pending_ffi()
 
   @async_fs.remove(uninstaller)
-  let error = expect_native_error(() => update_stage_begin(root, 1L, 3UL))
+  let error = expect_native_error(() => update_stage_begin(root, 1L, "0.3.0"))
   assert_true(
     error
     .to_string()
@@ -111,6 +111,6 @@ async test "updater refuses package-managed installations before staging" {
   update_test_set_medium("package")
   defer update_test_reset()
 
-  let error = expect_native_error(() => update_stage_begin(root, 1L, 2UL))
+  let error = expect_native_error(() => update_stage_begin(root, 1L, "0.2.0"))
   assert_true(error.to_string().contains("package manager"))
 }

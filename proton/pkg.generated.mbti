@@ -831,7 +831,6 @@ pub fn PdfPrintOptions::to_repr(Self) -> @debug.Repr
 
 pub struct PendingUpdate {
   version : String
-  revision : UInt64
   notes_url : String?
   size : Int64
   channel : @updater.UpdateChannel
@@ -840,7 +839,6 @@ pub struct PendingUpdate {
 }
 pub async fn PendingUpdate::download(Self, on_progress? : async (Int64) -> Unit noraise) -> Unit
 pub fn PendingUpdate::notes_url(Self) -> String?
-pub fn PendingUpdate::revision(Self) -> UInt64
 pub fn PendingUpdate::size(Self) -> Int64
 pub fn PendingUpdate::version(Self) -> String
 

@@ -17,7 +17,6 @@ fn test_staging_plan(
     formats: [@packager.PackageFormat::App],
     output: resolve_path(root, "dist"),
     base_dir: root,
-    update_revision: 42UL,
     frontend_dist: None,
     resources: [],
     sign_binaries,
@@ -134,7 +133,11 @@ async test "packaged configuration retains frontend and platform fields" {
     ]),
     resolve_path(root, "proton.project.json"),
     config,
-    0UL,
+  )
+  stage_update_version(plan, root)
+  assert_eq(
+    @async_fs.read_file(resolve_path(root, "proton-update-version")).text(),
+    "2.0.0\n",
   )
   write_package_manifest(plan, root)
   let loaded = @proton_config.AppConfig::load(

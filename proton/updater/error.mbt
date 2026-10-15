@@ -19,9 +19,9 @@ pub(all) suberror UpdateError {
   /// Another process owns the short-lived update commit lock.
   InstallBusy
   /// A signed release is older than what is currently installed.
-  RollbackRejected(target~ : UInt64, installed~ : UInt64)
-  /// The app bundle does not carry the revision authenticated by the manifest.
-  RevisionMismatch(detail~ : String)
+  RollbackRejected(target~ : @manifest.Version, installed~ : @manifest.Version)
+  /// The app bundle does not carry the version authenticated by the manifest.
+  VersionMismatch(detail~ : String)
   /// Waiting for the process-local install coordinator was interrupted.
   InstallInterrupted(detail~ : String)
   /// A native install step refused. `step` says how far the sequence got,
@@ -60,9 +60,9 @@ pub fn UpdateError::message(self : UpdateError) -> String {
       "the update freshness window cannot be computed: \{detail}"
     InstallBusy => "another process is installing an update"
     RollbackRejected(target~, installed~) =>
-      "update revision \{target} is older than installed revision \{installed}"
-    RevisionMismatch(detail~) =>
-      "the update revision could not be authenticated: \{detail}"
+      "update version \{target} is older than installed version \{installed}"
+    VersionMismatch(detail~) =>
+      "the update version could not be authenticated: \{detail}"
     InstallInterrupted(detail~) =>
       "waiting to install the update was interrupted: \{detail}"
     InstallFailed(step~, detail~) =>

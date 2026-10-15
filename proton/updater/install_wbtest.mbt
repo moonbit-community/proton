@@ -52,8 +52,8 @@ async fn prepare_update_test_installation(root : String) -> String {
     create_mode=CreateOrTruncate,
   )
   @async_fs.write_file(
-    install_test_path(root, "proton-update-revision"),
-    "2\n",
+    install_test_path(root, "proton-update-version"),
+    "0.2.0\n",
     create_mode=CreateOrTruncate,
   )
   executable
@@ -65,8 +65,8 @@ async fn prepare_update_test_installation(root : String) -> String {
   let appimage = install_test_path(root, "Demo.AppImage")
   @async_fs.write_file(appimage, "fixture", create_mode=CreateOrTruncate)
   @async_fs.write_file(
-    appimage + ".proton-revision",
-    "2\n",
+    appimage + ".proton-version",
+    "0.2.0\n",
     create_mode=CreateOrTruncate,
   )
   appimage
@@ -80,7 +80,7 @@ async fn prepare_update_test_installation(root : String) -> String {
   @async_fs.mkdir(contents, recursive=true)
   @async_fs.write_file(
     install_test_path(contents, "Info.plist"),
-    "<plist><dict><key>ProtonUpdateRevision</key><string>2</string></dict></plist>",
+    "<plist><dict><key>CFBundleShortVersionString</key><string>0.2.0</string></dict></plist>",
     create_mode=CreateOrTruncate,
   )
   bundle
@@ -89,9 +89,12 @@ async fn prepare_update_test_installation(root : String) -> String {
 ///|
 async test "prepared download stays staged until discarded" {
   with_update_stage_test(async fn(root) {
-    let stage = @native.update_stage_begin(root, 4L, 3UL)
+    let stage = @native.update_stage_begin(root, 4L, "0.3.0")
     stage.write(b"test")
-    let prepared = PreparedUpdate::{ stage: Some(stage), revision: 3UL, }
+    let prepared = PreparedUpdate::{
+      stage: Some(stage),
+      version: @manifest.Version::parse("0.3.0").unwrap(),
+    }
     assert_true(prepared.stage is Some(_))
     prepared.discard()
     assert_true(prepared.stage is None)
@@ -115,15 +118,15 @@ async test "prepared download stays staged until discarded" {
 ///|
 async test "authenticated download does not install its artifact" {
   with_update_stage_test(async fn(_root) {
-    let channel = channel(2UL)
+    let channel = channel(2)
     guard channel.check(serving(default_entries()), accepted_from())
       is Available(update) else {
       fail("expected an update")
     }
-    let before = current_revision()
+    let before = current_version()
     let prepared = channel.download(streaming(default_entries()), update)
     defer (prepared.discard() catch { _ => () })
-    assert_eq(current_revision(), before)
+    assert_eq(current_version(), before)
     assert_true(prepared.stage is Some(_))
   })
 }
@@ -131,7 +134,7 @@ async test "authenticated download does not install its artifact" {
 ///|
 async test "failed artifact verification releases its native stage" {
   with_update_stage_test(async fn(root) {
-    let channel = channel(2UL)
+    let channel = channel(2)
     guard channel.check(serving(default_entries()), accepted_from())
       is Available(update) else {
       fail("expected an update")
@@ -158,7 +161,7 @@ async test "failed artifact verification releases its native stage" {
 ///|
 async test "cancelling a download releases its native stage" {
   with_update_stage_test(async fn(root) {
-    let channel = channel(2UL)
+    let channel = channel(2)
     guard channel.check(serving(default_entries()), accepted_from())
       is Available(update) else {
       fail("expected an update")

@@ -88,7 +88,7 @@ int main(int argc, char **argv) {
       (void)getchar();
       close(fd);
     }
-  } else if (strcmp(argv[1], "install") == 0 && argc == 4) {
+  } else if (strcmp(argv[1], "install") == 0 && (argc == 4 || argc == 5)) {
     FILE *file = fopen(argv[3], "rb");
     if (file == NULL) return 2;
     fseek(file, 0, SEEK_END);
@@ -97,7 +97,7 @@ int main(int argc, char **argv) {
     char *bytes = malloc(size);
     if (bytes == NULL || fread(bytes, 1, size, file) != (size_t)size) return 2;
     fclose(file);
-    status = proton_update_install(bytes, (int32_t)size, NULL, error, sizeof(error));
+    status = proton_update_install(bytes, (int32_t)size, NULL, argc == 5 ? argv[4] : "0.2.0", error, sizeof(error));
     free(bytes);
   } else {
     status = proton_update_cleanup_previous(error, sizeof(error));

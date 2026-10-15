@@ -20,7 +20,7 @@ let update_check_jitter_ms : Int32 = 40 * 1000
 priv struct ApplicationUpdates {
   mut channel : ResolvedUpdateChannel?
   mut prepared : @updater.PreparedUpdate?
-  mut prepared_revision : UInt64?
+  mut prepared_version : @update_manifest.Version?
   can_download : () -> Bool
   download_mutex : @async.Mutex
 }
@@ -33,7 +33,7 @@ fn ApplicationUpdates::ApplicationUpdates(
   {
     channel,
     prepared: None,
-    prepared_revision: None,
+    prepared_version: None,
     can_download,
     download_mutex: @async.Mutex::Mutex(),
   }
@@ -51,7 +51,7 @@ fn ApplicationUpdates::discard(self : ApplicationUpdates) -> Unit {
           }
     }
     self.prepared = None
-    self.prepared_revision = None
+    self.prepared_version = None
   }
 }
 
@@ -109,11 +109,10 @@ async fn ApplicationUpdates::check(self : ApplicationUpdates) -> UpdateCheck {
 /// An update the channel offered, and the means to take it.
 ///
 /// Being handed one means the manifest was signed by a trusted key, is fresh,
-/// and carries a revision newer than the installed one. Nothing has been
+/// and carries a version newer than the installed one. Nothing has been
 /// downloaded.
 pub struct PendingUpdate {
   version : String
-  revision : UInt64
   notes_url : String?
   size : Int64
   channel : @updater.UpdateChannel
@@ -125,12 +124,6 @@ pub struct PendingUpdate {
 /// The version on offer.
 pub fn PendingUpdate::version(self : PendingUpdate) -> String {
   self.version
-}
-
-///|
-/// The signed monotonic release order.
-pub fn PendingUpdate::revision(self : PendingUpdate) -> UInt64 {
-  self.revision
 }
 
 ///|
@@ -162,11 +155,15 @@ pub async fn PendingUpdate::download(
       detail="the application is stopping or has stopped",
     )
   }
-  if updates.prepared_revision == Some(self.revision) {
+  if updates.prepared_version == Some(self.offer.version()) {
     return
   }
-  if updates.prepared_revision is Some(revision) && revision > self.revision {
-    raise @updater.RollbackRejected(target=self.revision, installed=revision)
+  if updates.prepared_version is Some(version) &&
+    version.is_newer_than(self.offer.version()) {
+    raise @updater.RollbackRejected(
+      target=self.offer.version(),
+      installed=version,
+    )
   }
   let prepared = self.channel.download(
     @updater.http_fetch_artifact,
@@ -182,7 +179,7 @@ pub async fn PendingUpdate::download(
   }
   updates.discard()
   updates.prepared = Some(prepared)
-  updates.prepared_revision = Some(self.revision)
+  updates.prepared_version = Some(self.offer.version())
 }
 
 ///|
@@ -204,12 +201,12 @@ fn ResolvedUpdateChannel::open(
   self : ResolvedUpdateChannel,
 ) -> @updater.UpdateChannel raise {
   let platform = @native.runtime_info().platform_id
-  let current_revision = @native.update_current_revision()
+  let current_version = @updater.current_version()
   @updater.UpdateChannel(
     self.endpoint,
     self.public_keys,
     platform,
-    current_revision,
+    current_version,
   )
 }
 
@@ -228,7 +225,6 @@ async fn ResolvedUpdateChannel::poll(
     Available(offer) =>
       Some(PendingUpdate::{
         version: offer.version().to_string(),
-        revision: offer.revision(),
         notes_url: offer.notes_url(),
         size: offer.size(),
         channel,

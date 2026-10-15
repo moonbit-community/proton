@@ -15,9 +15,7 @@ pub fn verify_pkcs1_sha256(PublicKey, Bytes, Bytes) -> Bool
 
 // Errors
 pub(all) suberror KeyError {
-  UnknownAlgorithm(tag~ : String)
   Malformed(detail~ : String)
-  NonCanonicalModulus
   ModulusTooSmall(bits~ : Int, minimum~ : Int)
   InvalidExponent(detail~ : String)
 } derive(Eq, @debug.Debug)

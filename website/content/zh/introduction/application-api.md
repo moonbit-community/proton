@@ -365,15 +365,15 @@ on_session_created 在应用启动钩子创建窗口前提供 partition 和解�
 
 **更新渠道与检查**
 
-endpoint 必须是 HTTPS，至少配置一个受信任 RSA 公钥。默认开启自动检查，manifest 新鲜度默认为 30 天且必须为正数。公钥格式由 [updater public-key](../command-line-interface/commands.md#updater-public-key) 校验。
+endpoint 必须是 HTTPS，至少配置一个受信任 RSA 公钥。默认开启自动检查，manifest 新鲜度默认为 30 天且必须为正数。传入 PEM 公钥文本（`PUBLIC KEY` 或 `RSA PUBLIC KEY`），不是文件路径。运行时负责解析 PEM 并校验 RSA 公钥，不接受私钥或证书。公钥数组可在密钥轮换时容纳多个受信任的签名公钥。
 
 自动检查在启动成功后进行，失败写入日志而不使应用启动失败。显式检查使用 ApplicationContext.check_for_update()，处理结果与异常。NotConfigured 与 UpToDate 不同；应用结束后，保留的上下文不再拥有活动更新渠道。
 
-PendingUpdate 表示 manifest 已通过信任、新鲜度和 revision 检查。它提供 version、revision、size 和可选 notes URL，此时尚未下载产物。
+PendingUpdate 表示 manifest 已通过信任、新鲜度和版本检查。它提供 version、size 和可选 notes URL，此时尚未下载产物。
 
 **下载与安装**
 
-`PendingUpdate.download()` 将产物写入私有暂存区域，并校验大小、摘要和签名。所有平台上都不会替换应用文件或退出。相同 revision 的下载已准备好时，重复调用不会再次下载。
+`PendingUpdate.download()` 将产物写入私有暂存区域，并校验大小、摘要和签名。所有平台上都不会替换应用文件或退出。相同版本的下载已准备好时，重复调用不会再次下载。
 
 下载完成后，在用户选择应用更新时调用 `ApplicationContext.quit_and_install()`：
 
@@ -393,7 +393,18 @@ match context.check_for_update() {
 
 **发布者责任**
 
-应用 identifier 保持稳定，revision 单调递增。[CLI package](../command-line-interface/commands.md#package) 的更新元数据选项指定产物位置、发布时间和 revision。updater public-key 只格式化公钥，不生成密钥、签署更新 manifest 或托管服务器。系统签名／公证与更新器签名验证承担不同检查，配置其中一项不会自动配置另一项。
+应用 identifier 保持稳定，每次发布更新都提升 `package.version`。版本使用三个数字分量（`major.minor.patch`），不支持预发布或构建后缀；同版本重新构建不视为更新。[CLI package](../command-line-interface/commands.md#package) 的更新元数据选项指定产物位置和发布时间，manifest 使用应用打包版本。
+
+Schema 3 替代原先依赖 revision 的 schema 2：已有客户端继续使用旧端点，需要手动升级或专门准备的过渡版本，才能迁移到独立的 schema 3 端点。
+
+在 Proton 之外生成签名密钥并导出标准 PEM 公钥：
+
+```sh
+openssl genrsa -out updater-private.pem 2048
+openssl pkey -in updater-private.pem -pubout -out updater-public.pem
+```
+
+将 `updater-public.pem` 的内容嵌入应用，以字符串传给 `App.update_channel`。`updater-private.pem` 只留在签名环境中，不得随应用打包。Proton 不生成密钥、不签署发布文件，也不托管更新端点。系统签名／公证与更新器签名验证承担不同检查，配置其中一项不会自动配置另一项。
 
 ## 进程控制与指标
 

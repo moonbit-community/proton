@@ -29,7 +29,6 @@ proton_cli [--cwd <directory>] <command> [options]
 | [`doctor`](#doctor) | Report environment and project diagnostics |
 | [`cef setup`](#cef-setup) | Install the release-matched runtime and helper |
 | [`cef requirements`](#cef-requirements) | Print the embedded CEF requirement |
-| [`updater public-key`](#updater-public-key) | Validate and format a trusted updater public key |
 
 ## `help`
 
@@ -138,9 +137,8 @@ Builds and assembles the application, frontend assets, CEF runtime, matching hel
 | `--macos-minimum-system-version <version>` | Override `package.platforms.macos.minimum_system_version` |
 | `--sign` | Sign the application; disabled by default |
 | `--notarize` | macOS signing, notarization and stapling; implies `--sign` |
-| `--updater-base-url <https-url>` | Emit update metadata using this artifact base URL; requires publication instant and revision |
+| `--updater-base-url <https-url>` | Emit update metadata using this artifact base URL; requires publication instant; uses `package.version`, overridden by `--version` |
 | `--updater-published-at <instant>` | Publication instant in `YYYY-MM-DDTHH:MM:SSZ`; requires base URL |
-| `--updater-revision <integer>` | Monotonic release sequence embedded in the app and update metadata |
 
 CLI lists such as `--format` override configured lists. Application identity comes from the top-level configuration `identifier`; `package` has no `--identifier` option. `--release` does not imply signing. A successful dry run does not verify artifact creation or runtime behavior. See [packaging](packaging.md) for platform formats, configuration defaults and resource rules.
 
@@ -189,21 +187,6 @@ proton_cli cef requirements
 ```
 
 Prints the release's embedded CEF requirement as JSON. It does not install the runtime or inspect an application's running browser. No command-specific options.
-
-## `updater public-key`
-
-```text
-proton_cli updater public-key --modulus <hex> [--exponent <hex>]
-```
-
-Validates a trusted RSA public key and prints a comment with its bit length followed by `rsa-sha256:<modulus>:<exponent>`, suitable for `App::update_channel`'s `public_keys`.
-
-| Option | Meaning |
-| --- | --- |
-| `--modulus <hex>` | Required RSA modulus; accepts the `Modulus=` prefix produced by OpenSSL |
-| `--exponent <hex>` | Public exponent; default `010001` (65537) |
-
-Surrounding whitespace is trimmed and hexadecimal is normalized to lowercase. The runtime's key parser validates the key, including modulus size and exponent. This command does not generate a key pair, read PEM files, sign artifacts or publish updates.
 
 ## Exit status and update checks
 

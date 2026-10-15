@@ -27,7 +27,6 @@ pub fn ManifestError::to_string(Self) -> String
 // Types and methods
 pub struct Manifest {
   version : Version
-  revision : UInt64
   published_at : Timestamp
   notes_url : String?
   platforms : Map[String, PlatformUpdate]
@@ -38,7 +37,6 @@ pub fn Manifest::parse(String) -> Self raise ManifestError
 pub fn Manifest::platform(Self, String) -> PlatformUpdate?
 pub fn Manifest::platforms(Self) -> Array[String]
 pub fn Manifest::published_at(Self) -> Timestamp
-pub fn Manifest::revision(Self) -> UInt64
 pub fn Manifest::version(Self) -> Version
 
 pub struct PlatformUpdate {

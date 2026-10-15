@@ -17,7 +17,6 @@ fn windows_test_spec(
     }),
     output: resolve_path(root, "output with spaces"),
     sign,
-    update_revision: 0UL,
     frontend_dist: Some(resolve_path(root, "frontend/dist")),
     resources: [resolve_path(root, "bundle resources/**")],
   }

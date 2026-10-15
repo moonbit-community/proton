@@ -1,6 +1,6 @@
 ///|
 /// The only manifest schema this client understands.
-pub let supported_schema_version : Int32 = 2
+pub let supported_schema_version : Int32 = 3
 
 ///|
 /// Number of hexadecimal characters in a SHA-256 digest.
@@ -46,10 +46,9 @@ pub fn PlatformUpdate::signature_hex(self : PlatformUpdate) -> String {
 ///
 /// Decoding proves the document is well formed. It proves nothing about
 /// authenticity: the caller verifies the manifest signature before trusting any
-/// of this, and enforces revision monotonicity and freshness afterwards.
+/// of this, and enforces version ordering and freshness afterwards.
 pub struct Manifest {
   version : Version
-  revision : UInt64
   published_at : Timestamp
   notes_url : String?
   platforms : Map[String, PlatformUpdate]
@@ -58,16 +57,6 @@ pub struct Manifest {
 ///|
 pub fn Manifest::version(self : Manifest) -> Version {
   self.version
-}
-
-///|
-/// The signed, monotonically increasing release order.
-///
-/// Unlike the display version, this value is compared at install time and
-/// never resets. It is what prevents an older signed release from replacing a
-/// newer installed application.
-pub fn Manifest::revision(self : Manifest) -> UInt64 {
-  self.revision
 }
 
 ///|
@@ -115,7 +104,6 @@ pub fn Manifest::from_json(json : Json) -> Manifest raise ManifestError {
     guard key
       is ("schema_version"
       | "version"
-      | "revision"
       | "published_at"
       | "notes_url"
       | "platforms") else {
@@ -134,13 +122,6 @@ pub fn Manifest::from_json(json : Json) -> Manifest raise ManifestError {
         path="manifest.version",
         expectation="must be major.minor.patch with no leading zeros",
       )
-  }
-  let revision = required_uint64(fields, "revision", "manifest")
-  guard revision > 0UL else {
-    raise InvalidField(
-      path="manifest.revision",
-      expectation="must be a positive unsigned 64-bit integer",
-    )
   }
   let published_at = match
     Timestamp::parse(required_string(fields, "published_at", "manifest")) {
@@ -164,36 +145,9 @@ pub fn Manifest::from_json(json : Json) -> Manifest raise ManifestError {
   }
   Manifest::{
     version,
-    revision,
     published_at,
     notes_url,
     platforms: parse_platforms(platforms_json),
-  }
-}
-
-///|
-fn required_uint64(
-  fields : Map[String, Json],
-  name : String,
-  path : String,
-) -> UInt64 raise ManifestError {
-  match fields.get(name) {
-    None => raise MissingField(path="\{path}.\{name}")
-    Some(Number(value, repr~)) => {
-      let text = repr.unwrap_or(value.to_string())
-      @string.parse_uint64(text[:]) catch {
-        _ =>
-          raise InvalidField(
-            path="\{path}.\{name}",
-            expectation="must be an unsigned 64-bit integer",
-          )
-      }
-    }
-    Some(_) =>
-      raise InvalidField(
-        path="\{path}.\{name}",
-        expectation="must be an unsigned 64-bit integer",
-      )
   }
 }
 

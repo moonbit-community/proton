@@ -73,9 +73,7 @@ ln -s "$openssl_root/lib/libssl.3.dylib" "$work/tls/libssl.48.dylib"
 # The publisher's key. A real release keeps this offline; here it lives beside
 # the artifacts it signs because nothing about it is secret to this test.
 "$openssl_bin" genrsa -out "$work/keys/private.pem" 2048 2>/dev/null
-modulus="$("$openssl_bin" rsa -in "$work/keys/private.pem" -noout -modulus |
-  sed 's/^Modulus=//' | tr 'A-Z' 'a-z')"
-printf 'rsa-sha256:%s:010001' "$modulus" > "$work/keys/trusted.txt"
+"$openssl_bin" pkey -in "$work/keys/private.pem" -pubout -out "$work/keys/trusted.txt"
 
 # Builds one signed bundle. Signing is ad-hoc: the check the updater makes is
 # that the seal covers the contents and that both bundles call themselves the
@@ -83,8 +81,7 @@ printf 'rsa-sha256:%s:010001' "$modulus" > "$work/keys/trusted.txt"
 make_bundle() {
   app="$1"
   version="$2"
-  revision="$3"
-  executable="$4"
+  executable="$3"
   mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources" \
     "$app/Contents/Frameworks"
   cp "$binary" "$app/Contents/MacOS/$executable"
@@ -97,7 +94,6 @@ make_bundle() {
 <key>CFBundleName</key><string>Updatee</string>
 <key>CFBundlePackageType</key><string>APPL</string>
 <key>CFBundleShortVersionString</key><string>$version</string>
-<key>ProtonUpdateRevision</key><string>$revision</string>
 <key>LSBackgroundOnly</key><true/>
 </dict></plist>
 PLIST
@@ -105,8 +101,8 @@ PLIST
   codesign --verify --strict "$app"
 }
 
-make_bundle "$work/build/Old.app" "0.1.0" "1" "updatee"
-make_bundle "$work/build/Updatee.app" "0.2.0" "2" "updatee-new"
+make_bundle "$work/build/Old.app" "0.1.0" "updatee"
+make_bundle "$work/build/Updatee.app" "0.2.0" "updatee-new"
 
 # ditto, because the archive has to preserve what the bundle's own signature
 # covers.
@@ -120,9 +116,8 @@ artifact_signature="$("$openssl_bin" dgst -sha256 -sign "$work/keys/private.pem"
   xxd -p | tr -d '\n')"
 cat > "$work/server/latest.json" <<JSON
 {
-  "schema_version": 2,
+  "schema_version": 3,
   "version": "0.2.0",
-  "revision": 2,
   "published_at": "$(date -u '+%Y-%m-%dT%H:%M:%SZ')",
   "platforms": {
     "darwin-arm64": {

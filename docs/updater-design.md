@@ -52,7 +52,7 @@ delta artifacts can be introduced without a breaking schema change.
 | --- | --- | --- |
 | Network attacker | Observe and modify traffic | TLS for transport, plus an artifact signature that TLS does not provide |
 | Compromised host or CDN | Serve arbitrary bytes at the update URL | RSA signature; the private key never touches the distribution host |
-| Rollback attacker | Replay an older, validly signed release to reintroduce a fixed vulnerability | A signed monotonic revision is checked again under the native commit lock |
+| Rollback attacker | Replay an older, validly signed release to reintroduce a fixed vulnerability | The signed application version is checked again under the native commit lock |
 | Compromised renderer | Execute arbitrary script in the page | The renderer cannot choose a URL and cannot apply an update; see [Renderer surface](#renderer-surface) |
 | Local attacker | Replace a staged path between validation and installation | Native code owns the stage throughout verification and consumption. macOS never exposes the expanded bundle, Linux renames the staged file directly, and Windows keeps the verified installer open against mutation until UAC accepts it |
 | Manifest substitution | Serve a manifest that points a current version at an attacker-chosen artifact | The manifest is signed; version and artifact digest are covered by that signature |
@@ -69,9 +69,8 @@ release asset, or plain HTTP host can serve it.
 
 ```json
 {
-  "schema_version": 2,
+  "schema_version": 3,
   "version": "0.2.0",
-  "revision": 42,
   "published_at": "2026-08-01T00:00:00Z",
   "notes_url": "https://example.com/releases/0.2.0",
   "platforms": {
@@ -91,16 +90,17 @@ Rules:
 - `schema_version` is rejected when unknown. This follows the discipline already
   applied to Proton's structured CLI and native configs: unknown top-level
   fields are an error, never silently ignored.
-- `revision` is a positive unsigned 64-bit release sequence. It is independent
-  of the display `version`, increases for every release, and never resets.
+- `version` is the packaged application version: canonical `major.minor.patch`
+  with non-negative Int32 components. Components compare numerically. Only a
+  strictly newer version is offered; rebuilding a version is not an update.
 - Platform keys reuse the identifiers Proton already uses everywhere else:
   `darwin-arm64`, `darwin-x64`, `win32-x64`, `linux-x64`. Introducing a second
   naming scheme for the same concept would be a defect.
 - `kind` must be `"full"`. Other values are invalid for this schema version.
   Adding another artifact form requires a new schema and an implementation that
   validates it explicitly.
-- `sha256` and `signature` are hexadecimal, matching the key format. One
-  encoding throughout means one strict decoder rather than two.
+- `sha256` and `signature` are lowercase hexadecimal. Public keys use standard
+  PEM encoding independently of these manifest fields.
 - `sha256` is for integrity and resumable download bookkeeping. It is **not** a
   security control; only `signature` is.
 - A platform absent from `platforms` means no update is offered for it. This is
@@ -153,9 +153,9 @@ bytes for a 2048-bit key. There is no container and no encoding layer.
 
 Length equality is enforced rather than normalised: a short signature is not
 zero-extended and a long one is not trimmed, because accepting several
-encodings of one integer is where signature malleability begins. **Nothing in
-this design parses attacker-supplied DER**, which is what a container format
-would have required.
+encodings of one integer is where signature malleability begins. Update
+signatures are raw PKCS#1 blocks. DER decoding is confined to the configured
+PEM public keys; it is not used to interpret downloaded signature bytes.
 
 ### Verification input
 
@@ -166,27 +166,16 @@ and never crosses a function boundary as a value.
 
 ### Key format
 
-A trusted key carries its algorithm and its parameters, in hexadecimal:
+Trusted RSA public keys are standard PEM text: SubjectPublicKeyInfo (`PUBLIC KEY`)
+or PKCS#1 (`RSA PUBLIC KEY`). The application embeds the public PEM contents,
+not a file path, and never includes its private key. There is no Proton-specific
+key conversion command or custom key encoding.
 
-```
-rsa-sha256:<modulus hex>:<exponent hex>
-```
-
-There is no ASN.1 anywhere in the key path. `proton_cli updater public-key`
-converts an OpenSSL public key file into this form.
-
-An unknown algorithm tag is rejected, not guessed. Tagging the algorithm now
-means a future migration — to a post-quantum scheme, or away from RSA for any
-other reason — does not require a release that existing installations cannot
-accept. This is the same forward-compatibility argument as the trusted key
-list, and it is equally impossible to retrofit.
-
-Keys are validated when parsed, and the checks are security controls rather
-than hygiene: a modulus below 2048 bits verifies signatures perfectly well and
-protects nothing; a modulus written with a leading zero byte would let one key
-have two spellings with different values of `k`, and `k` decides which signature
-lengths are accepted; `e = 1` would make every signature equal to the encoded
-block.
+`proton_rsa` uses `oilleelssq-wq/MoonBit-PKI` for PEM and ASN.1 DER decoding.
+Proton selects the RSA algorithm, extracts the modulus and exponent, and retains
+its existing minimum size and exponent checks. Signature verification remains
+RSASSA-PKCS1-v1_5 over SHA-256. Non-RSA keys, private keys, certificates, malformed
+DER, and multiple PEM blocks in a single configured key are rejected.
 
 ### What is signed
 
@@ -198,7 +187,7 @@ how keys are ordered, how numbers are formatted — and every disagreement betwe
 signer and verifier about that rule is a forgery opportunity. Signing the file
 as transmitted has no such rule.
 
-Because the manifest carries `revision`, `version`, and each artifact's
+Because the manifest carries `version`, and each artifact's
 `sha256`, this signature binds one release order to a specific artifact. That
 is what defeats manifest
 substitution, and together with `published_at` it is what makes staleness
@@ -231,16 +220,10 @@ openssl genrsa -out updater.pem 2048
 openssl rsa -in updater.pem -pubout -out updater.pub
 ```
 
-`proton_cli` offers only a converter from that public key to the configured
-form:
+Embed the contents of `updater.pub` in the application's `public_keys` array.
+No CLI conversion is required.
 
-```sh
-proton_cli updater public-key updater.pub
-# rsa-sha256:94c05429a8686a46...:010001
-```
-
-This is a pure data transformation over public material. A `keygen` subcommand
-was considered and rejected: generating a private key would oblige Proton to
+A `keygen` subcommand was considered and rejected: generating a private key would oblige Proton to
 own a cryptographic random source, to write a secret with the right
 permissions, and to keep it out of logs and build output. Tauri has already
 shipped a real instance of that last failure, leaking updater private keys
@@ -295,8 +278,8 @@ Trusting a list instead of a single key removes both:
 app..update_channel(
   "https://example.com/updates/latest.json",
   [
-    "rsa-sha256:94c05429a8686a46...:010001",
-    "rsa-sha256:b71fe3a20c4d8815...:010001",
+    active_public_key_pem,
+    reserve_public_key_pem,
   ],
 )
 ```
@@ -345,8 +328,8 @@ signature, not for the updater manifest or artifact signature.
    signature before parsing anything. Reject unknown `schema_version`. Reject a
    manifest whose `published_at` is older than the configured freshness window.
    Select the entry for the running platform.
-2. **Compare.** Offer the update only when the signed manifest revision is
-   strictly greater than the installed app revision. This check avoids work;
+2. **Compare.** Offer the update only when the signed manifest version is
+   strictly greater than the installed app version. This check avoids work;
    native code repeats it at commit time because another process may install
    between the check and apply.
 3. **Download.** Create an opaque native staging transaction and stream each
@@ -374,10 +357,10 @@ status codes, an opaque fixed-width handle, caller-owned buffers, and no
 platform types across the boundary.
 
 ```c
-int32_t proton_update_stage_begin_revision(
+int32_t proton_update_stage_begin_version(
     const char *parent_dir,
     int64_t expected_size,
-    uint64_t target_revision,
+    const char *target_version,
     proton_update_stage_id_t *out_stage,
     char *error, int32_t error_len);
 int32_t proton_update_stage_write(proton_update_stage_id_t stage,
@@ -389,16 +372,10 @@ int32_t proton_update_stage_install_outcome(
     char *error, int32_t error_len);
 int32_t proton_update_stage_abort(proton_update_stage_id_t stage,
                                   char *error, int32_t error_len);
-int32_t proton_update_current_revision(uint64_t *out_revision,
+int32_t proton_update_current_version(char *out_version, int32_t version_len,
                                        char *error, int32_t error_len);
 int32_t proton_update_relaunch(char *error, int32_t error_len);
 ```
-
-The older `proton_update_stage_begin`, `proton_update_stage_install`, and
-whole-buffer `proton_update_install` entry points remain exported with their
-original signatures for ABI stability, but the Proton updater no longer calls
-them. They are implemented on top of the same private staging transaction
-rather than as separate install paths.
 
 The stage handle is generation-checked and owned by its creating thread. It
 names a private file that native code creates, writes, consumes, and removes;
@@ -407,12 +384,16 @@ Relaunch is separate because the caller owns the decision about unsaved work
 and process exit.
 
 MoonBit serializes installs within one process. A waiting request re-reads the
-installed revision after the active request finishes, so it skips both download
-and apply when that revision is already present. Native code rechecks revision
+installed version after the active request finishes, so it skips both download
+and apply when that version is already present. Native code rechecks version
 ordering under the platform commit lock or mutex and returns distinct busy,
-already-installed, rollback, and revision-mismatch outcomes. macOS additionally
-requires the staged app's code-signed revision to equal the signed manifest
-revision. Windows and Linux package the same revision used to emit the manifest.
+already-installed, rollback, and version-mismatch outcomes. macOS additionally
+requires the staged app's code-signed `CFBundleShortVersionString` to equal the signed manifest
+version. Windows and Linux package the same version used to emit the manifest.
+
+Schema 3 removes the independent release counter. Existing schema 2 clients
+need their old endpoint retained. They require a manual upgrade or an explicitly
+prepared transition release before using a separate schema 3 endpoint.
 
 Artifact RSA signature verification is **not** here. Choosing RSA kept that in
 MoonBit. On macOS, native code also verifies the expanded bundle's platform code
@@ -454,11 +435,11 @@ historical `.previous-*` or `.backup` siblings. Hidden storage also keeps a
 partially deleted bundle out of Moon's package discovery in development trees.
 
 After the replacement completes application startup, it checks that the retained
-revision is older and atomically renames `previous.app` to `deleting.app` under
+version is older and atomically renames `previous.app` to `deleting.app` under
 the existing installation commit lock. Recursive deletion only touches this
 confirmed state. A later launch resumes an interrupted deletion without needing
 the removed Info.plist or a valid signature. Installation still verifies the
-incoming signature, application identity, and monotonic revision; those checks
+incoming signature, application identity, and monotonic version; those checks
 are not deletion predicates. Another update cannot replace a pending recovery
 copy or incomplete cleanup. No transaction log or arbitrary deletion paths are
 introduced: the private directory and its two fixed names encode ownership and
@@ -535,8 +516,8 @@ outside this mechanism. Their package manager or installer owns replacement.
 ..update_channel(
   "https://example.com/updates/latest.json",
   [
-    "rsa-sha256:94c05429a8686a46...:010001",
-    "rsa-sha256:b71fe3a20c4d8815...:010001",
+    active_public_key_pem,
+    reserve_public_key_pem,
   ],
   check_on_launch=true,
   freshness_days=30,
@@ -638,12 +619,12 @@ key held as a secret — never as part of an ordinary build, and never through
 Proton. `proton_cli package` emits the artifact and the digest to be signed;
 producing the signature is an OpenSSL invocation the developer controls.
 
-`--updater-revision` is required with `--updater-base-url`. The same value is
-written to the manifest fragment and to the installation itself, so native
-apply can prove it is committing the artifact the manifest ordered. Where it
-lands depends on what the platform can protect: macOS uses
-`ProtonUpdateRevision` in the app's signed `Info.plist`. Linux reads
-`proton-update-revision` from the AppImage's authenticated, read-only squashfs.
+`package.version` supplies both the manifest fragment and the installed
+application version. `--version` can override it for packaging; there is no
+separate updater version option. Native apply compares the same version under
+the commit lock. macOS reads `CFBundleShortVersionString` from the app's signed
+`Info.plist`. Linux reads
+`proton-update-version` from the AppImage's authenticated, read-only squashfs.
 It also advances a sidecar as a cross-process coordination cache while an old
 mounted image is still running; the packaged value and cache are combined by
 maximum, so lowering the mutable cache cannot enable rollback. Windows installs

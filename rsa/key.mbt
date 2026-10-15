@@ -8,9 +8,6 @@
 pub let minimum_modulus_bits : Int32 = 2048
 
 ///|
-let algorithm_tag : String = "rsa-sha256"
-
-///|
 /// An RSA public key that verifies RSASSA-PKCS1-v1_5 signatures over SHA-256.
 pub struct PublicKey {
   modulus : @bigint.BigInt
@@ -21,34 +18,24 @@ pub struct PublicKey {
 }
 
 ///|
-/// Parses a trusted public key.
+/// Parses a PEM-encoded RSA public key.
 ///
-/// The encoding is `rsa-sha256:<modulus hex>:<exponent hex>`, big-endian and
-/// unsigned. The algorithm tag is part of the stored key so that migrating to a
-/// different scheme later does not require a release that existing
-/// installations are unable to accept.
+/// Accepts SubjectPublicKeyInfo (`PUBLIC KEY`, produced by `openssl pkey -pubout`)
+/// and PKCS#1 (`RSA PUBLIC KEY`). Private keys and certificates are not accepted.
 pub fn PublicKey::parse(text : String) -> PublicKey raise KeyError {
-  let parts = text.split(":").collect()
-  guard parts.length() == 3 else {
-    raise Malformed(
-      detail="expected \{algorithm_tag}:<modulus hex>:<exponent hex>",
-    )
+  let block = @pem.decode_pem_single(text[:]) catch {
+    error => raise Malformed(detail=error.to_string())
   }
-  let tag = parts[0].to_owned()
-  guard tag == algorithm_tag else { raise UnknownAlgorithm(tag~) }
-  let modulus_bytes = decode_hex(parts[1].to_owned())
-  let exponent_bytes = decode_hex(parts[2].to_owned())
-
-  // A leading zero byte would let two different texts denote the same modulus
-  // with different values of `k`, and `k` decides which signature lengths are
-  // accepted. Requiring a canonical encoding keeps that mapping one to one.
-  guard modulus_bytes[0] != b'\x00' else { raise NonCanonicalModulus }
-  let modulus = @bigint.BigInt::from_octets(modulus_bytes[:])
+  let (modulus, exponent) = parse_parameters(block) catch {
+    error => raise Malformed(detail=error.to_string())
+  }
+  guard modulus.compare_int(0) > 0 else {
+    raise Malformed(detail="RSA modulus must be positive")
+  }
   let bits = modulus.bit_length()
   guard bits >= minimum_modulus_bits else {
     raise ModulusTooSmall(bits~, minimum=minimum_modulus_bits)
   }
-  let exponent = @bigint.BigInt::from_octets(exponent_bytes[:])
   // e = 1 would make the signature equal to the encoded message, so anyone
   // could produce one. Even exponents are not valid RSA exponents at all.
   guard exponent.compare_int(3) >= 0 else {
@@ -58,7 +45,48 @@ pub fn PublicKey::parse(text : String) -> PublicKey raise KeyError {
     raise InvalidExponent(detail="must be smaller than the modulus")
   }
   guard exponent.is_odd() else { raise InvalidExponent(detail="must be odd") }
-  PublicKey::{ modulus, exponent, size: modulus_bytes.length(), }
+  PublicKey::{ modulus, exponent, size: (bits + 7) / 8, }
+}
+
+///|
+/// Uses the DER library for framing and integer decoding; this layer only
+/// selects RSA and checks the public-key structure.
+fn parse_parameters(
+  block : @pem.PemBlock,
+) -> (@bigint.BigInt, @bigint.BigInt) raise @asn1.DerError {
+  let encoded = match block.label {
+    "RSA PUBLIC KEY" => block.data
+    "PUBLIC KEY" => {
+      let fields = @asn1.DerReader::from_bytes(block.data)
+        .read_single()
+        .as_sequence()
+      guard fields is [algorithm, key] else {
+        raise @asn1.InvalidValue("expected SubjectPublicKeyInfo")
+      }
+      let algorithm = algorithm.as_sequence()
+      guard algorithm is [oid, parameters] else {
+        raise @asn1.InvalidValue(
+          "expected RSA algorithm identifier and NULL parameters",
+        )
+      }
+      let oid = oid.as_object_identifier().to_string()
+      guard oid == "1.2.840.113549.1.1.1" else {
+        raise @asn1.InvalidValue("unsupported public key algorithm: \{oid}")
+      }
+      parameters.as_null()
+      let (unused_bits, encoded) = key.as_bit_string()
+      guard unused_bits == 0 else {
+        raise @asn1.InvalidValue("RSA public key must contain complete octets")
+      }
+      encoded
+    }
+    _ => raise @asn1.InvalidValue("expected PUBLIC KEY or RSA PUBLIC KEY PEM")
+  }
+  let fields = @asn1.DerReader::from_bytes(encoded).read_single().as_sequence()
+  guard fields is [modulus, exponent] else {
+    raise @asn1.InvalidValue("expected RSA modulus and public exponent")
+  }
+  (modulus.as_integer(), exponent.as_integer())
 }
 
 ///|

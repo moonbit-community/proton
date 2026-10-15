@@ -43,6 +43,55 @@ extern char **environ;
 
 #define PROTON_UPDATE_MAX_PATH 4096
 
+/* Matches proton_updater.Version: three canonical decimal Int32 components. */
+typedef struct {
+  int32_t components[3];
+} proton_update_version_t;
+
+static int proton_update_parse_version(const char *text,
+                                       proton_update_version_t *out) {
+  if (text == NULL) {
+    return 0;
+  }
+  for (int i = 0; i < 3; i++) {
+    const char *start = text;
+    int32_t value = 0;
+    while (*text >= '0' && *text <= '9') {
+      int digit = *text++ - '0';
+      if (value > (INT32_MAX - digit) / 10) {
+        return 0;
+      }
+      value = value * 10 + digit;
+    }
+    if (text == start || (text - start > 1 && *start == '0')) {
+      return 0;
+    }
+    out->components[i] = value;
+    if (i < 2) {
+      if (*text++ != '.') {
+        return 0;
+      }
+    }
+  }
+  return *text == '\0';
+}
+
+static int proton_update_compare_versions(proton_update_version_t a,
+                                          proton_update_version_t b) {
+  for (int i = 0; i < 3; i++) {
+    if (a.components[i] != b.components[i]) {
+      return a.components[i] > b.components[i] ? 1 : -1;
+    }
+  }
+  return 0;
+}
+
+static void proton_update_format_version(proton_update_version_t version,
+                                         char *out, size_t size) {
+  snprintf(out, size, "%d.%d.%d", version.components[0],
+           version.components[1], version.components[2]);
+}
+
 static char proton_update_previous[PROTON_UPDATE_MAX_PATH];
 static char proton_update_override[PROTON_UPDATE_MAX_PATH];
 
@@ -178,13 +227,13 @@ static int32_t proton_update_require_owned_medium(char *error,
    because it solves the same problem: keeping the downloaded bytes
    untampered from first write through final rename.
 
-   Revision tracking reads the packaged metadata from the mounted, read-only
+   Version tracking reads the packaged metadata from the mounted, read-only
    AppImage filesystem and maintains a mutable sidecar only as a cross-process
    coordination cache while the old image is still running. */
 #if defined(__linux__)
 
 #define PROTON_UPDATE_MAX_STAGES 8
-static uint64_t proton_update_installed_revision = 0;
+static proton_update_version_t proton_update_installed_version = {{0}};
 typedef struct {
   uint32_t generation;
   int occupied;
@@ -193,7 +242,7 @@ typedef struct {
   int fd;
   int64_t expected_size;
   int64_t written_size;
-  uint64_t target_revision;
+  proton_update_version_t target_version;
   char staging[PROTON_UPDATE_MAX_PATH];
 } proton_update_stage_slot_t;
 
@@ -223,7 +272,7 @@ static void proton_update_stage_release(proton_update_stage_slot_t *slot,
   slot->destroyed = 1;
   slot->expected_size = 0;
   slot->written_size = 0;
-  slot->target_revision = 0;
+  slot->target_version = (proton_update_version_t){{0}};
   pthread_mutex_unlock(&g_update_stage_mutex);
 }
 
@@ -315,55 +364,45 @@ static int proton_update_append_path(const char *path, const char *suffix,
   return 1;
 }
 
-/* Reads a decimal revision file. A missing file is revision zero; malformed
+/* Reads an application version file. A missing coordination file is 0.0.0; malformed
    contents are an error because silently resetting the rollback anchor would
    make every signed historical release appear current again. */
-static int proton_update_read_revision_file(const char *path,
-                                            uint64_t *out_revision) {
+static int proton_update_read_version_file(const char *path, int optional,
+                                            proton_update_version_t *out_version) {
   int fd = open(path, O_RDONLY | O_CLOEXEC | O_NOFOLLOW);
   if (fd < 0) {
-    if (errno != ENOENT) {
+    if (!optional || errno != ENOENT) {
       return 0;
     }
-    *out_revision = 0;
+    *out_version = (proton_update_version_t){{0}};
     return 1;
   }
-  char buffer[32];
+  char buffer[64];
   ssize_t n = read(fd, buffer, sizeof(buffer) - 1);
   close(fd);
   if (n <= 0) {
     return 0;
   }
   buffer[n] = '\0';
-  errno = 0;
-  char *end = NULL;
-  unsigned long long parsed = strtoull(buffer, &end, 10);
-  if (errno != 0 || end == buffer) {
-    return 0;
+  if (buffer[n - 1] == '\n') {
+    buffer[--n] = '\0';
   }
-  while (*end == ' ' || *end == '\t' || *end == '\r' || *end == '\n') {
-    end++;
-  }
-  if (*end != '\0') {
-    return 0;
-  }
-  *out_revision = (uint64_t)parsed;
-  return 1;
+  return proton_update_parse_version(buffer, out_version);
 }
 
-static int proton_update_revision_sidecar(const char *appimage_path, char *out,
+static int proton_update_version_sidecar(const char *appimage_path, char *out,
                                           size_t out_len) {
-  return proton_update_append_path(appimage_path, ".proton-revision", out,
+  return proton_update_append_path(appimage_path, ".proton-version", out,
                                    out_len);
 }
 
 /* Atomically advances the mutable cross-process coordination cache. The
-   packaged revision remains authoritative across launches; taking the maximum
+   packaged version remains authoritative across launches; taking the maximum
    of both prevents lowering this cache from enabling a rollback. */
-static int proton_update_write_revision_sidecar(const char *appimage_path,
-                                                uint64_t revision) {
+static int proton_update_write_version_sidecar(const char *appimage_path,
+                                                proton_update_version_t version) {
   char sidecar[PROTON_UPDATE_MAX_PATH];
-  if (!proton_update_revision_sidecar(appimage_path, sidecar,
+  if (!proton_update_version_sidecar(appimage_path, sidecar,
                                       sizeof(sidecar))) {
     return 0;
   }
@@ -377,9 +416,9 @@ static int proton_update_write_revision_sidecar(const char *appimage_path,
   if (fd < 0) {
     return 0;
   }
-  char buffer[32];
-  int length = snprintf(buffer, sizeof(buffer), "%llu\n",
-                        (unsigned long long)revision);
+  char buffer[64];
+  proton_update_format_version(version, buffer, sizeof(buffer));
+  int length = (int)strlen(buffer);
   int ok = write(fd, buffer, (size_t)length) == (ssize_t)length &&
            fsync(fd) == 0;
   if (close(fd) != 0) {
@@ -392,56 +431,59 @@ static int proton_update_write_revision_sidecar(const char *appimage_path,
   return 1;
 }
 
-/* Reads the revision embedded in the mounted AppImage. The package builder
+/* Reads the version embedded in the mounted AppImage. The package builder
    writes it into the read-only squashfs, so it is part of the authenticated
    artifact rather than a mutable sidecar beside it. Deriving the resource
    path from /proc/self/exe avoids trusting an inherited APPDIR value. The
    native test override bypasses reading the running executable. */
-static int proton_update_read_packaged_revision(uint64_t *out_revision) {
-  uint64_t packaged_revision = 0;
+static int proton_update_read_packaged_version(proton_update_version_t *out_version) {
+  proton_update_version_t packaged_version = {{0}};
   if (proton_update_override[0] == '\0') {
     char executable[PROTON_UPDATE_MAX_PATH];
     ssize_t length = readlink("/proc/self/exe", executable,
                               sizeof(executable) - 1);
-    if (length > 0 && (size_t)length < sizeof(executable)) {
-      executable[length] = '\0';
-      char bin_dir[PROTON_UPDATE_MAX_PATH];
-      char usr_dir[PROTON_UPDATE_MAX_PATH];
-      if (!proton_update_parent_path(executable, bin_dir, sizeof(bin_dir)) ||
-          !proton_update_parent_path(bin_dir, usr_dir, sizeof(usr_dir))) {
-        return 0;
-      }
-      char embedded[PROTON_UPDATE_MAX_PATH];
-      if (!proton_update_append_path(
-              usr_dir, "/Resources/proton-update-revision", embedded,
-              sizeof(embedded))) {
-        return 0;
-      }
-      if (!proton_update_read_revision_file(embedded, &packaged_revision)) {
-        return 0;
-      }
+    if (length <= 0 || (size_t)length >= sizeof(executable)) {
+      return 0;
+    }
+    executable[length] = '\0';
+    char bin_dir[PROTON_UPDATE_MAX_PATH];
+    char usr_dir[PROTON_UPDATE_MAX_PATH];
+    if (!proton_update_parent_path(executable, bin_dir, sizeof(bin_dir)) ||
+        !proton_update_parent_path(bin_dir, usr_dir, sizeof(usr_dir))) {
+      return 0;
+    }
+    char embedded[PROTON_UPDATE_MAX_PATH];
+    if (!proton_update_append_path(
+            usr_dir, "/Resources/proton-update-version", embedded,
+            sizeof(embedded))) {
+      return 0;
+    }
+    if (!proton_update_read_version_file(embedded, 0, &packaged_version)) {
+      return 0;
     }
   }
-  *out_revision = packaged_revision;
+  *out_version = packaged_version;
   return 1;
 }
 
-static int proton_update_read_revision(const char *appimage_path,
-                                       uint64_t *out_revision) {
-  uint64_t packaged_revision = 0;
-  if (!proton_update_read_packaged_revision(&packaged_revision)) return 0;
+static int proton_update_read_version(const char *appimage_path,
+                                       proton_update_version_t *out_version) {
+  proton_update_version_t packaged_version = {{0}};
+  if (!proton_update_read_packaged_version(&packaged_version)) {
+    return 0;
+  }
   char sidecar[PROTON_UPDATE_MAX_PATH];
-  if (!proton_update_revision_sidecar(appimage_path, sidecar,
+  if (!proton_update_version_sidecar(appimage_path, sidecar,
                                       sizeof(sidecar))) {
     return 0;
   }
-  uint64_t coordinated_revision = 0;
-  if (!proton_update_read_revision_file(sidecar, &coordinated_revision)) {
+  proton_update_version_t coordinated_version = {{0}};
+  if (!proton_update_read_version_file(sidecar, 1, &coordinated_version)) {
     return 0;
   }
-  *out_revision = packaged_revision > coordinated_revision
-                      ? packaged_revision
-                      : coordinated_revision;
+  *out_version = proton_update_compare_versions(packaged_version, coordinated_version) > 0
+                      ? packaged_version
+                      : coordinated_version;
   return 1;
 }
 
@@ -487,9 +529,14 @@ static int32_t proton_update_acquire_commit_lock(const char *appimage_path,
   return PROTON_OK;
 }
 
-int32_t proton_update_stage_begin_revision(
-    const char *parent_dir, int64_t expected_size, uint64_t target_revision,
+int32_t proton_update_stage_begin_version(
+    const char *parent_dir, int64_t expected_size, const char *target_version_text,
     proton_update_stage_id_t *out_stage, char *error, int32_t error_len) {
+  proton_update_version_t target_version;
+  if (!proton_update_parse_version(target_version_text, &target_version)) {
+    proton_update_set_message(error, error_len, "the target version must be major.minor.patch");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
   if (out_stage != NULL) {
     *out_stage = PROTON_INVALID_HANDLE;
   }
@@ -556,7 +603,7 @@ int32_t proton_update_stage_begin_revision(
   slot->fd = -1;
   slot->expected_size = expected_size;
   slot->written_size = 0;
-  slot->target_revision = target_revision;
+  slot->target_version = target_version;
   pthread_mutex_unlock(&g_update_stage_mutex);
   if (!proton_update_append_path(stage_dir, "/.proton-update-XXXXXX",
                                  slot->staging, sizeof(slot->staging))) {
@@ -578,13 +625,6 @@ int32_t proton_update_stage_begin_revision(
     *out_stage = proton_update_make_stage_handle(generation, index);
   }
   return PROTON_OK;
-}
-
-int32_t proton_update_stage_begin(
-    const char *parent_dir, int64_t expected_size,
-    proton_update_stage_id_t *out_stage, char *error, int32_t error_len) {
-  return proton_update_stage_begin_revision(parent_dir, expected_size, 0,
-                                            out_stage, error, error_len);
 }
 
 int32_t proton_update_stage_write(
@@ -661,27 +701,23 @@ int32_t proton_update_stage_install_outcome(
     proton_update_stage_release(slot, 1);
     return PROTON_ERR_PLATFORM;
   }
-  /* Read the current revision. */
-  uint64_t current_revision = 0;
-  if (!proton_update_read_revision(appimage_path, &current_revision)) {
+  /* Read the current version. */
+  proton_update_version_t current_version = {{0}};
+  if (!proton_update_read_version(appimage_path, &current_version)) {
     proton_update_set_message(error, error_len,
-                              "failed to read the current revision");
+                              "failed to read the current version");
     proton_update_stage_release(slot, 1);
     return PROTON_ERR_PLATFORM;
   }
-  uint64_t target_revision = slot->target_revision;
-  if (target_revision == 0) {
-    /* If no target revision was specified, accept any forward update. */
-    target_revision = current_revision + 1;
-  }
-  if (target_revision < current_revision) {
+  proton_update_version_t target_version = slot->target_version;
+  if (proton_update_compare_versions(target_version, current_version) < 0) {
     proton_update_set_message(
         error, error_len,
-        "the staged update revision is older than the installed application");
+        "the staged update version is older than the installed application");
     proton_update_stage_release(slot, 1);
     return PROTON_ERR_UPDATE_ROLLBACK;
   }
-  if (target_revision == current_revision) {
+  if (proton_update_compare_versions(target_version, current_version) == 0) {
     if (out_outcome != NULL) {
       *out_outcome = PROTON_UPDATE_ALREADY_INSTALLED;
     }
@@ -696,23 +732,23 @@ int32_t proton_update_stage_install_outcome(
     proton_update_stage_release(slot, 1);
     return status;
   }
-  uint64_t committed_revision = 0;
-  if (!proton_update_read_revision(appimage_path, &committed_revision)) {
+  proton_update_version_t committed_version = {{0}};
+  if (!proton_update_read_version(appimage_path, &committed_version)) {
     close(lock_fd);
     proton_update_set_message(error, error_len,
-                              "failed to re-read the current revision");
+                              "failed to re-read the current version");
     proton_update_stage_release(slot, 1);
     return PROTON_ERR_PLATFORM;
   }
-  if (target_revision < committed_revision) {
+  if (proton_update_compare_versions(target_version, committed_version) < 0) {
     close(lock_fd);
     proton_update_set_message(
         error, error_len,
-        "the staged update revision is older than the installed application");
+        "the staged update version is older than the installed application");
     proton_update_stage_release(slot, 1);
     return PROTON_ERR_UPDATE_ROLLBACK;
   }
-  if (target_revision == committed_revision) {
+  if (proton_update_compare_versions(target_version, committed_version) == 0) {
     close(lock_fd);
     if (out_outcome != NULL) {
       *out_outcome = PROTON_UPDATE_ALREADY_INSTALLED;
@@ -762,22 +798,22 @@ int32_t proton_update_stage_install_outcome(
     proton_update_stage_release(slot, 1);
     return PROTON_ERR_PLATFORM;
   }
-  if (!proton_update_write_revision_sidecar(appimage_path, target_revision)) {
+  if (!proton_update_write_version_sidecar(appimage_path, target_version)) {
     if (rename(appimage_path, staging_path) != 0) {
       proton_update_set_message(
           error, error_len,
-          "the update was installed but its revision could not be recorded; "
+          "the update was installed but its version could not be recorded; "
           "the previous AppImage remains beside it");
     } else if (rename(previous_path, appimage_path) != 0) {
       (void)rename(staging_path, appimage_path);
       proton_update_set_message(
           error, error_len,
-          "the update revision could not be recorded and the previous "
+          "the update version could not be recorded and the previous "
           "AppImage could not be restored");
     } else {
       (void)unlink(staging_path);
       proton_update_set_message(error, error_len,
-                                "failed to record the installed revision");
+                                "failed to record the installed version");
     }
     close(lock_fd);
     proton_update_stage_release(slot, 1);
@@ -787,7 +823,7 @@ int32_t proton_update_stage_install_outcome(
   snprintf(proton_update_previous, sizeof(proton_update_previous), "%s",
            previous_path);
   /* Keep the old AppImage until the replacement completes startup. */
-  proton_update_installed_revision = target_revision;
+  proton_update_installed_version = target_version;
   close(lock_fd);
   proton_update_stage_release(slot, 1);
   if (out_outcome != NULL) {
@@ -802,27 +838,27 @@ int32_t proton_update_stage_install(
   return proton_update_stage_install_outcome(stage, &outcome, error, error_len);
 }
 
-int32_t proton_update_current_revision(
-    uint64_t *out_revision, char *error, int32_t error_len) {
-  (void)error;
-  (void)error_len;
-  if (out_revision == NULL) {
+int32_t proton_update_current_version(
+    char *out_text, int32_t out_len, char *error, int32_t error_len) {
+  proton_update_version_t version = {{0}};
+  if (out_text == NULL || out_len < 33) {
+    proton_update_set_message(error, error_len, "an application version buffer of at least 33 bytes is required");
     return PROTON_ERR_INVALID_ARGUMENT;
   }
   char appimage_path[PROTON_UPDATE_MAX_PATH];
   if (!proton_update_running_appimage(appimage_path,
                                       sizeof(appimage_path))) {
-    *out_revision = 0;
-    return PROTON_OK;
+    proton_update_set_message(error, error_len, "the installed application path cannot be resolved");
+    return PROTON_ERR_UNSUPPORTED;
   }
-  uint64_t revision = 0;
-  if (!proton_update_read_revision(appimage_path, &revision)) {
-    *out_revision = 0;
-    return PROTON_OK;
+  if (!proton_update_read_version(appimage_path, &version)) {
+    proton_update_set_message(error, error_len, "the installed application version cannot be read");
+    return PROTON_ERR_INVALID_ARGUMENT;
   }
-  *out_revision = revision > proton_update_installed_revision
-                      ? revision
-                      : proton_update_installed_revision;
+  if (proton_update_compare_versions(proton_update_installed_version, version) > 0) {
+    version = proton_update_installed_version;
+  }
+  proton_update_format_version(version, out_text, (size_t)out_len);
   return PROTON_OK;
 }
 
@@ -871,15 +907,15 @@ int32_t proton_update_stage_abort(
 
 int32_t proton_update_install(const char *archive,
                                          int32_t archive_len,
-                                         const char *parent_dir, char *error,
+                                         const char *parent_dir, const char *target_version, char *error,
                                          int32_t error_len) {
   if (archive == NULL || archive_len <= 0) {
     proton_update_set_message(error, error_len, "the update archive is empty");
     return PROTON_ERR_INVALID_ARGUMENT;
   }
   proton_update_stage_id_t stage = PROTON_INVALID_HANDLE;
-  int32_t status = proton_update_stage_begin_revision(
-      parent_dir, (int64_t)archive_len, 0, &stage, error, error_len);
+  int32_t status = proton_update_stage_begin_version(
+      parent_dir, (int64_t)archive_len, target_version, &stage, error, error_len);
   if (status != PROTON_OK) {
     return status;
   }
@@ -930,7 +966,7 @@ typedef struct {
   HANDLE h_file;
   int64_t expected_size;
   int64_t written_size;
-  uint64_t target_revision;
+  proton_update_version_t target_version;
   wchar_t staging[PROTON_UPDATE_MAX_PATH];
 } proton_update_stage_slot_t;
 
@@ -941,7 +977,7 @@ static INIT_ONCE g_update_stage_mutex_once = INIT_ONCE_STATIC_INIT;
 static HANDLE proton_update_pending_installer = INVALID_HANDLE_VALUE;
 static HANDLE proton_update_commit_mutex = NULL;
 static wchar_t proton_update_pending_installer_path[PROTON_UPDATE_MAX_PATH];
-static uint64_t proton_update_pending_revision = 0;
+static proton_update_version_t proton_update_pending_version = {{0}};
 static int proton_update_pending_cleanup_registered = 0;
 
 static void proton_update_discard_pending(void) {
@@ -953,7 +989,7 @@ static void proton_update_discard_pending(void) {
     (void)DeleteFileW(proton_update_pending_installer_path);
     proton_update_pending_installer_path[0] = L'\0';
   }
-  proton_update_pending_revision = 0;
+  proton_update_pending_version = (proton_update_version_t){{0}};
   if (proton_update_commit_mutex != NULL) {
     (void)ReleaseMutex(proton_update_commit_mutex);
     CloseHandle(proton_update_commit_mutex);
@@ -1003,7 +1039,7 @@ static void proton_update_stage_release(proton_update_stage_slot_t *slot,
   slot->destroyed = 1;
   slot->expected_size = 0;
   slot->written_size = 0;
-  slot->target_revision = 0;
+  slot->target_version = (proton_update_version_t){{0}};
   LeaveCriticalSection(&g_update_stage_mutex);
 }
 
@@ -1108,8 +1144,8 @@ static int proton_update_parent_path_w(const wchar_t *path, wchar_t *out,
   return 1;
 }
 
-/* Builds the packaged revision path beside an executable. */
-static void proton_update_revision_path_w(const wchar_t *exe_path,
+/* Builds the packaged version path beside an executable. */
+static void proton_update_version_path_w(const wchar_t *exe_path,
                                           wchar_t *out, size_t out_len) {
   wchar_t parent[PROTON_UPDATE_MAX_PATH];
   if (!proton_update_parent_path_w(exe_path, parent,
@@ -1117,33 +1153,28 @@ static void proton_update_revision_path_w(const wchar_t *exe_path,
     out[0] = L'\0';
     return;
   }
-  int written = _snwprintf(out, out_len, L"%s\\proton-update-revision",
+  int written = _snwprintf(out, out_len, L"%s\\proton-update-version",
                            parent);
   if (written < 0 || (size_t)written >= out_len) {
     out[0] = L'\0';
   }
 }
 
-/* Reads the revision packaged beside the installed executable. */
-static int proton_update_read_revision_w(const wchar_t *exe_path,
-                                         uint64_t *out_revision) {
-  wchar_t revision_path[PROTON_UPDATE_MAX_PATH];
-  proton_update_revision_path_w(exe_path, revision_path,
+/* Reads the version packaged beside the installed executable. */
+static int proton_update_read_version_w(const wchar_t *exe_path,
+                                         proton_update_version_t *out_version) {
+  wchar_t version_path[PROTON_UPDATE_MAX_PATH];
+  proton_update_version_path_w(exe_path, version_path,
                                 PROTON_UPDATE_MAX_PATH);
-  if (revision_path[0] == L'\0') {
+  if (version_path[0] == L'\0') {
     return 0;
   }
-  HANDLE h_file = CreateFileW(revision_path, GENERIC_READ, FILE_SHARE_READ,
+  HANDLE h_file = CreateFileW(version_path, GENERIC_READ, FILE_SHARE_READ,
                               NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
   if (h_file == INVALID_HANDLE_VALUE) {
-    DWORD failure = GetLastError();
-    if (failure == ERROR_FILE_NOT_FOUND || failure == ERROR_PATH_NOT_FOUND) {
-      *out_revision = 0;
-      return 1;
-    }
     return 0;
   }
-  char buffer[32];
+  char buffer[64];
   DWORD bytes_read = 0;
   BOOL ok = ReadFile(h_file, buffer, sizeof(buffer) - 1, &bytes_read, NULL);
   CloseHandle(h_file);
@@ -1151,20 +1182,10 @@ static int proton_update_read_revision_w(const wchar_t *exe_path,
     return 0;
   }
   buffer[bytes_read] = '\0';
-  errno = 0;
-  char *end = NULL;
-  unsigned long long parsed = _strtoui64(buffer, &end, 10);
-  if (errno != 0 || end == buffer) {
-    return 0;
+  if (buffer[bytes_read - 1] == '\n') {
+    buffer[--bytes_read] = '\0';
   }
-  while (*end == ' ' || *end == '\t' || *end == '\r' || *end == '\n') {
-    end++;
-  }
-  if (*end != '\0') {
-    return 0;
-  }
-  *out_revision = (uint64_t)parsed;
-  return 1;
+  return proton_update_parse_version(buffer, out_version);
 }
 
 static int proton_update_is_installed_w(const wchar_t *exe_path) {
@@ -1217,9 +1238,14 @@ static int32_t proton_update_acquire_commit_mutex_w(
   return PROTON_OK;
 }
 
-int32_t proton_update_stage_begin_revision(
-    const char *parent_dir, int64_t expected_size, uint64_t target_revision,
+int32_t proton_update_stage_begin_version(
+    const char *parent_dir, int64_t expected_size, const char *target_version_text,
     proton_update_stage_id_t *out_stage, char *error, int32_t error_len) {
+  proton_update_version_t target_version;
+  if (!proton_update_parse_version(target_version_text, &target_version)) {
+    proton_update_set_message(error, error_len, "the target version must be major.minor.patch");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
   if (out_stage != NULL) {
     *out_stage = PROTON_INVALID_HANDLE;
   }
@@ -1303,7 +1329,7 @@ int32_t proton_update_stage_begin_revision(
   slot->h_file = INVALID_HANDLE_VALUE;
   slot->expected_size = expected_size;
   slot->written_size = 0;
-  slot->target_revision = target_revision;
+  slot->target_version = target_version;
   LeaveCriticalSection(&g_update_stage_mutex);
   /* CREATE_NEW makes the name reservation and file creation one operation. */
   for (uint32_t attempt = 0; attempt < 32; attempt++) {
@@ -1331,13 +1357,6 @@ int32_t proton_update_stage_begin_revision(
     *out_stage = proton_update_make_stage_handle(generation, index);
   }
   return PROTON_OK;
-}
-
-int32_t proton_update_stage_begin(
-    const char *parent_dir, int64_t expected_size,
-    proton_update_stage_id_t *out_stage, char *error, int32_t error_len) {
-  return proton_update_stage_begin_revision(parent_dir, expected_size, 0,
-                                            out_stage, error, error_len);
 }
 
 int32_t proton_update_stage_write(
@@ -1406,26 +1425,23 @@ int32_t proton_update_stage_install_outcome(
   }
   CloseHandle(slot->h_file);
   slot->h_file = INVALID_HANDLE_VALUE;
-  /* Read the current revision. */
-  uint64_t current_revision = 0;
-  if (!proton_update_read_revision_w(exe_path, &current_revision)) {
+  /* Read the current version. */
+  proton_update_version_t current_version = {{0}};
+  if (!proton_update_read_version_w(exe_path, &current_version)) {
     proton_update_set_message(error, error_len,
-                              "failed to read the current revision");
+                              "failed to read the current version");
     proton_update_stage_release(slot, 1);
     return PROTON_ERR_PLATFORM;
   }
-  uint64_t target_revision = slot->target_revision;
-  if (target_revision == 0) {
-    target_revision = current_revision + 1;
-  }
-  if (target_revision < current_revision) {
+  proton_update_version_t target_version = slot->target_version;
+  if (proton_update_compare_versions(target_version, current_version) < 0) {
     proton_update_set_message(
         error, error_len,
-        "the staged update revision is older than the installed application");
+        "the staged update version is older than the installed application");
     proton_update_stage_release(slot, 1);
     return PROTON_ERR_UPDATE_ROLLBACK;
   }
-  if (target_revision == current_revision) {
+  if (proton_update_compare_versions(target_version, current_version) == 0) {
     if (out_outcome != NULL) {
       *out_outcome = PROTON_UPDATE_ALREADY_INSTALLED;
     }
@@ -1445,25 +1461,25 @@ int32_t proton_update_stage_install_outcome(
     proton_update_stage_release(slot, 1);
     return status;
   }
-  uint64_t committed_revision = 0;
-  if (!proton_update_read_revision_w(exe_path, &committed_revision)) {
+  proton_update_version_t committed_version = {{0}};
+  if (!proton_update_read_version_w(exe_path, &committed_version)) {
     ReleaseMutex(commit_mutex);
     CloseHandle(commit_mutex);
     proton_update_set_message(error, error_len,
-                              "failed to re-read the current revision");
+                              "failed to re-read the current version");
     proton_update_stage_release(slot, 1);
     return PROTON_ERR_PLATFORM;
   }
-  if (target_revision < committed_revision) {
+  if (proton_update_compare_versions(target_version, committed_version) < 0) {
     ReleaseMutex(commit_mutex);
     CloseHandle(commit_mutex);
     proton_update_set_message(
         error, error_len,
-        "the staged update revision is older than the installed application");
+        "the staged update version is older than the installed application");
     proton_update_stage_release(slot, 1);
     return PROTON_ERR_UPDATE_ROLLBACK;
   }
-  if (target_revision == committed_revision) {
+  if (proton_update_compare_versions(target_version, committed_version) == 0) {
     ReleaseMutex(commit_mutex);
     CloseHandle(commit_mutex);
     if (out_outcome != NULL) {
@@ -1490,7 +1506,7 @@ int32_t proton_update_stage_install_outcome(
           PROTON_UPDATE_MAX_PATH);
   proton_update_pending_installer_path[PROTON_UPDATE_MAX_PATH - 1] = L'\0';
   slot->staging[0] = L'\0';
-  proton_update_pending_revision = target_revision;
+  proton_update_pending_version = target_version;
   proton_update_commit_mutex = commit_mutex;
   if (!proton_update_pending_cleanup_registered) {
     (void)atexit(proton_update_discard_pending);
@@ -1509,26 +1525,26 @@ int32_t proton_update_stage_install(
   return proton_update_stage_install_outcome(stage, &outcome, error, error_len);
 }
 
-int32_t proton_update_current_revision(
-    uint64_t *out_revision, char *error, int32_t error_len) {
-  (void)error;
-  (void)error_len;
-  if (out_revision == NULL) {
+int32_t proton_update_current_version(
+    char *out_text, int32_t out_len, char *error, int32_t error_len) {
+  proton_update_version_t version = {{0}};
+  if (out_text == NULL || out_len < 33) {
+    proton_update_set_message(error, error_len, "an application version buffer of at least 33 bytes is required");
     return PROTON_ERR_INVALID_ARGUMENT;
   }
   wchar_t exe_path[PROTON_UPDATE_MAX_PATH];
   if (!proton_update_running_exe(exe_path, PROTON_UPDATE_MAX_PATH)) {
-    *out_revision = 0;
-    return PROTON_OK;
+    proton_update_set_message(error, error_len, "the installed application path cannot be resolved");
+    return PROTON_ERR_UNSUPPORTED;
   }
-  uint64_t revision = 0;
-  if (!proton_update_read_revision_w(exe_path, &revision)) {
-    *out_revision = 0;
-    return PROTON_OK;
+  if (!proton_update_read_version_w(exe_path, &version)) {
+    proton_update_set_message(error, error_len, "the installed application version cannot be read");
+    return PROTON_ERR_INVALID_ARGUMENT;
   }
-  *out_revision = revision > proton_update_pending_revision
-                      ? revision
-                      : proton_update_pending_revision;
+  if (proton_update_compare_versions(proton_update_pending_version, version) > 0) {
+    version = proton_update_pending_version;
+  }
+  proton_update_format_version(version, out_text, (size_t)out_len);
   return PROTON_OK;
 }
 
@@ -1553,15 +1569,15 @@ int32_t proton_update_stage_abort(
 
 int32_t proton_update_install(const char *archive,
                                          int32_t archive_len,
-                                         const char *parent_dir, char *error,
+                                         const char *parent_dir, const char *target_version, char *error,
                                          int32_t error_len) {
   if (archive == NULL || archive_len <= 0) {
     proton_update_set_message(error, error_len, "the update archive is empty");
     return PROTON_ERR_INVALID_ARGUMENT;
   }
   proton_update_stage_id_t stage = PROTON_INVALID_HANDLE;
-  int32_t status = proton_update_stage_begin_revision(
-      parent_dir, (int64_t)archive_len, 0, &stage, error, error_len);
+  int32_t status = proton_update_stage_begin_version(
+      parent_dir, (int64_t)archive_len, target_version, &stage, error, error_len);
   if (status != PROTON_OK) {
     return status;
   }
@@ -1598,7 +1614,7 @@ int32_t proton_update_relaunch(char *error, int32_t error_len) {
     return PROTON_ERR_PLATFORM;
   }
   if (proton_update_pending_installer == INVALID_HANDLE_VALUE) {
-    /* Another process may already have installed the authenticated revision. */
+    /* Another process may already have installed the authenticated version. */
     SHELLEXECUTEINFOW launch;
     ZeroMemory(&launch, sizeof(launch));
     launch.cbSize = sizeof(launch);
@@ -1870,7 +1886,7 @@ typedef struct {
   int fd;
   int64_t expected_size;
   int64_t written_size;
-  uint64_t target_revision;
+  proton_update_version_t target_version;
   char staging[PROTON_UPDATE_MAX_PATH];
   char archive_path[PROTON_UPDATE_MAX_PATH];
 } proton_update_stage_slot_t;
@@ -1901,7 +1917,7 @@ static void proton_update_stage_release(proton_update_stage_slot_t *slot,
   slot->destroyed = 1;
   slot->expected_size = 0;
   slot->written_size = 0;
-  slot->target_revision = 0;
+  slot->target_version = (proton_update_version_t){{0}};
   pthread_mutex_unlock(&g_update_stage_mutex);
 }
 
@@ -1949,9 +1965,14 @@ static int32_t proton_update_get_stage(proton_update_stage_id_t handle,
   return PROTON_OK;
 }
 
-int32_t proton_update_stage_begin_revision(
-    const char *parent_dir, int64_t expected_size, uint64_t target_revision,
+int32_t proton_update_stage_begin_version(
+    const char *parent_dir, int64_t expected_size, const char *target_version_text,
     proton_update_stage_id_t *out_stage, char *error, int32_t error_len) {
+  proton_update_version_t target_version;
+  if (!proton_update_parse_version(target_version_text, &target_version)) {
+    proton_update_set_message(error, error_len, "the target version must be major.minor.patch");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
   if (out_stage != NULL) {
     *out_stage = PROTON_INVALID_HANDLE;
   }
@@ -2034,7 +2055,7 @@ int32_t proton_update_stage_begin_revision(
   slot->fd = -1;
   slot->expected_size = expected_size;
   slot->written_size = 0;
-  slot->target_revision = target_revision;
+  slot->target_version = target_version;
   slot->staging[0] = '\0';
   slot->archive_path[0] = '\0';
   pthread_mutex_unlock(&g_update_stage_mutex);
@@ -2071,13 +2092,6 @@ int32_t proton_update_stage_begin_revision(
   }
   *out_stage = proton_update_make_stage_handle(slot->generation, index);
   return PROTON_OK;
-}
-
-int32_t proton_update_stage_begin(
-    const char *parent_dir, int64_t expected_size,
-    proton_update_stage_id_t *out_stage, char *error, int32_t error_len) {
-  return proton_update_stage_begin_revision(parent_dir, expected_size, 0,
-                                            out_stage, error, error_len);
 }
 
 int32_t proton_update_stage_write(
@@ -2193,14 +2207,11 @@ static SecStaticCodeRef proton_update_static_code(const char *path) {
   return code;
 }
 
-#define PROTON_UPDATE_REVISION_KEY "ProtonUpdateRevision"
+#define PROTON_UPDATE_VERSION_KEY "CFBundleShortVersionString"
 
-/* Reads the revision through CoreFoundation's property-list parser. Keeping it
-   as a decimal string in Info.plist preserves the full uint64_t range; plist
-   integers and JSON doubles do not provide that guarantee on every reader. */
-static int proton_update_bundle_revision(const char *bundle,
-                                         int missing_is_zero,
-                                         uint64_t *out_revision, char *error,
+/* Reads the application version from its code-signed Info.plist. */
+static int proton_update_bundle_version(const char *bundle,
+                                         proton_update_version_t *out_version, char *error,
                                          int32_t error_len) {
   char path[PROTON_UPDATE_MAX_PATH];
   int written = snprintf(path, sizeof(path), "%s/Contents/Info.plist", bundle);
@@ -2257,62 +2268,52 @@ static int proton_update_bundle_revision(const char *bundle,
     return 0;
   }
   CFTypeRef raw = CFDictionaryGetValue((CFDictionaryRef)property,
-                                       CFSTR(PROTON_UPDATE_REVISION_KEY));
-  if (raw == NULL && missing_is_zero) {
-    CFRelease(property);
-    *out_revision = 0;
-    return 1;
-  }
+                                       CFSTR(PROTON_UPDATE_VERSION_KEY));
   if (raw == NULL || CFGetTypeID(raw) != CFStringGetTypeID()) {
     CFRelease(property);
     proton_update_set_message(
         error, error_len,
-        "the application has no valid monotonic update revision");
+        "the application has no valid version");
     return 0;
   }
-  char text[32];
+  char text[64];
   int converted = CFStringGetCString((CFStringRef)raw, text, sizeof(text),
                                      kCFStringEncodingASCII);
   CFRelease(property);
-  if (!converted || text[0] == '\0' || text[0] == '-') {
+  if (!converted) {
     proton_update_set_message(
         error, error_len,
-        "the application has no valid monotonic update revision");
+        "the application has no valid version");
     return 0;
   }
-  errno = 0;
-  char *end = NULL;
-  unsigned long long revision = strtoull(text, &end, 10);
-  if (errno == ERANGE || end == text || *end != '\0') {
-    proton_update_set_message(
-        error, error_len,
-        "the application has no valid monotonic update revision");
+  if (!proton_update_parse_version(text, out_version)) {
+    proton_update_set_message(error, error_len,
+                              "the application version must be major.minor.patch");
     return 0;
   }
-  *out_revision = (uint64_t)revision;
   return 1;
 }
 
-int32_t proton_update_current_revision(
-    uint64_t *out_revision, char *error, int32_t error_len) {
-  if (out_revision == NULL) {
-    proton_update_set_message(error, error_len,
-                              "an update revision output is required");
+int32_t proton_update_current_version(
+    char *out_text, int32_t out_len, char *error, int32_t error_len) {
+  proton_update_version_t version = {{0}};
+  if (out_text == NULL || out_len < 33) {
+    proton_update_set_message(error, error_len, "an application version buffer of at least 33 bytes is required");
     return PROTON_ERR_INVALID_ARGUMENT;
   }
-  *out_revision = 0;
   char current[PROTON_UPDATE_MAX_PATH];
   if (!proton_update_running_bundle(current, sizeof(current))) {
     proton_update_set_message(
         error, error_len,
         "the running executable is not inside a .app bundle, so its update "
-        "revision cannot be read");
+        "version cannot be read");
     return PROTON_ERR_UNSUPPORTED;
   }
-  if (!proton_update_bundle_revision(current, 1, out_revision, error,
+  if (!proton_update_bundle_version(current, &version, error,
                                      error_len)) {
     return PROTON_ERR_INVALID_ARGUMENT;
   }
+  proton_update_format_version(version, out_text, (size_t)out_len);
   return PROTON_OK;
 }
 
@@ -2589,14 +2590,14 @@ int32_t proton_update_cleanup_previous(char *error, int32_t error_len) {
                               "the retained update state is invalid");
     status = PROTON_ERR_PLATFORM;
   } else if (retained) {
-    uint64_t current_revision = 0;
-    uint64_t previous_revision = 0;
-    if (!proton_update_bundle_revision(current, 1, &current_revision,
+    proton_update_version_t current_version = {{0}};
+    proton_update_version_t previous_version = {{0}};
+    if (!proton_update_bundle_version(current, &current_version,
                                        error, error_len) ||
-        !proton_update_bundle_revision(previous, 1, &previous_revision,
+        !proton_update_bundle_version(previous, &previous_version,
                                        error, error_len)) {
       status = PROTON_ERR_INVALID_ARGUMENT;
-    } else if (previous_revision < current_revision) {
+    } else if (proton_update_compare_versions(previous_version, current_version) < 0) {
       /* Commit eligibility before touching contents. A later attempt resumes
          deleting.app without requiring its already-removed Info.plist or seal. */
       if (renameat(fd, "previous.app", fd, "deleting.app") != 0) {
@@ -2766,36 +2767,34 @@ int32_t proton_update_stage_install_outcome(
     return PROTON_ERR_INVALID_ARGUMENT;
   }
 
-  uint64_t staged_revision = 0;
-  uint64_t current_revision = 0;
-  if (!proton_update_bundle_revision(staged_bundle_path, 0, &staged_revision,
+  proton_update_version_t staged_version = {{0}};
+  proton_update_version_t current_version = {{0}};
+  if (!proton_update_bundle_version(staged_bundle_path, &staged_version,
                                      error, error_len) ||
-      !proton_update_bundle_revision(current, 1, &current_revision, error,
+      !proton_update_bundle_version(current, &current_version, error,
                                      error_len)) {
     close(lock_fd);
     proton_update_stage_release(slot, 1);
-    return PROTON_ERR_UPDATE_REVISION_MISMATCH;
+    return PROTON_ERR_UPDATE_VERSION_MISMATCH;
   }
-  uint64_t target_revision = slot->target_revision != 0
-                                 ? slot->target_revision
-                                 : staged_revision;
-  if (staged_revision != target_revision) {
+  proton_update_version_t target_version = slot->target_version;
+  if (proton_update_compare_versions(staged_version, target_version) != 0) {
     close(lock_fd);
     proton_update_set_message(
         error, error_len,
-        "the staged application revision does not match the signed manifest");
+        "the staged application version does not match the signed manifest");
     proton_update_stage_release(slot, 1);
-    return PROTON_ERR_UPDATE_REVISION_MISMATCH;
+    return PROTON_ERR_UPDATE_VERSION_MISMATCH;
   }
-  if (target_revision < current_revision) {
+  if (proton_update_compare_versions(target_version, current_version) < 0) {
     close(lock_fd);
     proton_update_set_message(
         error, error_len,
-        "the staged update revision is older than the installed application");
+        "the staged update version is older than the installed application");
     proton_update_stage_release(slot, 1);
     return PROTON_ERR_UPDATE_ROLLBACK;
   }
-  if (target_revision == current_revision) {
+  if (proton_update_compare_versions(target_version, current_version) == 0) {
     close(lock_fd);
     *out_outcome = PROTON_UPDATE_ALREADY_INSTALLED;
     snprintf(proton_update_relaunch_bundle, sizeof(proton_update_relaunch_bundle),
@@ -2823,15 +2822,15 @@ int32_t proton_update_stage_install(
 
 int32_t proton_update_install(const char *archive,
                                          int32_t archive_len,
-                                         const char *parent_dir, char *error,
+                                         const char *parent_dir, const char *target_version, char *error,
                                          int32_t error_len) {
   if (archive == NULL || archive_len <= 0) {
     proton_update_set_message(error, error_len, "the update archive is empty");
     return PROTON_ERR_INVALID_ARGUMENT;
   }
   proton_update_stage_id_t stage = PROTON_INVALID_HANDLE;
-  int32_t status = proton_update_stage_begin_revision(
-      parent_dir, archive_len, 0, &stage, error, error_len);
+  int32_t status = proton_update_stage_begin_version(
+      parent_dir, archive_len, target_version, &stage, error, error_len);
   if (status != PROTON_OK) {
     return status;
   }
@@ -2898,9 +2897,9 @@ int32_t proton_update_validate_running_image(char *error, int32_t error_len) {
 #elif defined(__linux__)
   const char *appimage = getenv("APPIMAGE");
   if (appimage != NULL && appimage[0] != '\0') {
-    uint64_t running = 0, installed = 0;
-    if (!proton_update_read_packaged_revision(&running) ||
-        !proton_update_read_revision(appimage, &installed) || running < installed) {
+    proton_update_version_t running = {{0}}, installed = {{0}};
+    if (!proton_update_read_packaged_version(&running) ||
+        !proton_update_read_version(appimage, &installed) || proton_update_compare_versions(running, installed) < 0) {
       proton_update_set_message(error, error_len,
                                 "the running AppImage was replaced; start the installed application again");
       return PROTON_ERR_DESTROYED;
