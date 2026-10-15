@@ -333,6 +333,8 @@ pub fn App::document_extension(self : App, extension : String) -> Unit {
 
 ///|
 /// Configures the signed update channel used by this application.
+/// `public_keys` contains PEM-encoded RSA public-key text, not file paths.
+/// Keep private keys outside the application.
 pub fn App::update_channel(
   self : App,
   endpoint : String,

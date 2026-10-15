@@ -2546,7 +2546,7 @@ fn updater_test_channel(check_on_launch : Bool) -> ResolvedUpdateChannel? {
   ..identifier("dev.proton.update-test")
   ..update_channel(
     "https://updates.example.com/latest.json",
-    ["rsa-sha256:ab:010001"],
+    ["invalid PEM public key"],
     check_on_launch~,
   )
   .resolved_app_config().update_channel

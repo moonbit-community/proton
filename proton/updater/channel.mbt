@@ -47,6 +47,7 @@ pub struct UpdateChannel {
 
 ///|
 /// Resolves a channel from its configured form.
+/// `public_keys` contains PEM public-key text, not file paths.
 ///
 /// Trusted keys are parsed once, here, so that a key which cannot be used is
 /// reported when the channel is built rather than at the moment a signature

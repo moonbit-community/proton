@@ -1,6 +1,6 @@
 ///|
 fn vector_key() -> PublicKey raise {
-  PublicKey::parse("rsa-sha256:\{vector_modulus_hex}:\{vector_exponent_hex}")
+  PublicKey::parse(vector_public_key_pem)
 }
 
 ///|
@@ -138,4 +138,9 @@ test "compares byte strings without an early exit" {
   assert_false(bytes_equal_no_early_exit(b"\x01\x02\x03", b"\x81\x02\x03"))
   assert_false(bytes_equal_no_early_exit(b"\x01\x02", b"\x01\x02\x03"))
   assert_true(bytes_equal_no_early_exit(b"", b""))
+}
+
+///|
+fn decode_hex(text : String) -> Bytes raise {
+  @hex.decode(text[:])
 }

@@ -13,7 +13,6 @@ import {
   "moonbit-community/proton_cli/new" @new_project,
   "moonbit-community/proton_cli/output",
   "moonbit-community/proton_cli/package",
-  "moonbit-community/proton_cli/updater",
   "moonbit-community/proton_updater",
 }
 

@@ -1,6 +1,0 @@
-import {
-  "moonbit-community/proton_rsa" @rsa,
-  "moonbitlang/core/argparse",
-}
-
-supported_targets = "native+wasm"

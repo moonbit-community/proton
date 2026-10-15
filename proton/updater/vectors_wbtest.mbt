@@ -4,9 +4,6 @@
 // so a disagreement indicts this package rather than the vector.
 
 ///|
-let vector_modulus_hex : String = "ce78ad25bc9617215ecbc56a303330acbbc9c39da56bac8b6cd6379996c0565d6a4fd4e4463d5ab23facb82e7d110ab8389713ae08eab5fdba9594ccfc036f5c3a2675a217fb5f2ebd4d1967012e0f8ac066a2fbf866bce97f3c6ca93f991718a4f9b6b1480b0a8907818405bc91699612cb06db9e44af581a1c65b0cd49b5acde109b0892067a2fa1356f28ab71597baead105e46031f4a6561bf2be9afeba6a9950ad08dcf4ab31a902a632d8d33d13eb4bb5e82ce21813290796dc50f806d9844b91bea5eedb5ad13fe20193e4ddce9ab59a7365c92cedb3e15eec2d9692bb337af93c9827c285ae9716c5dee1a43253972f1f73fec0e8a442068b83824e7"
-
-///|
 let vector_manifest : String = "{\"schema_version\":3,\"version\":\"0.3.0\",\"published_at\":\"2026-08-01T00:00:00Z\",\"notes_url\":\"https://example.com/notes\",\"platforms\":{\"darwin-arm64\":{\"kind\":\"full\",\"url\":\"https://example.com/App-0.3.0.zip\",\"size\":11,\"sha256\":\"4c83048dd991da670e578ca812c1b6a306dc69ee8c389d2a2e41f0de4595881c\",\"signature\":\"37fad03e1296d047b5d85ac66c23c4f83b3b8df44a5f55909b05b6744c77728c39b4bf6e197b53c6656e31dfb70bf1f9b1d26b89ac5f84dd61977352a56f27ba2e7bfe03b9754acda591f9fcac999a2a328692ca53ad823c2bfe2664ccf4758e78bc5113cb99619a4e95c3eccaa8b51eb5b724057f3d656d7d303030ff988cdfd7f52caee686d098e63b2b9eb37ec7929dc386c1e2b7a771a76c7f7d4d1d28106a7169785d417775309650e3f03e7c8f6fb675ae4032a1f76d48e738b5557df8bd86854db278ea7154993b062b4802a9136896ecfdca3256e2fb5f112d826eea4ce3712a64a8bbffaff302ccbc324c0e03642cd697ad68b4144742e757aec95e\"}}}"
 
 ///|
@@ -17,3 +14,27 @@ let vector_artifact : Bytes = b"proton zip\n"
 
 ///|
 let vector_artifact_sha256_hex : String = "4c83048dd991da670e578ca812c1b6a306dc69ee8c389d2a2e41f0de4595881c"
+
+///|
+let vector_public_key_pem : String =
+  #|-----BEGIN PUBLIC KEY-----
+  #|MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAznitJbyWFyFey8VqMDMw
+  #|rLvJw52la6yLbNY3mZbAVl1qT9TkRj1asj+suC59EQq4OJcTrgjqtf26lZTM/ANv
+  #|XDomdaIX+18uvU0ZZwEuD4rAZqL7+Ga86X88bKk/mRcYpPm2sUgLCokHgYQFvJFp
+  #|lhLLBtueRK9YGhxlsM1JtazeEJsIkgZ6L6E1byircVl7rq0QXkYDH0plYb8r6a/r
+  #|pqmVCtCNz0qzGpAqYy2NM9E+tLtegs4hgTKQeW3FD4BtmES5G+pe7bWtE/4gGT5N
+  #|3OmrWac2XJLO2z4V7sLZaSuzN6+TyYJ8KFrpcWxd7hpDJTly8fc/7A6KRCBouDgk
+  #|5wIDAQAB
+  #|-----END PUBLIC KEY-----
+
+///|
+let vector_other_public_key_pem : String =
+  #|-----BEGIN PUBLIC KEY-----
+  #|MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA//+tJbyWFyFey8VqMDMw
+  #|rLvJw52la6yLbNY3mZbAVl1qT9TkRj1asj+suC59EQq4OJcTrgjqtf26lZTM/ANv
+  #|XDomdaIX+18uvU0ZZwEuD4rAZqL7+Ga86X88bKk/mRcYpPm2sUgLCokHgYQFvJFp
+  #|lhLLBtueRK9YGhxlsM1JtazeEJsIkgZ6L6E1byircVl7rq0QXkYDH0plYb8r6a/r
+  #|pqmVCtCNz0qzGpAqYy2NM9E+tLtegs4hgTKQeW3FD4BtmES5G+pe7bWtE/4gGT5N
+  #|3OmrWac2XJLO2z4V7sLZaSuzN6+TyYJ8KFrpcWxd7hpDJTly8fc/7A6KRCBouDgk
+  #|5wIDAQAB
+  #|-----END PUBLIC KEY-----

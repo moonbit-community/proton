@@ -99,8 +99,8 @@ Rules:
 - `kind` must be `"full"`. Other values are invalid for this schema version.
   Adding another artifact form requires a new schema and an implementation that
   validates it explicitly.
-- `sha256` and `signature` are hexadecimal, matching the key format. One
-  encoding throughout means one strict decoder rather than two.
+- `sha256` and `signature` are lowercase hexadecimal. Public keys use standard
+  PEM encoding independently of these manifest fields.
 - `sha256` is for integrity and resumable download bookkeeping. It is **not** a
   security control; only `signature` is.
 - A platform absent from `platforms` means no update is offered for it. This is
@@ -153,9 +153,9 @@ bytes for a 2048-bit key. There is no container and no encoding layer.
 
 Length equality is enforced rather than normalised: a short signature is not
 zero-extended and a long one is not trimmed, because accepting several
-encodings of one integer is where signature malleability begins. **Nothing in
-this design parses attacker-supplied DER**, which is what a container format
-would have required.
+encodings of one integer is where signature malleability begins. Update
+signatures are raw PKCS#1 blocks. DER decoding is confined to the configured
+PEM public keys; it is not used to interpret downloaded signature bytes.
 
 ### Verification input
 
@@ -166,27 +166,16 @@ and never crosses a function boundary as a value.
 
 ### Key format
 
-A trusted key carries its algorithm and its parameters, in hexadecimal:
+Trusted RSA public keys are standard PEM text: SubjectPublicKeyInfo (`PUBLIC KEY`)
+or PKCS#1 (`RSA PUBLIC KEY`). The application embeds the public PEM contents,
+not a file path, and never includes its private key. There is no Proton-specific
+key conversion command or custom key encoding.
 
-```
-rsa-sha256:<modulus hex>:<exponent hex>
-```
-
-There is no ASN.1 anywhere in the key path. `proton_cli updater public-key`
-converts an OpenSSL public key file into this form.
-
-An unknown algorithm tag is rejected, not guessed. Tagging the algorithm now
-means a future migration — to a post-quantum scheme, or away from RSA for any
-other reason — does not require a release that existing installations cannot
-accept. This is the same forward-compatibility argument as the trusted key
-list, and it is equally impossible to retrofit.
-
-Keys are validated when parsed, and the checks are security controls rather
-than hygiene: a modulus below 2048 bits verifies signatures perfectly well and
-protects nothing; a modulus written with a leading zero byte would let one key
-have two spellings with different values of `k`, and `k` decides which signature
-lengths are accepted; `e = 1` would make every signature equal to the encoded
-block.
+`proton_rsa` uses `oilleelssq-wq/MoonBit-PKI` for PEM and ASN.1 DER decoding.
+Proton selects the RSA algorithm, extracts the modulus and exponent, and retains
+its existing minimum size and exponent checks. Signature verification remains
+RSASSA-PKCS1-v1_5 over SHA-256. Non-RSA keys, private keys, certificates, malformed
+DER, and multiple PEM blocks in a single configured key are rejected.
 
 ### What is signed
 
@@ -231,16 +220,10 @@ openssl genrsa -out updater.pem 2048
 openssl rsa -in updater.pem -pubout -out updater.pub
 ```
 
-`proton_cli` offers only a converter from that public key to the configured
-form:
+Embed the contents of `updater.pub` in the application's `public_keys` array.
+No CLI conversion is required.
 
-```sh
-proton_cli updater public-key updater.pub
-# rsa-sha256:94c05429a8686a46...:010001
-```
-
-This is a pure data transformation over public material. A `keygen` subcommand
-was considered and rejected: generating a private key would oblige Proton to
+A `keygen` subcommand was considered and rejected: generating a private key would oblige Proton to
 own a cryptographic random source, to write a secret with the right
 permissions, and to keep it out of logs and build output. Tauri has already
 shipped a real instance of that last failure, leaking updater private keys
@@ -295,8 +278,8 @@ Trusting a list instead of a single key removes both:
 app..update_channel(
   "https://example.com/updates/latest.json",
   [
-    "rsa-sha256:94c05429a8686a46...:010001",
-    "rsa-sha256:b71fe3a20c4d8815...:010001",
+    active_public_key_pem,
+    reserve_public_key_pem,
   ],
 )
 ```
@@ -533,8 +516,8 @@ outside this mechanism. Their package manager or installer owns replacement.
 ..update_channel(
   "https://example.com/updates/latest.json",
   [
-    "rsa-sha256:94c05429a8686a46...:010001",
-    "rsa-sha256:b71fe3a20c4d8815...:010001",
+    active_public_key_pem,
+    reserve_public_key_pem,
   ],
   check_on_launch=true,
   freshness_days=30,

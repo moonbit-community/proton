@@ -139,7 +139,6 @@ fn cli_command() -> @argparse.Command {
       @package.command(),
       doctor_command(),
       @cef.command(),
-      @updater.command(),
     ],
     arg_required_else_help=true,
     subcommand_required=true,
@@ -177,7 +176,6 @@ async fn dispatch_cli(cwd : String, matches : @argparse.Matches) -> Bool {
     Some(("build", build_matches)) => @build.run(cwd, build_matches)
     Some(("package", package_matches)) => @package.run(cwd, package_matches)
     Some(("cef", cef_matches)) => @cef.run(cef_matches)
-    Some(("updater", updater_matches)) => @updater.run(updater_matches)
     _ => abort("argparse invariant violated: missing subcommand")
   }
   true

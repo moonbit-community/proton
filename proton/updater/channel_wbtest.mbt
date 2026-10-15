@@ -1,5 +1,5 @@
 ///|
-let trusted_key : String = "rsa-sha256:\{vector_modulus_hex}:010001"
+let trusted_key : String = vector_public_key_pem
 
 ///|
 let manifest_url : String = "https://example.com/latest.json"
@@ -281,7 +281,7 @@ async test "refuses a key that cannot be used" {
   let build = fn() -> UpdateError {
     let _ = UpdateChannel(
       manifest_url,
-      ["rsa-sha256:00\{vector_modulus_hex}:010001"],
+      ["invalid PEM public key"],
       "darwin-arm64",
       @manifest.Version::parse("0.2.0").unwrap(),
     ) catch {
@@ -297,7 +297,7 @@ async test "accepts a signature from any trusted key, not only the first" {
   // A reserve key is distributed before it is used, so rotation does not need
   // a transition release. An unrelated key listed first must not prevent the
   // real signer from being recognised.
-  let unrelated = "rsa-sha256:\{vector_modulus_hex.replace(old=vector_modulus_hex[0:4].to_owned(), new="ffff")}:010001"
+  let unrelated = vector_other_public_key_pem
   let rotated = UpdateChannel(
     manifest_url,
     [unrelated, trusted_key],

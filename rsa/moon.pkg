@@ -1,3 +1,9 @@
 import {
   "moonbitlang/core/bigint",
+  "oilleelssq-wq/MoonBit-PKI/pem",
+  "oilleelssq-wq/MoonBit-PKI/asn1",
 }
+
+import {
+  "moonbitlang/core/encoding/hex",
+} for "wbtest"

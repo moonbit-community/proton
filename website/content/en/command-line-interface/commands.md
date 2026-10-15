@@ -29,7 +29,6 @@ proton_cli [--cwd <directory>] <command> [options]
 | [`doctor`](#doctor) | Report environment and project diagnostics |
 | [`cef setup`](#cef-setup) | Install the release-matched runtime and helper |
 | [`cef requirements`](#cef-requirements) | Print the embedded CEF requirement |
-| [`updater public-key`](#updater-public-key) | Validate and format a trusted updater public key |
 
 ## `help`
 
@@ -188,21 +187,6 @@ proton_cli cef requirements
 ```
 
 Prints the release's embedded CEF requirement as JSON. It does not install the runtime or inspect an application's running browser. No command-specific options.
-
-## `updater public-key`
-
-```text
-proton_cli updater public-key --modulus <hex> [--exponent <hex>]
-```
-
-Validates a trusted RSA public key and prints a comment with its bit length followed by `rsa-sha256:<modulus>:<exponent>`, suitable for `App::update_channel`'s `public_keys`.
-
-| Option | Meaning |
-| --- | --- |
-| `--modulus <hex>` | Required RSA modulus; accepts the `Modulus=` prefix produced by OpenSSL |
-| `--exponent <hex>` | Public exponent; default `010001` (65537) |
-
-Surrounding whitespace is trimmed and hexadecimal is normalized to lowercase. The runtime's key parser validates the key, including modulus size and exponent. This command does not generate a key pair, read PEM files, sign artifacts or publish updates.
 
 ## Exit status and update checks
 

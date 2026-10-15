@@ -11,3 +11,7 @@ license = "Apache-2.0"
 keywords = [ "rsa", "pkcs1", "signature", "verification" ]
 
 description = "RSASSA-PKCS1-v1_5 signature verification over SHA-256."
+
+import {
+  "oilleelssq-wq/MoonBit-PKI@0.2.0",
+}

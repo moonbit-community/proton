@@ -1851,7 +1851,7 @@ pub async fn run_startup_update_regression(case : StartupUpdateOutcome) -> Unit 
     ..identifier("com.example.startup-update")
     ..update_channel(
       "https://127.0.0.1:1/latest.json",
-      ["rsa-sha256:ab:010001"],
+      ["invalid PEM public key"],
       check_on_launch=false,
     )
     ..app_lifecycle(

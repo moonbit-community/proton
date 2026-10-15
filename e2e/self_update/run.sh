@@ -73,9 +73,7 @@ ln -s "$openssl_root/lib/libssl.3.dylib" "$work/tls/libssl.48.dylib"
 # The publisher's key. A real release keeps this offline; here it lives beside
 # the artifacts it signs because nothing about it is secret to this test.
 "$openssl_bin" genrsa -out "$work/keys/private.pem" 2048 2>/dev/null
-modulus="$("$openssl_bin" rsa -in "$work/keys/private.pem" -noout -modulus |
-  sed 's/^Modulus=//' | tr 'A-Z' 'a-z')"
-printf 'rsa-sha256:%s:010001' "$modulus" > "$work/keys/trusted.txt"
+"$openssl_bin" pkey -in "$work/keys/private.pem" -pubout -out "$work/keys/trusted.txt"
 
 # Builds one signed bundle. Signing is ad-hoc: the check the updater makes is
 # that the seal covers the contents and that both bundles call themselves the

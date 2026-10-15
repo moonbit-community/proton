@@ -375,7 +375,7 @@ Application updates replace the distributed application, not the development CLI
 
 **Channel and checks**
 
-The endpoint must use HTTPS and there must be at least one trusted RSA public key. Automatic checking defaults to enabled; manifest freshness defaults to 30 days and must be positive. Keys use the format validated by [`updater public-key`](../command-line-interface/commands.md#updater-public-key).
+The endpoint must use HTTPS and there must be at least one trusted RSA public key. Automatic checking defaults to enabled; manifest freshness defaults to 30 days and must be positive. Pass each public key as PEM text (`PUBLIC KEY` or `RSA PUBLIC KEY`), not as a file path. The runtime parses the PEM and validates the RSA key; private keys and certificates are rejected. The public-key array allows more than one trusted signing key during rotation.
 
 The automatic check runs after successful startup and reports failures through logging without making startup fail. For explicit checks, use `ApplicationContext.check_for_update()` and handle its result and errors. `NotConfigured` is distinct from `UpToDate`; a context used after its application ends no longer has an active channel.
 
@@ -407,7 +407,14 @@ Keep the application identifier stable and increase `package.version` for every 
 
 Schema 3 replaces the old revision-based schema 2: retain the old endpoint for existing clients. Those installations require a manual upgrade or an explicitly prepared transition release before using a separate schema 3 endpoint.
 
-`updater public-key` only formats a public key; it does not generate keys, sign an update manifest or host an endpoint. OS signing/notarization and updater signature verification serve different checks; configuring one does not configure the other.
+Generate the signing key outside Proton and export its public key as standard PEM:
+
+```sh
+openssl genrsa -out updater-private.pem 2048
+openssl pkey -in updater-private.pem -pubout -out updater-public.pem
+```
+
+Embed the contents of `updater-public.pem` in the application and pass that string to `App.update_channel`. Keep `updater-private.pem` in your signing environment; never package it with the app. Proton does not generate keys, sign release files or host an update endpoint. OS signing/notarization and updater signature verification serve different checks; configuring one does not configure the other.
 
 ## Process control and metrics
 

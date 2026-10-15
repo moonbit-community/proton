@@ -11,7 +11,7 @@ Verification only, using SHA-256. Key generation and signing are not provided.
 ## Use
 
 ```moonbit nocheck
-let key = @rsa.PublicKey::parse("rsa-sha256:<modulus hex>:<exponent hex>")
+let key = @rsa.PublicKey::parse(public_key_pem)
 let digest = compute_sha256_of_the_artifact()
 if @rsa.verify_pkcs1_sha256(key, digest, signature) {
   // The signature is valid.
@@ -21,11 +21,21 @@ if @rsa.verify_pkcs1_sha256(key, digest, signature) {
 `verify_pkcs1_sha256` takes a digest rather than the signed content, so a large
 artifact can be streamed through a hash instead of being held in memory.
 
+`public_key_pem` is the PEM text, not a file path. Both SubjectPublicKeyInfo
+(`-----BEGIN PUBLIC KEY-----`) and PKCS#1 (`-----BEGIN RSA PUBLIC KEY-----`)
+are accepted. Private keys, certificates, and the former custom key encoding
+are rejected. PEM and DER decoding use `oilleelssq-wq/MoonBit-PKI`.
+
+Export a public key with OpenSSL:
+
+```sh
+openssl pkey -in updater-private.pem -pubout -out updater-public.pem
+```
+
 ## Validation
 
 Verification returns `false` for invalid signatures. Signature length must equal
-the modulus length. Public keys require a modulus of at least 2048 bits without
-a leading zero byte and an odd exponent of at least 3, smaller than the modulus.
+the modulus length. Public keys require a modulus of at least 2048 bits and an odd exponent of at least 3, smaller than the modulus.
 
 ## Trust
 

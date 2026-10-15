@@ -29,7 +29,6 @@ proton_cli [--cwd <directory>] <command> [options]
 | [`doctor`](#doctor) | 输出环境和项目诊断 |
 | [`cef setup`](#cef-setup) | 安装匹配当前发行版的运行时和 helper |
 | [`cef requirements`](#cef-requirements) | 输出内嵌的 CEF 版本要求 |
-| [`updater public-key`](#updater-public-key) | 校验并格式化更新器信任的公钥 |
 
 ## `help`
 
@@ -188,21 +187,6 @@ proton_cli cef requirements
 ```
 
 以 JSON 输出当前发行版内嵌的 CEF 要求。不安装运行时，也不检查正在运行的应用浏览器。没有专属选项。
-
-## `updater public-key`
-
-```text
-proton_cli updater public-key --modulus <hex> [--exponent <hex>]
-```
-
-校验受信任 RSA 公钥，输出包含位数的注释及 `rsa-sha256:<modulus>:<exponent>` 文本，可用于 `App::update_channel` 的 `public_keys`。
-
-| 选项 | 含义 |
-| --- | --- |
-| `--modulus <hex>` | 必填 RSA 模数；接受 OpenSSL 输出的 `Modulus=` 前缀 |
-| `--exponent <hex>` | 公钥指数，默认 `010001`（65537） |
-
-参数会去除首尾空白，并将十六进制规范化为小写。校验使用运行时的公钥解析器，包括模数尺寸和指数约束。本命令不生成密钥对、不读取 PEM 文件、不签名产物，也不发布更新。
 
 ## 退出状态与更新检查
 
