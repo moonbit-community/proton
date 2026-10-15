@@ -778,6 +778,8 @@ fn RuntimeSession::create_window(
   self.emit_web_contents_created(self.browser_handle(running))
   self.emit_window_created(running)
   for view in planned_views {
+    // Earlier observers may have removed this instance or replaced its id.
+    guard view.view.id() != 0 else { continue }
     self.emit_web_contents_created(
       self.view_handle(running, view).web_contents(),
     )

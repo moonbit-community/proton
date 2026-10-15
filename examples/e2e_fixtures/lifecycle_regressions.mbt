@@ -1929,7 +1929,13 @@ pub async fn run_window_config_regression() -> Unit {
   let config = @proton.WindowConfig(
     "Window Config",
     @proton.AppEntry::Html("<title>Window Config</title>"),
-    views=[("child", @proton.view("about:blank", width=100, height=100))],
+    views=[
+      ("child", @proton.view("about:blank", width=100, height=100)),
+      ("removed-in-window", @proton.view("about:blank", width=50, height=50)),
+      ("replaced-in-window", @proton.view("about:blank", width=50, height=50)),
+      ("removed-in-contents", @proton.view("about:blank", width=50, height=50)),
+      ("removed-in-view", @proton.view("about:blank", width=50, height=50)),
+    ],
     close_handler=_ => {
       main_closes.val += 1
       @proton.WindowCloseDecision::Allow
@@ -1967,6 +1973,18 @@ pub async fn run_window_config_regression() -> Unit {
   ..on_window_created(window => {
     created.push(window.id())
     if window.id() == "main" {
+      try {
+        window.remove_view("removed-in-window")
+        window.remove_view("replaced-in-window")
+        ignore(
+          window.add_view(
+            "replaced-in-window",
+            @proton.view("about:blank", width=50, height=50),
+          ),
+        )
+      } catch {
+        error => abort(error.message())
+      }
       ignore(
         window.add_view(
           "created-in-window",
@@ -1986,6 +2004,9 @@ pub async fn run_window_config_regression() -> Unit {
     )
     if contents.window_id() == "main" && contents.view_id() is None {
       let window = application.val.unwrap().windows().find("main").unwrap()
+      window.remove_view("removed-in-contents") catch {
+        error => abort(error.message())
+      }
       ignore(
         window.add_view(
           "created-in-contents",
@@ -1997,6 +2018,16 @@ pub async fn run_window_config_regression() -> Unit {
     }
   })
   ..on_web_contents_created(contents => {
+    if contents.window_id() == "main" && contents.view_id() == Some("child") {
+      application.val
+      .unwrap()
+      .windows()
+      .find("main")
+      .unwrap()
+      .remove_view("removed-in-view") catch {
+        error => abort(error.message())
+      }
+    }
     created_contents.push(
       contents.window_id() +
       "/" +
@@ -2034,7 +2065,7 @@ pub async fn run_window_config_regression() -> Unit {
       assert_eq(
         window.views().length(),
         if context.id() == "main" {
-          3
+          4
         } else {
           1
         },
@@ -2057,8 +2088,9 @@ pub async fn run_window_config_regression() -> Unit {
           assert_true(created.contains("main:second"))
           assert_eq(created_contents, [
             "main/main", "main/created-in-contents", "main/created-in-contents:second",
-            "main/main:second", "main/created-in-window", "main/created-in-window:second",
-            "main/child", "main/child:second",
+            "main/main:second", "main/replaced-in-window", "main/replaced-in-window:second",
+            "main/created-in-window", "main/created-in-window:second", "main/child",
+            "main/child:second",
           ])
           while !popups.contains("main") {
             @async.sleep(5)
@@ -2127,11 +2159,15 @@ pub async fn run_window_config_regression() -> Unit {
   assert_false(navigations.contains("main/child"))
   assert_false(navigations.contains("main"))
   assert_eq(popups, ["main", "dynamic"])
-  assert_eq(created_contents.length(), 18)
+  assert_eq(created_contents.length(), 20)
+  for id in ["removed-in-window", "removed-in-contents", "removed-in-view"] {
+    assert_false(created_contents.contains("main/" + id))
+    assert_false(created_contents.contains("main/" + id + ":second"))
+  }
   for
     label in [
       "main/main", "main/child", "main/created-in-window", "main/created-in-contents",
-      "main/dynamic", "secondary/main", "secondary/child",
+      "main/dynamic", "main/replaced-in-window", "secondary/main", "secondary/child",
     ] {
     let expected = if label.has_prefix("secondary/") { 2 } else { 1 }
     assert_eq(created_contents.filter(item => item == label).length(), expected)
