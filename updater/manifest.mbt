@@ -191,7 +191,15 @@ fn parse_platform(
   }
   let size = match fields.get("size") {
     None => raise MissingField(path="\{path}.size")
-    Some(Number(value, repr~)) =>
+    Some(Number(value, repr~)) => {
+      // Decimal/exponent tokens may lack repr after Double conversion. Their
+      // original value cannot be recovered outside the safe integer range.
+      guard repr is Some(_) || (value >= 1.0 && value <= 9007199254740991.0) else {
+        raise InvalidField(
+          path="\{path}.size",
+          expectation="must be an exact signed 64-bit integer",
+        )
+      }
       @string.parse_int64(repr.unwrap_or(value.to_string())[:]) catch {
         _ =>
           raise InvalidField(
@@ -199,6 +207,7 @@ fn parse_platform(
             expectation="must be a signed 64-bit integer",
           )
       }
+    }
     Some(_) =>
       raise InvalidField(path="\{path}.size", expectation="must be a number")
   }

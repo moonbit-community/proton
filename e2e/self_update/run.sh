@@ -52,10 +52,12 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         host = f"localhost:{self.server.server_port}"
         redirects = {
             '/latest.json': (301, 'metadata/latest.json'),
-            '/metadata/latest.json': (307, '../signed/latest.json?channel=stable'),
+            '/metadata/latest.json': (307, f'https://{host}?token=absolute%2Froot'),
+            '/?token=absolute%2Froot': (302, f'//{host}?token=relative%2Froot'),
+            '/?token=relative%2Froot': (307, 'signed/%2E/latest.json?channel=stable'),
             '/latest.json.sig': (302, '/signed/latest.json.sig'),
-            '/Updatee-0.2.0.zip': (303, f'https://{host}/downloads/update.zip'),
-            '/downloads/update.zip': (308, f'//{host}/signed/Updatee-0.2.0.zip?token=a%2Fb&part=1#not-sent'),
+            '/Updatee-0.2.0.zip': (303, f'https://{host}/downloads/%2E/update.zip'),
+            '/downloads/%2E/update.zip': (308, f'//{host}/signed/%2e%2E/Updatee-0.2.0.zip?token=a%2Fb&part=1#not-sent'),
             '/loop': (302, '/loop'),
             '/downgrade': (302, 'http://127.0.0.1:1/should-not-request'),
             '/missing-location': (302, None),
@@ -68,11 +70,16 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             self.send_header('Content-Length', '0')
             self.end_headers()
             return
-        if self.path.startswith('/signed/Updatee-0.2.0.zip') and self.path != '/signed/Updatee-0.2.0.zip?token=a%2Fb&part=1':
-            self.send_error(400, 'download query was changed or fragment was sent')
+        signed_paths = {
+            '/signed/%2E/latest.json?channel=stable': '/latest.json',
+            '/signed/%2e%2E/Updatee-0.2.0.zip?token=a%2Fb&part=1': '/Updatee-0.2.0.zip',
+            '/signed/latest.json.sig': '/latest.json.sig',
+        }
+        if self.path in signed_paths:
+            self.path = signed_paths[self.path]
+        else:
+            self.send_error(400, 'unexpected request path or query')
             return
-        if self.path.startswith('/signed/'):
-            self.path = self.path.removeprefix('/signed')
         super().do_GET()
 handler = functools.partial(Handler, directory=str(root / 'server'))
 server = http.server.ThreadingHTTPServer(('127.0.0.1', 0), handler)

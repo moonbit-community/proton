@@ -200,7 +200,11 @@ test "artifact sizes preserve Int64 values without a floating-point round trip" 
       .unwrap()
     assert_eq(update.size(), size)
   }
-  for size in ["9223372036854775808", "18446744073709551616", "1.5", "1e100"] {
+  for
+    size in [
+      "9223372036854775808", "18446744073709551616", "1.5", "1e100", "9007199254740993.0",
+      "9007199254740993e0",
+    ] {
     assert_true(parse_failure(with_size(size)) is InvalidField(_))
   }
 }

@@ -36,24 +36,77 @@ async fn open_update_stream(
         detail="redirect response has no Location header",
       )
     }
-    let next = @uri.UriRef::parse(location).resolve_against(
-      @uri.Uri::parse(current),
-    ) catch {
-      _ =>
-        raise FetchFailed(
-          url=current,
-          detail="invalid redirect Location: \{location}",
-        )
-    }
-    let scheme = next.scheme.as_str()
-    guard scheme.to_lower() == "https" else {
-      raise FetchFailed(url=current, detail="redirect target must use https")
-    }
-    // The HTTP transport expects a lowercase scheme; preserve the signed
-    // path and query text while omitting the fragment from the request.
-    let text = next.strip_fragment().text
-    continue "https" + text[scheme.length():].to_owned(), redirects + 1
+    continue update_redirect_url(current, location), redirects + 1
   }
+}
+
+///|
+/// Resolve URI components without decoding or normalizing signed paths.
+fn update_redirect_url(
+  base_url : String,
+  location : String,
+) -> String raise UpdateError {
+  let (base, target) = (@uri.Uri::parse(base_url), @uri.UriRef::parse(location)) catch {
+    _ =>
+      raise FetchFailed(
+        url=base_url,
+        detail="invalid redirect Location: \{location}",
+      )
+  }
+  let scheme = target.scheme
+    .map(s => s.as_str())
+    .unwrap_or(base.scheme.as_str())
+  guard scheme.to_lower() == "https" else {
+    raise FetchFailed(url=base_url, detail="redirect target must use https")
+  }
+  let (authority, path, query) = if target.scheme is Some(_) ||
+    target.authority is Some(_) {
+    (target.authority, target.path.as_str(), target.query)
+  } else if target.path.as_str().is_empty() {
+    (
+      base.authority,
+      base.path.as_str(),
+      match target.query {
+        Some(_) => target.query
+        None => base.query
+      },
+    )
+  } else {
+    let path = target.path.as_str()
+    let merged = if path.has_prefix("/") {
+      path
+    } else {
+      let base_path = base.path.as_str()
+      match base_path.rev_find("/") {
+        Some(index) => base_path[:index + 1].to_owned() + path
+        None => "/" + path
+      }
+    }
+    // RFC 3986 dot segments are literal '.' and '..'; %2E is path data.
+    let segments : Array[String] = []
+    let parts = merged.split("/").collect()
+    for i, part in parts {
+      match part {
+        "." => ()
+        ".." => if segments.length() > 1 { ignore(segments.pop()) }
+        _ => segments.push(part.to_owned())
+      }
+      if i == parts.length() - 1 && (part == "." || part == "..") {
+        segments.push("")
+      }
+    }
+    (base.authority, segments.join("/"), target.query)
+  }
+  guard authority is Some(authority) && !authority.host.is_empty() else {
+    raise FetchFailed(url=base_url, detail="redirect target must have a host")
+  }
+  // async/http splits authority from the request target at the first '/'.
+  let path = if path.is_empty() { "/" } else { path }
+  let query = match query {
+    Some(query) => "?" + query.as_str()
+    None => ""
+  }
+  "https://" + authority.as_str() + path + query
 }
 
 ///|
