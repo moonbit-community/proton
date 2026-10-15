@@ -910,7 +910,7 @@ pub fn View::stop_find_in_page(Self, Bool) -> Unit raise NativeError
 pub fn View::zoom_percent(Self) -> Int raise NativeError
 
 type ViewConfig derive(Eq, @debug.Debug)
-pub fn ViewConfig::ViewConfig(width~ : Int, height~ : Int, x? : Int, y? : Int, visible? : Bool, z_order? : Int, initial_url? : String, background_color? : String) -> Self
+pub fn ViewConfig::ViewConfig(width~ : Int, height~ : Int, x? : Int, y? : Int, visible? : Bool, z_order? : Int, initial_url? : String, background_color? : String, navigation? : BrowserPolicyMode, new_window? : BrowserPolicyMode) -> Self
 pub fn ViewConfig::equal(Self, Self) -> Bool
 pub fn ViewConfig::not_equal(Self, Self) -> Bool
 pub fn ViewConfig::to_repr(Self) -> @debug.Repr

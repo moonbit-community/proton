@@ -437,19 +437,24 @@ pub async fn run_close_decision_regression() -> Unit {
   let close_count = Ref(0)
   let close_error = Ref("")
   let cleaned = Ref(false)
-  @proton.html("Close decision", "<h1>Lifecycle</h1>")
+  @proton.App(
+    @proton.WindowConfig(
+      "Close decision",
+      @proton.AppEntry::Html("<h1>Lifecycle</h1>"),
+      close_handler=window => {
+        window.web_contents().eval("void 0") catch {
+          error => close_error.val = error.message()
+        }
+        close_count.val += 1
+        if close_count.val == 1 {
+          @proton.WindowCloseDecision::Deny
+        } else {
+          Allow
+        }
+      },
+    ),
+  )
   ..identifier("dev.proton.e2e-lifecycle")
-  ..on_window_close_request(window => {
-    window.web_contents().eval("void 0") catch {
-      error => close_error.val = error.message()
-    }
-    close_count.val += 1
-    if close_count.val == 1 {
-      @proton.WindowCloseDecision::Deny
-    } else {
-      Allow
-    }
-  })
   ..window_lifecycle(
     on_ready=context => {
       ignore(
@@ -504,13 +509,39 @@ pub async fn run_startup_quit_regression(case : StartupQuitCase) -> Unit {
   let later_hook_started = Ref(false)
   let close_requests = Ref(0)
   let confirm_quit = case is DenyFirst || case is Allow
-  let app = @proton.html("Startup quit", "<h1>Startup quit</h1>")
+  let close_handler = if confirm_quit {
+    Some(async fn(
+      _window : @proton.WindowHandle,
+    ) -> @proton.WindowCloseDecision noraise {
+      close_requests.val += 1
+      if close_requests.val == 1 {
+        @async.sleep(300)
+        if case is DenyFirst {
+          @proton.WindowCloseDecision::Deny
+        } else {
+          Allow
+        }
+      } else {
+        Allow
+      }
+    })
+  } else {
+    None
+  }
+  let app = @proton.App(
+      @proton.WindowConfig(
+        "Startup quit",
+        @proton.AppEntry::Html("<h1>Startup quit</h1>"),
+        close_handler?,
+      ),
+    )
     ..identifier("dev.proton.startup-quit")
     ..add_window(
       "secondary",
       @proton.WindowConfig(
         "Secondary",
         @proton.AppEntry::Html("<h1>Secondary</h1>"),
+        close_handler?,
       ),
       open_on_start=false,
     )
@@ -560,23 +591,6 @@ pub async fn run_startup_quit_regression(case : StartupQuitCase) -> Unit {
       },
       on_close=_ => window_closed.val += 1,
     )
-  let app = if confirm_quit {
-    app..on_window_close_request(_ => {
-      close_requests.val += 1
-      if close_requests.val == 1 {
-        @async.sleep(300)
-        if case is DenyFirst {
-          @proton.WindowCloseDecision::Deny
-        } else {
-          Allow
-        }
-      } else {
-        Allow
-      }
-    })
-  } else {
-    app
-  }
   app.run()
   assert_eq(completed_hook_cleanup.val, 1)
   if case is Allow {
@@ -1895,17 +1909,102 @@ pub async fn run_startup_update_regression(case : StartupUpdateOutcome) -> Unit 
 pub async fn run_window_config_regression() -> Unit {
   let application : Ref[@proton.ApplicationContext?] = Ref(None)
   let secondary_activations = Ref(0)
+  let main_closes = Ref(0)
+  let secondary_closes = Ref(0)
+  let navigations : Array[String] = []
+  let popups : Array[String] = []
+  let created : Array[String] = []
+  let created_contents : Array[String] = []
+  let notifications : Array[String] = []
+  let child_policy = @proton.WebContentsPolicy(
+    navigation_handler=(contents, _) => {
+      navigations.push(contents.window_id() + "/" + contents.view_id().unwrap())
+      @proton.NavigationDecision::Deny
+    },
+    new_window_handler=(contents, _) => {
+      popups.push(contents.view_id().unwrap())
+      @proton.NewWindowDecision::Deny
+    },
+  )
   let config = @proton.WindowConfig(
     "Window Config",
     @proton.AppEntry::Html("<title>Window Config</title>"),
     views=[("child", @proton.view("about:blank", width=100, height=100))],
+    close_handler=_ => {
+      main_closes.val += 1
+      @proton.WindowCloseDecision::Allow
+    },
+    web_contents_policy=@proton.WebContentsPolicy(new_window_handler=(_, _) => {
+      popups.push("main")
+      @proton.NewWindowDecision::Deny
+    }),
   )
   @proton.App(config)
   ..identifier("dev.proton.window-config")
-  ..add_window("secondary", config, open_on_start=false)
-  ..app_lifecycle(on_start=context => application.val = Some(context), on_shutdown=_ => {
-    ()
+  ..add_window(
+    "secondary",
+    {
+      ..config,
+      web_contents_policy: @proton.WebContentsPolicy(),
+      close_handler: Some(fn(_) {
+        secondary_closes.val += 1
+        @proton.WindowCloseDecision::Allow
+      }),
+      views: [
+        (
+          "child",
+          @proton.ViewConfig(
+            width=100,
+            height=100,
+            initial_url="data:text/html,<title>Policy child</title>",
+            web_contents_policy=child_policy,
+          ),
+        ),
+      ],
+    },
+    open_on_start=false,
+  )
+  ..on_window_created(window => created.push(window.id()))
+  ..on_window_created(window => created.push(window.id() + ":second"))
+  ..on_session_created(_ => created.push("session"))
+  ..on_session_created(_ => created.push("session:second"))
+  ..on_web_contents_created(contents => {
+    created_contents.push(
+      contents.window_id() + "/" + contents.view_id().unwrap_or("main"),
+    )
   })
+  ..on_web_contents_created(contents => {
+    created_contents.push(
+      contents.window_id() +
+      "/" +
+      contents.view_id().unwrap_or("main") +
+      ":second",
+    )
+  })
+  ..on_web_contents_event((contents, event) => {
+    if contents.window_id() == "main" &&
+      contents.view_id() is None &&
+      event is DidFinishLoad {
+      while !notifications.contains("second") {
+        @async.sleep(5)
+      }
+      notifications.push("first")
+    }
+  })
+  ..on_web_contents_event((contents, event) => {
+    if contents.window_id() == "main" &&
+      contents.view_id() is None &&
+      event is DidFinishLoad {
+      notifications.push("second")
+    }
+  })
+  ..app_lifecycle(
+    on_start=context => {
+      assert_eq(created, ["session", "session:second"])
+      application.val = Some(context)
+    },
+    on_shutdown=_ => (),
+  )
   ..window_lifecycle(
     on_ready=context => {
       let window = context.handle()
@@ -1921,8 +2020,51 @@ pub async fn run_window_config_regression() -> Unit {
         .spawn(no_wait=true, () => {
           lifecycle_probe_gate()
           let manager = context.windows()
-          for _ in 0..<2 {
+          while !notifications.contains("first") {
+            @async.sleep(5)
+          }
+          assert_eq(notifications, ["second", "first"])
+          assert_true(created.contains("main:second"))
+          assert_eq(created_contents, [
+            "main/main", "main/main:second", "main/child", "main/child:second",
+          ])
+          while !popups.contains("main") {
+            @async.sleep(5)
+          }
+          let dynamic = window.add_view(
+            "dynamic",
+            @proton.ViewConfig(
+              width=100,
+              height=100,
+              initial_url="data:text/html,<title>Dynamic policy</title>",
+              web_contents_policy=child_policy,
+            ),
+          )
+          assert_true(created_contents.contains("main/dynamic:second"))
+          while !navigations.contains("main/dynamic") {
+            @async.sleep(5)
+          }
+          assert_true(dynamic.web_contents().state().title != "Dynamic policy")
+          // The driver opens a popup with a trusted user gesture on this page.
+          dynamic.web_contents().eval("document.title = 'Dynamic policy ready'")
+          while !popups.contains("dynamic") {
+            @async.sleep(5)
+          }
+          window.remove_view("dynamic")
+          for iteration in 0..<2 {
             let secondary = manager.open("secondary")
+            assert_eq(
+              created.filter(id => id == "secondary:second").length(),
+              iteration + 1,
+            )
+            while navigations.filter(id => id == "secondary/child").length() <
+                  iteration + 1 {
+              @async.sleep(5)
+            }
+            assert_true(
+              secondary.view("child").unwrap().web_contents().state().title !=
+              "Policy child",
+            )
             let child = secondary.view("child").unwrap()
             assert_eq(child.window_id(), "secondary")
             secondary.close()
@@ -1947,6 +2089,19 @@ pub async fn run_window_config_regression() -> Unit {
   )
   .run()
   assert_eq(secondary_activations.val, 2)
+  assert_eq(main_closes.val, 1)
+  assert_eq(secondary_closes.val, 2)
+  assert_false(navigations.contains("secondary"))
+  assert_false(navigations.contains("main/child"))
+  assert_false(navigations.contains("main"))
+  assert_eq(popups, ["main", "dynamic"])
+  assert_eq(created_contents.length(), 14)
+  for index in 0..<(created_contents.length() / 2) {
+    assert_eq(
+      created_contents[index * 2 + 1],
+      created_contents[index * 2] + ":second",
+    )
+  }
   println("LIFECYCLE_PASSED window-config")
 }
 
@@ -1991,7 +2146,11 @@ pub async fn run_web_contents_regression() -> Unit {
   )
   ..identifier("dev.proton.web-contents")
   ..web_request_cancel_prefix("https://proton.test/blocked")
-  ..on_download_request((contents, request) => {
+  ..set_download_handler((_, _) => {
+    downloads.push("replaced handler")
+    @proton.DownloadDecision::Deny
+  })
+  ..set_download_handler((contents, request) => {
     if request.url.has_suffix("hold") {
       pending_started.val = true
       defer {
@@ -2176,6 +2335,7 @@ pub async fn run_web_contents_regression() -> Unit {
     on_close=_ => assert_true(window_task_stopped.val),
   )
   .run()
+  assert_false(downloads.contains("replaced handler"))
   for contents in handles {
     let stale = try {
       contents.eval("void 0")

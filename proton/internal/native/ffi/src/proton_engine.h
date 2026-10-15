@@ -114,6 +114,8 @@ typedef struct {
   int32_t visible;
   int32_t has_background_color;
   uint32_t background_color;
+  int32_t navigation_policy;
+  int32_t new_window_policy;
 } proton_engine_view_config_t;
 
 /* CEF's external pump is not fully wake-driven. Match cefclient's maximum

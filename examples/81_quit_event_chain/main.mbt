@@ -14,6 +14,7 @@ struct QuitReply {
   ok : Bool
   before_quit_blocked : Bool
   will_quit_blocked : Bool
+  window_close_blocked : Bool
   message : String
 } derive(ToJson, FromJson)
 
@@ -45,6 +46,9 @@ let block_before_quit : Ref[Bool] = { val: false, }
 let block_will_quit : Ref[Bool] = { val: false, }
 
 ///|
+let block_window_close : Ref[Bool] = { val: false, }
+
+///|
 /// Emits one review line for the terminal that started the example.
 fn log_chain_step(step : String) -> Unit {
   println("[quit-chain] " + step)
@@ -56,6 +60,7 @@ fn state_reply(message : String, ok~ : Bool = true) -> QuitReply {
     ok,
     before_quit_blocked: block_before_quit.val,
     will_quit_blocked: block_will_quit.val,
+    window_close_blocked: block_window_close.val,
     message,
   }
 }
@@ -85,6 +90,10 @@ fn control(request : QuitRequest) -> QuitReply {
     "toggle-will-quit" =>
       toggle_reply(
         block_will_quit, "will-quit now prevents the quit", "will-quit now allows the quit",
+      )
+    "toggle-window-close" =>
+      toggle_reply(
+        block_window_close, "window close now denied", "window close now allowed",
       )
     "close-window" =>
       match context.windows().find("main") {
@@ -172,10 +181,12 @@ fn page() -> String {
     #|          <div class="panel-body">
     #|            <button class="action" id="toggle-before" aria-pressed="false">Block before-quit</button>
     #|            <button class="action" id="toggle-will" aria-pressed="false">Block will-quit</button>
+    #|            <button class="action" id="toggle-close" aria-pressed="false">Block window close</button>
     #|          </div>
     #|          <dl class="state">
     #|            <dt>before-quit</dt><dd id="before-state">allows the quit</dd>
     #|            <dt>will-quit</dt><dd id="will-state">allows the quit</dd>
+    #|            <dt>window close</dt><dd id="close-state">allows closing</dd>
     #|          </dl>
     #|        </section>
     #|        <section class="panel">
@@ -199,12 +210,15 @@ fn page() -> String {
     #|      const stepState = document.querySelector("#step-state");
     #|      const beforeButton = document.querySelector("#toggle-before");
     #|      const willButton = document.querySelector("#toggle-will");
+    #|      const closeButton = document.querySelector("#toggle-close");
     #|      async function invoke(action) {
     #|        return window.__MoonBit__.core.invokeOp("ext:quitChain/control", { action });
     #|      }
     #|      function render(reply) {
     #|        beforeButton.setAttribute("aria-pressed", String(reply.before_quit_blocked));
     #|        willButton.setAttribute("aria-pressed", String(reply.will_quit_blocked));
+    #|        closeButton.setAttribute("aria-pressed", String(reply.window_close_blocked));
+    #|        document.querySelector("#close-state").textContent = reply.window_close_blocked ? "denies closing" : "allows closing";
     #|        document.querySelector("#before-state").textContent = reply.before_quit_blocked
     #|          ? "prevents the quit"
     #|          : "allows the quit";
@@ -223,6 +237,7 @@ fn page() -> String {
     #|      }
     #|      beforeButton.addEventListener("click", () => void run("toggle-before-quit"));
     #|      willButton.addEventListener("click", () => void run("toggle-will-quit"));
+    #|      closeButton.addEventListener("click", () => void run("toggle-window-close"));
     #|      document.querySelector("#quit").addEventListener("click", () => void run("quit"));
     #|      document.querySelector("#quit-3").addEventListener("click", () => void run("quit-3"));
     #|      document.querySelector("#exit-7").addEventListener("click", () => void run("exit-7"));
@@ -236,7 +251,27 @@ fn page() -> String {
 
 ///|
 async fn main {
-  @proton.html("Quit Event Chain", page(), width=900, height=700)
+  @proton.App(
+    @proton.WindowConfig(
+      "Quit Event Chain",
+      @proton.AppEntry::Html(page()),
+      width=900,
+      height=700,
+      close_handler=fn(window) {
+        log_chain_step(
+          "close " +
+          window.id() +
+          " blocked=" +
+          block_window_close.val.to_string(),
+        )
+        if block_window_close.val {
+          @proton.WindowCloseDecision::Deny
+        } else {
+          @proton.WindowCloseDecision::Allow
+        }
+      },
+    ),
+  )
   ..identifier("com.example.proton.quit-event-chain")
   ..single_instance()
   // A prevented `will-quit` leaves the application running without windows.
@@ -260,7 +295,7 @@ async fn main {
       log_chain_step("lifecycle shutdown")
     },
   )
-  ..on_before_quit(fn(_context) {
+  ..set_before_quit_handler(fn(_context) {
     log_chain_step("before-quit blocked=" + block_before_quit.val.to_string())
     if block_before_quit.val {
       @proton.ApplicationQuitDecision::Prevent
@@ -268,7 +303,7 @@ async fn main {
       @proton.ApplicationQuitDecision::Allow
     }
   })
-  ..on_will_quit(fn(_context) {
+  ..set_will_quit_handler(fn(_context) {
     log_chain_step("will-quit blocked=" + block_will_quit.val.to_string())
     if block_will_quit.val {
       @proton.ApplicationQuitDecision::Prevent
@@ -279,5 +314,7 @@ async fn main {
   ..on_quit(fn(_context, exit_code) {
     log_chain_step("quit exit_code=" + exit_code.to_string())
   })
+  // Final notifications append and complete synchronously before shutdown.
+  ..on_quit(fn(_, _) { log_chain_step("second quit observer") })
   .run_or_abort()
 }

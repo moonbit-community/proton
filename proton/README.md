@@ -52,6 +52,49 @@ make an old handle valid again. The former operation fields such as
 `load_url()` instead. Use `web_contents()`, `session()`, and `view_id()` instead
 of the former `browser`/`contents`, `session_handle`, and `view_id` fields.
 
+## Callback contracts
+
+`on_*` appends observers; `set_*_handler` replaces one decision handler. Async
+observers run in the existing application/window task groups without holding up
+the source operation. They can overlap while suspended, so completion order is
+not guaranteed. A retained handle does not keep its window or page alive.
+
+Creation observers (`on_session_created`, `on_window_created`, and
+`on_web_contents_created`) and the final `on_quit` notification are synchronous
+and run in registration order. Creation does not mean page readiness or provide
+an initialization barrier before navigation. Use `app_lifecycle` and
+`window_lifecycle` for awaited setup and paired asynchronous cleanup.
+
+Configure `WindowConfig.close_handler` for a window's asynchronous close decision.
+Configure `WindowConfig.web_contents_policy` or `ViewConfig.web_contents_policy`
+for that page's navigation and new-window decisions, installed before its first
+load. Sharing a policy value is explicit; there is no App/window/view fallback
+chain. Missing close/navigation handlers allow the operation; new windows are
+denied unless handled.
+
+```moonbit
+let policy = @proton.WebContentsPolicy(
+  navigation_handler=fn(_contents, request) {
+    if request.url.has_prefix("https://example.com/") {
+      @proton.NavigationDecision::Allow
+    } else {
+      Deny
+    }
+  },
+)
+let window = @proton.WindowConfig(
+  "Example", @proton.AppEntry::Url("https://example.com/"),
+  web_contents_policy=policy,
+)
+```
+
+Navigation interception currently has a [known replay limitation](https://github.com/moonbit-community/proton/issues/469): returning `Allow` may fail for initial or cross-origin navigation. Leave `navigation_handler` unset when unrestricted navigation is required.
+
+All handlers are `noraise`: handle expected operation failures inside the callback
+and return the appropriate decision. Pending decisions are canceled when their
+owner closes, the page becomes invalid, or forced exit supersedes them; late
+results cannot act on a replaced instance.
+
 ## Application metadata and paths
 
 Read configuration fields directly from the returned `AppConfig`, including
@@ -174,9 +217,10 @@ have been replaced by `task_metrics()`, `AppTaskMetric`, and `AppTaskType`.
 Use `task_type`, `process_cpu_percent`, and `process_memory_bytes` in place of
 `process_type`, `cpu_percent`, and `memory_bytes`.
 
-Use `App::on_permission_request` to apply one policy to certificate and media
-permission requests. It takes precedence over the specialized handlers; when
-no handler is configured, Proton denies both request types by default.
+`App::set_certificate_error_handler`, `set_media_permission_handler`, and
+`set_download_handler` each replace one application-session decision handler.
+Certificate exceptions, media access and downloads are denied by default.
+There is no unified permission handler or precedence between these policies.
 
 Use `App::proxy` to configure a startup-wide Chromium proxy. Proton passes the
 server and optional bypass list to CEF before startup; changing proxy settings
@@ -212,8 +256,8 @@ Scheduled relaunches are started after orderly cleanup or immediately before
 ## Application quit chain
 
 An orderly quit follows Electron's quit event chain. `ApplicationContext::quit`
-first runs `..on_before_quit(...)`, then closes every open window through the
-configured close interception, runs `..on_will_quit(...)` after the last window
+first runs `..set_before_quit_handler(...)`, then closes every open window through the
+configured close interception, runs `..set_will_quit_handler(...)` after the last window
 has closed, and finally reports `..on_quit(...)` before configured lifecycle
 shutdown and native teardown. Neither `quit` nor `exit` is guesswork for the
 application: `on_quit` receives the process exit code that Proton adopts.
@@ -223,14 +267,14 @@ let mut save_pending = true
 
 @proton.html("Quit chain", page)
 ..identifier("com.example.quit-chain")
-..on_before_quit(fn(_context) {
+..set_before_quit_handler(fn(_context) {
   if save_pending {
     @proton.ApplicationQuitDecision::Prevent
   } else {
     @proton.ApplicationQuitDecision::Allow
   }
 })
-..on_will_quit(fn(context) {
+..set_will_quit_handler(fn(context) {
   context.relaunch() catch { _ => () }
   @proton.ApplicationQuitDecision::Allow
 })
@@ -369,7 +413,9 @@ downloads, printing, and session access belong to `WebContentsHandle`. Subscribe
 to `App::on_web_contents_event` for either kind of page. `window_id()` identifies
 the owner; `view_id()` is `None` for its main page and `Some(id)` for a child.
 Navigation, popup, download, and permission handlers also receive this handle.
-Child pages use the application's configured browser policy.
+Each page uses its own `WebContentsPolicy`, supplied through `WindowConfig` for
+the main page and `ViewConfig` for a child view. Child views do not inherit
+navigation or new-window handlers from their parent window.
 
 A handle refers to one native instance. Navigation keeps it valid; destroying
 its page makes it stale. Recreating a view with the same declaration ID does not

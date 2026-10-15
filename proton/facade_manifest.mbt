@@ -38,13 +38,9 @@ pub fn App::App(main_window : WindowConfig) -> App {
     web_contents_created_handlers: [],
     render_process_gone_handlers: [],
     session_created_handlers: [],
-    window_close_handler: None,
-    navigation_handler: None,
-    new_window_handler: None,
     download_handler: None,
     certificate_handler: None,
     media_handler: None,
-    permission_handler: None,
     download_event_handlers: [],
     update_handlers: [],
     system_appearance_handlers: [],
@@ -124,13 +120,13 @@ fn App::resolved_app_config(self : App) -> ResolvedAppConfig {
     accessibility_mode: self.accessibility_mode_value,
     proxy_server: self.proxy_server_value,
     proxy_bypass: self.proxy_bypass_value,
-    window_views: {
-      let views = Map([])
-      views["main"] = self.main_window_config.native_views()
+    window_configs: {
+      let configs = Map([])
+      configs["main"] = self.main_window_config.snapshot()
       for (id, config, _) in self.windows {
-        views[id] = config.native_views()
+        configs[id] = config.snapshot()
       }
-      views
+      configs
     },
     last_window_closed_policy: self.last_window_closed_policy_value,
     launch_input_handlers: self.launch_input_handlers,
@@ -142,16 +138,12 @@ fn App::resolved_app_config(self : App) -> ResolvedAppConfig {
     render_process_gone_handlers: self.render_process_gone_handlers,
     session_created_handlers: self.session_created_handlers,
     contents_event_handlers: self.contents_event_handlers,
-    window_close_handler: self.window_close_handler,
     before_quit_handler: self.before_quit_handler,
     will_quit_handler: self.will_quit_handler,
     quit_handlers: self.quit_handlers,
-    navigation_handler: self.navigation_handler,
-    new_window_handler: self.new_window_handler,
     download_handler: self.download_handler,
     certificate_handler: self.certificate_handler,
     media_handler: self.media_handler,
-    permission_handler: self.permission_handler,
     download_event_handlers: self.download_event_handlers,
     update_handlers: self.update_handlers,
     explicit_locale: self.explicit_locale,

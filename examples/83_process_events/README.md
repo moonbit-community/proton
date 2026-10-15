@@ -21,12 +21,18 @@ closing the window.
 
 1. Before the window appears, the terminal must print
    `session-created partition=process-events data=<user data>/sessionData/process-events`.
-   That line comes from the session Proton created for this run.
-2. `browser-window-created main` must print once, followed by
-   `web-contents-created browser:main` for the window's main page.
+   It is followed by `second session observer`, then
+   `lifecycle start (session observers have returned)`. Session callbacks run
+   synchronously in registration order before the startup hook.
+2. `web-contents-created browser:main` and `second contents observer
+   browser:main` report the main page. `browser-window-created main` and
+   `second window observer main` report its window. Both observers of each
+   notification run synchronously in registration order; neither replaces the
+   other. Creation does not imply that the page or bridge is ready.
 3. Press **Add probe view**. The terminal must print
-   `web-contents-created view:main/probe`, and **web contents created** must
-   count 2. Press **Close probe view** and confirm the count stays at 2: the
+   `web-contents-created view:main/probe`, followed by
+   `second contents observer view:main/probe`, and **web contents created**
+   must count 2. Press **Close probe view** and confirm the count stays at 2: the
    creation event describes the object, not the current layout.
 4. Kill the renderer to review `render-process-gone`. Find the `cef_process`
    helper that carries `--type=renderer` (Activity Monitor on macOS, Task

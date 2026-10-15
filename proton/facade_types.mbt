@@ -133,31 +133,25 @@ struct App {
   application_lifecycle_hooks : Array[ApplicationLifecycleHook]
   mut before_quit_handler : (async (ApplicationContext) -> ApplicationQuitDecision noraise)?
   mut will_quit_handler : (async (ApplicationContext) -> ApplicationQuitDecision noraise)?
-  quit_handlers : Array[async (ApplicationContext, Int32) -> Unit noraise]
+  quit_handlers : Array[(ApplicationContext, Int32) -> Unit noraise]
   launch_input_handlers : Array[
     async (ApplicationContext, RuntimeLaunchInput) -> Unit noraise,
   ]
   window_event_handlers : Array[
     async (WindowHandle, WindowEvent) -> Unit noraise,
   ]
-  window_created_handlers : Array[async (WindowHandle) -> Unit noraise]
-  web_contents_created_handlers : Array[
-    async (WebContentsHandle) -> Unit noraise,
-  ]
+  window_created_handlers : Array[(WindowHandle) -> Unit noraise]
+  web_contents_created_handlers : Array[(WebContentsHandle) -> Unit noraise]
   render_process_gone_handlers : Array[
     async (WebContentsHandle, RenderProcessGoneDetails) -> Unit noraise,
   ]
-  session_created_handlers : Array[async (ApplicationSession) -> Unit noraise]
+  session_created_handlers : Array[(ApplicationSession) -> Unit noraise]
   contents_event_handlers : Array[
     async (WebContentsHandle, WebContentsEvent) -> Unit noraise,
   ]
-  mut window_close_handler : (async (WindowHandle) -> WindowCloseDecision noraise)?
-  mut navigation_handler : (async (WebContentsHandle, NavigationRequest) -> NavigationDecision noraise)?
-  mut new_window_handler : (async (WebContentsHandle, NewWindowRequest) -> NewWindowDecision noraise)?
   mut download_handler : (async (WebContentsHandle, DownloadRequest) -> DownloadDecision noraise)?
   mut certificate_handler : (async (WebContentsHandle, CertificateError) -> BrowserPermissionDecision noraise)?
   mut media_handler : (async (WebContentsHandle, MediaPermissionRequest) -> BrowserPermissionDecision noraise)?
-  mut permission_handler : (async (WebContentsHandle, PermissionRequest) -> BrowserPermissionDecision noraise)?
   download_event_handlers : Array[
     async (WebContentsHandle, DownloadEvent) -> Unit noraise,
   ]
@@ -269,7 +263,7 @@ priv struct ResolvedAppConfig {
   accessibility_mode : AccessibilityMode
   proxy_server : String?
   proxy_bypass : String?
-  window_views : Map[String, Array[(String, @native.ViewConfig)]]
+  window_configs : Map[String, WindowConfig]
   last_window_closed_policy : LastWindowClosedPolicy
   launch_input_handlers : Array[
     async (ApplicationContext, RuntimeLaunchInput) -> Unit noraise,
@@ -279,27 +273,21 @@ priv struct ResolvedAppConfig {
   window_event_handlers : Array[
     async (WindowHandle, WindowEvent) -> Unit noraise,
   ]
-  window_created_handlers : Array[async (WindowHandle) -> Unit noraise]
-  web_contents_created_handlers : Array[
-    async (WebContentsHandle) -> Unit noraise,
-  ]
+  window_created_handlers : Array[(WindowHandle) -> Unit noraise]
+  web_contents_created_handlers : Array[(WebContentsHandle) -> Unit noraise]
   render_process_gone_handlers : Array[
     async (WebContentsHandle, RenderProcessGoneDetails) -> Unit noraise,
   ]
-  session_created_handlers : Array[async (ApplicationSession) -> Unit noraise]
+  session_created_handlers : Array[(ApplicationSession) -> Unit noraise]
   contents_event_handlers : Array[
     async (WebContentsHandle, WebContentsEvent) -> Unit noraise,
   ]
-  window_close_handler : (async (WindowHandle) -> WindowCloseDecision noraise)?
   before_quit_handler : (async (ApplicationContext) -> ApplicationQuitDecision noraise)?
   will_quit_handler : (async (ApplicationContext) -> ApplicationQuitDecision noraise)?
-  quit_handlers : Array[async (ApplicationContext, Int32) -> Unit noraise]
-  navigation_handler : (async (WebContentsHandle, NavigationRequest) -> NavigationDecision noraise)?
-  new_window_handler : (async (WebContentsHandle, NewWindowRequest) -> NewWindowDecision noraise)?
+  quit_handlers : Array[(ApplicationContext, Int32) -> Unit noraise]
   download_handler : (async (WebContentsHandle, DownloadRequest) -> DownloadDecision noraise)?
   certificate_handler : (async (WebContentsHandle, CertificateError) -> BrowserPermissionDecision noraise)?
   media_handler : (async (WebContentsHandle, MediaPermissionRequest) -> BrowserPermissionDecision noraise)?
-  permission_handler : (async (WebContentsHandle, PermissionRequest) -> BrowserPermissionDecision noraise)?
   download_event_handlers : Array[
     async (WebContentsHandle, DownloadEvent) -> Unit noraise,
   ]
@@ -366,6 +354,7 @@ priv struct RunningWindow {
   /// it stays valid after the window handle itself is destroyed.
   native_id : Int64
   window : @native.Window
+  config : WindowConfig
   permissions : WindowPermissionPolicy
   lifetime : WindowLifetime
   views : Array[RunningView]
@@ -383,6 +372,7 @@ priv struct RunningView {
   native_id : Int64
   id : String
   view : @native.View
+  web_contents_policy : WebContentsPolicy
   mut document : ResourceDocument?
   mut observed_loading : Bool?
 }
@@ -422,7 +412,6 @@ priv enum CloseCoordinatorState {
   CloseCollecting = 3
   CloseClosingWindows = 4
   CloseWillQuit = 5
-  CloseQuitting = 6
   CloseCommitted = 7
 } derive(Eq)
 
@@ -493,7 +482,7 @@ priv struct PreparedWindow {
   bridge : @native.BridgeConfig?
   permissions : WindowPermissionPolicy
   browser_policy : @native.BrowserPolicy
-  views : Array[(String, @native.ViewConfig)]
+  config : WindowConfig
 }
 
 ///|
@@ -1031,19 +1020,6 @@ pub extend MediaPermissionRequest with Eq::{not_equal, equal}
 
 ///|
 pub extend MediaPermissionRequest with Debug::{to_repr}
-
-///|
-/// A browser permission request delivered to the unified policy handler.
-pub(all) enum PermissionRequest {
-  Certificate(CertificateError)
-  Media(MediaPermissionRequest)
-} derive(Debug, Eq)
-
-///|
-pub extend PermissionRequest with Eq::{not_equal, equal}
-
-///|
-pub extend PermissionRequest with Debug::{to_repr}
 
 ///|
 pub(all) enum BrowserPermissionDecision {

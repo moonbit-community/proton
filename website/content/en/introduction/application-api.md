@@ -66,7 +66,7 @@ validation, registration order, and lifecycle behavior are unchanged.
 | --- | --- |
 | `app_lifecycle(on_start, on_shutdown)` | Application-level state; the start result is passed to shutdown |
 | `window_lifecycle(on_ready, on_close)` | Per-window state; the ready result is passed to close |
-| `on_window_close_request` | Async allow/deny decision before window closure |
+| `WindowConfig.close_handler` | Async allow/deny decision before window closure |
 
 Application and window contexts expose task groups and window management. Window contexts additionally expose their handle and event emitter. A window's state must not outlive the resources it refers to.
 
@@ -100,7 +100,7 @@ Ready/close hooks own per-window state; creation and browser event callbacks rep
 
 The default `LastWindowClosedPolicy::Quit` requests shutdown after the last window closes; `KeepRunning` keeps the application running until an explicit quit or exit. Browser and child-view teardown must finish before normal runtime shutdown completes.
 
-An orderly quit runs `on_before_quit`, closes windows through their close decisions, then runs `on_will_quit` after windows close. `ApplicationQuitDecision::Prevent` cancels the quit; a denied window close also cancels the request. Cancellation does not recreate windows that have already closed. `on_quit` observes the final exit code before runtime teardown and is not a veto point.
+An orderly quit runs `set_before_quit_handler`, closes windows through their close decisions, then runs `set_will_quit_handler` after windows close. `ApplicationQuitDecision::Prevent` cancels the quit; a denied window close also cancels the request. Cancellation does not recreate windows that have already closed. `on_quit` observes the final exit code before runtime teardown and is not a veto point.
 
 Forced exit bypasses cancelable decisions, including an already pending decision, but still performs the final quit notification and runtime cleanup. It is not equivalent to externally killing the process. Scheduled relaunches are started after cleanup and before process termination.
 
@@ -260,7 +260,7 @@ Native operations can raise `WindowSessionError`. A handle is not valid indefini
 
 **Close semantics**
 
-`App.on_window_close_request` registers an async callback that receives the window handle and returns `WindowCloseDecision::Allow` or `Deny`. `window_lifecycle.on_close` is cleanup after closure; it is not a veto hook. The default last-window policy is `Quit`. `KeepRunning` leaves the application running with no open windows and requires an explicit exit path. See [application lifecycle](#application-lifecycle).
+`WindowConfig.close_handler` configures an async callback that receives the window handle and returns `WindowCloseDecision::Allow` or `Deny`. `window_lifecycle.on_close` is cleanup after closure; it is not a veto hook. The default last-window policy is `Quit`. `KeepRunning` leaves the application running with no open windows and requires an explicit exit path. See [application lifecycle](#application-lifecycle).
 
 **Child browser views**
 
@@ -340,6 +340,38 @@ Capability grants are separate from operating-system authorization. Declaring a 
 The net extension performs host HTTP requests and returns status, headers and UTF-8 text. It is not browser fetch, does not share the browser cookie jar and does not follow redirects automatically. Its text response is not a lossless binary transfer interface. Processes spawned by the process extension belong to its application lifetime: wait collects handles, kill still needs wait, and application shutdown cancels and reaps remaining children.
 
 See the [extension API](https://github.com/moonbit-community/proton/blob/bdb169302952db553deda6de015887c7a6a19831/extensions/pkg.generated.mbti) for the complete inventory and scope types. Check target grants, OS permission and platform backend support independently.
+
+## Host callback contracts
+
+`on_*` methods append observers. `set_before_quit_handler`,
+`set_will_quit_handler`, `set_certificate_error_handler`,
+`set_media_permission_handler`, and `set_download_handler` each replace one
+decision handler. Decisions are awaited; async notifications do not block their
+source operation and may overlap while suspended. No completion order is
+promised. Handle expected errors inside these `noraise` callbacks; holding a
+handle does not extend the lifetime of its native object.
+
+Creation notifications (`on_session_created`, `on_window_created`,
+`on_web_contents_created`) and final `on_quit` notifications run synchronously
+in registration order. They are not asynchronous setup or cleanup hooks.
+Creation does not imply page readiness or run before initial navigation. Use
+`app_lifecycle` and `window_lifecycle` for awaited setup and paired cleanup.
+
+`WebContentsPolicy(navigation_handler?=..., new_window_handler?=...)` belongs to
+one page. Supply it through `WindowConfig.web_contents_policy` for a window's
+main page or `ViewConfig.web_contents_policy` for a child, including a view added
+at runtime. Policy is installed before the first load. Children do not inherit
+these handlers; share a policy value explicitly when desired. Navigation is
+allowed by default; new browsing contexts are denied by default.
+
+Navigation interception has a [known replay limitation](https://github.com/moonbit-community/proton/issues/469): `Allow` may fail for initial or cross-origin navigation. Leave `navigation_handler` unset for unrestricted navigation.
+
+`WindowConfig.close_handler` belongs to that window and also participates in
+application quit. An absent handler allows closing. Certificate, media and
+download decisions apply to the single application session and default to deny;
+there is no general permission handler overriding the specific handlers.
+Pending decisions are canceled when their owner closes or becomes invalid;
+forced exit supersedes cancellable close/quit decisions.
 
 ## Browser sessions
 

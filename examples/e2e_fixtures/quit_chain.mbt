@@ -39,9 +39,17 @@ pub async fn run_quit_chain() -> Unit {
       quit_chain_application.val = Some(context)
       context
     },
-    on_shutdown=fn(_) { () },
+    on_shutdown=fn(_) { quit_chain_log("shutdown") },
   )
-  ..on_before_quit(fn(context) {
+  ..set_before_quit_handler(fn(_) {
+    quit_chain_log("replaced before-quit handler")
+    @proton.ApplicationQuitDecision::Prevent
+  })
+  ..set_will_quit_handler(fn(_) {
+    quit_chain_log("replaced will-quit handler")
+    @proton.ApplicationQuitDecision::Prevent
+  })
+  ..set_before_quit_handler(fn(context) {
     quit_chain_log("before-quit")
     if mode == "exit-before-quit" {
       context.exit(exit_code=7)
@@ -52,7 +60,7 @@ pub async fn run_quit_chain() -> Unit {
       @proton.ApplicationQuitDecision::Allow
     }
   })
-  ..on_will_quit(async fn(context) noraise {
+  ..set_will_quit_handler(async fn(context) noraise {
     quit_chain_log("will-quit")
     if mode == "exit-will-quit" || mode == "exit-pending-will-quit" {
       context.exit(exit_code=7)
@@ -70,6 +78,9 @@ pub async fn run_quit_chain() -> Unit {
   })
   ..on_quit(fn(_context, exit_code) {
     quit_chain_log("quit " + exit_code.to_string())
+  })
+  ..on_quit(fn(_, exit_code) {
+    quit_chain_log("second quit observer " + exit_code.to_string())
   })
   ..window_lifecycle(
     on_ready=context => {

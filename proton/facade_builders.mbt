@@ -439,7 +439,8 @@ pub fn App::last_window_closed_policy(
 }
 
 ///|
-/// Observes coalesced native state changes for every running window.
+/// Appends an async observer of coalesced native state changes for all windows.
+/// Observers do not delay the source operation and may overlap while suspended.
 pub fn App::on_window_event(
   self : App,
   handler : async (WindowHandle, WindowEvent) -> Unit noraise,
@@ -450,11 +451,12 @@ pub fn App::on_window_event(
 ///|
 /// Observes every window Proton creates, Electron's `browser-window-created`.
 ///
-/// The handler runs once per window, including windows opened later through
-/// `WindowManager::open`, and receives a handle that is usable immediately.
+/// Runs synchronously in registration order after the instance is registered,
+/// including windows opened later through `WindowManager::open`. It observes
+/// creation, not page readiness; configure policy before creating the window.
 pub fn App::on_window_created(
   self : App,
-  handler : async (WindowHandle) -> Unit noraise,
+  handler : (WindowHandle) -> Unit noraise,
 ) -> Unit {
   self.window_created_handlers.push(handler)
 }
@@ -465,10 +467,11 @@ pub fn App::on_window_created(
 ///
 /// Both a window's main browser page and each web contents view report here,
 /// including views declared in `WindowConfig` and views added later
-/// through `WindowHandle::add_view`.
+/// through `WindowHandle::add_view`. Runs synchronously in registration order;
+/// it is not a setup hook before initial navigation or a page-ready barrier.
 pub fn App::on_web_contents_created(
   self : App,
-  handler : async (WebContentsHandle) -> Unit noraise,
+  handler : (WebContentsHandle) -> Unit noraise,
 ) -> Unit {
   self.web_contents_created_handlers.push(handler)
 }
@@ -490,13 +493,14 @@ pub fn App::on_render_process_gone(
 
 ///|
 /// Observes the application session Proton created for this run, Electron's
-/// `session-created`.
+/// `session-created`. Runs synchronously in registration order before
+/// application startup hooks. Use `app_lifecycle` for asynchronous setup.
 ///
 /// Proton runs one session per application, so the handler runs once during
 /// startup, before the `app_lifecycle` start hooks.
 pub fn App::on_session_created(
   self : App,
-  handler : async (ApplicationSession) -> Unit noraise,
+  handler : (ApplicationSession) -> Unit noraise,
 ) -> Unit {
   self.session_created_handlers.push(handler)
 }
@@ -512,41 +516,9 @@ pub fn App::on_web_contents_event(
 }
 
 ///|
-/// Intercepts user-initiated close requests without blocking the native UI
-/// thread. `WindowHandle::close` uses the same request path; forced cleanup is
-/// reserved for the session-owned destroy lifecycle.
-pub fn App::on_window_close_request(
-  self : App,
-  handler : async (WindowHandle) -> WindowCloseDecision noraise,
-) -> Unit {
-  self.window_close_handler = Some(handler)
-}
-
-///|
-/// Reviews top-level navigations asynchronously. The native browser cancels a
-/// pending navigation until this handler returns, then replays it exactly once
-/// when allowed.
-pub fn App::on_navigation_request(
-  self : App,
-  handler : async (WebContentsHandle, NavigationRequest) -> NavigationDecision noraise,
-) -> Unit {
-  self.navigation_handler = Some(handler)
-}
-
-///|
-/// Reviews requests for a new browsing context, including `window.open`,
-/// target-blank links, and modified link clicks. New Proton windows must
-/// already be declared with `add_window(..., open_on_start=false)`.
-pub fn App::on_new_window_request(
-  self : App,
-  handler : async (WebContentsHandle, NewWindowRequest) -> NewWindowDecision noraise,
-) -> Unit {
-  self.new_window_handler = Some(handler)
-}
-
-///|
 /// Reviews downloads before CEF chooses a destination.
-pub fn App::on_download_request(
+/// Replaces the previously configured handler.
+pub fn App::set_download_handler(
   self : App,
   handler : async (WebContentsHandle, DownloadRequest) -> DownloadDecision noraise,
 ) -> Unit {
@@ -555,7 +527,8 @@ pub fn App::on_download_request(
 
 ///|
 /// Reviews invalid TLS certificates. The default is denial.
-pub fn App::on_certificate_error(
+/// Replaces the previously configured handler.
+pub fn App::set_certificate_error_handler(
   self : App,
   handler : async (WebContentsHandle, CertificateError) -> BrowserPermissionDecision noraise,
 ) -> Unit {
@@ -565,20 +538,12 @@ pub fn App::on_certificate_error(
 ///|
 /// Reviews camera, microphone, and display-capture requests. The default is
 /// denial.
-pub fn App::on_media_permission_request(
+/// Replaces the previously configured handler.
+pub fn App::set_media_permission_handler(
   self : App,
   handler : async (WebContentsHandle, MediaPermissionRequest) -> BrowserPermissionDecision noraise,
 ) -> Unit {
   self.media_handler = Some(handler)
-}
-
-///|
-/// Applies one policy to certificate and media permission requests.
-pub fn App::on_permission_request(
-  self : App,
-  handler : async (WebContentsHandle, PermissionRequest) -> BrowserPermissionDecision noraise,
-) -> Unit {
-  self.permission_handler = Some(handler)
 }
 
 ///|
@@ -596,7 +561,8 @@ pub fn App::on_download_event(
 /// This is Electron's cancelable `before-quit` step. `Prevent` aborts the quit
 /// request, keeps every window open, and leaves the application running; a
 /// later quit request runs the handler again.
-pub fn App::on_before_quit(
+/// Replaces the previously configured handler.
+pub fn App::set_before_quit_handler(
   self : App,
   handler : async (ApplicationContext) -> ApplicationQuitDecision noraise,
 ) -> Unit {
@@ -610,7 +576,8 @@ pub fn App::on_before_quit(
 /// This is Electron's cancelable `will-quit` step. `Prevent` aborts the
 /// termination and leaves the application running without windows; use
 /// `LastWindowClosedPolicy::KeepRunning` semantics to open a window again.
-pub fn App::on_will_quit(
+/// Replaces the previously configured handler.
+pub fn App::set_will_quit_handler(
   self : App,
   handler : async (ApplicationContext) -> ApplicationQuitDecision noraise,
 ) -> Unit {
@@ -620,12 +587,13 @@ pub fn App::on_will_quit(
 ///|
 /// Observes the final `quit` step with the process exit code.
 ///
-/// The handler runs after the quit can no longer be cancelled and before
-/// configured lifecycle shutdown and native cleanup. `exit_code` is the value
-/// requested by `ApplicationContext::quit` or `ApplicationContext::exit`.
+/// Runs synchronously in registration order after exit is committed and before
+/// lifecycle shutdown and native cleanup. Use `app_lifecycle` for async cleanup.
+/// `exit_code` is requested by `ApplicationContext::quit` or
+/// `ApplicationContext::exit`.
 pub fn App::on_quit(
   self : App,
-  handler : async (ApplicationContext, Int32) -> Unit noraise,
+  handler : (ApplicationContext, Int32) -> Unit noraise,
 ) -> Unit {
   self.quit_handlers.push(handler)
 }

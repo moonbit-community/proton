@@ -60,7 +60,7 @@ app.run()
 | --- | --- |
 | `app_lifecycle(on_start, on_shutdown)` | 应用级状态；启动钩子的返回值传给退出钩子 |
 | `window_lifecycle(on_ready, on_close)` | 窗口级状态；ready 返回值传给 close |
-| `on_window_close_request` | 窗口关闭前的异步允许／拒绝决策 |
+| `WindowConfig.close_handler` | 窗口关闭前的异步允许／拒绝决策 |
 
 应用和窗口上下文提供任务组与窗口管理器。窗口上下文还提供窗口句柄和事件发送器。窗口状态不应比其引用的资源存活更久。
 
@@ -94,7 +94,7 @@ ready／close 钩子管理窗口状态；创建通知和浏览器事件用于观
 | `context.exit(exit_code=0)` | 强制退出并终止进程，包括退出码为零时 |
 | `handle.close()` | 请求关闭该窗口，受其关闭拦截器约束 |
 
-正常退出依次执行 on_before_quit、各窗口的关闭决策、窗口关闭后的 on_will_quit。`ApplicationQuitDecision::Prevent` 取消退出；窗口拒绝关闭也会取消整个退出请求。取消不会重新创建已经关闭的窗口。on_quit 在运行时清理前观察最终退出码，不能再否决退出。
+正常退出依次执行 set_before_quit_handler、各窗口的关闭决策、窗口关闭后的 set_will_quit_handler。`ApplicationQuitDecision::Prevent` 取消退出；窗口拒绝关闭也会取消整个退出请求。取消不会重新创建已经关闭的窗口。on_quit 在运行时清理前观察最终退出码，不能再否决退出。
 
 强制退出跳过可取消的决策，包括已经等待中的决策，但仍执行最终退出通知与运行时清理，因此不同于从外部杀死进程。已经安排的 relaunch 在清理后、进程终止前启动。
 
@@ -250,7 +250,7 @@ hide() 保留窗口实例、浏览器和相关任务。close() 发起销毁流�
 
 **关闭语义**
 
-`App.on_window_close_request` 注册异步回调；回调接收窗口句柄，返回 `WindowCloseDecision::Allow` 或 `Deny`。`window_lifecycle.on_close` 是关闭后的清理钩子，不能否决关闭。最后窗口关闭策略默认为 `Quit`；`KeepRunning` 让应用在无窗口时继续运行，需要应用提供显式退出入口。参见[应用生命周期](#应用生命周期)。
+`WindowConfig.close_handler` 配置异步回调；回调接收窗口句柄，返回 `WindowCloseDecision::Allow` 或 `Deny`。`window_lifecycle.on_close` 是关闭后的清理钩子，不能否决关闭。最后窗口关闭策略默认为 `Quit`；`KeepRunning` 让应用在无窗口时继续运行，需要应用提供显式退出入口。参见[应用生命周期](#应用生命周期)。
 
 **子浏览器视图**
 
@@ -330,6 +330,30 @@ capability 授权与操作系统授权不同。声明屏幕或媒体能力不会
 net 扩展在宿主执行 HTTP 请求，返回状态、响应头及 UTF-8 文本；它不等于浏览器 fetch，不共享浏览器 cookie jar，也不自动跟随重定向。二进制数据不是该文本响应接口的无损用途。process 扩展创建的进程属于扩展应用生命周期，wait 回收句柄，kill 后仍需 wait，应用退出会取消并回收剩余子进程。
 
 完整扩展清单及各范围类型见[扩展 API](https://github.com/moonbit-community/proton/blob/bdb169302952db553deda6de015887c7a6a19831/extensions/pkg.generated.mbti)。访问某个 API 前分别确认：目标授权、操作系统授权、平台后端支持。
+
+## 宿主回调契约
+
+`on_*` 方法追加观察者。`set_before_quit_handler`、`set_will_quit_handler`、
+`set_certificate_error_handler`、`set_media_permission_handler` 和
+`set_download_handler` 各自替换唯一的决策处理器。框架等待决策结果；异步通知
+不会阻止原操作继续，挂起期间可以与后续通知重叠，不保证完成顺序。
+这些回调均为 `noraise`，应在回调内部处理可预期的操作失败。保存句柄不会延长原生对象寿命。
+
+创建通知（`on_session_created`、`on_window_created`、`on_web_contents_created`）
+和最终 `on_quit` 通知按注册顺序同步执行，不是异步初始化或清理钩子。
+创建不代表页面就绪，也不保证早于首次导航；需要等待的初始化与配套清理由
+`app_lifecycle` 和 `window_lifecycle` 承担。
+
+`WebContentsPolicy(navigation_handler?=..., new_window_handler?=...)` 属于具体页面。
+窗口主页面通过 `WindowConfig.web_contents_policy` 配置；子视图通过
+`ViewConfig.web_contents_policy` 配置，包括运行时添加的视图。策略在首次加载前安装，
+子视图不继承父窗口的处理器；需要共用时显式复用策略值。默认允许导航、拒绝新浏览上下文。
+
+导航拦截存在[已知的重放限制](https://github.com/moonbit-community/proton/issues/469)：返回 `Allow` 时，首次导航或跨域导航仍可能失败。需要不受限制的导航时，不设置 `navigation_handler`。
+
+`WindowConfig.close_handler` 属于具体窗口，也参与应用退出流程；未配置时允许关闭。
+证书、媒体权限和下载决策作用于唯一的应用会话，默认拒绝，不存在覆盖专用处理器的通用权限入口。
+对象关闭或失效时取消相应的待决任务；强制退出覆盖可取消的关闭和退出决策。
 
 ## 浏览器会话
 

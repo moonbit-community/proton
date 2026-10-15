@@ -278,26 +278,17 @@ pub fn App::locale(Self, @locale.Locale) -> Unit
 pub fn App::main_window(Self, WindowConfig) -> Unit
 pub fn App::menu(Self, MenuBar) -> Unit
 pub fn App::name(Self) -> String raise @proton_config.AppConfigError
-pub fn App::on_before_quit(Self, async (ApplicationContext) -> ApplicationQuitDecision noraise) -> Unit
-pub fn App::on_certificate_error(Self, async (WebContentsHandle, CertificateError) -> BrowserPermissionDecision noraise) -> Unit
 pub fn App::on_download_event(Self, async (WebContentsHandle, DownloadEvent) -> Unit noraise) -> Unit
-pub fn App::on_download_request(Self, async (WebContentsHandle, DownloadRequest) -> DownloadDecision noraise) -> Unit
 pub fn App::on_launch_input(Self, async (ApplicationContext, RuntimeLaunchInput) -> Unit noraise) -> Unit
-pub fn App::on_media_permission_request(Self, async (WebContentsHandle, MediaPermissionRequest) -> BrowserPermissionDecision noraise) -> Unit
-pub fn App::on_navigation_request(Self, async (WebContentsHandle, NavigationRequest) -> NavigationDecision noraise) -> Unit
-pub fn App::on_new_window_request(Self, async (WebContentsHandle, NewWindowRequest) -> NewWindowDecision noraise) -> Unit
-pub fn App::on_permission_request(Self, async (WebContentsHandle, PermissionRequest) -> BrowserPermissionDecision noraise) -> Unit
-pub fn App::on_quit(Self, async (ApplicationContext, Int) -> Unit noraise) -> Unit
+pub fn App::on_quit(Self, (ApplicationContext, Int) -> Unit) -> Unit
 pub fn App::on_render_process_gone(Self, async (WebContentsHandle, RenderProcessGoneDetails) -> Unit noraise) -> Unit
-pub fn App::on_session_created(Self, async (ApplicationSession) -> Unit noraise) -> Unit
+pub fn App::on_session_created(Self, (ApplicationSession) -> Unit) -> Unit
 pub fn App::on_system_appearance_change(Self, async (SystemAppearance) -> Unit noraise) -> Unit
 pub fn App::on_thumbar_button_click(Self, async (WindowHandle, String) -> Unit noraise) -> Unit
 pub fn App::on_update_available(Self, async (PendingUpdate) -> Unit noraise) -> Unit
-pub fn App::on_web_contents_created(Self, async (WebContentsHandle) -> Unit noraise) -> Unit
+pub fn App::on_web_contents_created(Self, (WebContentsHandle) -> Unit) -> Unit
 pub fn App::on_web_contents_event(Self, async (WebContentsHandle, WebContentsEvent) -> Unit noraise) -> Unit
-pub fn App::on_will_quit(Self, async (ApplicationContext) -> ApplicationQuitDecision noraise) -> Unit
-pub fn App::on_window_close_request(Self, async (WindowHandle) -> WindowCloseDecision noraise) -> Unit
-pub fn App::on_window_created(Self, async (WindowHandle) -> Unit noraise) -> Unit
+pub fn App::on_window_created(Self, (WindowHandle) -> Unit) -> Unit
 pub fn App::on_window_event(Self, async (WindowHandle, WindowEvent) -> Unit noraise) -> Unit
 pub fn App::path(Self, AppPathKind) -> String raise AppPathError
 pub fn App::proxy(Self, String, bypass? : String) -> Unit
@@ -305,7 +296,12 @@ pub async fn App::run(Self) -> Unit raise AppRunError
 pub async fn App::run_or_abort(Self) -> Unit
 pub fn App::session_partition(Self, String) -> Unit
 pub fn App::set_app_logs_path(Self, path? : String) -> Unit raise AppPathError
+pub fn App::set_before_quit_handler(Self, async (ApplicationContext) -> ApplicationQuitDecision noraise) -> Unit
+pub fn App::set_certificate_error_handler(Self, async (WebContentsHandle, CertificateError) -> BrowserPermissionDecision noraise) -> Unit
+pub fn App::set_download_handler(Self, async (WebContentsHandle, DownloadRequest) -> DownloadDecision noraise) -> Unit
+pub fn App::set_media_permission_handler(Self, async (WebContentsHandle, MediaPermissionRequest) -> BrowserPermissionDecision noraise) -> Unit
 pub fn App::set_path(Self, AppPathKind, String) -> Unit raise AppPathError
+pub fn App::set_will_quit_handler(Self, async (ApplicationContext) -> ApplicationQuitDecision noraise) -> Unit
 pub fn App::single_instance(Self, enabled? : Bool) -> Unit
 pub fn App::update_channel(Self, String, Array[String], check_on_launch? : Bool, freshness_days? : Int) -> Unit
 pub fn App::url_scheme(Self, String) -> Unit
@@ -842,14 +838,6 @@ pub fn PendingUpdate::notes_url(Self) -> String?
 pub fn PendingUpdate::size(Self) -> Int64
 pub fn PendingUpdate::version(Self) -> String
 
-pub(all) enum PermissionRequest {
-  Certificate(CertificateError)
-  Media(MediaPermissionRequest)
-} derive(Eq, @debug.Debug)
-pub fn PermissionRequest::equal(Self, Self) -> Bool
-pub fn PermissionRequest::not_equal(Self, Self) -> Bool
-pub fn PermissionRequest::to_repr(Self) -> @debug.Repr
-
 pub(all) enum ProgressBarMode {
   Automatic
   Normal
@@ -1004,8 +992,9 @@ pub struct ViewConfig {
   z_order : Int
   initial_url : String
   background_color : String?
+  web_contents_policy : WebContentsPolicy
 }
-pub fn ViewConfig::ViewConfig(width~ : Int, height~ : Int, x? : Int, y? : Int, visible? : Bool, z_order? : Int, initial_url? : String, background_color? : String) -> Self
+pub fn ViewConfig::ViewConfig(width~ : Int, height~ : Int, x? : Int, y? : Int, visible? : Bool, z_order? : Int, initial_url? : String, background_color? : String, web_contents_policy? : WebContentsPolicy) -> Self
 
 pub struct ViewHandle {
   id : String
@@ -1099,6 +1088,12 @@ pub fn WebContentsHandle::view_id(Self) -> String?
 pub fn WebContentsHandle::window_id(Self) -> String
 pub fn WebContentsHandle::zoom_percent(Self) -> Int raise WindowSessionError
 
+pub(all) struct WebContentsPolicy {
+  navigation_handler : (async (WebContentsHandle, NavigationRequest) -> NavigationDecision noraise)?
+  new_window_handler : (async (WebContentsHandle, NewWindowRequest) -> NewWindowDecision noraise)?
+}
+pub fn WebContentsPolicy::WebContentsPolicy(navigation_handler? : async (WebContentsHandle, NavigationRequest) -> NavigationDecision noraise, new_window_handler? : async (WebContentsHandle, NewWindowRequest) -> NewWindowDecision noraise) -> Self
+
 pub(all) struct WindowButtonPosition {
   x : Int
   y : Int
@@ -1125,8 +1120,10 @@ pub(all) struct WindowConfig {
   theme : WindowThemePreference
   traffic_light_position : WindowButtonPosition?
   views : Array[(String, ViewConfig)]
+  close_handler : (async (WindowHandle) -> WindowCloseDecision noraise)?
+  web_contents_policy : WebContentsPolicy
 }
-pub fn WindowConfig::WindowConfig(String, @manifest.AppEntry, width? : Int, height? : Int, size_hint? : WindowSizeHint, titlebar_style? : TitlebarStyle, theme? : WindowThemePreference, traffic_light_position? : WindowButtonPosition, views? : Array[(String, ViewConfig)]) -> Self
+pub fn WindowConfig::WindowConfig(String, @manifest.AppEntry, width? : Int, height? : Int, size_hint? : WindowSizeHint, titlebar_style? : TitlebarStyle, theme? : WindowThemePreference, traffic_light_position? : WindowButtonPosition, views? : Array[(String, ViewConfig)], close_handler? : async (WindowHandle) -> WindowCloseDecision noraise, web_contents_policy? : WebContentsPolicy) -> Self
 
 pub struct WindowContext {
   id : String

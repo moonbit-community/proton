@@ -412,16 +412,6 @@ async fn run_manifest(
     }
     let definitions : Array[PreparedWindow] = []
     let browser_policy = @native.BrowserPolicy(
-      navigation=if config.navigation_handler is Some(_) {
-        @native.BrowserPolicyMode::Ask
-      } else {
-        @native.BrowserPolicyMode::Allow
-      },
-      new_window=if config.new_window_handler is Some(_) {
-        @native.BrowserPolicyMode::Ask
-      } else {
-        @native.BrowserPolicyMode::Deny
-      },
       download=if config.download_handler is Some(_) {
         @native.BrowserPolicyMode::Ask
       } else {
@@ -454,13 +444,16 @@ async fn run_manifest(
       } else {
         None
       }
+      let window_config = config.window_configs.get(plan.id).unwrap()
       definitions.push(PreparedWindow::{
         plan,
         entry,
         bridge,
         permissions: permission_policies[index],
-        browser_policy,
-        views: config.window_views.get(plan.id).unwrap_or([]),
+        browser_policy: window_config.web_contents_policy.to_native(
+          browser_policy,
+        ),
+        config: window_config,
       })
     }
     @async.with_task_group(application_tasks => {

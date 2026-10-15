@@ -3492,6 +3492,7 @@ int32_t proton_internal_view_create(
     proton_window_handle_t window, int32_t x, int32_t y, int32_t width,
     int32_t height, int32_t visible, int32_t z_order, const char *initial_url,
     int32_t has_background_color, uint32_t background_color,
+    int32_t navigation_policy, int32_t new_window_policy,
     proton_view_handle_t *out_view) {
   proton_window_slot_t *window_slot = NULL;
   int32_t status = proton_get_window(window, &window_slot);
@@ -3509,6 +3510,9 @@ int32_t proton_internal_view_create(
   if (status != PROTON_OK) {
     return status;
   }
+
+  config.navigation_policy = navigation_policy;
+  config.new_window_policy = new_window_policy;
 
   proton_runtime_slot_t *runtime_slot = NULL;
   status = proton_get_runtime(window_slot->runtime, &runtime_slot);

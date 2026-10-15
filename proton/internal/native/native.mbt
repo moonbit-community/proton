@@ -3434,6 +3434,8 @@ pub fn View::View(
     @ffi.to_cstr(config.initial_url),
     runtime_config_bool(color is Some(_)),
     color.unwrap_or(0),
+    browser_policy_code(config.navigation),
+    browser_policy_code(config.new_window),
     out_view,
   )
   if status < 0 {

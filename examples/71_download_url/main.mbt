@@ -154,7 +154,7 @@ async fn main {
     debug=true,
   )
   ..commands(register_commands)
-  ..on_download_request(fn(_browser, request) {
+  ..set_download_handler(fn(_browser, request) {
     last_download_id.val = Some(request.id)
     let destination = if show_dialog.val {
       "system save dialog"

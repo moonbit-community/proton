@@ -67,7 +67,7 @@ The default last-window policy quits the application. Tray and background applic
 
 With that policy, closing all windows does not stop the process. Provide an explicit quit action before using it in a real application.
 
-Use `on_window_close_request` for an asynchronous close decision: return `WindowCloseDecision::Allow` to proceed or `Deny` to keep the window open. A confirmation or unsaved-document check belongs here; `on_close` is cleanup after closing.
+Set `WindowConfig.close_handler` for an asynchronous close decision: return `WindowCloseDecision::Allow` to proceed or `Deny` to keep the window open. A confirmation or unsaved-document check belongs here; `on_close` is cleanup after closing.
 
 ## Platform-specific window behavior
 

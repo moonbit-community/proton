@@ -125,10 +125,9 @@ fn CloseCoordinator::cancel_all(self : CloseCoordinator) -> Unit {
   }
   self.pending.clear()
   match self.pending_quit {
-    Some(task) => {
-      task.cancel()
-      self.pending_quit = None
-    }
+    // Keep the canceled decision until its cleanup has completed. Final quit
+    // notification must not overtake the interrupted handler's defers.
+    Some(task) => task.cancel()
     None => ()
   }
 }
@@ -239,7 +238,7 @@ fn RuntimeSession::add_window_view(
   window_id : String,
   window_native_id : Int64,
   view_id : String,
-  config : @native.ViewConfig,
+  config : ViewConfig,
 ) -> ViewHandle raise WindowSessionError {
   let running = self.resolve_window(window_id, window_native_id)
   let running_view = add_view_to_running_window(running, view_id, config)
@@ -253,7 +252,7 @@ fn RuntimeSession::add_window_view(
 fn add_view_to_running_window(
   running : RunningWindow,
   view_id : String,
-  config : @native.ViewConfig,
+  config : ViewConfig,
 ) -> RunningView raise WindowSessionError {
   if view_id.is_empty() {
     raise window_operation_failed(
@@ -266,7 +265,7 @@ fn add_view_to_running_window(
       raise AlreadyExists(id=view_id)
     }
   }
-  let created = @native.View::View(running.window, config) catch {
+  let created = @native.View::View(running.window, config.to_native()) catch {
     error =>
       raise window_operation_failed(
         "add view " + view_id + " to window " + running.id,
@@ -277,6 +276,7 @@ fn add_view_to_running_window(
     id: view_id,
     native_id: created.id(),
     view: created,
+    web_contents_policy: config.web_contents_policy,
     document: None,
     observed_loading: None,
   }
@@ -517,7 +517,7 @@ fn RuntimeSession::close_window(
   running.window.close() catch {
     error => raise window_operation_failed("close window " + id, error)
   }
-  if self.config.window_close_handler is None {
+  if running.config.close_handler is None {
     running.state = WindowCloseRequested
   }
 }
@@ -725,6 +725,7 @@ fn RuntimeSession::create_window(
     id: plan.id,
     native_id: created_window.id(),
     window: created_window,
+    config: definition.config,
     permissions: definition.permissions,
     lifetime: WindowLifetime(),
     views: [],
@@ -741,7 +742,7 @@ fn RuntimeSession::create_window(
         WindowDestroy(status=error.status(), detail=error.message()),
       )
   })
-  if self.config.window_close_handler is Some(_) {
+  if running.config.close_handler is Some(_) {
     created_window.set_close_interception(true) catch {
       error =>
         raise native_run_error(
@@ -753,7 +754,7 @@ fn RuntimeSession::create_window(
   load_prepared_entry(created_window, definition.entry) catch {
     error => raise EntryLoadError(error)
   }
-  for view_plan in definition.views {
+  for view_plan in definition.config.views {
     let (view_id, view_config) = view_plan
     ignore(
       add_view_to_running_window(running, view_id, view_config) catch {
@@ -1816,7 +1817,7 @@ pub fn WindowHandle::add_view(
   id : String,
   config : ViewConfig,
 ) -> ViewHandle raise WindowSessionError {
-  self.session.add_window_view(self.id, self.native_id, id, config.to_native())
+  self.session.add_window_view(self.id, self.native_id, id, config)
 }
 
 ///|
@@ -3042,6 +3043,13 @@ fn RuntimeSession::start_browser_request(
   guard window_id is Some(window_id) else { return }
   guard self.find_window_by_native_id(window_id) is Some(window) else { return }
   guard self.contents_handle(window, view_id) is Some(browser) else { return }
+  let policy = match view_id {
+    None => window.config.web_contents_policy
+    Some(id) => {
+      guard window.find_view_by_native_id(id) is Some(view) else { return }
+      view.web_contents_policy
+    }
+  }
   let request_id = match request {
     Navigation(request_id~, ..)
     | NewWindow(request_id~, ..)
@@ -3054,7 +3062,7 @@ fn RuntimeSession::start_browser_request(
       defer self.wakeup.signal.notify()
       match request {
         Navigation(url~, http_method~, user_gesture~, redirect~, ..) =>
-          match self.config.navigation_handler {
+          match policy.navigation_handler {
             Some(handler) =>
               match
                 handler(browser, { url, http_method, user_gesture, redirect, }) {
@@ -3066,7 +3074,7 @@ fn RuntimeSession::start_browser_request(
             None => BrowserResponse::{ action: "deny", path: None, }
           }
         NewWindow(url~, user_gesture~, ..) => {
-          let decision = match self.config.new_window_handler {
+          let decision = match policy.new_window_handler {
             Some(handler) => handler(browser, { url, user_gesture, })
             None => NewWindowDecision::Deny
           }
@@ -3106,54 +3114,26 @@ fn RuntimeSession::start_browser_request(
             None => BrowserResponse::{ action: "deny", path: None, }
           }
         Certificate(url~, error_code~, ..) =>
-          match self.config.permission_handler {
+          match self.config.certificate_handler {
             Some(handler) =>
-              match
-                handler(
-                  browser,
-                  PermissionRequest::Certificate({ url, error_code, }),
-                ) {
+              match handler(browser, { url, error_code, }) {
                 BrowserPermissionDecision::Allow =>
-                  BrowserResponse::{ action: "allow", path: None, }
+                  { action: "allow", path: None, }
                 BrowserPermissionDecision::Deny =>
-                  BrowserResponse::{ action: "deny", path: None, }
+                  { action: "deny", path: None, }
               }
-            None =>
-              match self.config.certificate_handler {
-                Some(handler) =>
-                  match handler(browser, { url, error_code, }) {
-                    BrowserPermissionDecision::Allow =>
-                      BrowserResponse::{ action: "allow", path: None, }
-                    BrowserPermissionDecision::Deny =>
-                      BrowserResponse::{ action: "deny", path: None, }
-                  }
-                None => BrowserResponse::{ action: "deny", path: None, }
-              }
+            None => { action: "deny", path: None, }
           }
         Media(origin~, permissions~, ..) =>
-          match self.config.permission_handler {
+          match self.config.media_handler {
             Some(handler) =>
-              match
-                handler(
-                  browser,
-                  PermissionRequest::Media({ origin, permissions, }),
-                ) {
+              match handler(browser, { origin, permissions, }) {
                 BrowserPermissionDecision::Allow =>
-                  BrowserResponse::{ action: "allow", path: None, }
+                  { action: "allow", path: None, }
                 BrowserPermissionDecision::Deny =>
-                  BrowserResponse::{ action: "deny", path: None, }
+                  { action: "deny", path: None, }
               }
-            None =>
-              match self.config.media_handler {
-                Some(handler) =>
-                  match handler(browser, { origin, permissions, }) {
-                    BrowserPermissionDecision::Allow =>
-                      BrowserResponse::{ action: "allow", path: None, }
-                    BrowserPermissionDecision::Deny =>
-                      BrowserResponse::{ action: "deny", path: None, }
-                  }
-                None => BrowserResponse::{ action: "deny", path: None, }
-              }
+            None => { action: "deny", path: None, }
           }
       }
     },
@@ -3454,8 +3434,8 @@ fn RuntimeSession::start_window_close_request(
   window_id : Int64,
   request_id : Int64,
 ) -> Unit {
-  guard self.config.window_close_handler is Some(handler) else { return }
   guard self.find_window_by_native_id(window_id) is Some(window) else { return }
+  guard window.config.close_handler is Some(handler) else { return }
   match self.close_coordinator.find(window_id) {
     Some(pending) => {
       pending.native_request = Some(request_id)
@@ -4150,7 +4130,6 @@ fn RuntimeSession::advance_application_lifetime(
         did_work = true
       }
     CloseWillQuit => if self.advance_will_quit() { did_work = true }
-    CloseQuitting => if self.advance_quit_event() { did_work = true }
     CloseCommitted => ()
   }
   did_work
@@ -4173,7 +4152,7 @@ fn RuntimeSession::advance_forced_exit(
     }
     // Window teardown is already in progress. The final notification is not
     // cancelable; a forced request there can only replace the exit code.
-    CloseClosingWindows | CloseQuitting | CloseCommitted => false
+    CloseClosingWindows | CloseCommitted => false
   }
 }
 
@@ -4236,7 +4215,9 @@ fn RuntimeSession::advance_quit_decision(
       self.application_tasks.spawn(
         () => {
           defer self.wakeup.signal.notify()
-          handler(context)
+          @async.handle_cancellation(() => handler(context)).unwrap_or(
+            ApplicationQuitDecision::Allow,
+          )
         },
         no_wait=true,
       ),
@@ -4260,58 +4241,18 @@ fn RuntimeSession::advance_quit_decision(
 }
 
 ///|
-/// Runs the application notification of the last quit step and waits for it,
-/// matching Electron's synchronous `quit` emission before shutdown.
+/// Commits exit and synchronously notifies observers before lifecycle cleanup.
 fn RuntimeSession::begin_quit_event(
   self : RuntimeSession,
 ) -> Unit raise AppRunError {
-  // The quit can no longer be cancelled from here on, so a later launch of the
-  // same application must not start new windows.
   self.runtime.stop_app_activations() catch {
     error => raise native_run_error("stop app activations", error)
   }
-  self.close_coordinator.state = CloseQuitting
-  guard !self.config.quit_handlers.is_empty() else {
-    self.close_coordinator.state = CloseCommitted
-    return
-  }
+  self.close_coordinator.state = CloseCommitted
   let context = self.application_context()
-  let handlers = self.config.quit_handlers
   let exit_code = self.close_coordinator.exit_code()
-  self.close_coordinator.pending_quit = Some(
-    self.application_tasks.spawn(
-      () => {
-        defer self.wakeup.signal.notify()
-        for handler in handlers {
-          handler(context, exit_code)
-        }
-        ApplicationQuitDecision::Allow
-      },
-      no_wait=true,
-    ),
-  )
-}
-
-///|
-fn RuntimeSession::advance_quit_event(self : RuntimeSession) -> Bool {
-  match self.close_coordinator.pending_quit {
-    None => {
-      self.close_coordinator.state = CloseCommitted
-      true
-    }
-    Some(task) => {
-      let completed = task.try_wait() catch {
-        _ => Some(ApplicationQuitDecision::Allow)
-      }
-      match completed {
-        None => false
-        Some(_) => {
-          self.close_coordinator.pending_quit = None
-          self.close_coordinator.state = CloseCommitted
-          true
-        }
-      }
-    }
+  for handler in self.config.quit_handlers {
+    handler(context, exit_code)
   }
 }
 
@@ -4351,6 +4292,13 @@ fn RuntimeSession::advance_close_completion(
   self : RuntimeSession,
 ) -> Bool raise AppRunError {
   guard self.windows_fully_closed() else { return false }
+  if self.close_coordinator.pending_quit is Some(task) {
+    let completed = task.try_wait() catch {
+      _ => Some(ApplicationQuitDecision::Allow)
+    }
+    guard completed is Some(_) else { return false }
+    self.close_coordinator.pending_quit = None
+  }
   if self.close_coordinator.is_forced() {
     self.begin_quit_event()
   } else {
@@ -4370,12 +4318,9 @@ fn RuntimeSession::windows_fully_closed(self : RuntimeSession) -> Bool {
 fn RuntimeSession::begin_application_close_decisions(
   self : RuntimeSession,
 ) -> Unit raise AppRunError {
-  guard self.config.window_close_handler is Some(handler) else {
-    self.commit_application_close()
-    return
-  }
   for running in self.windows {
     guard running.is_active() else { continue }
+    guard running.config.close_handler is Some(handler) else { continue }
     let window_id = running.native_id
     guard self.close_coordinator.find(window_id) is None else { continue }
     let handle = self.window_handle(running)
@@ -4486,7 +4431,7 @@ fn RuntimeSession::commit_application_close(
   self.close_coordinator.pending.clear()
   for running in self.windows {
     guard running.is_active() else { continue }
-    if self.config.window_close_handler is Some(_) {
+    if running.config.close_handler is Some(_) {
       running.window.set_close_interception(false) catch {
         error =>
           raise native_run_error(
@@ -4593,7 +4538,7 @@ fn RuntimeSession::emit_session_created(self : RuntimeSession) -> Unit {
   guard !self.config.session_created_handlers.is_empty() else { return }
   let session = self.environment.application_session
   for handler in self.config.session_created_handlers {
-    ignore(self.application_tasks.spawn(() => handler(session), no_wait=true))
+    handler(session)
   }
 }
 
@@ -4606,7 +4551,7 @@ fn RuntimeSession::emit_window_created(
   guard !self.config.window_created_handlers.is_empty() else { return }
   let handle = self.window_handle(window)
   for handler in self.config.window_created_handlers {
-    ignore(self.application_tasks.spawn(() => handler(handle), no_wait=true))
+    handler(handle)
   }
 }
 
@@ -4618,7 +4563,7 @@ fn RuntimeSession::emit_web_contents_created(
 ) -> Unit {
   guard !self.config.web_contents_created_handlers.is_empty() else { return }
   for handler in self.config.web_contents_created_handlers {
-    ignore(self.application_tasks.spawn(() => handler(contents), no_wait=true))
+    handler(contents)
   }
 }
 
@@ -4722,7 +4667,6 @@ fn CloseCoordinator::exit_code(self : CloseCoordinator) -> Int32 {
 ///|
 fn CloseCoordinator::accepts_download(self : CloseCoordinator) -> Bool {
   self.purpose != InstallUpdate &&
-  self.state != CloseQuitting &&
   self.state != CloseCommitted &&
   !self.is_forced()
 }

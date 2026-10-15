@@ -239,14 +239,21 @@ async fn main {
       session.data_path.unwrap_or("temporary"),
     )
   })
+  ..on_session_created(fn(_) { log_process_step("second session observer") })
   ..on_window_created(fn(window) {
     created_windows.push(window.id())
     log_process_step("browser-window-created " + window.id())
+  })
+  ..on_window_created(fn(window) {
+    log_process_step("second window observer " + window.id())
   })
   ..on_web_contents_created(fn(contents) {
     let label = web_contents_label(contents)
     created_contents.push(label)
     log_process_step("web-contents-created " + label)
+  })
+  ..on_web_contents_created(fn(contents) {
+    log_process_step("second contents observer " + web_contents_label(contents))
   })
   ..on_render_process_gone(fn(contents, details) {
     let line = web_contents_label(contents) +
@@ -260,6 +267,7 @@ async fn main {
   ..commands(register_commands)
   ..app_lifecycle(
     on_start=context => {
+      log_process_step("lifecycle start (session observers have returned)")
       application_slot.val = Some(context)
       context
     },

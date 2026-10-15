@@ -287,15 +287,22 @@ fn sync_sidebar(url~ : String?, title~ : String?, error~ : String?) -> Unit {
 }
 
 ///|
-let start_page_url = "data:text/html,<body style='margin:0;background:rgb(30,32,36);color:rgb(220,224,230);font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh'><div style='text-align:center'><h1>Built-in Browser</h1><p>Start the view tone, then use the sidebar to mute this view.</p><button onclick='startTone()' style='padding:10px 16px'>Start view tone</button><script>let audioContext,oscillator;function startTone(){if(!audioContext){audioContext=new AudioContext();oscillator=audioContext.createOscillator();oscillator.frequency.value=523.25;oscillator.connect(audioContext.destination);oscillator.start()}audioContext.resume()}</script></div></body>"
+let start_page_url = "data:text/html,<body style='margin:0;background:rgb(30,32,36);color:rgb(220,224,230);font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh'><div style='text-align:center'><h1>Built-in Browser</h1><p>Start the view tone, then use the sidebar to mute this view.</p><p><button onclick=\"window.open(&quot;data:text/html,&lt;title&gt;View popup&lt;/title&gt;&lt;h1&gt;Opened in the child view&lt;/h1&gt;&quot;)\">Open view popup</button></p><button onclick='startTone()' style='padding:10px 16px'>Start view tone</button><script>let audioContext,oscillator;function startTone(){if(!audioContext){audioContext=new AudioContext();oscillator=audioContext.createOscillator();oscillator.frequency.value=523.25;oscillator.connect(audioContext.destination);oscillator.start()}audioContext.resume()}</script></div></body>"
 
 ///|
 fn open_panel(window : @proton.WindowHandle) -> Unit {
   let (width, height) = window.content_size() catch { _ => return }
   let view = window.add_view(
     "browser",
-    @proton.view(
-      start_page_url,
+    @proton.ViewConfig(
+      initial_url=start_page_url,
+      web_contents_policy=@proton.WebContentsPolicy(new_window_handler=fn(
+        _,
+        request,
+      ) {
+        println("view popup opened in current view: " + request.url)
+        @proton.NewWindowDecision::OpenInCurrent
+      }),
       width=if width > sidebar_width { width - sidebar_width } else { 1 },
       height=if height > 0 { height } else { 1 },
       x=sidebar_width,
@@ -319,6 +326,13 @@ async fn main {
       titlebar_style=@proton.TitlebarStyle::Overlay,
       width=1120,
       height=720,
+      web_contents_policy=@proton.WebContentsPolicy(new_window_handler=fn(
+        _,
+        request,
+      ) {
+        println("host popup denied: " + request.url)
+        @proton.NewWindowDecision::Deny
+      }),
     ),
   )
   ..debug(enabled=true)
