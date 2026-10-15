@@ -1964,7 +1964,19 @@ pub async fn run_window_config_regression() -> Unit {
     },
     open_on_start=false,
   )
-  ..on_window_created(window => created.push(window.id()))
+  ..on_window_created(window => {
+    created.push(window.id())
+    if window.id() == "main" {
+      ignore(
+        window.add_view(
+          "created-in-window",
+          @proton.view("about:blank", width=50, height=50),
+        ),
+      ) catch {
+        error => abort(error.message())
+      }
+    }
+  })
   ..on_window_created(window => created.push(window.id() + ":second"))
   ..on_session_created(_ => created.push("session"))
   ..on_session_created(_ => created.push("session:second"))
@@ -1972,6 +1984,17 @@ pub async fn run_window_config_regression() -> Unit {
     created_contents.push(
       contents.window_id() + "/" + contents.view_id().unwrap_or("main"),
     )
+    if contents.window_id() == "main" && contents.view_id() is None {
+      let window = application.val.unwrap().windows().find("main").unwrap()
+      ignore(
+        window.add_view(
+          "created-in-contents",
+          @proton.view("about:blank", width=50, height=50),
+        ),
+      ) catch {
+        error => abort(error.message())
+      }
+    }
   })
   ..on_web_contents_created(contents => {
     created_contents.push(
@@ -2008,7 +2031,14 @@ pub async fn run_window_config_regression() -> Unit {
   ..window_lifecycle(
     on_ready=context => {
       let window = context.handle()
-      assert_eq(window.views().length(), 1)
+      assert_eq(
+        window.views().length(),
+        if context.id() == "main" {
+          3
+        } else {
+          1
+        },
+      )
       assert_eq(window.view("child").unwrap().window_id(), context.id())
       if context.id() == "secondary" {
         secondary_activations.val += 1
@@ -2026,7 +2056,9 @@ pub async fn run_window_config_regression() -> Unit {
           assert_eq(notifications, ["second", "first"])
           assert_true(created.contains("main:second"))
           assert_eq(created_contents, [
-            "main/main", "main/main:second", "main/child", "main/child:second",
+            "main/main", "main/created-in-contents", "main/created-in-contents:second",
+            "main/main:second", "main/created-in-window", "main/created-in-window:second",
+            "main/child", "main/child:second",
           ])
           while !popups.contains("main") {
             @async.sleep(5)
@@ -2095,11 +2127,17 @@ pub async fn run_window_config_regression() -> Unit {
   assert_false(navigations.contains("main/child"))
   assert_false(navigations.contains("main"))
   assert_eq(popups, ["main", "dynamic"])
-  assert_eq(created_contents.length(), 14)
-  for index in 0..<(created_contents.length() / 2) {
+  assert_eq(created_contents.length(), 18)
+  for
+    label in [
+      "main/main", "main/child", "main/created-in-window", "main/created-in-contents",
+      "main/dynamic", "secondary/main", "secondary/child",
+    ] {
+    let expected = if label.has_prefix("secondary/") { 2 } else { 1 }
+    assert_eq(created_contents.filter(item => item == label).length(), expected)
     assert_eq(
-      created_contents[index * 2 + 1],
-      created_contents[index * 2] + ":second",
+      created_contents.filter(item => item == label + ":second").length(),
+      expected,
     )
   }
   println("LIFECYCLE_PASSED window-config")

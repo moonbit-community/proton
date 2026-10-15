@@ -772,11 +772,12 @@ fn RuntimeSession::create_window(
   // A new window starts a new last-window policy period: closing it again may
   // request quit even when an earlier automatic request was prevented.
   self.close_coordinator.last_window_quit_handled = false
-  // Report creation the way Electron does: the web contents exists before the
-  // window joins the application's window list, and planned views follow it.
+  // Fix the planned-view list before callbacks can add views. add_view emits
+  // its own creation notification and must not join this notification pass.
+  let planned_views = running.views.copy()
   self.emit_web_contents_created(self.browser_handle(running))
   self.emit_window_created(running)
-  for view in running.views {
+  for view in planned_views {
     self.emit_web_contents_created(
       self.view_handle(running, view).web_contents(),
     )
