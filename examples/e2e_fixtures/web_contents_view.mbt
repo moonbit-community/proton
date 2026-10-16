@@ -30,33 +30,30 @@ async fn run_web_contents_view_app() -> Result[Unit, String] {
       height=480,
       debug=true,
     )
-    ..window_lifecycle(
-      on_ready=fn(context) raise {
-        let window = context.handle()
-        let left = window.add_view(
-          "left",
-          @proton.view(wcv_left_url, width=300, height=220, x=10, y=10),
-        )
-        let right = window.add_view(
-          "right",
-          @proton.view(
-            "about:blank",
-            width=300,
-            height=220,
-            x=330,
-            y=10,
-            z_order=1,
-          ),
-        )
-        left.web_contents().set_zoom_percent(125)
-        if left.web_contents().zoom_percent() != 125 {
-          abort("web contents view zoom did not persist")
-        }
-        left.web_contents().load_url(wcv_left_url)
-        right.web_contents().load_html(wcv_right_html, wcv_right_url)
-      },
-      on_close=fn(_state) {  },
-    )
+    ..setup_window(context => {
+      let window = context.handle()
+      let left = window.add_view(
+        "left",
+        @proton.view(wcv_left_url, width=300, height=220, x=10, y=10),
+      )
+      let right = window.add_view(
+        "right",
+        @proton.view(
+          "about:blank",
+          width=300,
+          height=220,
+          x=330,
+          y=10,
+          z_order=1,
+        ),
+      )
+      left.web_contents().set_zoom_percent(125)
+      if left.web_contents().zoom_percent() != 125 {
+        abort("web contents view zoom did not persist")
+      }
+      left.web_contents().load_url(wcv_left_url)
+      right.web_contents().load_html(wcv_right_html, wcv_right_url)
+    })
     ..on_web_contents_event(fn(_view, event) noraise {
       if _view.view_id() is None {
         return

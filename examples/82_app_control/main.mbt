@@ -246,34 +246,29 @@ async fn main {
   @proton.html("Application Control", page(), width=880, height=620)
   ..identifier("com.example.proton.app-control")
   ..commands(register_commands)
-  ..app_lifecycle(
-    on_start=context => {
-      application_slot.val = Some(context)
-      log_app_step(
-        "is_ready in app_lifecycle.on_start = " + @proton.is_ready().to_string(),
-      )
-      // Readiness flips once startup finished: hooks completed and the initial
-      // window is ready. The renderer may load before that happens, so the
-      // terminal reports the transition instead of the first page readback.
-      ignore(
-        context
-        .task_group()
-        .spawn(
-          () => {
-            while !@proton.is_ready() {
-              @async.sleep(10)
-            }
-            log_app_step("is_ready after startup = true")
-          },
-          no_wait=true,
-        ),
-      )
+  ..setup(context => {
+    application_slot.val = Some(context)
+    log_app_step("is_ready in setup = " + @proton.is_ready().to_string())
+    // Readiness flips once startup finished: hooks completed and the initial
+    // window is ready. The renderer may load before that happens, so the
+    // terminal reports the transition instead of the first page readback.
+    ignore(
       context
-    },
-    on_shutdown=fn(_context) {
+      .task_group()
+      .spawn(
+        () => {
+          while !@proton.is_ready() {
+            @async.sleep(10)
+          }
+          log_app_step("is_ready after startup = true")
+        },
+        no_wait=true,
+      ),
+    )
+    context.add_cleanup(() => {
       application_slot.val = None
       log_app_step("lifecycle shutdown")
-    },
-  )
+    })
+  })
   .run_or_abort()
 }

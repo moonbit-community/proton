@@ -114,12 +114,11 @@ pub fn LifecycleHookError::message(self : LifecycleHookError) -> String {
   match self {
     ApplicationStart(index~, detail~) =>
       "application startup hook " + index.to_string() + " failed: " + detail
-    ApplicationShutdown(index~, detail~) =>
-      "application shutdown hook " + index.to_string() + " failed: " + detail
+    ApplicationShutdown(detail~) => "application cleanup failed: " + detail
     WindowReady(index~, detail~) =>
       "window ready hook " + index.to_string() + " failed: " + detail
-    WindowClose(index~, detail~) =>
-      "window close hook " + index.to_string() + " failed: " + detail
+    WindowClose(window~, detail~) =>
+      "window " + window + " cleanup failed: " + detail
   }
 }
 

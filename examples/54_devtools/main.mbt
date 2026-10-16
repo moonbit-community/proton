@@ -162,18 +162,15 @@ async fn main {
     debug=true,
   )
   ..commands(register_commands)
-  ..window_lifecycle(
-    on_ready=context => {
-      let window = context.handle()
-      browser_slot.val = Some(window.web_contents())
-      open_review_view(window)
-      window
-    },
-    on_close=fn(_window) {
+  ..setup_window(context => {
+    let window = context.handle()
+    browser_slot.val = Some(window.web_contents())
+    open_review_view(window)
+    context.add_cleanup(() => {
       view_slot.val = None
       browser_slot.val = None
-    },
-  )
+    })
+  })
   ..identifier("dev.proton.54-devtools-focus")
   .run_or_abort()
 }

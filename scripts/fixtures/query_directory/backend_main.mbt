@@ -33,16 +33,13 @@ async fn main {
       @proton.RendererTarget::entry(window="secondary"),
     ],
   )
-  ..window_lifecycle(
-    on_ready=context => {
-      let id = backend.attach(context)
-      windows[id] = context.handle()
-      id
-    },
-    on_close=id => {
+  ..setup_window(context => {
+    let id = backend.attach(context)
+    windows[id] = context.handle()
+    context.add_cleanup(() => {
       windows.remove(id)
       backend.detach(id)
-    },
-  )
+    })
+  })
   .run_or_abort()
 }

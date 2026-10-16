@@ -1895,38 +1895,35 @@ test "application lifecycle advances through close and destroy" {
 }
 
 ///|
-async test "application lifecycle hooks shut down in reverse order" {
+async test "setup runs in order and registered cleanup runs in reverse order" {
   let calls : Array[String] = []
   let configured = html("Lifecycle", "<html></html>")
-    ..app_lifecycle(
-      on_start=fn(_context) {
-        calls.push("start:first")
-        "first"
-      },
-      on_shutdown=fn(state) { calls.push("stop:" + state) },
-    )
-    ..app_lifecycle(
-      on_start=fn(_context) {
-        calls.push("start:second")
-        "second"
-      },
-      on_shutdown=fn(state) { calls.push("stop:" + state) },
-    )
+    ..setup(_context => {
+      calls.push("start:first")
+      let state = "first"
+      _context.add_cleanup(() => calls.push("stop:" + state))
+    })
+    ..setup(_context => {
+      calls.push("start:second")
+      let state = "second"
+      _context.add_cleanup(() => calls.push("stop:" + state))
+    })
+    ..setup(_ => calls.push("start:without-cleanup"))
   @async.with_task_group(group => {
-    start_application_lifecycle_hooks(
-      configured.application_lifecycle_hooks,
+    run_application_setup(
+      configured.application_setup,
       ApplicationContext(
         session=test_session_handle(),
         group,
         test_window_manager(),
         @locale.LocalePreferences::resolve(None, []),
       ),
-      group,
-      [],
     )
     group.return_immediately(())
   })
-  assert_eq(calls, ["start:first", "start:second", "stop:second", "stop:first"])
+  assert_eq(calls, [
+    "start:first", "start:second", "start:without-cleanup", "stop:second", "stop:first",
+  ])
 }
 
 ///|
@@ -2127,39 +2124,38 @@ async test "window activation success wins over later waiter cancellation" {
 }
 
 ///|
-async test "application lifecycle startup rolls back completed hooks" {
+async test "setup failure retains primary error and all registered cleanup failures" {
   let calls : Array[String] = []
   let cleanup_failures : Array[AppCleanupError] = []
   let configured = html("Lifecycle", "<html></html>")
-    ..app_lifecycle(
-      on_start=fn(_context) {
-        calls.push("start:first")
-        "first"
-      },
-      on_shutdown=fn(state) raise {
+    ..setup(_context => {
+      calls.push("start:first")
+      let state = "first"
+      _context.add_cleanup(() => {
         calls.push("stop:" + state)
         raise FacadeLifecycleTestError::DestroyFailed(state)
-      },
-    )
-    ..app_lifecycle(
-      on_start=fn(_context) raise {
-        calls.push("start:second")
-        raise FacadeLifecycleTestError::StartFailed("second")
-      },
-      on_shutdown=fn(_state : Unit) { calls.push("unexpected") },
-    )
+      })
+    })
+    ..setup(_context => {
+      calls.push("start:second")
+      _context.add_cleanup(() => {
+        @async.sleep(1)
+        calls.push("stop:second")
+        raise FacadeLifecycleTestError::DestroyFailed("second")
+      })
+      raise FacadeLifecycleTestError::StartFailed("second")
+    })
   try {
     @async.with_task_group(group => {
-      start_application_lifecycle_hooks(
-        configured.application_lifecycle_hooks,
+      run_application_setup(
+        configured.application_setup,
         ApplicationContext(
           session=test_session_handle(),
+          cleanup_failures~,
           group,
           test_window_manager(),
           @locale.LocalePreferences::resolve(None, []),
         ),
-        group,
-        cleanup_failures,
       )
     })
     fail("expected lifecycle startup failure")
@@ -2168,10 +2164,15 @@ async test "application lifecycle startup rolls back completed hooks" {
       assert_true(detail.contains("second"))
     _ => fail("expected lifecycle startup failure")
   }
-  assert_eq(calls, ["start:first", "start:second", "stop:first"])
+  assert_eq(calls, ["start:first", "start:second", "stop:second", "stop:first"])
   match cleanup_failures {
-    [LifecycleHook(ApplicationShutdown(index=0, detail~))] =>
-      assert_true(detail.contains("first"))
+    [
+      LifecycleHook(ApplicationShutdown(detail=second)),
+      LifecycleHook(ApplicationShutdown(detail=first)),
+    ] => {
+      assert_true(second.contains("second"))
+      assert_true(first.contains("first"))
+    }
     _ => fail("expected rollback cleanup failure")
   }
 }

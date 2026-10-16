@@ -34,13 +34,10 @@ pub async fn run_quit_chain() -> Unit {
   let prevents_will_quit = mode == "prevent-will-quit"
   @proton.html("Quit chain", "<h1>Quit chain</h1>")
   ..identifier("dev.proton.e2e-quit-chain")
-  ..app_lifecycle(
-    on_start=context => {
-      quit_chain_application.val = Some(context)
-      context
-    },
-    on_shutdown=fn(_) { quit_chain_log("shutdown") },
-  )
+  ..setup(context => {
+    quit_chain_application.val = Some(context)
+    context.add_cleanup(() => quit_chain_log("shutdown"))
+  })
   ..set_before_quit_handler(fn(_) {
     quit_chain_log("replaced before-quit handler")
     @proton.ApplicationQuitDecision::Prevent
@@ -82,39 +79,36 @@ pub async fn run_quit_chain() -> Unit {
   ..on_quit(fn(_, exit_code) {
     quit_chain_log("second quit observer " + exit_code.to_string())
   })
-  ..window_lifecycle(
-    on_ready=context => {
-      @mbfs.write_string_to_file(ready, "ready") catch {
-        _ => ()
-      }
-      ignore(
-        context
-        .task_group()
-        .spawn(
-          () => {
-            while !@mbfs.path_exists(gate) {
-              @async.sleep(10)
-            }
-            // Let primary window activation finish before the quit chain closes
-            // the window again.
-            @async.sleep(200)
-            match quit_chain_application.val {
-              Some(application) =>
-                match mode {
-                  "quit3" => application.quit(exit_code=3)
-                  "exit0" => application.exit()
-                  "exit7" => application.exit(exit_code=7)
-                  _ => application.quit()
-                }
-              None => ()
-            }
-          },
-          no_wait=true,
-        ),
-      )
-    },
-    on_close=fn(_) { () },
-  )
+  ..setup_window(context => {
+    @mbfs.write_string_to_file(ready, "ready") catch {
+      _ => ()
+    }
+    ignore(
+      context
+      .task_group()
+      .spawn(
+        () => {
+          while !@mbfs.path_exists(gate) {
+            @async.sleep(10)
+          }
+          // Let primary window activation finish before the quit chain closes
+          // the window again.
+          @async.sleep(200)
+          match quit_chain_application.val {
+            Some(application) =>
+              match mode {
+                "quit3" => application.quit(exit_code=3)
+                "exit0" => application.exit()
+                "exit7" => application.exit(exit_code=7)
+                _ => application.quit()
+              }
+            None => ()
+          }
+        },
+        no_wait=true,
+      ),
+    )
+  })
   .run()
   quit_chain_log("run-returned")
 }

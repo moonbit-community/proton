@@ -210,21 +210,18 @@ async fn main {
     }
   })
   ..commands(register_commands)
-  ..app_lifecycle(
-    on_start=context => {
-      application_slot.val = Some(context)
-      log_lock_step(
-        "started with has_single_instance_lock=" +
-        context.has_single_instance_lock().to_string() +
-        " partition=" +
-        partition,
-      )
-      context
-    },
-    on_shutdown=fn(_context) {
+  ..setup(context => {
+    application_slot.val = Some(context)
+    log_lock_step(
+      "started with has_single_instance_lock=" +
+      context.has_single_instance_lock().to_string() +
+      " partition=" +
+      partition,
+    )
+    context.add_cleanup(() => {
       application_slot.val = None
       log_lock_step("lifecycle shutdown")
-    },
-  )
+    })
+  })
   .run_or_abort()
 }

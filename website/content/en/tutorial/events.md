@@ -59,7 +59,7 @@ The first click installs the listener before invoking the command, so this examp
 
 ## Notify a window outside a command
 
-Background work may need to notify a window after the originating command has completed. The Todo template saves `context.events()` from `window_lifecycle(on_ready=...)` and removes that destination in `on_close`. The saved `WindowEventEmitter` can emit typed events while the window remains alive.
+Background work may need to notify a window after the originating command has completed. The Todo template saves `context.events()` from `setup_window(...)` and registers removal of that destination with `context.add_cleanup`. The saved `WindowEventEmitter` can emit typed events while the window remains alive.
 
 Choose destinations explicitly. Do not retain stale window emitters or treat every event as a global broadcast. See the [complete Todo example](isomorphic.md) for the attach/detach lifecycle.
 

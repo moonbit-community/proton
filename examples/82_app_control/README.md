@@ -16,7 +16,7 @@ cleanup is closing the window.
 ## Review steps
 
 1. Before pressing anything, read the terminal. The first three lines must be
-   `is_ready before App::run = false`, `is_ready in app_lifecycle.on_start =
+   `is_ready before App::run = false`, `is_ready in setup =
    false`, and `is_ready after startup = true`: readiness becomes true only
    after startup hooks completed and the initial window is ready. The page's
    **isReady** row must read `true` after any action, because the renderer can

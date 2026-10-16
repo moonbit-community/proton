@@ -245,13 +245,10 @@ async fn main {
   @proton.html("Context Menu", html(), width=900, height=680, debug=true)
   ..identifier("dev.proton.context-menu")
   ..commands(register_commands)
-  ..window_lifecycle(
-    on_ready=context => {
-      let window = context.handle()
-      window_slot.val = Some(window)
-      window
-    },
-    on_close=fn(_window) { window_slot.val = None },
-  )
+  ..setup_window(context => {
+    let window = context.handle()
+    window_slot.val = Some(window)
+    context.add_cleanup(() => window_slot.val = None)
+  })
   .run_or_abort()
 }

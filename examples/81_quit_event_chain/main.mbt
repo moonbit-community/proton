@@ -285,16 +285,13 @@ async fn main {
     }
   })
   ..commands(register_commands)
-  ..app_lifecycle(
-    on_start=context => {
-      application_slot.val = Some(context)
-      context
-    },
-    on_shutdown=fn(_context) {
+  ..setup(context => {
+    application_slot.val = Some(context)
+    context.add_cleanup(() => {
       application_slot.val = None
       log_chain_step("lifecycle shutdown")
-    },
-  )
+    })
+  })
   ..set_before_quit_handler(fn(_context) {
     log_chain_step("before-quit blocked=" + block_before_quit.val.to_string())
     if block_before_quit.val {

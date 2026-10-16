@@ -20,14 +20,11 @@ async fn main {
       height=320,
     ),
   )
-  ..window_lifecycle(
-    on_ready=context => {
-      let id = context.handle().id()
-      println("Ready: " + id)
-      id
-    },
-    on_close=id => println("Closed: " + id),
-  )
+  ..setup_window(context => {
+    let id = context.handle().id()
+    println("Ready: " + id)
+    context.add_cleanup(() => println("Closed: " + id))
+  })
   .run_or_abort()
 }
 ```
@@ -43,19 +40,16 @@ The primary window's ID is `main`. Secondary IDs must be nonempty, unique, and d
 For example, add `open_on_start=false` to the Help declaration above, and add this builder call before `.run_or_abort()` to open it from the application startup hook:
 
 ```moonbit
-..app_lifecycle(
-  on_start=context => { ignore(context.windows().open("help")) },
-  on_shutdown=_ => (),
-)
+
 ```
 
 A later user action can call the same window manager operation from a retained application context. Do not create a second Proton runtime for a second window.
 
 ## Use and release handles
 
-`context.handle()` inside `on_ready` gives the current `WindowHandle`. It supports operations such as `focus()`, `hide()`, `show()`, and `close()`. Browser operations are available through `handle.web_contents()`.
+`context.handle()` inside `setup_window` gives the current `WindowHandle`. It supports operations such as `focus()`, `hide()`, `show()`, and `close()`. Browser operations are available through `handle.web_contents()`.
 
-A lifecycle callback's return value becomes the corresponding `on_close` argument. The example returns an ID; the Todo template uses that ID to remove a saved event destination. Keep window-owned state in this lifecycle and stop using the handle after close.
+The cleanup closure captures the ID directly. The Todo template uses the same pattern to remove a saved event destination. Register cleanup immediately after acquiring a window-owned resource; it still runs if later setup fails. Reopening a declaration creates a new cleanup scope. Stop using the native handle after close.
 
 ## Decide when the application exits
 
@@ -67,7 +61,7 @@ The default last-window policy quits the application. Tray and background applic
 
 With that policy, closing all windows does not stop the process. Provide an explicit quit action before using it in a real application.
 
-Set `WindowConfig.close_handler` for an asynchronous close decision: return `WindowCloseDecision::Allow` to proceed or `Deny` to keep the window open. A confirmation or unsaved-document check belongs here; `on_close` is cleanup after closing.
+Set `WindowConfig.close_handler` for an asynchronous close decision: return `WindowCloseDecision::Allow` to proceed or `Deny` to keep the window open. A confirmation or unsaved-document check belongs here; `context.add_cleanup` registers cleanup after closing.
 
 ## Platform-specific window behavior
 

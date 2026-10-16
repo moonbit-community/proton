@@ -187,14 +187,11 @@ async fn main {
   )
   ..identifier("dev.proton.window-skip-taskbar")
   ..commands(register_commands)
-  ..window_lifecycle(
-    on_ready=context => {
-      let window = context.handle()
-      window_slot.val = Some(window)
-      skip_state.val = false
-      window
-    },
-    on_close=fn(_window) { window_slot.val = None },
-  )
+  ..setup_window(context => {
+    let window = context.handle()
+    window_slot.val = Some(window)
+    skip_state.val = false
+    context.add_cleanup(() => window_slot.val = None)
+  })
   .run_or_abort()
 }

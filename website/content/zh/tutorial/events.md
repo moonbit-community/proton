@@ -59,7 +59,7 @@ window.addEventListener("pagehide", () => {
 
 ## 在命令之外通知窗口
 
-后台工作有时需要在发起它的命令已经结束后继续通知窗口。Todo 模板在 `window_lifecycle(on_ready=...)` 中保存 `context.events()`，在 `on_close` 中移除目标。保存的 `WindowEventEmitter` 可以在窗口存活期间发送类型化事件。
+后台工作有时需要在发起它的命令已经结束后继续通知窗口。Todo 模板在 `setup_window(...)` 中保存 `context.events()`，在 `context.add_cleanup` 中移除目标。保存的 `WindowEventEmitter` 可以在窗口存活期间发送类型化事件。
 
 需要明确选择接收目标，不要保留已经关闭窗口的 emitter，也不要把每个事件都当作全局广播。建立和移除关联的完整过程见 [Todo 示例](isomorphic.md)。
 

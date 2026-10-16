@@ -12,65 +12,56 @@ pub async fn run_single_instance() -> Unit {
         context.quit()
       }
     })
-    ..app_lifecycle(
-      on_start=context => {
-        application.val = Some(context)
-        context
-      },
-      on_shutdown=fn(_) { () },
-    )
-    ..window_lifecycle(
-      on_ready=context => {
-        guard role == "primary" || role == "release" || role == "expect-primary" else {
-          abort("secondary unexpectedly created a runtime window")
+    ..setup(context => application.val = Some(context))
+    ..setup_window(context => {
+      guard role == "primary" || role == "release" || role == "expect-primary" else {
+        abort("secondary unexpectedly created a runtime window")
+      }
+      @mbfs.write_string_to_file(
+        @env.get_env_var("PROTON_INSTANCE_TEST_READY").unwrap(),
+        "ready",
+      ) catch {
+        _ => abort("failed to write single-instance readiness marker")
+      }
+      let app = application.val.unwrap()
+      if role == "release" {
+        assert_true(app.has_single_instance_lock())
+        app.release_single_instance_lock() catch {
+          error =>
+            abort(
+              "failed to release the single-instance lock: " + error.message(),
+            )
         }
+        assert_false(app.has_single_instance_lock())
+        println("INSTANCE: lock released")
         @mbfs.write_string_to_file(
-          @env.get_env_var("PROTON_INSTANCE_TEST_READY").unwrap(),
-          "ready",
+          @env.get_env_var("PROTON_INSTANCE_TEST_RELEASED").unwrap(),
+          "released",
         ) catch {
-          _ => abort("failed to write single-instance readiness marker")
+          _ => abort("failed to write released marker")
         }
-        let app = application.val.unwrap()
-        if role == "release" {
-          assert_true(app.has_single_instance_lock())
-          app.release_single_instance_lock() catch {
-            error =>
-              abort(
-                "failed to release the single-instance lock: " + error.message(),
-              )
-          }
-          assert_false(app.has_single_instance_lock())
-          println("INSTANCE: lock released")
-          @mbfs.write_string_to_file(
-            @env.get_env_var("PROTON_INSTANCE_TEST_RELEASED").unwrap(),
-            "released",
-          ) catch {
-            _ => abort("failed to write released marker")
-          }
-          // The released owner no longer receives activations, so the harness
-          // stops it by creating this file instead of launching the app again.
-          let stop = @env.get_env_var("PROTON_INSTANCE_TEST_STOP").unwrap()
-          ignore(
-            context
-            .task_group()
-            .spawn(
-              () => {
-                while !@mbfs.path_exists(stop) {
-                  @async.sleep(20)
-                }
-                app.quit()
-              },
-              no_wait=true,
-            ),
-          )
-        } else if role == "expect-primary" {
-          assert_true(app.has_single_instance_lock())
-          println("INSTANCE: primary lock held")
-          app.quit()
-        }
-      },
-      on_close=fn(_) { () },
-    )
+        // The released owner no longer receives activations, so the harness
+        // stops it by creating this file instead of launching the app again.
+        let stop = @env.get_env_var("PROTON_INSTANCE_TEST_STOP").unwrap()
+        ignore(
+          context
+          .task_group()
+          .spawn(
+            () => {
+              while !@mbfs.path_exists(stop) {
+                @async.sleep(20)
+              }
+              app.quit()
+            },
+            no_wait=true,
+          ),
+        )
+      } else if role == "expect-primary" {
+        assert_true(app.has_single_instance_lock())
+        println("INSTANCE: primary lock held")
+        app.quit()
+      }
+    })
   // A released lock lets another process become primary, but CEF still owns
   // the session profile exclusively, so the successor runs with its own
   // partition instead of the shared profile.

@@ -13,6 +13,7 @@ identify 命令返回传入标签与 CommandContext.window_id()。不同窗口�
 以下为入口中的节选，完整上下文见本页源码链接。
 
 ```moonbit
+///|
 async fn main {
   @proton.html(
     "Bridge Multi A",
@@ -35,10 +36,7 @@ async fn main {
     @proton.RendererTarget::entry(),
     @proton.RendererTarget::entry(window="secondary"),
   ])
-  ..app_lifecycle(
-    on_start=async fn(context) { ignore(context.windows().open("secondary")) },
-    on_shutdown=fn(_state) {  },
-  )
+  ..setup(context => ignore(context.windows().open("secondary")))
   ..identifier("dev.proton.45-bridge-multi-window")
   .run_or_abort()
 }

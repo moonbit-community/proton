@@ -494,10 +494,10 @@ pub fn App::on_render_process_gone(
 ///|
 /// Observes the application session Proton created for this run, Electron's
 /// `session-created`. Runs synchronously in registration order before
-/// application startup hooks. Use `app_lifecycle` for asynchronous setup.
+/// application startup hooks. Use `setup` for asynchronous setup.
 ///
 /// Proton runs one session per application, so the handler runs once during
-/// startup, before the `app_lifecycle` start hooks.
+/// startup, before the `setup` start hooks.
 pub fn App::on_session_created(
   self : App,
   handler : (ApplicationSession) -> Unit noraise,
@@ -588,7 +588,8 @@ pub fn App::set_will_quit_handler(
 /// Observes the final `quit` step with the process exit code.
 ///
 /// Runs synchronously in registration order after exit is committed and before
-/// lifecycle shutdown and native cleanup. Use `app_lifecycle` for async cleanup.
+/// lifecycle shutdown and native cleanup. Register async cleanup with
+/// `context.add_cleanup` during `setup`.
 /// `exit_code` is requested by `ApplicationContext::quit` or
 /// `ApplicationContext::exit`.
 pub fn App::on_quit(
@@ -678,41 +679,25 @@ pub fn App::commands(
 }
 
 ///|
-/// Adds a paired application lifecycle hook.
-///
-/// The startup state is passed to shutdown. Completed hooks shut down in
-/// reverse order, including when a later startup hook fails.
-pub fn[State] App::app_lifecycle(
+/// Appends application setup, awaited in registration order before automatic
+/// startup windows open. Unlike observers, setup can fail startup. Register
+/// acquired resources immediately with `context.add_cleanup`.
+pub fn App::setup(
   self : App,
-  on_start~ : async (ApplicationContext) -> State,
-  on_shutdown~ : async (State) -> Unit,
+  setup : async (ApplicationContext) -> Unit,
 ) -> Unit {
-  self.application_lifecycle_hooks.push(ApplicationLifecycleHook::{
-    start: async fn(context) {
-      let state = on_start(context)
-      ApplicationLifecycleActivation::{
-        shutdown: async fn() { on_shutdown(state) },
-      }
-    },
-  })
+  self.application_setup.push(setup)
 }
 
 ///|
-/// Adds a paired primary-window lifecycle hook.
-///
-/// The ready state is passed to close. Completed hooks close in reverse order,
-/// including when a later ready hook fails.
-pub fn[State] App::window_lifecycle(
+/// Appends setup awaited in registration order for each window after page
+/// readiness, including reopened windows.
+/// Register instance-owned resources with `context.add_cleanup`.
+pub fn App::setup_window(
   self : App,
-  on_ready~ : async (WindowContext) -> State,
-  on_close~ : async (State) -> Unit,
+  setup : async (WindowContext) -> Unit,
 ) -> Unit {
-  self.window_lifecycle_hooks.push(WindowLifecycleHook::{
-    start: async fn(context) {
-      let state = on_ready(context)
-      WindowLifecycleActivation::{ close: async fn() { on_close(state) }, }
-    },
-  })
+  self.window_setup.push(setup)
 }
 
 ///|

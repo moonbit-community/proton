@@ -13,6 +13,7 @@ Menu actions update enabled, visible and checked state. Native menu roles and ap
 Excerpt from the entry point; use the source link above for the complete context.
 
 ```moonbit
+///|
 async fn main {
   @proton.html(
     "App Menu State Review",
@@ -24,14 +25,11 @@ async fn main {
   ..menu(menu_bar())
   ..identifier("dev.proton.49-app-menu")
   ..commands(register_commands)
-  ..window_lifecycle(
-    on_ready=context => {
-      let window = context.handle()
-      window_slot.val = Some(window)
-      window
-    },
-    on_close=fn(_window) { window_slot.val = None },
-  )
+  ..setup_window(context => {
+    let window = context.handle()
+    window_slot.val = Some(window)
+    context.add_cleanup(() => window_slot.val = None)
+  })
   .run_or_abort()
 }
 ```

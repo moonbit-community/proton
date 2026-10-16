@@ -15,13 +15,10 @@ async fn main {
       ..headless()
       ..single_instance()
       ..update_channel(endpoint, [key], check_on_launch=false)
-      ..app_lifecycle(
-        on_start=context => {
-          record("obsolete-started")
-          context.quit()
-        },
-        on_shutdown=_ => (),
-      )
+      ..setup(context => {
+        record("obsolete-started")
+        context.quit()
+      })
       .run()
       false
     } catch {
@@ -36,14 +33,11 @@ async fn main {
     ..identifier("com.example.proton-updater-e2e")
     ..headless()
     ..single_instance()
-    ..app_lifecycle(
-      on_start=context => {
-        assert_true(context.has_single_instance_lock())
-        record("started-new")
-        context.quit()
-      },
-      on_shutdown=_ => (),
-    )
+    ..setup(context => {
+      assert_true(context.has_single_instance_lock())
+      record("started-new")
+      context.quit()
+    })
     .run()
     @updater.cleanup_previous()
     record("new-cleaned")
@@ -62,72 +56,69 @@ async fn main {
       [require_env("PROTON_E2E_KEY")],
       check_on_launch=false,
     )
-    ..app_lifecycle(
-      on_start=context => {
-        if mode == "install" {
-          for
-            (path, expected) in [
-              ("loop", "redirect limit"),
-              ("downgrade", "https"),
-              ("missing-location", "Location"),
-            ] {
-            let url = require_env("PROTON_E2E_ENDPOINT").replace(
-              old="latest.json",
-              new=path,
-            )
-            try ignore(@updater.http_fetch(url)) catch {
-              error => assert_true(error.message().contains(expected))
-            } noraise {
-              _ => fail("expected redirect refusal: \{path}")
-            }
-          }
-          record("redirect-checks")
-        }
-        let unavailable = try {
-          context.quit_and_install()
-          false
-        } catch {
-          _ => true
-        }
-        assert_true(unavailable)
-        guard context.check_for_update() is Available(update) else {
-          fail("expected an authenticated update")
-        }
-        update.download()
-        assert_eq(@updater.current_version().to_string(), "0.1.0")
-        assert_eq(
-          @mbfs.read_file_to_string("\{bundle}/Contents/Resources/version"),
-          "0.1.0",
-        )
-        record("downloaded")
-        if mode == "ordinary-quit" {
-          context.quit()
-        } else {
-          context.quit_and_install()
-          context.quit_and_install() // Duplicate requests must be harmless.
-        }
-        if mode == "prevent-before" || mode == "prevent-will" {
-          ignore(
-            context
-            .task_group()
-            .spawn(() => {
-              // Retry until a second quit transaction starts. Success is measured
-              // by callbacks, not by assuming a fixed delay completes cancellation.
-              let counter = if mode == "prevent-before" {
-                before_count
-              } else {
-                will_count
-              }
-              while counter.val < 2 {
-                @async.sleep(1)
-                context.quit_and_install()
-              }
-            }),
+    ..setup(context => {
+      if mode == "install" {
+        for
+          (path, expected) in [
+            ("loop", "redirect limit"),
+            ("downgrade", "https"),
+            ("missing-location", "Location"),
+          ] {
+          let url = require_env("PROTON_E2E_ENDPOINT").replace(
+            old="latest.json",
+            new=path,
           )
+          try ignore(@updater.http_fetch(url)) catch {
+            error => assert_true(error.message().contains(expected))
+          } noraise {
+            _ => fail("expected redirect refusal: \{path}")
+          }
         }
-        context
-      },
-      on_shutdown=context => {
+        record("redirect-checks")
+      }
+      let unavailable = try {
+        context.quit_and_install()
+        false
+      } catch {
+        _ => true
+      }
+      assert_true(unavailable)
+      guard context.check_for_update() is Available(update) else {
+        fail("expected an authenticated update")
+      }
+      update.download()
+      assert_eq(@updater.current_version().to_string(), "0.1.0")
+      assert_eq(
+        @mbfs.read_file_to_string("\{bundle}/Contents/Resources/version"),
+        "0.1.0",
+      )
+      record("downloaded")
+      if mode == "ordinary-quit" {
+        context.quit()
+      } else {
+        context.quit_and_install()
+        context.quit_and_install() // Duplicate requests must be harmless.
+      }
+      if mode == "prevent-before" || mode == "prevent-will" {
+        ignore(
+          context
+          .task_group()
+          .spawn(() => {
+            // Retry until a second quit transaction starts. Success is measured
+            // by callbacks, not by assuming a fixed delay completes cancellation.
+            let counter = if mode == "prevent-before" {
+              before_count
+            } else {
+              will_count
+            }
+            while counter.val < 2 {
+              @async.sleep(1)
+              context.quit_and_install()
+            }
+          }),
+        )
+      }
+      context.add_cleanup(() => {
         if mode == "install" {
           let refused = try {
             context.release_single_instance_lock()
@@ -147,8 +138,8 @@ async fn main {
         if mode == "cleanup-failure" {
           fail("intentional update cleanup failure")
         }
-      },
-    )
+      })
+    })
     ..set_before_quit_handler(fn(context) {
       before_count.val = before_count.val + 1
       record("before-quit")

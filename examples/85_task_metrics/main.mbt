@@ -305,28 +305,25 @@ async fn main {
   @proton.html("Application Metrics", page(), width=940, height=720)
   ..identifier("com.example.proton.task-metrics")
   ..commands(register_commands)
-  ..app_lifecycle(
-    on_start=context => {
-      application_slot.val = Some(context)
-      // The first sample starts Chromium's task-manager sampling, so the
-      // terminal shows both the empty first answer and the measured one.
-      ignore(
-        context
-        .task_group()
-        .spawn(
-          () => {
-            ignore(measure())
-            @async.sleep(1000)
-            ignore(measure())
-            @async.sleep(2000)
-            ignore(measure())
-          },
-          no_wait=true,
-        ),
-      )
+  ..setup(context => {
+    application_slot.val = Some(context)
+    // The first sample starts Chromium's task-manager sampling, so the
+    // terminal shows both the empty first answer and the measured one.
+    ignore(
       context
-    },
-    on_shutdown=fn(_context) { application_slot.val = None },
-  )
+      .task_group()
+      .spawn(
+        () => {
+          ignore(measure())
+          @async.sleep(1000)
+          ignore(measure())
+          @async.sleep(2000)
+          ignore(measure())
+        },
+        no_wait=true,
+      ),
+    )
+    context.add_cleanup(() => application_slot.val = None)
+  })
   .run_or_abort()
 }

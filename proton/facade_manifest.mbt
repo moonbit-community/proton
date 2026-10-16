@@ -27,7 +27,7 @@ pub fn App::App(main_window : WindowConfig) -> App {
     update_channel: None,
     command_capabilities: [],
     extension_capabilities: [],
-    application_lifecycle_hooks: [],
+    application_setup: [],
     before_quit_handler: None,
     will_quit_handler: None,
     quit_handlers: [],
@@ -45,7 +45,7 @@ pub fn App::App(main_window : WindowConfig) -> App {
     update_handlers: [],
     system_appearance_handlers: [],
     thumbar_button_handlers: [],
-    window_lifecycle_hooks: [],
+    window_setup: [],
     validation_errors: [],
   }
 }
@@ -112,8 +112,8 @@ fn App::resolved_app_config(self : App) -> ResolvedAppConfig {
     },
     command_capabilities: self.command_capabilities,
     extension_capabilities: self.extension_capabilities,
-    application_lifecycle_hooks: self.application_lifecycle_hooks,
-    window_lifecycle_hooks: self.window_lifecycle_hooks,
+    application_setup: self.application_setup,
+    window_setup: self.window_setup,
     menu: self.menu.map(menu => menu.to_native()),
     bridge_startup_timeout_ms: self.bridge_startup_timeout_value_ms,
     headless: self.resolved_headless(),

@@ -246,14 +246,11 @@ async fn main {
   @proton.html("Window Movable", html(), width=930, height=700, debug=true)
   ..identifier("dev.proton.window-movable")
   ..commands(register_commands)
-  ..window_lifecycle(
-    on_ready=context => {
-      let window = context.handle()
-      window_slot.val = Some(window)
-      movable_state.val = true
-      window
-    },
-    on_close=fn(_window) { window_slot.val = None },
-  )
+  ..setup_window(context => {
+    let window = context.handle()
+    window_slot.val = Some(window)
+    movable_state.val = true
+    context.add_cleanup(() => window_slot.val = None)
+  })
   .run_or_abort()
 }

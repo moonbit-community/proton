@@ -342,41 +342,39 @@ async fn main {
   @proton.html("Page control", page(), width=900, height=760)
   ..identifier("com.example.proton.page-control")
   ..commands(register_commands)
-  ..app_lifecycle(
-    on_start=context => {
-      application_slot.val = Some(context)
-      log_page_step("application started")
-      // Report the startup history so the terminal shows the review surface
-      // without a click. The primary window appears a moment after startup.
-      ignore(
-        context
-        .task_group()
-        .spawn(
-          () => {
-            for attempt = 0; attempt < 400; attempt = attempt + 1 {
-              let reply = state_reply("Startup history")
-              if reply.entries.length() > 0 {
-                log_page_step(
-                  "startup entries=" +
-                  reply.entries.length().to_string() +
-                  " active_index=" +
-                  reply.active_index.to_string(),
-                )
-                return
-              }
-              @async.sleep(25)
-            }
-            log_page_step("startup history stayed empty")
-          },
-          no_wait=true,
-        ),
-      )
+  ..setup(context => {
+    application_slot.val = Some(context)
+    log_page_step("application started")
+    // Report the startup history so the terminal shows the review surface
+    // without a click. The primary window appears a moment after startup.
+    ignore(
       context
-    },
-    on_shutdown=fn(_context) {
+      .task_group()
+      .spawn(
+        () => {
+          for attempt = 0; attempt < 400; attempt = attempt + 1 {
+            let reply = state_reply("Startup history")
+            if reply.entries.length() > 0 {
+              log_page_step(
+                "startup entries=" +
+                reply.entries.length().to_string() +
+                " active_index=" +
+                reply.active_index.to_string(),
+              )
+              return
+            }
+            @async.sleep(25)
+          }
+          log_page_step("startup history stayed empty")
+        },
+        no_wait=true,
+      ),
+    )
+
+    context.add_cleanup(() => {
       application_slot.val = None
       inserted_css.val = 0L
-    },
-  )
+    })
+  })
   .run_or_abort()
 }

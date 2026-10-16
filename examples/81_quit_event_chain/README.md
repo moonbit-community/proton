@@ -55,7 +55,7 @@ system state or writes files, so the only cleanup is closing the window.
 
 `set_before_quit_handler` and `set_will_quit_handler` each replace a single
 handler. `on_quit` appends observers; it cannot perform asynchronous cleanup.
-The `on_shutdown` lifecycle hook handles that cleanup instead.
+Register that cleanup with `context.add_cleanup` inside `setup` instead.
 
 ## Platform matrix
 

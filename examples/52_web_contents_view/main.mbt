@@ -386,17 +386,15 @@ async fn main {
       _ => ()
     }
   })
-  ..window_lifecycle(
-    on_ready=async fn(context) {
-      let window = context.handle()
-      host_slot.val = Some(window)
-      open_panel(window)
-    },
-    on_close=fn(_state) {
+  ..setup_window(context => {
+    let window = context.handle()
+    host_slot.val = Some(window)
+    open_panel(window)
+    context.add_cleanup(() => {
       panel_slot.val = None
       host_slot.val = None
-    },
-  )
+    })
+  })
   ..identifier("dev.proton.52-web-contents-view")
   .run_or_abort()
 }

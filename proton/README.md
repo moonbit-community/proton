@@ -62,8 +62,13 @@ not guaranteed. A retained handle does not keep its window or page alive.
 Creation observers (`on_session_created`, `on_window_created`, and
 `on_web_contents_created`) and the final `on_quit` notification are synchronous
 and run in registration order. Creation does not mean page readiness or provide
-an initialization barrier before navigation. Use `app_lifecycle` and
-`window_lifecycle` for awaited setup and paired asynchronous cleanup.
+an initialization barrier before navigation. Use `setup` and
+`setup_window` for awaited setup.
+Register resource cleanup immediately with `context.add_cleanup(() => ...)`.
+Cleanup runs after the scope's child tasks stop, in reverse registration order,
+even if setup later fails or is canceled. Cleanup failures are collected while
+remaining cleanup continues. Window cleanup belongs to that specific instance;
+reopening the same window id creates a new scope.
 
 Configure `WindowConfig.close_handler` for a window's asynchronous close decision.
 Configure `WindowConfig.web_contents_policy` or `ViewConfig.web_contents_policy`
@@ -148,14 +153,11 @@ and every other launch forwards its activation and exits. A running
 | `release_single_instance_lock()` | `app.releaseSingleInstanceLock()` | Releases the identity so the next launch acquires it instead of forwarding; the releasing process keeps running and stops receiving activations |
 
 ```moonbit
-app_lifecycle(
-  on_start=context => {
-    println(context.has_single_instance_lock().to_string())
-    context.release_single_instance_lock() catch { _ => () }
-    context
-  },
-  on_shutdown=fn(_) { () },
-)
+  println(context.has_single_instance_lock().to_string())
+  context.release_single_instance_lock() catch {
+    _ => ()
+  }
+})
 ```
 
 Unlike Electron, Proton does not expose `requestSingleInstanceLock` as a
@@ -343,11 +345,11 @@ outside macOS. `badge_count` reads Proton's own cache, because AppKit exposes no
 readback for the Dock badge label, exactly as Electron's implementation does.
 
 `@proton.is_ready()` corresponds to Electron's `app.isReady()`. It is `false`
-before `App::run`, while startup hooks run, and in the per-window `on_ready`
+before `App::run`, while startup hooks run, and in the per-window `setup_window`
 hooks; it becomes `true` once the startup hooks completed and the initial
 windows are ready, and returns to `false` when Proton starts tearing the
 runtime down. Electron's `ready` event and `whenReady()` correspond to
-`App::app_lifecycle(on_start=...)`, which still observes `false`.
+`App::setup(...)`, which still observes `false`.
 
 ## Process-level events
 
@@ -383,7 +385,7 @@ bridge that fails during startup still fails the opening operation; runtime
 infrastructure errors still use the application failure path.
 
 Proton runs one session per application, so `session-created` fires once during
-startup, before the `app_lifecycle` start hooks, and reports the configured
+startup, before the `setup` start hooks, and reports the configured
 partition with the session data directory (or `temporary`, when the run has no
 single-instance route). `ApplicationContext::session()` provides the shared
 browser session from application startup, before any windows exist.
@@ -427,14 +429,10 @@ windows. Once runtime teardown begins, retained session handles fail with
 Child pages do not receive the application command bridge.
 
 ```moonbit
-..app_lifecycle(
-  on_start=context => {
-    let session = context.session()
-    ignore(session.get_cookies(url="https://example.com/"))
-    // Use the existing application profile before opening a window.
-  },
-  on_shutdown=_ => (),
-)
+  let session = context.session()
+  ignore(session.get_cookies(url="https://example.com/"))
+  // Use the existing application profile before opening a window.
+})
 ```
 
 Migration: `SessionHandle::window_id()` is removed because sessions have no

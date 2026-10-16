@@ -55,64 +55,62 @@ pub async fn run_view_close_regression(case : ViewCloseCase) -> Unit {
   ..on_web_contents_event((view, event) => {
     record_child_view_event(view, event, loaded, closed, rejected)
   })
-  ..window_lifecycle(
-    on_ready=context => {
-      let window = context.handle()
-      ignore(
-        context
-        .task_group()
-        .spawn(no_wait=true, () => {
-          lifecycle_probe_gate()
-          let old = window.add_view(
-            "tab",
-            @proton.view("data:text/html,old", width=100, height=100),
-          )
-          if !(case is BeforeLoad) {
-            while !loaded.contains("tab") {
-              @async.sleep(10)
-            }
-          }
-          match case {
-            Page => old.web_contents().eval("window.close()")
-            Remove => window.remove_view("tab")
-            _ => old.close()
-          }
-          if !(case is Page) {
-            assert_true(window.view("tab") is None)
-            assert_eq(window.views().length(), 0)
-          }
-          if case is StaleHandle {
-            loaded.clear()
-            let fresh = window.add_view(
-              "tab",
-              @proton.view("data:text/html,new", width=100, height=100),
-            )
-            while !loaded.contains("tab") {
-              @async.sleep(10)
-            }
-            old.close() catch {
-              _ => ()
-            }
-            while closed.length() < 1 {
-              @async.sleep(10)
-            }
-            fresh.web_contents().eval("void 0")
-            fresh.close()
-          }
-          let expected = if case is StaleHandle { 2 } else { 1 }
-          while closed.length() < expected {
+  ..setup_window(context => {
+    let window = context.handle()
+    ignore(
+      context
+      .task_group()
+      .spawn(no_wait=true, () => {
+        lifecycle_probe_gate()
+        let old = window.add_view(
+          "tab",
+          @proton.view("data:text/html,old", width=100, height=100),
+        )
+        if !(case is BeforeLoad) {
+          while !loaded.contains("tab") {
             @async.sleep(10)
           }
-          @async.sleep(100)
-          assert_eq(closed.length(), expected)
-          assert_true(rejected.val)
-          println("LIFECYCLE_OPERATIONS_OK")
-          window.close()
-        }),
-      )
-    },
-    on_close=_ => cleaned.val = true,
-  )
+        }
+        match case {
+          Page => old.web_contents().eval("window.close()")
+          Remove => window.remove_view("tab")
+          _ => old.close()
+        }
+        if !(case is Page) {
+          assert_true(window.view("tab") is None)
+          assert_eq(window.views().length(), 0)
+        }
+        if case is StaleHandle {
+          loaded.clear()
+          let fresh = window.add_view(
+            "tab",
+            @proton.view("data:text/html,new", width=100, height=100),
+          )
+          while !loaded.contains("tab") {
+            @async.sleep(10)
+          }
+          old.close() catch {
+            _ => ()
+          }
+          while closed.length() < 1 {
+            @async.sleep(10)
+          }
+          fresh.web_contents().eval("void 0")
+          fresh.close()
+        }
+        let expected = if case is StaleHandle { 2 } else { 1 }
+        while closed.length() < expected {
+          @async.sleep(10)
+        }
+        @async.sleep(100)
+        assert_eq(closed.length(), expected)
+        assert_true(rejected.val)
+        println("LIFECYCLE_OPERATIONS_OK")
+        window.close()
+      }),
+    )
+    context.add_cleanup(() => cleaned.val = true)
+  })
   .run()
   assert_true(cleaned.val)
   let name = match case {
@@ -145,12 +143,10 @@ pub async fn run_parent_view_close_regression() -> Unit {
   ..on_web_contents_event((view, event) => {
     record_child_view_event(view, event, loaded, closed, rejected)
   })
-  ..window_lifecycle(
-    on_ready=context => {
-      if context.handle().id() == "secondary" {
-        @async.sleep(300)
-        return
-      }
+  ..setup_window(context => {
+    if context.handle().id() == "secondary" {
+      @async.sleep(300)
+    } else {
       ignore(
         context
         .task_group()
@@ -182,9 +178,9 @@ pub async fn run_parent_view_close_regression() -> Unit {
           context.handle().close()
         }),
       )
-    },
-    on_close=_ => cleaned.val = true,
-  )
+    }
+    context.add_cleanup(() => cleaned.val = true)
+  })
   .run()
   assert_true(cleaned.val)
   println("LIFECYCLE_PASSED parent-view-close")
@@ -204,19 +200,17 @@ pub async fn run_initial_open_regression() -> Unit {
     ),
     open_on_start=false,
   )
-  ..window_lifecycle(
-    on_ready=context => {
-      if context.handle().id() == "secondary" {
-        @async.sleep(300)
-        return
-      }
+  ..setup_window(context => {
+    if context.handle().id() == "secondary" {
+      @async.sleep(300)
+    } else {
       lifecycle_probe_gate()
       let secondary = context.windows().open("secondary")
       secondary.close()
       context.handle().close()
-    },
-    on_close=_ => cleaned.val = true,
-  )
+    }
+    context.add_cleanup(() => cleaned.val = true)
+  })
   .run()
   assert_true(cleaned.val)
   println("LIFECYCLE_PASSED initial-open")
@@ -230,35 +224,31 @@ pub async fn run_cancel_sleep_regression() -> Unit {
   let cleaned = Ref(false)
   @proton.html("Cancel sleep", "<h1>Lifecycle</h1>")
   ..identifier("dev.proton.e2e-lifecycle")
-  ..app_lifecycle(on_start=context => application.val = Some(context), on_shutdown=_ => {
-    ()
+  ..setup(context => application.val = Some(context))
+  ..setup_window(context => {
+    ignore(
+      context
+      .task_group()
+      .spawn(no_wait=true, () => {
+        lifecycle_probe_gate()
+        let task = application.val
+          .unwrap()
+          .task_group()
+          .spawn(no_wait=true, () => {
+            started.val = true
+            @async.sleep(10000)
+          })
+        while !started.val {
+          @async.sleep(10)
+        }
+        task.cancel()
+        @async.sleep(500)
+        println("LIFECYCLE_OPERATIONS_OK")
+        context.handle().close()
+      }),
+    )
+    context.add_cleanup(() => cleaned.val = true)
   })
-  ..window_lifecycle(
-    on_ready=context => {
-      ignore(
-        context
-        .task_group()
-        .spawn(no_wait=true, () => {
-          lifecycle_probe_gate()
-          let task = application.val
-            .unwrap()
-            .task_group()
-            .spawn(no_wait=true, () => {
-              started.val = true
-              @async.sleep(10000)
-            })
-          while !started.val {
-            @async.sleep(10)
-          }
-          task.cancel()
-          @async.sleep(500)
-          println("LIFECYCLE_OPERATIONS_OK")
-          context.handle().close()
-        }),
-      )
-    },
-    on_close=_ => cleaned.val = true,
-  )
   .run()
   assert_true(cleaned.val)
   println("LIFECYCLE_PASSED cancel-sleep")
@@ -282,24 +272,20 @@ pub async fn run_cancel_open_regression() -> Unit {
     ),
     open_on_start=false,
   )
-  ..app_lifecycle(on_start=context => application.val = Some(context), on_shutdown=_ => {
-    ()
-  })
-  ..window_lifecycle(
-    on_ready=context => {
-      if context.handle().id() == "secondary" {
-        started.val = true
-        if !stopped.val {
-          defer {
-            stopped.val = true
-          }
-          @async.sleep(10000)
-          completed.val = true
-        } else {
-          @async.sleep(300)
+  ..setup(context => application.val = Some(context))
+  ..setup_window(context => {
+    if context.handle().id() == "secondary" {
+      started.val = true
+      if !stopped.val {
+        defer {
+          stopped.val = true
         }
-        return
+        @async.sleep(10000)
+        completed.val = true
+      } else {
+        @async.sleep(300)
       }
+    } else {
       ignore(
         context
         .task_group()
@@ -332,9 +318,9 @@ pub async fn run_cancel_open_regression() -> Unit {
           context.handle().close()
         }),
       )
-    },
-    on_close=_ => cleaned.val = true,
-  )
+    }
+    context.add_cleanup(() => cleaned.val = true)
+  })
   .run()
   assert_true(cleaned.val)
   println("LIFECYCLE_PASSED cancel-open")
@@ -355,56 +341,51 @@ pub async fn run_window_task_regression(outcome : WindowTaskOutcome) -> Unit {
   let cleaned = Ref(false)
   let app = @proton.html("Window task", "<h1>Lifecycle</h1>")
     ..identifier("dev.proton.e2e-lifecycle")
-    ..app_lifecycle(
-      on_start=context => {
-        if outcome is Failure {
-          ignore(
-            context
-            .task_group()
-            .spawn(no_wait=true, () => {
-              while !injected.val {
-                @async.sleep(10)
-              }
-              @async.sleep(300)
-              context.quit()
-            }),
-          )
-        }
-      },
-      on_shutdown=_ => (),
-    )
-    ..window_lifecycle(
-      on_ready=context => {
+    ..setup(context => {
+      if outcome is Failure {
         ignore(
           context
           .task_group()
           .spawn(no_wait=true, () => {
-            defer {
-              sibling_stopped.val = true
+            while !injected.val {
+              @async.sleep(10)
             }
-            @async.sleep(10000)
+            @async.sleep(300)
+            context.quit()
           }),
         )
-        ignore(
-          context
-          .task_group()
-          .spawn(no_wait=true, () => {
-            lifecycle_probe_gate()
-            if outcome is Failure {
-              injected.val = true
-              fail("INJECTED_WINDOW_TASK_FAILURE")
-            }
-            @async.sleep(50)
-            println("LIFECYCLE_OPERATIONS_OK")
-            context.handle().close()
-          }),
-        )
-      },
-      on_close=_ => {
+      }
+    })
+    ..setup_window(context => {
+      ignore(
+        context
+        .task_group()
+        .spawn(no_wait=true, () => {
+          defer {
+            sibling_stopped.val = true
+          }
+          @async.sleep(10000)
+        }),
+      )
+      ignore(
+        context
+        .task_group()
+        .spawn(no_wait=true, () => {
+          lifecycle_probe_gate()
+          if outcome is Failure {
+            injected.val = true
+            fail("INJECTED_WINDOW_TASK_FAILURE")
+          }
+          @async.sleep(50)
+          println("LIFECYCLE_OPERATIONS_OK")
+          context.handle().close()
+        }),
+      )
+      context.add_cleanup(() => {
         assert_true(sibling_stopped.val)
         cleaned.val = true
-      },
-    )
+      })
+    })
   let result = try {
     app.run()
     Ok(())
@@ -455,30 +436,28 @@ pub async fn run_close_decision_regression() -> Unit {
     ),
   )
   ..identifier("dev.proton.e2e-lifecycle")
-  ..window_lifecycle(
-    on_ready=context => {
-      ignore(
-        context
-        .task_group()
-        .spawn(no_wait=true, () => {
-          lifecycle_probe_gate()
-          let window = context.handle()
-          window.web_contents().eval("void 0")
-          window.close()
-          while close_count.val == 0 {
-            @async.sleep(10)
-          }
-          // Wait for the denied decision to be consumed by the session.
-          @async.sleep(50)
-          assert_eq(close_error.val, "")
-          window.web_contents().eval("void 0")
-          println("LIFECYCLE_OPERATIONS_OK")
-          window.close()
-        }),
-      )
-    },
-    on_close=_ => cleaned.val = true,
-  )
+  ..setup_window(context => {
+    ignore(
+      context
+      .task_group()
+      .spawn(no_wait=true, () => {
+        lifecycle_probe_gate()
+        let window = context.handle()
+        window.web_contents().eval("void 0")
+        window.close()
+        while close_count.val == 0 {
+          @async.sleep(10)
+        }
+        // Wait for the denied decision to be consumed by the session.
+        @async.sleep(50)
+        assert_eq(close_error.val, "")
+        window.web_contents().eval("void 0")
+        println("LIFECYCLE_OPERATIONS_OK")
+        window.close()
+      }),
+    )
+    context.add_cleanup(() => cleaned.val = true)
+  })
   .run()
   assert_true(cleaned.val)
   assert_eq(close_error.val, "")
@@ -545,14 +524,12 @@ pub async fn run_startup_quit_regression(case : StartupQuitCase) -> Unit {
       ),
       open_on_start=false,
     )
-    ..app_lifecycle(on_start=context => application.val = Some(context), on_shutdown=_ => {
-      completed_hook_cleanup.val += 1
+    ..setup(context => {
+      application.val = Some(context)
+      context.add_cleanup(() => completed_hook_cleanup.val += 1)
     })
-    ..app_lifecycle(
-      on_start=context => {
-        if case is DuringActivation {
-          return
-        }
+    ..setup(context => {
+      if !(case is DuringActivation) {
         defer {
           startup_cancelled.val = true
         }
@@ -561,36 +538,31 @@ pub async fn run_startup_quit_regression(case : StartupQuitCase) -> Unit {
         }
         lifecycle_probe_gate()
         context.quit()
-        if confirm_quit {
-          return
-        }
-        @async.sleep(10000)
-        fail("startup continued after quit")
-      },
-      on_shutdown=_ => pending_hook_cleanup.val += 1,
-    )
-    ..app_lifecycle(on_start=_ => later_hook_started.val = true, on_shutdown=_ => {
-      ()
-    })
-    ..window_lifecycle(
-      on_ready=context => {
-        window_ready.val += 1
-        if case is DenyFirst && context.handle().id() == "main" {
-          assert_eq(close_requests.val, 1)
-          application.val.unwrap().quit()
-        }
-        if case is DuringActivation {
-          defer {
-            window_cancelled.val = true
-          }
-          lifecycle_probe_gate()
-          application.val.unwrap().quit()
+        if !confirm_quit {
           @async.sleep(10000)
-          fail("window activation continued after quit")
+          fail("startup continued after quit")
         }
-      },
-      on_close=_ => window_closed.val += 1,
-    )
+      }
+      context.add_cleanup(() => pending_hook_cleanup.val += 1)
+    })
+    ..setup(_ => later_hook_started.val = true)
+    ..setup_window(context => {
+      window_ready.val += 1
+      context.add_cleanup(() => window_closed.val += 1)
+      if case is DenyFirst && context.handle().id() == "main" {
+        assert_eq(close_requests.val, 1)
+        application.val.unwrap().quit()
+      }
+      if case is DuringActivation {
+        defer {
+          window_cancelled.val = true
+        }
+        lifecycle_probe_gate()
+        application.val.unwrap().quit()
+        @async.sleep(10000)
+        fail("window activation continued after quit")
+      }
+    })
   app.run()
   assert_eq(completed_hook_cleanup.val, 1)
   if case is Allow {
@@ -610,8 +582,8 @@ pub async fn run_startup_quit_regression(case : StartupQuitCase) -> Unit {
     assert_true(window_cancelled.val)
     assert_eq(pending_hook_cleanup.val, 1)
     assert_eq(window_ready.val, 1)
-    // The interrupted window hook never returned an activation to clean up.
-    assert_eq(window_closed.val, 0)
+    // Registered cleanup survives cancellation before window setup completes.
+    assert_eq(window_closed.val, 1)
   } else {
     assert_true(startup_cancelled.val)
     assert_false(later_hook_started.val)
@@ -657,33 +629,29 @@ pub async fn run_app_cancellation_regression(
       ),
     )
     ..identifier("dev.proton.e2e-app-cancel")
-    ..app_lifecycle(
-      on_start=context => {
-        application.val = Some(context)
-        if case is Startup {
-          defer {
-            interrupted.val = true
-          }
-          armed.val = true
-          @async.sleep(60000)
-        }
-      },
-      on_shutdown=_ => {
+    ..setup(context => {
+      application.val = Some(context)
+      context.add_cleanup(() => {
         @async.sleep(10)
         shutdown_count.val = shutdown_count.val + 1
-      },
-    )
-    ..window_lifecycle(
-      on_ready=context => {
-        window.val = Some(context.handle())
-        view.val = context.handle().view("child")
+      })
+      if case is Startup {
+        defer {
+          interrupted.val = true
+        }
         armed.val = true
-      },
-      on_close=_ => {
+        @async.sleep(60000)
+      }
+    })
+    ..setup_window(context => {
+      window.val = Some(context.handle())
+      view.val = context.handle().view("child")
+      armed.val = true
+      context.add_cleanup(() => {
         @async.sleep(10)
         close_count.val = close_count.val + 1
-      },
-    )
+      })
+    })
   @async.with_task_group(group => {
     let running = group.spawn(() => app.run(), no_wait=true)
     while !armed.val {
@@ -706,7 +674,7 @@ pub async fn run_app_cancellation_regression(
   }
   if case is Startup {
     assert_true(interrupted.val)
-    assert_eq(shutdown_count.val, 0)
+    assert_eq(shutdown_count.val, 1)
     assert_eq(close_count.val, 0)
   } else {
     assert_eq(shutdown_count.val, 1)
@@ -746,35 +714,29 @@ pub async fn run_cancel_during_startup_regression() -> Unit {
     ),
     open_on_start=false,
   )
-  ..app_lifecycle(
-    on_start=context => {
-      application.val = Some(context)
-      lifecycle_probe_gate()
-      let opening = context
-        .task_group()
-        .spawn(() => ignore(context.windows().open("secondary")), no_wait=true)
-      while context.windows().find("secondary") is None {
-        @async.sleep(1)
-      }
-      opening.cancel()
-      opening.wait() catch {
-        error => assert_true(error is @async.WaitedTaskAlreadyCancelled)
-      }
-      assert_false(secondary_ready.val)
-    },
-    on_shutdown=_ => (),
-  )
-  ..window_lifecycle(
-    on_ready=context => {
-      if context.handle().id() == "secondary" {
-        secondary_ready.val = true
-      } else {
-        main_ready.val = true
-        application.val.unwrap().quit()
-      }
-    },
-    on_close=_ => (),
-  )
+  ..setup(context => {
+    application.val = Some(context)
+    lifecycle_probe_gate()
+    let opening = context
+      .task_group()
+      .spawn(() => ignore(context.windows().open("secondary")), no_wait=true)
+    while context.windows().find("secondary") is None {
+      @async.sleep(1)
+    }
+    opening.cancel()
+    opening.wait() catch {
+      error => assert_true(error is @async.WaitedTaskAlreadyCancelled)
+    }
+    assert_false(secondary_ready.val)
+  })
+  ..setup_window(context => {
+    if context.handle().id() == "secondary" {
+      secondary_ready.val = true
+    } else {
+      main_ready.val = true
+      application.val.unwrap().quit()
+    }
+  })
   .run()
   assert_true(main_ready.val)
   assert_false(secondary_ready.val)
@@ -851,94 +813,84 @@ pub async fn run_task_metrics_regression() -> Unit {
     ),
   )
   ..identifier("dev.proton.e2e-task-metrics")
-  ..app_lifecycle(
-    on_start=context => {
-      application.val = Some(context)
+  ..setup(context => application.val = Some(context))
+  ..setup_window(context => {
+    lifecycle_probe_gate()
+    ignore(
       context
-    },
-    on_shutdown=_ => (),
-  )
-  ..window_lifecycle(
-    on_ready=context => {
-      lifecycle_probe_gate()
-      ignore(
-        context
-        .task_group()
-        .spawn(
-          () => {
-            let app = application.val.unwrap()
-            let sampled : Ref[Array[@proton.AppTaskMetric]] = Ref([])
-            let mut measured = false
-            for attempt = 0; attempt <= 40; attempt = attempt + 1 {
-              let sample = app.task_metrics() catch {
-                error => fail("task_metrics failed: " + error.message())
-              }
-              sampled.val = sample
-              println(
-                "TASK_METRICS_SAMPLE attempt=" +
-                attempt.to_string() +
-                " " +
-                describe_metrics(sample),
-              )
-              measured = task_metrics_measured(sample)
-              let workers = sample.filter(metric => {
-                metric.task_type is @proton.AppTaskType::Worker
-              })
-              if measured && workers.length() == 2 {
-                break
-              }
-              @async.sleep(250)
+      .task_group()
+      .spawn(
+        () => {
+          let app = application.val.unwrap()
+          let sampled : Ref[Array[@proton.AppTaskMetric]] = Ref([])
+          let mut measured = false
+          for attempt = 0; attempt <= 40; attempt = attempt + 1 {
+            let sample = app.task_metrics() catch {
+              error => fail("task_metrics failed: " + error.message())
             }
-            let metrics = sampled.val
-            assert_true(metrics.length() > 0)
-            let types : Array[String] = []
-            let task_ids : Array[Int64] = []
-            for metric in metrics {
-              assert_false(task_ids.contains(metric.task_id))
-              task_ids.push(metric.task_id)
-              types.push(app_task_type_name(metric.task_type))
-              assert_true(metric.process_cpu_percent >= 0.0)
-              assert_true(metric.process_memory_bytes >= -1L)
-            }
-            assert_eq(
-              metrics
-              .filter(metric => metric.task_type is @proton.AppTaskType::Worker)
-              .length(),
-              2,
-              msg="dedicated worker classification: " +
-                describe_metrics(metrics),
-            )
-            let browser = metrics[0]
-            assert_true(browser.task_type is @proton.AppTaskType::Browser)
-            guard measured else {
-              fail(
-                "task metrics never reported a memory footprint: " +
-                describe_metrics(metrics),
-              )
-            }
-            summary.val = metrics.length().to_string() +
-              ":" +
-              types.join(",") +
-              ":" +
-              browser.task_id.to_string() +
-              ":" +
-              browser.process_memory_bytes.to_string() +
-              ":" +
-              describe_metrics(metrics)
+            sampled.val = sample
             println(
-              "TASK_METRICS count=" +
-              summary.val +
-              " browser_memory=" +
-              browser.process_memory_bytes.to_string(),
+              "TASK_METRICS_SAMPLE attempt=" +
+              attempt.to_string() +
+              " " +
+              describe_metrics(sample),
             )
-            app.quit()
-          },
-          no_wait=true,
-        ),
-      )
-    },
-    on_close=_ => (),
-  )
+            measured = task_metrics_measured(sample)
+            let workers = sample.filter(metric => {
+              metric.task_type is @proton.AppTaskType::Worker
+            })
+            if measured && workers.length() == 2 {
+              break
+            }
+            @async.sleep(250)
+          }
+          let metrics = sampled.val
+          assert_true(metrics.length() > 0)
+          let types : Array[String] = []
+          let task_ids : Array[Int64] = []
+          for metric in metrics {
+            assert_false(task_ids.contains(metric.task_id))
+            task_ids.push(metric.task_id)
+            types.push(app_task_type_name(metric.task_type))
+            assert_true(metric.process_cpu_percent >= 0.0)
+            assert_true(metric.process_memory_bytes >= -1L)
+          }
+          assert_eq(
+            metrics
+            .filter(metric => metric.task_type is @proton.AppTaskType::Worker)
+            .length(),
+            2,
+            msg="dedicated worker classification: " + describe_metrics(metrics),
+          )
+          let browser = metrics[0]
+          assert_true(browser.task_type is @proton.AppTaskType::Browser)
+          guard measured else {
+            fail(
+              "task metrics never reported a memory footprint: " +
+              describe_metrics(metrics),
+            )
+          }
+          summary.val = metrics.length().to_string() +
+            ":" +
+            types.join(",") +
+            ":" +
+            browser.task_id.to_string() +
+            ":" +
+            browser.process_memory_bytes.to_string() +
+            ":" +
+            describe_metrics(metrics)
+          println(
+            "TASK_METRICS count=" +
+            summary.val +
+            " browser_memory=" +
+            browser.process_memory_bytes.to_string(),
+          )
+          app.quit()
+        },
+        no_wait=true,
+      ),
+    )
+  })
   .run()
   assert_true(summary.val != "")
   println("LIFECYCLE_PASSED task-metrics")
@@ -1013,119 +965,109 @@ pub async fn run_page_control_regression() -> Unit {
   ..commands(registrar => {
     registrar.bind(report_command, (_context, report) => reported.push(report))
   })
-  ..app_lifecycle(
-    on_start=context => {
-      application.val = Some(context)
+  ..setup(context => application.val = Some(context))
+  ..setup_window(context => {
+    lifecycle_probe_gate()
+    ignore(
       context
-    },
-    on_shutdown=_ => (),
-  )
-  ..window_lifecycle(
-    on_ready=context => {
-      lifecycle_probe_gate()
-      ignore(
-        context
-        .task_group()
-        .spawn(
-          () => {
-            let app = application.val.unwrap()
-            let browser = app.windows().find("main").unwrap().web_contents()
-            // Scripts issued before the entry document commits never reach the
-            // page, so wait for the page to answer through the bridge.
-            let mut page_live = false
-            for attempt = 0; attempt < 400 && !page_live; attempt = attempt + 1 {
-              browser.eval(
-                "void window.__MoonBit__.app.report({ kind: 'live', value: document.title })",
-              ) catch {
-                error => fail("eval failed: " + error.message())
-              }
-              page_live = page_report_value(reported, "live") is Some(_)
-              if !page_live {
-                @async.sleep(25)
-              }
+      .task_group()
+      .spawn(
+        () => {
+          let app = application.val.unwrap()
+          let browser = app.windows().find("main").unwrap().web_contents()
+          // Scripts issued before the entry document commits never reach the
+          // page, so wait for the page to answer through the bridge.
+          let mut page_live = false
+          for attempt = 0; attempt < 400 && !page_live; attempt = attempt + 1 {
+            browser.eval(
+              "void window.__MoonBit__.app.report({ kind: 'live', value: document.title })",
+            ) catch {
+              error => fail("eval failed: " + error.message())
             }
-            assert_true(page_live)
-            let initial = browser.navigation_history() catch {
+            page_live = page_report_value(reported, "live") is Some(_)
+            if !page_live {
+              @async.sleep(25)
+            }
+          }
+          assert_true(page_live)
+          let initial = browser.navigation_history() catch {
+            error => fail("navigation history failed: " + error.message())
+          }
+          assert_true(initial.length() > 0)
+          assert_eq(initial.active_index, initial.length() - 1)
+          println("PAGE_CONTROL initial " + describe_history(initial))
+          let key = browser.insert_css("html { --proton-e2e-css: applied }") catch {
+            error => fail("insert_css failed: " + error.message())
+          }
+          assert_true(key > 0L)
+          let mut css_state = ""
+          for attempt = 0; attempt < 400; attempt = attempt + 1 {
+            browser.eval(page_css_probe_script()) catch {
+              error => fail("eval failed: " + error.message())
+            }
+            match page_report_value(reported, "css") {
+              Some(value) => {
+                css_state = value
+                if value == "applied" {
+                  break
+                }
+              }
+              None => ()
+            }
+            @async.sleep(25)
+          }
+          assert_eq(css_state, "applied")
+          browser.remove_inserted_css(key) catch {
+            error => fail("remove_inserted_css failed: " + error.message())
+          }
+          let mut removed_state = ""
+          for attempt = 0; attempt < 400; attempt = attempt + 1 {
+            browser.eval(page_css_probe_script()) catch {
+              error => fail("eval failed: " + error.message())
+            }
+            match page_report_value(reported, "css") {
+              Some(value) => {
+                removed_state = value
+                if value == "unset" {
+                  break
+                }
+              }
+              None => ()
+            }
+            @async.sleep(25)
+          }
+          assert_eq(removed_state, "unset")
+          browser.load_url("data:text/html,<title>Second</title>") catch {
+            error => fail("load_url failed: " + error.message())
+          }
+          let mut history = initial
+          for attempt = 0; attempt < 400; attempt = attempt + 1 {
+            history = browser.navigation_history() catch {
               error => fail("navigation history failed: " + error.message())
             }
-            assert_true(initial.length() > 0)
-            assert_eq(initial.active_index, initial.length() - 1)
-            println("PAGE_CONTROL initial " + describe_history(initial))
-            let key = browser.insert_css("html { --proton-e2e-css: applied }") catch {
-              error => fail("insert_css failed: " + error.message())
+            if history.length() >= 2 &&
+              history.active_index == history.length() - 1 {
+              break
             }
-            assert_true(key > 0L)
-            let mut css_state = ""
-            for attempt = 0; attempt < 400; attempt = attempt + 1 {
-              browser.eval(page_css_probe_script()) catch {
-                error => fail("eval failed: " + error.message())
-              }
-              match page_report_value(reported, "css") {
-                Some(value) => {
-                  css_state = value
-                  if value == "applied" {
-                    break
-                  }
-                }
-                None => ()
-              }
-              @async.sleep(25)
-            }
-            assert_eq(css_state, "applied")
-            browser.remove_inserted_css(key) catch {
-              error => fail("remove_inserted_css failed: " + error.message())
-            }
-            let mut removed_state = ""
-            for attempt = 0; attempt < 400; attempt = attempt + 1 {
-              browser.eval(page_css_probe_script()) catch {
-                error => fail("eval failed: " + error.message())
-              }
-              match page_report_value(reported, "css") {
-                Some(value) => {
-                  removed_state = value
-                  if value == "unset" {
-                    break
-                  }
-                }
-                None => ()
-              }
-              @async.sleep(25)
-            }
-            assert_eq(removed_state, "unset")
-            browser.load_url("data:text/html,<title>Second</title>") catch {
-              error => fail("load_url failed: " + error.message())
-            }
-            let mut history = initial
-            for attempt = 0; attempt < 400; attempt = attempt + 1 {
-              history = browser.navigation_history() catch {
-                error => fail("navigation history failed: " + error.message())
-              }
-              if history.length() >= 2 &&
-                history.active_index == history.length() - 1 {
-                break
-              }
-              @async.sleep(25)
-            }
-            assert_true(history.length() >= 2)
-            assert_eq(history.active_index, history.length() - 1)
-            println("PAGE_CONTROL navigated " + describe_history(history))
-            // The key belonged to the document that was replaced, so removing
-            // it now must stay a no-op instead of failing.
-            browser.remove_inserted_css(key) catch {
-              error =>
-                fail("remove after navigation failed: " + error.message())
-            }
-            summary.val = history.length().to_string() +
-              ":" +
-              history.active_index.to_string()
-            app.quit()
-          },
-          no_wait=true,
-        ),
-      )
-    },
-    on_close=_ => (),
-  )
+            @async.sleep(25)
+          }
+          assert_true(history.length() >= 2)
+          assert_eq(history.active_index, history.length() - 1)
+          println("PAGE_CONTROL navigated " + describe_history(history))
+          // The key belonged to the document that was replaced, so removing
+          // it now must stay a no-op instead of failing.
+          browser.remove_inserted_css(key) catch {
+            error => fail("remove after navigation failed: " + error.message())
+          }
+          summary.val = history.length().to_string() +
+            ":" +
+            history.active_index.to_string()
+          app.quit()
+        },
+        no_wait=true,
+      ),
+    )
+  })
   .run()
   assert_true(summary.val != "")
   println("LIFECYCLE_PASSED page-control")
@@ -1197,49 +1139,46 @@ pub async fn run_process_events_regression() -> Unit {
       main_loaded.val = true
     }
   })
-  ..window_lifecycle(
-    on_ready=context => {
-      ignore(
-        context
-        .task_group()
-        .spawn(
-          () => {
-            while !main_loaded.val {
-              @async.sleep(10)
-            }
-            let view = context
-              .handle()
-              .add_view(
-                "tab",
-                @proton.view(
-                  "data:text/html,<title>Process Events View</title>process-events",
-                  width=200,
-                  height=120,
-                ),
+  ..setup_window(context => {
+    ignore(
+      context
+      .task_group()
+      .spawn(
+        () => {
+          while !main_loaded.val {
+            @async.sleep(10)
+          }
+          let view = context
+            .handle()
+            .add_view(
+              "tab",
+              @proton.view(
+                "data:text/html,<title>Process Events View</title>process-events",
+                width=200,
+                height=120,
+              ),
+            )
+          ignore(view)
+          // The harness snapshots the process tree once this gate is ready,
+          // then kills the renderer helpers it finds.
+          lifecycle_probe_gate()
+          let deadline = @async.now() + 20000L
+          while !gone_contents.any(gone => gone.has_prefix("browser:main:")) ||
+                !gone_contents.any(gone => gone.has_prefix("view:main/tab:")) {
+            if @async.now() > deadline {
+              fail(
+                "missing renderer notifications; received: " +
+                gone_contents.join(","),
               )
-            ignore(view)
-            // The harness snapshots the process tree once this gate is ready,
-            // then kills the renderer helpers it finds.
-            lifecycle_probe_gate()
-            let deadline = @async.now() + 20000L
-            while !gone_contents.any(gone => gone.has_prefix("browser:main:")) ||
-                  !gone_contents.any(gone => gone.has_prefix("view:main/tab:")) {
-              if @async.now() > deadline {
-                fail(
-                  "missing renderer notifications; received: " +
-                  gone_contents.join(","),
-                )
-              }
-              @async.sleep(10)
             }
-            context.handle().close()
-          },
-          no_wait=true,
-        ),
-      )
-    },
-    on_close=_ => (),
-  )
+            @async.sleep(10)
+          }
+          context.handle().close()
+        },
+        no_wait=true,
+      ),
+    )
+  })
   .run()
   assert_eq(session_events.length(), 1)
   assert_true(created_windows.contains("main"))
@@ -1278,66 +1217,57 @@ pub async fn run_app_control_regression() -> Unit {
 
   @proton.html("Application control", "<h1>Application control</h1>")
   ..identifier("dev.proton.e2e-app-control")
-  ..app_lifecycle(
-    on_start=context => {
-      application.val = Some(context)
-      // Startup hooks run before readiness, like Electron code before `ready`.
-      startup_ready.val = @proton.is_ready()
+  ..setup(context => {
+    application.val = Some(context)
+    // Startup hooks run before readiness, like Electron code before `ready`.
+    startup_ready.val = @proton.is_ready()
+  })
+  ..setup_window(context => {
+    lifecycle_probe_gate()
+    ignore(
       context
-    },
-    on_shutdown=_ => (),
-  )
-  ..window_lifecycle(
-    on_ready=context => {
-      lifecycle_probe_gate()
-      ignore(
-        context
-        .task_group()
-        .spawn(
-          () => {
-            let deadline = @async.now() + 5000L
-            while !@proton.is_ready() {
-              if @async.now() > deadline {
-                fail("application never reported readiness")
-              }
-              @async.sleep(10)
+      .task_group()
+      .spawn(
+        () => {
+          let deadline = @async.now() + 5000L
+          while !@proton.is_ready() {
+            if @async.now() > deadline {
+              fail("application never reported readiness")
             }
-            reached_ready.val = true
-            let app = application.val.unwrap()
-            // `focus` is defined on every platform.
-            app.focus()
-            // macOS owns `hide`, `show`, `isActive`, and `isHidden`; other
-            // platforms must report all four as unsupported.
-            try {
-              app.hide()
-              app.show()
-              active.val = app.is_active()
-              hidden.val = app.is_hidden()
-              supported.val = true
-            } catch {
-              @proton.AppControlError::UnsupportedPlatform(_) =>
-                supported.val = false
-              error =>
-                fail(
-                  "unexpected application control error: " + error.to_string(),
-                )
-            }
-            println(
-              "APP_CONTROL focus=ok appkit=" +
-              supported.val.to_string() +
-              " active=" +
-              active.val.to_string() +
-              " hidden=" +
-              hidden.val.to_string(),
-            )
-            app.quit()
-          },
-          no_wait=true,
-        ),
-      )
-    },
-    on_close=_ => (),
-  )
+            @async.sleep(10)
+          }
+          reached_ready.val = true
+          let app = application.val.unwrap()
+          // `focus` is defined on every platform.
+          app.focus()
+          // macOS owns `hide`, `show`, `isActive`, and `isHidden`; other
+          // platforms must report all four as unsupported.
+          try {
+            app.hide()
+            app.show()
+            active.val = app.is_active()
+            hidden.val = app.is_hidden()
+            supported.val = true
+          } catch {
+            @proton.AppControlError::UnsupportedPlatform(_) =>
+              supported.val = false
+            error =>
+              fail("unexpected application control error: " + error.to_string())
+          }
+          println(
+            "APP_CONTROL focus=ok appkit=" +
+            supported.val.to_string() +
+            " active=" +
+            active.val.to_string() +
+            " hidden=" +
+            hidden.val.to_string(),
+          )
+          app.quit()
+        },
+        no_wait=true,
+      ),
+    )
+  })
   .run()
   assert_false(startup_ready.val)
   assert_true(reached_ready.val)
@@ -1361,30 +1291,25 @@ pub async fn run_process_lifetime_regression() -> Unit {
       application.val.unwrap().quit()
     })
   })
-  ..app_lifecycle(on_start=context => application.val = Some(context), on_shutdown=_ => {
-    ()
+  ..setup(context => application.val = Some(context))
+  ..setup_window(context => {
+    lifecycle_probe_gate()
+    context
+    .handle()
+    .web_contents()
+    .eval(
+      (
+        #|void (async () => {
+        #|  const child = await window.__MoonBit__.process.spawn({
+        #|    command: "node",
+        #|    args: ["-e", "setTimeout(() => process.exit(7), 500)"]
+        #|  });
+        #|  const result = await window.__MoonBit__.process.wait({process_id: child.process_id});
+        #|  await window.__MoonBit__.app.finish(result.exit_code);
+        #|})();
+      ),
+    )
   })
-  ..window_lifecycle(
-    on_ready=context => {
-      lifecycle_probe_gate()
-      context
-      .handle()
-      .web_contents()
-      .eval(
-        (
-          #|void (async () => {
-          #|  const child = await window.__MoonBit__.process.spawn({
-          #|    command: "node",
-          #|    args: ["-e", "setTimeout(() => process.exit(7), 500)"]
-          #|  });
-          #|  const result = await window.__MoonBit__.process.wait({process_id: child.process_id});
-          #|  await window.__MoonBit__.app.finish(result.exit_code);
-          #|})();
-        ),
-      )
-    },
-    on_close=_ => (),
-  )
   .run()
   assert_true(completed.val)
   println("LIFECYCLE_PASSED process-lifetime")
@@ -1410,25 +1335,22 @@ pub async fn run_renderer_without_bridge_regression() -> Unit {
       _ => ()
     }
   })
-  ..app_lifecycle(
-    on_start=context => {
-      ignore(
-        context
-        .task_group()
-        .spawn(no_wait=true, () => {
-          while !loaded.val {
-            @async.sleep(10)
-          }
-          lifecycle_probe_gate()
-          while terminations.val == 0 {
-            @async.sleep(10)
-          }
-          context.quit()
-        }),
-      )
-    },
-    on_shutdown=_ => (),
-  )
+  ..setup(context => {
+    ignore(
+      context
+      .task_group()
+      .spawn(no_wait=true, () => {
+        while !loaded.val {
+          @async.sleep(10)
+        }
+        lifecycle_probe_gate()
+        while terminations.val == 0 {
+          @async.sleep(10)
+        }
+        context.quit()
+      }),
+    )
+  })
   .run()
   assert_eq(terminations.val, 1)
   assert_true(valid_termination.val)
@@ -1477,72 +1399,69 @@ pub async fn run_proxy_regression(case : ProxySource) -> Unit {
         }
       eprintln("PROXY_STATE " + state)
     })
-    ..app_lifecycle(
-      on_start=context => {
-        ignore(
-          context
-          .task_group()
-          .spawn(no_wait=true, () => {
-            while !served.val {
-              let (connection, _) = server.accept()
-              eprintln("PROXY_CONNECTION accepted")
-              ignore(
-                context
-                .task_group()
-                .spawn(no_wait=true, () => {
-                  defer connection.close()
-                  // A browser may close a speculative connection before sending
-                  // a request. This does not satisfy the proxy success assertion.
-                  let request = connection.read_request() catch {
-                    @io.ReaderClosed => {
-                      eprintln("PROXY_CONNECTION closed without a request")
-                      return
-                    }
-                    error => raise error
+    ..setup(context => {
+      ignore(
+        context
+        .task_group()
+        .spawn(no_wait=true, () => {
+          while !served.val {
+            let (connection, _) = server.accept()
+            eprintln("PROXY_CONNECTION accepted")
+            ignore(
+              context
+              .task_group()
+              .spawn(no_wait=true, () => {
+                defer connection.close()
+                // A browser may close a speculative connection before sending
+                // a request. This does not satisfy the proxy success assertion.
+                let request = connection.read_request() catch {
+                  @io.ReaderClosed => {
+                    eprintln("PROXY_CONNECTION closed without a request")
+                    return
                   }
-                  eprintln("PROXY_REQUEST " + request.path)
-                  if request.path == "http://proton-proxy.invalid:8080/probe" {
-                    connection.send_response(200, "OK")
-                    connection.write_string("<title>" + page_title + "</title>")
-                    connection.end_response()
-                    served.val = true
-                  } else {
-                    connection.send_response(503, "Unavailable")
-                    connection.end_response()
-                  }
-                }),
-              )
-            }
-          }),
-        )
-        ignore(
-          context
-          .task_group()
-          .spawn(no_wait=true, () => {
-            // The parent runner owns the startup timeout and includes this
-            // child's event/request log on failure. Keep the initial navigation
-            // under test rather than issuing a second navigation after startup.
-            while true {
-              // A registered window may still be waiting for its native browser.
-              // Observe the response and load completion before querying it.
-              if served.val &&
-                loaded.val &&
-                context.windows().find("main") is Some(window) {
-                let state = window.web_contents().state()
-                if state.url == "http://proton-proxy.invalid:8080/probe" &&
-                  !state.is_loading {
-                  break
+                  error => raise error
                 }
+                eprintln("PROXY_REQUEST " + request.path)
+                if request.path == "http://proton-proxy.invalid:8080/probe" {
+                  connection.send_response(200, "OK")
+                  connection.write_string("<title>" + page_title + "</title>")
+                  connection.end_response()
+                  served.val = true
+                } else {
+                  connection.send_response(503, "Unavailable")
+                  connection.end_response()
+                }
+              }),
+            )
+          }
+        }),
+      )
+      ignore(
+        context
+        .task_group()
+        .spawn(no_wait=true, () => {
+          // The parent runner owns the startup timeout and includes this
+          // child's event/request log on failure. Keep the initial navigation
+          // under test rather than issuing a second navigation after startup.
+          while true {
+            // A registered window may still be waiting for its native browser.
+            // Observe the response and load completion before querying it.
+            if served.val &&
+              loaded.val &&
+              context.windows().find("main") is Some(window) {
+              let state = window.web_contents().state()
+              if state.url == "http://proton-proxy.invalid:8080/probe" &&
+                !state.is_loading {
+                break
               }
-              @async.sleep(10)
             }
-            lifecycle_probe_gate()
-            context.quit()
-          }),
-        )
-      },
-      on_shutdown=_ => (),
-    )
+            @async.sleep(10)
+          }
+          lifecycle_probe_gate()
+          context.quit()
+        }),
+      )
+    })
   if configured {
     app.proxy(proxy)
   }
@@ -1636,93 +1555,87 @@ pub async fn run_page_recovery_regression(case : PageRecoveryCase) -> Unit {
     ..on_render_process_gone(fn(contents, _details) {
       renderer_failures.push(contents.window_id())
     })
-    ..app_lifecycle(
-      on_start=context => {
-        application.val = Some(context)
-        if case is StartupFailure {
+    ..setup(context => {
+      application.val = Some(context)
+      if case is StartupFailure {
+        lifecycle_probe_gate()
+      }
+    })
+    ..setup_window(context => {
+      ready_windows.val += 1
+      if context.handle().id() != "main" {
+        return
+      }
+      ignore(
+        context
+        .task_group()
+        .spawn(no_wait=true, () => {
+          while ready_windows.val != 2 {
+            @async.sleep(10)
+          }
+          let main = context.handle().web_contents()
+          let secondary = application.val
+            .unwrap()
+            .windows()
+            .find("secondary")
+            .unwrap()
+            .web_contents()
+          // Give the survivor a different site so Chromium cannot put it in the
+          // renderer being terminated. It needs no bridge for this liveness check.
+          secondary.load_url(
+            "data:text/html,<title>Independent Survivor</title>",
+          )
+          while !secondary.state().url.has_prefix("data:") {
+            @async.sleep(10)
+          }
           lifecycle_probe_gate()
-        }
-      },
-      on_shutdown=_ => (),
-    )
-    ..window_lifecycle(
-      on_ready=context => {
-        ready_windows.val += 1
-        if context.handle().id() != "main" {
-          return
-        }
-        ignore(
-          context
-          .task_group()
-          .spawn(no_wait=true, () => {
-            while ready_windows.val != 2 {
+          main.eval("void window.__MoonBit__.app.slow(null).catch(() => {})")
+          while !slow_started.val {
+            @async.sleep(10)
+          }
+          if case is Renderer {
+            main.load_url("chrome://crash")
+            while renderer_failures.is_empty() {
               @async.sleep(10)
             }
-            let main = context.handle().web_contents()
-            let secondary = application.val
-              .unwrap()
-              .windows()
-              .find("secondary")
-              .unwrap()
-              .web_contents()
-            // Give the survivor a different site so Chromium cannot put it in the
-            // renderer being terminated. It needs no bridge for this liveness check.
-            secondary.load_url(
-              "data:text/html,<title>Independent Survivor</title>",
-            )
-            while !secondary.state().url.has_prefix("data:") {
-              @async.sleep(10)
-            }
-            lifecycle_probe_gate()
-            main.eval("void window.__MoonBit__.app.slow(null).catch(() => {})")
-            while !slow_started.val {
-              @async.sleep(10)
-            }
-            if case is Renderer {
-              main.load_url("chrome://crash")
-              while renderer_failures.is_empty() {
-                @async.sleep(10)
-              }
-            } else {
-              main.load_html(
-                "<title>Failed Page</title>", "https://proton.localhost/?fail",
-              )
-              while bridge_failures.val == 0 {
-                @async.sleep(10)
-              }
-            }
-            while !slow_cancelled.val {
-              @async.sleep(10)
-            }
-            if case is Bridge {
-              main.eval("globalThis.__failureReady = true")
-              let gate = @env.get_env_var("PROTON_E2E_LIFECYCLE_GATE").unwrap()
-              while !@mbfs.path_exists(gate + ".failed-request-checked") {
-                @async.sleep(10)
-              }
-              assert_eq(pinged.val, 0)
-            }
-            secondary.load_url("data:text/html,survivor-responded")
-            while secondary.state().url != "data:text/html,survivor-responded" {
-              @async.sleep(10)
-            }
-            let before_reload = initialized.val
+          } else {
             main.load_html(
-              "<title>Recovered</title>", "https://proton.localhost/",
+              "<title>Failed Page</title>", "https://proton.localhost/?fail",
             )
-            // The script retries until the fresh document has installed its bridge.
-            while pinged.val == 0 || initialized.val <= before_reload {
-              main.eval(
-                "if (document.title === 'Recovered' && window.__MoonBit__?.app?.ping) void window.__MoonBit__.app.ping(null)",
-              )
-              @async.sleep(25)
+            while bridge_failures.val == 0 {
+              @async.sleep(10)
             }
-            application.val.unwrap().quit()
-          }),
-        )
-      },
-      on_close=_ => (),
-    )
+          }
+          while !slow_cancelled.val {
+            @async.sleep(10)
+          }
+          if case is Bridge {
+            main.eval("globalThis.__failureReady = true")
+            let gate = @env.get_env_var("PROTON_E2E_LIFECYCLE_GATE").unwrap()
+            while !@mbfs.path_exists(gate + ".failed-request-checked") {
+              @async.sleep(10)
+            }
+            assert_eq(pinged.val, 0)
+          }
+          secondary.load_url("data:text/html,survivor-responded")
+          while secondary.state().url != "data:text/html,survivor-responded" {
+            @async.sleep(10)
+          }
+          let before_reload = initialized.val
+          main.load_html(
+            "<title>Recovered</title>", "https://proton.localhost/",
+          )
+          // The script retries until the fresh document has installed its bridge.
+          while pinged.val == 0 || initialized.val <= before_reload {
+            main.eval(
+              "if (document.title === 'Recovered' && window.__MoonBit__?.app?.ping) void window.__MoonBit__.app.ping(null)",
+            )
+            @async.sleep(25)
+          }
+          application.val.unwrap().quit()
+        }),
+      )
+    })
   let error = try {
     app.run()
     None
@@ -1768,9 +1681,7 @@ pub async fn run_closed_record_churn_regression() -> Unit {
     ),
     open_on_start=false,
   )
-  ..app_lifecycle(on_start=context => application.val = Some(context), on_shutdown=_ => {
-    ()
-  })
+  ..setup(context => application.val = Some(context))
   ..on_web_contents_event(fn(_view, event) {
     if _view.view_id() is None {
       return
@@ -1782,67 +1693,64 @@ pub async fn run_closed_record_churn_regression() -> Unit {
       loaded.val += 1
     }
   })
-  ..window_lifecycle(
-    on_ready=context => {
-      if context.handle().id() != "main" {
-        return
-      }
-      ignore(
-        context
-        .task_group()
-        .spawn(no_wait=true, () => {
-          lifecycle_probe_gate()
-          let manager = application.val.unwrap().windows()
-          for index = 0; index < 25; index = index + 1 {
-            let view = context
-              .handle()
-              .add_view(
-                "temporary",
-                @proton.view("data:text/html,temporary", width=100, height=100),
-              )
-            old_views.push(view)
-            while loaded.val <= index {
-              @async.sleep(5)
-            }
-            if index % 2 == 0 {
-              context.handle().remove_view("temporary")
-            } else {
-              view.web_contents().eval("window.close()")
-            }
-            while removed.val <= index {
-              @async.sleep(5)
-            }
-            let window = manager.open("secondary")
-            old_windows.push(window)
-            window.close()
-            while manager.find("secondary") is Some(_) {
-              @async.sleep(5)
-            }
+  ..setup_window(context => {
+    if context.handle().id() != "main" {
+      return
+    }
+    ignore(
+      context
+      .task_group()
+      .spawn(no_wait=true, () => {
+        lifecycle_probe_gate()
+        let manager = application.val.unwrap().windows()
+        for index = 0; index < 25; index = index + 1 {
+          let view = context
+            .handle()
+            .add_view(
+              "temporary",
+              @proton.view("data:text/html,temporary", width=100, height=100),
+            )
+          old_views.push(view)
+          while loaded.val <= index {
+            @async.sleep(5)
           }
-          for view in old_views {
-            let rejected = try {
-              ignore(view.state())
-              false
-            } catch {
-              _ => true
-            }
-            assert_true(rejected)
+          if index % 2 == 0 {
+            context.handle().remove_view("temporary")
+          } else {
+            view.web_contents().eval("window.close()")
           }
-          for window in old_windows {
-            let rejected = try {
-              ignore(window.state())
-              false
-            } catch {
-              _ => true
-            }
-            assert_true(rejected)
+          while removed.val <= index {
+            @async.sleep(5)
           }
-          application.val.unwrap().quit()
-        }),
-      )
-    },
-    on_close=_ => (),
-  )
+          let window = manager.open("secondary")
+          old_windows.push(window)
+          window.close()
+          while manager.find("secondary") is Some(_) {
+            @async.sleep(5)
+          }
+        }
+        for view in old_views {
+          let rejected = try {
+            ignore(view.state())
+            false
+          } catch {
+            _ => true
+          }
+          assert_true(rejected)
+        }
+        for window in old_windows {
+          let rejected = try {
+            ignore(window.state())
+            false
+          } catch {
+            _ => true
+          }
+          assert_true(rejected)
+        }
+        application.val.unwrap().quit()
+      }),
+    )
+  })
   .run()
   assert_eq(removed.val, 25)
   println("LIFECYCLE_PASSED closed-record-churn")
@@ -1868,26 +1776,23 @@ pub async fn run_startup_update_regression(case : StartupUpdateOutcome) -> Unit 
       ["invalid PEM public key"],
       check_on_launch=false,
     )
-    ..app_lifecycle(
-      on_start=application => {
-        context.val = Some(application)
-        lifecycle_probe_gate()
-        // Invalid test keys/absent installed version fail locally. Reaching
-        // that check proves the configured channel was present before startup.
-        ignore(application.check_for_update()) catch {
-          _ => checked.val = checked.val + 1
-        }
-        ignore(@proton.check_for_update()) catch {
-          _ => checked.val = checked.val + 1
-        }
-        assert_eq(checked.val, 2)
-        if failed_startup {
-          fail("intentional startup failure")
-        }
-        application.quit()
-      },
-      on_shutdown=_ => (),
-    )
+    ..setup(application => {
+      context.val = Some(application)
+      lifecycle_probe_gate()
+      // Invalid test keys/absent installed version fail locally. Reaching
+      // that check proves the configured channel was present before startup.
+      ignore(application.check_for_update()) catch {
+        _ => checked.val = checked.val + 1
+      }
+      ignore(@proton.check_for_update()) catch {
+        _ => checked.val = checked.val + 1
+      }
+      assert_eq(checked.val, 2)
+      if failed_startup {
+        fail("intentional startup failure")
+      }
+      application.quit()
+    })
   let failed = try {
     app.run()
     false
@@ -2052,105 +1957,99 @@ pub async fn run_window_config_regression() -> Unit {
       notifications.push("second")
     }
   })
-  ..app_lifecycle(
-    on_start=context => {
-      assert_eq(created, ["session", "session:second"])
-      application.val = Some(context)
-    },
-    on_shutdown=_ => (),
-  )
-  ..window_lifecycle(
-    on_ready=context => {
-      let window = context.handle()
-      assert_eq(
-        window.views().length(),
-        if context.id() == "main" {
-          4
-        } else {
-          1
-        },
-      )
-      assert_eq(window.view("child").unwrap().window_id(), context.id())
-      if context.id() == "secondary" {
-        secondary_activations.val += 1
-        return
-      }
-      ignore(
-        context
-        .task_group()
-        .spawn(no_wait=true, () => {
-          lifecycle_probe_gate()
-          let manager = context.windows()
-          while !notifications.contains("first") {
-            @async.sleep(5)
-          }
-          assert_eq(notifications, ["second", "first"])
-          assert_true(created.contains("main:second"))
-          assert_eq(created_contents, [
-            "main/main", "main/created-in-contents", "main/created-in-contents:second",
-            "main/main:second", "main/replaced-in-window", "main/replaced-in-window:second",
-            "main/created-in-window", "main/created-in-window:second", "main/child",
-            "main/child:second",
-          ])
-          while !popups.contains("main") {
-            @async.sleep(5)
-          }
-          let dynamic = window.add_view(
-            "dynamic",
-            @proton.ViewConfig(
-              width=100,
-              height=100,
-              initial_url="data:text/html,<title>Dynamic policy</title>",
-              web_contents_policy=child_policy,
-            ),
+  ..setup(context => {
+    assert_eq(created, ["session", "session:second"])
+    application.val = Some(context)
+  })
+  ..setup_window(context => {
+    let window = context.handle()
+    assert_eq(
+      window.views().length(),
+      if context.id() == "main" {
+        4
+      } else {
+        1
+      },
+    )
+    assert_eq(window.view("child").unwrap().window_id(), context.id())
+    if context.id() == "secondary" {
+      secondary_activations.val += 1
+      return
+    }
+    ignore(
+      context
+      .task_group()
+      .spawn(no_wait=true, () => {
+        lifecycle_probe_gate()
+        let manager = context.windows()
+        while !notifications.contains("first") {
+          @async.sleep(5)
+        }
+        assert_eq(notifications, ["second", "first"])
+        assert_true(created.contains("main:second"))
+        assert_eq(created_contents, [
+          "main/main", "main/created-in-contents", "main/created-in-contents:second",
+          "main/main:second", "main/replaced-in-window", "main/replaced-in-window:second",
+          "main/created-in-window", "main/created-in-window:second", "main/child",
+          "main/child:second",
+        ])
+        while !popups.contains("main") {
+          @async.sleep(5)
+        }
+        let dynamic = window.add_view(
+          "dynamic",
+          @proton.ViewConfig(
+            width=100,
+            height=100,
+            initial_url="data:text/html,<title>Dynamic policy</title>",
+            web_contents_policy=child_policy,
+          ),
+        )
+        assert_true(created_contents.contains("main/dynamic:second"))
+        while !navigations.contains("main/dynamic") {
+          @async.sleep(5)
+        }
+        assert_true(dynamic.web_contents().state().title != "Dynamic policy")
+        // The driver opens a popup with a trusted user gesture on this page.
+        dynamic.web_contents().eval("document.title = 'Dynamic policy ready'")
+        while !popups.contains("dynamic") {
+          @async.sleep(5)
+        }
+        window.remove_view("dynamic")
+        for iteration in 0..<2 {
+          let secondary = manager.open("secondary")
+          assert_eq(
+            created.filter(id => id == "secondary:second").length(),
+            iteration + 1,
           )
-          assert_true(created_contents.contains("main/dynamic:second"))
-          while !navigations.contains("main/dynamic") {
+          while navigations.filter(id => id == "secondary/child").length() <
+                iteration + 1 {
             @async.sleep(5)
           }
-          assert_true(dynamic.web_contents().state().title != "Dynamic policy")
-          // The driver opens a popup with a trusted user gesture on this page.
-          dynamic.web_contents().eval("document.title = 'Dynamic policy ready'")
-          while !popups.contains("dynamic") {
+          assert_true(
+            secondary.view("child").unwrap().web_contents().state().title !=
+            "Policy child",
+          )
+          let child = secondary.view("child").unwrap()
+          assert_eq(child.window_id(), "secondary")
+          secondary.close()
+          while manager.find("secondary") is Some(_) {
             @async.sleep(5)
           }
-          window.remove_view("dynamic")
-          for iteration in 0..<2 {
-            let secondary = manager.open("secondary")
-            assert_eq(
-              created.filter(id => id == "secondary:second").length(),
-              iteration + 1,
-            )
-            while navigations.filter(id => id == "secondary/child").length() <
-                  iteration + 1 {
-              @async.sleep(5)
-            }
-            assert_true(
-              secondary.view("child").unwrap().web_contents().state().title !=
-              "Policy child",
-            )
-            let child = secondary.view("child").unwrap()
-            assert_eq(child.window_id(), "secondary")
-            secondary.close()
-            while manager.find("secondary") is Some(_) {
-              @async.sleep(5)
-            }
-            let stale = try {
-              ignore(child.state())
-              false
-            } catch {
-              _ => true
-            }
-            assert_true(stale)
-            // The primary window's child with the same id remains usable.
-            ignore(window.view("child").unwrap().state())
+          let stale = try {
+            ignore(child.state())
+            false
+          } catch {
+            _ => true
           }
-          application.val.unwrap().quit()
-        }),
-      )
-    },
-    on_close=_ => (),
-  )
+          assert_true(stale)
+          // The primary window's child with the same id remains usable.
+          ignore(window.view("child").unwrap().state())
+        }
+        application.val.unwrap().quit()
+      }),
+    )
+  })
   .run()
   assert_eq(secondary_activations.val, 2)
   assert_eq(main_closes.val, 1)
@@ -2255,159 +2154,155 @@ pub async fn run_web_contents_regression() -> Unit {
       _ => ()
     }
   })
-  ..app_lifecycle(on_start=context => application.val = Some(context), on_shutdown=_ => {
-    ()
-  })
-  ..window_lifecycle(
-    on_ready=context => {
-      assert_eq(context.locale(), application.val.unwrap().locale())
-      assert_eq(
-        context.preferred_languages(),
-        application.val.unwrap().preferred_languages(),
-      )
+  ..setup(context => application.val = Some(context))
+  ..setup_window(context => {
+    assert_eq(context.locale(), application.val.unwrap().locale())
+    assert_eq(
+      context.preferred_languages(),
+      application.val.unwrap().preferred_languages(),
+    )
+    context
+    .task_group()
+    .spawn_bg(
+      () => {
+        defer {
+          window_task_stopped.val = true
+        }
+        while true {
+          @async.sleep(1000)
+        }
+      },
+      no_wait=true,
+    )
+    ignore(
       context
       .task_group()
-      .spawn_bg(
-        () => {
-          defer {
-            window_task_stopped.val = true
-          }
-          while true {
-            @async.sleep(1000)
-          }
-        },
-        no_wait=true,
-      )
-      ignore(
-        context
-        .task_group()
-        .spawn(no_wait=true, () => {
-          lifecycle_probe_gate()
-          let window = context.handle()
-          let main = window.web_contents()
-          let left = window.view("left").unwrap().web_contents()
-          let right = window.view("right").unwrap().web_contents()
-          handles.push(main)
-          handles.push(left)
-          handles.push(right)
-          for id in ["main", "left", "right"] {
-            while !loaded.contains(id) {
-              @async.sleep(10)
-            }
-          }
-          while main.state().title != "Main" ||
-                left.state().title != "Left" ||
-                right.state().title != "Right" {
+      .spawn(no_wait=true, () => {
+        lifecycle_probe_gate()
+        let window = context.handle()
+        let main = window.web_contents()
+        let left = window.view("left").unwrap().web_contents()
+        let right = window.view("right").unwrap().web_contents()
+        handles.push(main)
+        handles.push(left)
+        handles.push(right)
+        for id in ["main", "left", "right"] {
+          while !loaded.contains(id) {
             @async.sleep(10)
           }
-          assert_eq(main.state().title, "Main")
-          assert_eq(left.state().title, "Left")
-          assert_eq(right.state().title, "Right")
-          left.set_audio_muted(true)
-          assert_true(left.is_audio_muted())
-          assert_false(right.is_audio_muted())
-          assert_false(main.is_audio_muted())
-          for contents in [main, left, right] {
-            assert_eq(contents.window_id(), window.id())
-            contents.set_zoom_percent(125)
-            assert_eq(contents.zoom_percent(), 125)
-            contents.set_zoom_percent(100)
-            contents.stop_find_in_page(clear_selection=false)
-            let id = contents.view_id().unwrap_or("main")
-            contents.eval(
-              "new Image().src = 'https://proton.test/blocked/" + id + "'",
-            )
-            contents.download_url("data:text/plain,contents-download")
-            ignore(contents.find_in_page("needle"))
-            contents.print_to_pdf(pdf_root + "." + id + ".pdf")
-            printed.push(id)
-          }
-          for id in ["main", "left", "right"] {
-            while !found.contains(id) ||
-                  !printed.contains(id) ||
-                  !completed_downloads.contains(id) ||
-                  !resources.contains(id) {
-              @async.sleep(10)
-            }
-            assert_true(downloads.contains(id))
-            assert_true(resources.contains(id))
-            assert_eq(
-              @mbfs.read_file_to_string(
-                pdf_root + "." + id + ".txt",
-                encoding="utf8",
-              ),
-              "contents-download",
-            )
-          }
-          left.session().set_cookie("https://proton.test/", "contents", "left")
-          let cookies = left.session().get_cookies(url="https://proton.test/")
-          assert_true(
-            cookies.any(cookie => {
-              cookie.name == "contents" && cookie.value == "left"
-            }),
+        }
+        while main.state().title != "Main" ||
+              left.state().title != "Left" ||
+              right.state().title != "Right" {
+          @async.sleep(10)
+        }
+        assert_eq(main.state().title, "Main")
+        assert_eq(left.state().title, "Left")
+        assert_eq(right.state().title, "Right")
+        left.set_audio_muted(true)
+        assert_true(left.is_audio_muted())
+        assert_false(right.is_audio_muted())
+        assert_false(main.is_audio_muted())
+        for contents in [main, left, right] {
+          assert_eq(contents.window_id(), window.id())
+          contents.set_zoom_percent(125)
+          assert_eq(contents.zoom_percent(), 125)
+          contents.set_zoom_percent(100)
+          contents.stop_find_in_page(clear_selection=false)
+          let id = contents.view_id().unwrap_or("main")
+          contents.eval(
+            "new Image().src = 'https://proton.test/blocked/" + id + "'",
           )
-          left
-          .session()
-          .delete_cookies(url="https://proton.test/", name="contents")
-          left.load_html("<title>Changed</title><p>new</p>", "proton://left/")
-          while left.state().title != "Changed" {
+          contents.download_url("data:text/plain,contents-download")
+          ignore(contents.find_in_page("needle"))
+          contents.print_to_pdf(pdf_root + "." + id + ".pdf")
+          printed.push(id)
+        }
+        for id in ["main", "left", "right"] {
+          while !found.contains(id) ||
+                !printed.contains(id) ||
+                !completed_downloads.contains(id) ||
+                !resources.contains(id) {
             @async.sleep(10)
           }
-          assert_eq(right.state().title, "Right")
-          let old_view = window.view("left").unwrap()
-          old_view.set_bounds(x=5, y=10, width=160, height=120)
-          old_view.set_z_order(3)
-          old_view.set_visible(false)
-          let view_state = old_view.state()
+          assert_true(downloads.contains(id))
+          assert_true(resources.contains(id))
           assert_eq(
-            (view_state.x, view_state.y, view_state.width, view_state.height),
-            (5, 10, 160, 120),
-          )
-          assert_eq(view_state.z_order, 3)
-          assert_false(view_state.visible)
-          old_view.close()
-          let replacement = window.add_view(
-            "left",
-            @proton.view(
-              "data:text/html,<title>Replacement</title>",
-              width=200,
-              height=200,
+            @mbfs.read_file_to_string(
+              pdf_root + "." + id + ".txt",
+              encoding="utf8",
             ),
+            "contents-download",
           )
-          let stale = try {
-            left.eval("void 0")
-            false
-          } catch {
-            @proton.WindowSessionError::StaleView(id="left") => true
-            error => raise error
-          }
-          assert_true(stale)
-          try old_view.close() catch {
-            @proton.WindowSessionError::StaleView(id="left") => ()
-            error => raise error
-          } noraise {
-            _ => fail("stale view closed its replacement")
-          }
-          while !titles.contains("left=Replacement") {
-            @async.sleep(10)
-          }
-          assert_eq(replacement.web_contents().state().title, "Replacement")
-          assert_eq(right.state().title, "Right")
-          right.download_url("data:text/plain,hold")
-          while !pending_started.val {
-            @async.sleep(10)
-          }
-          window.view("right").unwrap().close()
-          while !pending_cancelled.val {
-            @async.sleep(10)
-          }
-          assert_eq(main.state().title, "Main")
-          application.val.unwrap().quit()
-        }),
-      )
-    },
-    on_close=_ => assert_true(window_task_stopped.val),
-  )
+        }
+        left.session().set_cookie("https://proton.test/", "contents", "left")
+        let cookies = left.session().get_cookies(url="https://proton.test/")
+        assert_true(
+          cookies.any(cookie => {
+            cookie.name == "contents" && cookie.value == "left"
+          }),
+        )
+        left
+        .session()
+        .delete_cookies(url="https://proton.test/", name="contents")
+        left.load_html("<title>Changed</title><p>new</p>", "proton://left/")
+        while left.state().title != "Changed" {
+          @async.sleep(10)
+        }
+        assert_eq(right.state().title, "Right")
+        let old_view = window.view("left").unwrap()
+        old_view.set_bounds(x=5, y=10, width=160, height=120)
+        old_view.set_z_order(3)
+        old_view.set_visible(false)
+        let view_state = old_view.state()
+        assert_eq(
+          (view_state.x, view_state.y, view_state.width, view_state.height),
+          (5, 10, 160, 120),
+        )
+        assert_eq(view_state.z_order, 3)
+        assert_false(view_state.visible)
+        old_view.close()
+        let replacement = window.add_view(
+          "left",
+          @proton.view(
+            "data:text/html,<title>Replacement</title>",
+            width=200,
+            height=200,
+          ),
+        )
+        let stale = try {
+          left.eval("void 0")
+          false
+        } catch {
+          @proton.WindowSessionError::StaleView(id="left") => true
+          error => raise error
+        }
+        assert_true(stale)
+        try old_view.close() catch {
+          @proton.WindowSessionError::StaleView(id="left") => ()
+          error => raise error
+        } noraise {
+          _ => fail("stale view closed its replacement")
+        }
+        while !titles.contains("left=Replacement") {
+          @async.sleep(10)
+        }
+        assert_eq(replacement.web_contents().state().title, "Replacement")
+        assert_eq(right.state().title, "Right")
+        right.download_url("data:text/plain,hold")
+        while !pending_started.val {
+          @async.sleep(10)
+        }
+        window.view("right").unwrap().close()
+        while !pending_cancelled.val {
+          @async.sleep(10)
+        }
+        assert_eq(main.state().title, "Main")
+        application.val.unwrap().quit()
+      }),
+    )
+    context.add_cleanup(() => assert_true(window_task_stopped.val))
+  })
   .run()
   assert_false(downloads.contains("replaced handler"))
   for contents in handles {
@@ -2435,100 +2330,95 @@ pub async fn run_session_lifetime_regression() -> Unit {
   ..identifier("dev.proton.session-lifetime")
   ..last_window_closed_policy(@proton.LastWindowClosedPolicy::KeepRunning)
   ..add_window("secondary", config, open_on_start=false)
-  ..app_lifecycle(
-    on_start=context => {
-      let session = context.session()
-      retained.push(session)
-      // No browser exists during this initial application startup hook.
-      session.set_cookie(url, "lifetime", "startup")
-      assert_true(session.get_cookies(url~).any(c => c.value == "startup"))
-      ignore(
-        context
-        .task_group()
-        .spawn(no_wait=true, () => {
-          lifecycle_probe_gate()
-          let manager = context.windows()
-          let window = manager.open("secondary")
-          let page_session = window.web_contents().session()
-          let child = window.view("child").unwrap()
-          let child_session = child.web_contents().session()
-          retained.push(page_session)
-          retained.push(child_session)
-          assert_true(
-            child_session.get_cookies(url~).any(c => c.value == "startup"),
-          )
-          child.close()
-          window.close()
-          while manager.find("secondary") is Some(_) {
-            @async.sleep(5)
+  ..setup(context => {
+    let session = context.session()
+    retained.push(session)
+    // No browser exists during this initial application startup hook.
+    session.set_cookie(url, "lifetime", "startup")
+    assert_true(session.get_cookies(url~).any(c => c.value == "startup"))
+    ignore(
+      context
+      .task_group()
+      .spawn(no_wait=true, () => {
+        lifecycle_probe_gate()
+        let manager = context.windows()
+        let window = manager.open("secondary")
+        let page_session = window.web_contents().session()
+        let child = window.view("child").unwrap()
+        let child_session = child.web_contents().session()
+        retained.push(page_session)
+        retained.push(child_session)
+        assert_true(
+          child_session.get_cookies(url~).any(c => c.value == "startup"),
+        )
+        child.close()
+        window.close()
+        while manager.find("secondary") is Some(_) {
+          @async.sleep(5)
+        }
+        page_session.set_cookie(url, "lifetime", "after-close")
+        assert_true(
+          child_session.get_cookies(url~).any(c => c.value == "after-close"),
+        )
+        manager.find("main").unwrap().close()
+        while manager.find("main") is Some(_) {
+          @async.sleep(5)
+        }
+        // The application remains alive with no windows. Every retained
+        // handle addresses the same store, and visits may overlap.
+        @async.with_task_group(group => {
+          for handle in retained {
+            ignore(
+              group.spawn(() => {
+                assert_true(
+                  handle.get_cookies(url~).any(c => c.value == "after-close"),
+                )
+              }),
+            )
           }
-          page_session.set_cookie(url, "lifetime", "after-close")
-          assert_true(
-            child_session.get_cookies(url~).any(c => c.value == "after-close"),
-          )
-          manager.find("main").unwrap().close()
-          while manager.find("main") is Some(_) {
-            @async.sleep(5)
-          }
-          // The application remains alive with no windows. Every retained
-          // handle addresses the same store, and visits may overlap.
-          @async.with_task_group(group => {
-            for handle in retained {
-              ignore(
-                group.spawn(() => {
-                  assert_true(
-                    handle.get_cookies(url~).any(c => c.value == "after-close"),
-                  )
-                }),
-              )
-            }
-          })
-          child_session.clear_cache()
-          ignore(session.get_cookies(url~))
-          child_session.clear_auth_cache()
-          ignore(session.get_cookies(url~))
-          child_session.clear_certificate_exceptions()
-          ignore(session.get_cookies(url~))
-          child_session.close_all_connections()
-          ignore(session.get_cookies(url~))
-          child_session.delete_cookies(url~, name="lifetime")
-          child_session.flush_cookies()
-          assert_true(session.get_cookies(url~).is_empty())
-          let replacement = manager.open("secondary")
-          assert_eq(replacement.id(), window.id())
-          try window.set_title("stale window") catch {
-            @proton.WindowSessionError::StaleWindow(id="secondary") => ()
-            error => raise error
-          } noraise {
-            _ => fail("stale window changed its replacement")
-          }
-          try
-            window.web_contents().eval("document.title = 'stale page'")
-          catch {
-            @proton.WindowSessionError::StaleWindow(id="secondary") => ()
-            error => raise error
-          } noraise {
-            _ => fail("stale page changed its replacement")
-          }
-          try child.web_contents().eval("void 0") catch {
-            @proton.WindowSessionError::StaleWindow(id="secondary") => ()
-            error => raise error
-          } noraise {
-            _ => fail("stale child resolved through a replacement parent")
-          }
-          // Obtaining the shared session does not require a live page.
-          assert_true(
-            window.web_contents().session().get_cookies(url~).is_empty(),
-          )
-          assert_true(
-            replacement.web_contents().session().get_cookies(url~).is_empty(),
-          )
-          context.quit()
-        }),
-      )
-    },
-    on_shutdown=_ => (),
-  )
+        })
+        child_session.clear_cache()
+        ignore(session.get_cookies(url~))
+        child_session.clear_auth_cache()
+        ignore(session.get_cookies(url~))
+        child_session.clear_certificate_exceptions()
+        ignore(session.get_cookies(url~))
+        child_session.close_all_connections()
+        ignore(session.get_cookies(url~))
+        child_session.delete_cookies(url~, name="lifetime")
+        child_session.flush_cookies()
+        assert_true(session.get_cookies(url~).is_empty())
+        let replacement = manager.open("secondary")
+        assert_eq(replacement.id(), window.id())
+        try window.set_title("stale window") catch {
+          @proton.WindowSessionError::StaleWindow(id="secondary") => ()
+          error => raise error
+        } noraise {
+          _ => fail("stale window changed its replacement")
+        }
+        try window.web_contents().eval("document.title = 'stale page'") catch {
+          @proton.WindowSessionError::StaleWindow(id="secondary") => ()
+          error => raise error
+        } noraise {
+          _ => fail("stale page changed its replacement")
+        }
+        try child.web_contents().eval("void 0") catch {
+          @proton.WindowSessionError::StaleWindow(id="secondary") => ()
+          error => raise error
+        } noraise {
+          _ => fail("stale child resolved through a replacement parent")
+        }
+        // Obtaining the shared session does not require a live page.
+        assert_true(
+          window.web_contents().session().get_cookies(url~).is_empty(),
+        )
+        assert_true(
+          replacement.web_contents().session().get_cookies(url~).is_empty(),
+        )
+        context.quit()
+      }),
+    )
+  })
   .run()
   for handle in retained {
     let rejected = try {

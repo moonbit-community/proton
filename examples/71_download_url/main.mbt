@@ -176,17 +176,14 @@ async fn main {
       "Download \{event.id}: \{event.state}\nProgress: \{event.percent}%\nReceived: \{event.received_bytes} / \{event.total_bytes} bytes\nAutomatic path: \{automatic_download_path}",
     )
   })
-  ..window_lifecycle(
-    on_ready=context => {
-      let window = context.handle()
-      browser_slot.val = Some(window.web_contents())
-      window
-    },
-    on_close=fn(_window) {
+  ..setup_window(context => {
+    let window = context.handle()
+    browser_slot.val = Some(window.web_contents())
+    context.add_cleanup(() => {
       browser_slot.val = None
       last_download_id.val = None
-    },
-  )
+    })
+  })
   ..identifier("dev.proton.71-download-url")
   .run_or_abort()
 }
