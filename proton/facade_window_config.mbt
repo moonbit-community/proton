@@ -101,14 +101,15 @@ fn WindowConfig::validation_error(
 /// Decisions belonging to one page. Sharing this value is explicit; a child
 /// view does not inherit its parent window's navigation or new-window policy.
 pub(all) struct WebContentsPolicy {
-  navigation_handler : (async (WebContentsHandle, NavigationRequest) -> NavigationDecision noraise)?
+  /// Runs synchronously before navigation. It cannot suspend or raise.
+  navigation_handler : ((WebContentsHandle, NavigationRequest) -> NavigationDecision)?
   new_window_handler : (async (WebContentsHandle, NewWindowRequest) -> NewWindowDecision noraise)?
 }
 
 ///|
 /// Allows navigation and denies new windows when no handler is supplied.
 pub fn WebContentsPolicy::WebContentsPolicy(
-  navigation_handler? : async (WebContentsHandle, NavigationRequest) -> NavigationDecision noraise,
+  navigation_handler? : (WebContentsHandle, NavigationRequest) -> NavigationDecision,
   new_window_handler? : async (WebContentsHandle, NewWindowRequest) -> NewWindowDecision noraise,
 ) -> WebContentsPolicy {
   { navigation_handler, new_window_handler, }

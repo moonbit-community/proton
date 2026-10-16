@@ -32,7 +32,10 @@ Download, certificate, and media decisions apply to the application session,
 including its child views. Popup policy belongs to this page. There is no
 combined permission callback or implicit policy inheritance.
 
-Navigation remains unrestricted in this example. Async navigation interception
-has a [known replay limitation](https://github.com/moonbit-community/proton/issues/469)
-for initial and cross-origin navigation. The `window-config` headless regression
-in `e2e_fixtures/lifecycle_regressions.mbt` covers page-local navigation denial.
+Navigation policy belongs to this page too. Its synchronous handler prints each
+intercepted request, allows normal navigation, and denies `blob:` URLs. It runs
+before the original navigation proceeds, including the initial HTML load; it
+cannot await asynchronous work. The new-window handler remains asynchronous.
+The headless `navigation` regression covers initial and cross-origin Allow,
+POST bodies, redirects and non-resource denial; `window-config` retains the
+page-local child-view policy checks.

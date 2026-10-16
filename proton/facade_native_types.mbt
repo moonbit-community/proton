@@ -647,7 +647,8 @@ fn ViewConfig::to_native(self : ViewConfig) -> @native.ViewConfig {
     y=self.y,
     visible=self.visible,
     z_order=self.z_order,
-    initial_url=self.initial_url,
+    // The facade starts navigation after registering the view instance.
+    initial_url="about:blank",
     background_color?=self.background_color,
     navigation=if self.web_contents_policy.navigation_handler is Some(_) {
       Ask

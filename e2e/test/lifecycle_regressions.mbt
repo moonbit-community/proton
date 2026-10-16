@@ -93,8 +93,9 @@ async fn run_lifecycle_regressions(root : String, timeout : Int32) -> Unit {
         "app-control", "process-events", "process-events-no-bridge", "task-metrics",
         "page-control", "startup-update-channel", "startup-update-failure", "proxy-config",
         "proxy-env", "renderer-recovery", "bridge-recovery", "bridge-startup-failure",
-        "closed-record-churn", "bridge-admission", "window-config", "web-contents",
-        "session-lifetime", "pdf", "window-cleanup-cancel", "window-cleanup-startup",
+        "closed-record-churn", "bridge-admission", "window-config", "navigation",
+        "navigation-cleanup", "web-contents", "session-lifetime", "pdf", "window-cleanup-cancel",
+        "window-cleanup-startup",
       ]
   }
   let failures : Array[String] = []
@@ -105,6 +106,11 @@ async fn run_lifecycle_regressions(root : String, timeout : Int32) -> Unit {
     }
     if @mbfs.path_exists(gate + ".failed-request-checked") {
       @fs.remove(gate + ".failed-request-checked")
+    }
+    for suffix in [".cleanup-ready", ".cleanup-release"] {
+      if @mbfs.path_exists(gate + suffix) {
+        @fs.remove(gate + suffix)
+      }
     }
     if @mbfs.path_exists(gate) {
       @fs.remove(gate)
@@ -210,6 +216,26 @@ async fn run_lifecycle_regressions(root : String, timeout : Int32) -> Unit {
             )
             client.close()
           }
+        }
+        if name == "navigation-cleanup" {
+          while !@mbfs.path_exists(gate + ".cleanup-ready") {
+            @async.sleep(10)
+          }
+          let client = @client.connect_cdp_page_target_with_timeout(
+            group,
+            cdp_target_from(target),
+            title="Navigation cleanup",
+            timeout_ms=timeout,
+          )
+          let response = client.send_schema_command("Page.navigate", params={
+            "url": "https://proton.localhost/late",
+          })
+          assert_true(
+            response.result
+            is Some({ "errorText": String("net::ERR_ABORTED"), .. }),
+          )
+          client.close()
+          @mbfs.write_string_to_file(gate + ".cleanup-release", "release")
         }
         if name == "process-events" || name == "process-events-no-bridge" {
           kill_renderer_helpers(snapshot)

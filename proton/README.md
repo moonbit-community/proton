@@ -93,7 +93,12 @@ let window = @proton.WindowConfig(
 )
 ```
 
-Navigation interception currently has a [known replay limitation](https://github.com/moonbit-community/proton/issues/469): returning `Allow` may fail for initial or cross-origin navigation. Leave `navigation_handler` unset when unrestricted navigation is required.
+`navigation_handler` runs synchronously on the UI thread and returns `Allow` or
+`Deny` for the original navigation; it cannot suspend or raise. Keep it short.
+This also applies to intercepted non-network navigations such as `blob:` URLs.
+Same-document URL changes (hashes and `history.pushState`) are not intercepted.
+For asynchronous confirmation, complete the confirmation before calling
+`contents.load_url(url)`. The new-window handler remains asynchronous.
 
 All handlers are `noraise`: handle expected operation failures inside the callback
 and return the appropriate decision. Pending decisions are canceled when their

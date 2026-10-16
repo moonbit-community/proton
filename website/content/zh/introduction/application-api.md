@@ -353,7 +353,11 @@ net 扩展在宿主执行 HTTP 请求，返回状态、响应头及 UTF-8 文本
 `ViewConfig.web_contents_policy` 配置，包括运行时添加的视图。策略在首次加载前安装，
 子视图不继承父窗口的处理器；需要共用时显式复用策略值。默认允许导航、拒绝新浏览上下文。
 
-导航拦截存在[已知的重放限制](https://github.com/moonbit-community/proton/issues/469)：返回 `Allow` 时，首次导航或跨域导航仍可能失败。需要不受限制的导航时，不设置 `navigation_handler`。
+`navigation_handler` 是同步函数，不能挂起或抛错。它在原导航继续前返回
+`NavigationDecision::Allow` 或 `Deny`，适用于首次加载、跨域请求和被拦截的
+`blob:` 导航。处理器在 UI 线程执行，应尽快返回。同文档的 hash 导航和
+`history.pushState` 不经过此拦截。需要异步确认时，先等待确认完成，再调用
+`contents.load_url(url)`。`new_window_handler` 仍是异步函数。
 
 `WindowConfig.close_handler` 属于具体窗口，也参与应用退出流程；未配置时允许关闭。
 证书、媒体权限和下载决策作用于唯一的应用会话，默认拒绝，不存在覆盖专用处理器的通用权限入口。

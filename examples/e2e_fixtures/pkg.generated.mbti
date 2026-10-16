@@ -39,6 +39,10 @@ pub async fn run_initial_open_regression() -> Unit
 
 pub async fn run_multi_window() -> Unit
 
+pub async fn run_navigation_cleanup_regression() -> Unit
+
+pub async fn run_navigation_regression() -> Unit
+
 pub async fn run_page_control_regression() -> Unit
 
 pub async fn run_page_recovery_regression(PageRecoveryCase) -> Unit

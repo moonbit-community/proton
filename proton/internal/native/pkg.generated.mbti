@@ -482,7 +482,6 @@ pub fn NativeBrowserEvent::not_equal(Self, Self) -> Bool
 pub fn NativeBrowserEvent::to_repr(Self) -> @debug.Repr
 
 pub(all) enum NativeBrowserRequest {
-  Navigation(request_id~ : Int64, url~ : String, http_method~ : String, user_gesture~ : Bool, redirect~ : Bool)
   NewWindow(request_id~ : Int64, url~ : String, user_gesture~ : Bool)
   Download(request_id~ : Int64, download_id~ : Int, url~ : String, suggested_name~ : String)
   Certificate(request_id~ : Int64, url~ : String, error_code~ : Int)
@@ -702,6 +701,7 @@ pub fn Runtime::prepare_bridge_request(Self, BridgeRequest, Window) -> BridgeReq
 pub fn Runtime::respond_app_activation(Self, Int64, Bool) -> Bool raise NativeError
 pub fn Runtime::respond_bridge_request(Self, BridgeResponse) -> Unit raise NativeError
 pub fn Runtime::set_menu(Self, MenuBar) -> Unit raise NativeError
+pub fn Runtime::set_navigation_handler(Self, (Int64, Int64?, String, String, Bool, Bool) -> Bool) -> Unit raise NativeError
 pub fn Runtime::stop_app_activations(Self) -> Unit raise NativeError
 
 type RuntimeConfig derive(Eq, @debug.Debug)

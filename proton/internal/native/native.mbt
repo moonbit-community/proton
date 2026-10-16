@@ -1047,20 +1047,6 @@ fn decode_native_runtime_event(
           Failed(require_native_event_text(event, 0, "notification result"))
         },
       )
-    12 =>
-      BrowserRequest(
-        window,
-        native_event_view_id(event),
-        Navigation(
-          request_id=@native_ffi.event_int64(event, 2),
-          url=require_native_event_text(event, 0, "browser navigation"),
-          http_method=require_native_event_text(
-            event, 1, "browser navigation method",
-          ),
-          user_gesture=@native_ffi.event_int(event, 3) != 0,
-          redirect=@native_ffi.event_int(event, 4) != 0,
-        ),
-      )
     13 =>
       BrowserRequest(
         window,
@@ -3932,5 +3918,39 @@ pub fn Contents::cancel_download(
           download_id,
         )
     },
+  )
+}
+
+///|
+/// Installs a synchronous UI-thread decision for the lifetime of this runtime.
+pub fn Runtime::set_navigation_handler(
+  self : Runtime,
+  handler : (Int64, Int64?, String, String, Bool, Bool) -> Bool,
+) -> Unit raise NativeError {
+  check_status(
+    @native_ffi.runtime_set_navigation_handler(
+      self.active_handle(),
+      (callback, window, view, url, http_method, gesture, redirect) => {
+        callback(window, view, url, http_method, gesture, redirect)
+      },
+      (window, view, url, http_method, gesture, redirect) => {
+        if handler(
+            window,
+            if view == 0L {
+              None
+            } else {
+              Some(view)
+            },
+            @ffi.from_cstr(url),
+            @ffi.from_cstr(http_method),
+            gesture != 0,
+            redirect != 0,
+          ) {
+          1
+        } else {
+          0
+        }
+      },
+    ),
   )
 }

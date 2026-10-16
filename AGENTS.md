@@ -259,7 +259,9 @@ native checks before handing off larger refactors.
   codes, detailed diagnostics go through the existing last-error/probe/info JSON
   paths, and MoonBit wrappers translate status codes into typed errors.
 - The facade installs Proton's external event loop before async starts. Native
-  callbacks enqueue records and wake that loop; they never enter MoonBit.
+  callbacks enqueue records and wake that loop. The sole exception is the
+  synchronous navigation decision: it enters MoonBit on the owner/UI thread,
+  cannot suspend or raise, and never runs a nested event loop.
 - macOS synchronous AppKit/CEF calls do not inherit the event-pump autorelease
   pool. Give native UI entry points a local pool, and ensure dispatched blocks
   have one on their execution thread. Document Objective-C ownership; CEF host
@@ -279,7 +281,8 @@ native checks before handing off larger refactors.
   default top-level close and complete the teardown by destroying the browser
   host view (NSView/child HWND/X window) instead.
 - Respect the thread model. Runtime, window, and view objects are owned by their
-  creating thread; native callbacks only enqueue work for that owner thread.
+  creating thread; native notifications enqueue work for that owner thread.
+  Only the synchronous navigation decision calls MoonBit directly on that thread.
 - `proton_cefsetup/store` owns CEF runtime assembly and resolution. No project-local
   runtime-selection file is permitted.
 - Keep `cef_process.exe` or the platform equivalent as a MoonBit executable

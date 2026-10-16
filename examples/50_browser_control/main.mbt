@@ -77,13 +77,20 @@ async fn main {
     @proton.WindowConfig(
       "Browser Control",
       @proton.AppEntry::Html(page),
-      web_contents_policy=@proton.WebContentsPolicy(new_window_handler=fn(
-        _browser,
-        request,
-      ) {
-        println("new window: \{request.url}")
-        @proton.NewWindowDecision::OpenInCurrent
-      }),
+      web_contents_policy=@proton.WebContentsPolicy(
+        navigation_handler=fn(_, request) {
+          println("navigation: \{request.http_method} \{request.url}")
+          if request.url.has_prefix("blob:") {
+            Deny
+          } else {
+            Allow
+          }
+        },
+        new_window_handler=fn(_browser, request) {
+          println("new window: \{request.url}")
+          @proton.NewWindowDecision::OpenInCurrent
+        },
+      ),
     ),
   )
   ..debug()

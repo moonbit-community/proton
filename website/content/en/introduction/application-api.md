@@ -368,7 +368,13 @@ at runtime. Policy is installed before the first load. Children do not inherit
 these handlers; share a policy value explicitly when desired. Navigation is
 allowed by default; new browsing contexts are denied by default.
 
-Navigation interception has a [known replay limitation](https://github.com/moonbit-community/proton/issues/469): `Allow` may fail for initial or cross-origin navigation. Leave `navigation_handler` unset for unrestricted navigation.
+`navigation_handler` is synchronous and cannot suspend or raise. It returns
+`NavigationDecision::Allow` or `Deny` before the original navigation proceeds,
+including initial loads, cross-origin requests and intercepted `blob:` navigations.
+Keep it short because it runs on the UI thread. Same-document changes such as
+hash navigation and `history.pushState` are not intercepted. For asynchronous
+confirmation, await the confirmation before calling `contents.load_url(url)`.
+`new_window_handler` remains asynchronous.
 
 `WindowConfig.close_handler` belongs to that window and also participates in
 application quit. An absent handler allows closing. Certificate, media and

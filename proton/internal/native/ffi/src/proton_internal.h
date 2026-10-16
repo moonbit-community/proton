@@ -13,4 +13,8 @@ PROTON_INTERNAL int32_t proton_set_error(int32_t code, const char *message);
 PROTON_INTERNAL int32_t proton_set_engine_status(int32_t status,
                                                  const char *engine_error);
 
+/* Synchronous owner-thread navigation decision. No event or replay is created. */
+PROTON_INTERNAL int32_t proton_decide_navigation(int64_t window, int64_t view,
+    const char *url, const char *method, int32_t user_gesture, int32_t redirect);
+
 #endif

@@ -457,6 +457,8 @@ pub fn runtime_poll_event(RuntimeHandle, EventHandle) -> Int
 
 pub fn runtime_set_menu(RuntimeHandle, MenuConfigHandle) -> Int
 
+pub fn runtime_set_navigation_handler(RuntimeHandle, FuncRef[((Int64, Int64, Bytes, Bytes, Int, Int) -> Int, Int64, Int64, Bytes, Bytes, Int, Int) -> Int], (Int64, Int64, Bytes, Bytes, Int, Int) -> Int) -> Int
+
 pub fn thumbar_builder_add(ThumbarBuilderHandle, Bytes, ImageHandle, Bytes, Int) -> Int
 
 pub fn thumbar_builder_create() -> ThumbarBuilderHandle

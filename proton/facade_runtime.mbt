@@ -463,11 +463,32 @@ async fn run_manifest(
         }
       }
       @async.with_task_group(window_tasks => {
+        // Stop synchronous user decisions before child scopes and their cleanups
+        // unwind, including when application startup fails before activation.
+        defer (for running in windows {
+          if running.is_active() {
+            running.state = WindowCloseRequested
+          }
+        })
         let session = RuntimeSession(
           config, environment, updates, close_coordinator, runtime, event_pump, definitions,
           windows, command_host, wakeup, forward_menu_events, bridge_enabled, app_instance,
           application_tasks, window_tasks, lifecycle_failures, destroy_window,
         )
+        runtime.set_navigation_handler((
+          window,
+          view,
+          url,
+          http_method,
+          gesture,
+          redirect,
+        ) => {
+          session.decide_navigation(
+            window, view, url, http_method, gesture, redirect,
+          )
+        }) catch {
+          error => raise native_run_error("install navigation handler", error)
+        }
         let application_context = session.application_context()
         // Electron reports the session as soon as it exists, before the
         // application start hooks create any window of their own.
@@ -1122,6 +1143,10 @@ async fn run_window_lifecycle_scope(
   locale_preferences : @locale.LocalePreferences,
 ) -> Unit {
   @async.with_task_group(tasks => {
+    // This runs before TaskGroup defers, including setup failure, child failure
+    // and cancellation. The native browser can outlive its user-owned resources.
+    defer (if running.is_active() { running.state = WindowCloseRequested })
+
     run_window_setup(
       hooks,
       WindowContext(
