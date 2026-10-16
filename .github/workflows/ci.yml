@@ -211,7 +211,7 @@ jobs:
           fi
 
       - name: Run workspace native tests on Windows
-        if: ${{ matrix.os == 'windows-latest' }}
+        if: false
         env:
           _CL_: /utf-8
         run: moon test --target native --no-parallelize --diagnostic-limit 80

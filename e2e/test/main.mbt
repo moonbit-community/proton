@@ -9,10 +9,7 @@ async fn main {
     let timeout = timeout_ms()
     run_scenario_probe(root, "41_app_commands", timeout)
     run_single_instance_probe(root, timeout)
-    for index in 0..<30 {
-      println("[startup-diagnostic] pending iteration " + index.to_string())
-      run_pending_lifecycle_probe(root, timeout)
-    }
+    run_pending_lifecycle_probe(root, timeout)
     return
   }
   if @env.args().contains("--lifecycle-regressions") {

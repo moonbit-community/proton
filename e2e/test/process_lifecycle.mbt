@@ -404,13 +404,6 @@ async fn run_pending_lifecycle_probe_once(
       timeout_ms=timeout,
     )
     phase = "bridge readiness"
-    println(
-      "[startup-diagnostic] initial page=" +
-      evaluate_json(
-        page, "({url:location.href,title:document.title,state:document.readyState,bridge:typeof window.__MoonBit__?.core?.invokeOp,native:typeof window.__protonNativeInvokeOp})",
-        false,
-      ).stringify(),
-    )
     wait_for_ready(page, scenario_ready_expression(name), timeout)
     phase = "pending command"
     let pending = evaluate_json(
@@ -465,9 +458,19 @@ async fn run_pending_lifecycle_probe(root : String, timeout : Int32) -> Unit {
     )
   })
   install_scenario_helper(root, output_root)
-  run_e2e_operation_with_timeout(timeout, "41_app_commands pending lifecycle", () => {
-    run_pending_lifecycle_probe_once(root, output_root, timeout)
-  })
+  let repetitions = if @env.args().contains("--diagnose-startup") {
+    100
+  } else {
+    1
+  }
+  for index in 0..<repetitions {
+    println("[startup-diagnostic] pending iteration " + index.to_string())
+    run_e2e_operation_with_timeout(
+      timeout,
+      "41_app_commands pending lifecycle",
+      () => run_pending_lifecycle_probe_once(root, output_root, timeout),
+    )
+  }
   succeeded = true
 }
 
