@@ -130,7 +130,7 @@ struct App {
   mut update_channel : ResolvedUpdateChannel?
   command_capabilities : Array[AppCommandCapability]
   extension_capabilities : Array[ExtensionCapabilityBinding]
-  application_lifecycle_hooks : Array[ApplicationLifecycleHook]
+  application_setup : Array[async (ApplicationContext) -> Unit]
   mut before_quit_handler : (async (ApplicationContext) -> ApplicationQuitDecision noraise)?
   mut will_quit_handler : (async (ApplicationContext) -> ApplicationQuitDecision noraise)?
   quit_handlers : Array[(ApplicationContext, Int32) -> Unit noraise]
@@ -158,7 +158,7 @@ struct App {
   update_handlers : Array[async (PendingUpdate) -> Unit noraise]
   system_appearance_handlers : Array[async (SystemAppearance) -> Unit noraise]
   thumbar_button_handlers : Array[async (WindowHandle, String) -> Unit noraise]
-  window_lifecycle_hooks : Array[WindowLifecycleHook]
+  window_setup : Array[async (WindowContext) -> Unit]
   validation_errors : Array[AppConfigurationError]
 }
 
@@ -255,8 +255,8 @@ priv struct ResolvedAppConfig {
   update_channel : ResolvedUpdateChannel?
   command_capabilities : Array[AppCommandCapability]
   extension_capabilities : Array[ExtensionCapabilityBinding]
-  application_lifecycle_hooks : Array[ApplicationLifecycleHook]
-  window_lifecycle_hooks : Array[WindowLifecycleHook]
+  application_setup : Array[async (ApplicationContext) -> Unit]
+  window_setup : Array[async (WindowContext) -> Unit]
   menu : @native.MenuBar?
   bridge_startup_timeout_ms : Int32
   headless : Bool
@@ -1442,9 +1442,9 @@ pub extend CommandExtensionLifecycleError with Debug::{to_repr}
 /// Failures produced by application or window lifecycle hooks.
 pub(all) suberror LifecycleHookError {
   ApplicationStart(index~ : Int32, detail~ : String)
-  ApplicationShutdown(index~ : Int32, detail~ : String)
+  ApplicationShutdown(detail~ : String)
   WindowReady(index~ : Int32, detail~ : String)
-  WindowClose(index~ : Int32, detail~ : String)
+  WindowClose(window~ : String, detail~ : String)
 } derive(Debug)
 
 ///|

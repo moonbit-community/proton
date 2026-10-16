@@ -5,6 +5,7 @@ pub struct ApplicationContext {
   priv updates : ApplicationUpdates
   priv close_coordinator : CloseCoordinator
   tasks : @async.TaskGroup[Unit]
+  priv cleanup_failures : Array[AppCleanupError]
   windows : WindowManager
   locale_preferences : @locale.LocalePreferences
   request_quit : (Int32) -> Unit
@@ -25,6 +26,7 @@ pub struct WindowContext {
   handle : WindowHandle
   windows : WindowManager
   tasks : @async.TaskGroup[Unit]
+  priv cleanup_failures : Array[AppCleanupError]
   events : WindowEventEmitter
   locale_preferences : @locale.LocalePreferences
 }
@@ -36,28 +38,9 @@ pub struct WindowEventEmitter {
 }
 
 ///|
-priv struct ApplicationLifecycleActivation {
-  shutdown : async () -> Unit
-}
-
-///|
-priv struct ApplicationLifecycleHook {
-  start : async (ApplicationContext) -> ApplicationLifecycleActivation
-}
-
-///|
-priv struct WindowLifecycleActivation {
-  close : async () -> Unit
-}
-
-///|
-priv struct WindowLifecycleHook {
-  start : async (WindowContext) -> WindowLifecycleActivation
-}
-
-///|
 fn ApplicationContext::ApplicationContext(
   session~ : SessionHandle,
+  cleanup_failures~ : Array[AppCleanupError] = [],
   updates~ : ApplicationUpdates = ApplicationUpdates(None),
   close_coordinator~ : CloseCoordinator = CloseCoordinator(),
   tasks : @async.TaskGroup[Unit],
@@ -83,6 +66,7 @@ fn ApplicationContext::ApplicationContext(
 ) -> ApplicationContext {
   ApplicationContext::{
     browser_session: session,
+    cleanup_failures,
     updates,
     close_coordinator,
     tasks,
@@ -108,8 +92,17 @@ fn WindowContext::WindowContext(
   tasks : @async.TaskGroup[Unit],
   events : WindowEventEmitter,
   locale_preferences : @locale.LocalePreferences,
+  cleanup_failures~ : Array[AppCleanupError] = [],
 ) -> WindowContext {
-  WindowContext::{ id, handle, windows, tasks, events, locale_preferences, }
+  WindowContext::{
+    id,
+    handle,
+    windows,
+    tasks,
+    events,
+    locale_preferences,
+    cleanup_failures,
+  }
 }
 
 ///|
@@ -417,56 +410,72 @@ pub async fn[Payload : ToJson] WindowEventEmitter::emit(
 }
 
 ///|
-async fn start_application_lifecycle_hooks(
-  hooks : Array[ApplicationLifecycleHook],
+/// Registers application-owned cleanup immediately. After child tasks stop,
+/// cleanup runs in reverse registration order, protected from cancellation.
+/// Failures are collected without skipping remaining cleanup. Register while
+/// the scope is active; cleanup must not spawn tasks in the terminating group.
+pub fn ApplicationContext::add_cleanup(
+  self : ApplicationContext,
+  cleanup : async () -> Unit,
+) -> Unit {
+  self.tasks.add_defer(async fn() nocancel {
+    @async.protect_from_cancel(cleanup) catch {
+      error =>
+        self.cleanup_failures.push(
+          LifecycleHook(ApplicationShutdown(detail=@debug.render(Repr(error)))),
+        )
+    }
+  })
+}
+
+///|
+/// Registers cleanup for this window instance. It runs after the instance's
+/// child tasks stop, in reverse registration order, even if setup later fails.
+/// Cleanup cannot veto closing or use an already closed native window. Register
+/// while the scope is active; cleanup cannot spawn tasks in its ending group.
+pub fn WindowContext::add_cleanup(
+  self : WindowContext,
+  cleanup : async () -> Unit,
+) -> Unit {
+  self.tasks.add_defer(async fn() nocancel {
+    @async.protect_from_cancel(cleanup) catch {
+      error =>
+        self.cleanup_failures.push(
+          LifecycleHook(
+            WindowClose(window=self.id, detail=@debug.render(Repr(error))),
+          ),
+        )
+    }
+  })
+}
+
+///|
+async fn run_application_setup(
+  setups : Array[async (ApplicationContext) -> Unit],
   context : ApplicationContext,
-  group : @async.TaskGroup[Unit],
-  cleanup_failures : Array[AppCleanupError],
 ) -> Unit raise AppRunError {
-  for index, hook in hooks {
-    let activation = (hook.start)(context) catch {
+  for index, setup in setups {
+    setup(context) catch {
       error =>
         raise LifecycleHookError(
           ApplicationStart(index~, detail=@debug.render(Repr(error))),
         )
     }
-    group.add_defer(async fn() nocancel {
-      @async.protect_from_cancel(activation.shutdown) catch {
-        error =>
-          cleanup_failures.push(
-            LifecycleHook(
-              ApplicationShutdown(index~, detail=@debug.render(Repr(error))),
-            ),
-          )
-      }
-    })
   }
 }
 
 ///|
-async fn start_window_lifecycle_hooks(
-  hooks : Array[WindowLifecycleHook],
+async fn run_window_setup(
+  setups : Array[async (WindowContext) -> Unit],
   context : WindowContext,
-  group : @async.TaskGroup[Unit],
-  cleanup_failures : Array[AppCleanupError],
 ) -> Unit raise AppRunError {
-  for index, hook in hooks {
-    let activation = (hook.start)(context) catch {
+  for index, setup in setups {
+    setup(context) catch {
       error =>
         raise LifecycleHookError(
           WindowReady(index~, detail=@debug.render(Repr(error))),
         )
     }
-    group.add_defer(async fn() nocancel {
-      @async.protect_from_cancel(activation.close) catch {
-        error =>
-          cleanup_failures.push(
-            LifecycleHook(
-              WindowClose(index~, detail=@debug.render(Repr(error))),
-            ),
-          )
-      }
-    })
   }
 }
 

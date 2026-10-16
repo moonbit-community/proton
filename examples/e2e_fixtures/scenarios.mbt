@@ -365,10 +365,7 @@ pub async fn run_devtools() -> Unit {
     height=700,
     debug=true,
   )
-  ..window_lifecycle(
-    on_ready=context => context.handle().web_contents().open_devtools(),
-    on_close=fn(_) { () },
-  )
+  ..setup_window(context => context.handle().web_contents().open_devtools())
   ..identifier("dev.proton.e2e-fixtures")
   .run_or_abort()
 }
@@ -396,50 +393,47 @@ pub async fn run_windowed_close() -> Unit {
     height=480,
   )
   ..on_system_appearance_change(fn(_) noraise { appearance_events.val += 1 })
-  ..window_lifecycle(
-    on_ready=context => {
-      let handle = context.handle()
-      ignore(
-        context
-        .task_group()
-        .spawn(
-          () => {
-            let mut attempts = 0
-            while !handle.is_visible() && attempts < 100 {
-              @async.sleep(10)
-              attempts = attempts + 1
-            }
-            guard handle.is_visible() else {
-              abort("window did not become visible before close")
-            }
-            handle.focus()
-            attempts = 0
-            while !handle.is_focused() && attempts < 100 {
-              @async.sleep(10)
-              attempts = attempts + 1
-            }
-            guard handle.is_focused() else {
-              abort("window did not become focused before close")
-            }
-            // Window preferences must not override system queries or produce
-            // system appearance events, including the initial registration.
+  ..setup_window(context => {
+    let handle = context.handle()
+    ignore(
+      context
+      .task_group()
+      .spawn(
+        () => {
+          let mut attempts = 0
+          while !handle.is_visible() && attempts < 100 {
+            @async.sleep(10)
+            attempts = attempts + 1
+          }
+          guard handle.is_visible() else {
+            abort("window did not become visible before close")
+          }
+          handle.focus()
+          attempts = 0
+          while !handle.is_focused() && attempts < 100 {
+            @async.sleep(10)
+            attempts = attempts + 1
+          }
+          guard handle.is_focused() else {
+            abort("window did not become focused before close")
+          }
+          // Window preferences must not override system queries or produce
+          // system appearance events, including the initial registration.
+          @async.sleep(100)
+          assert_eq(appearance_events.val, 0)
+          let system = @proton.system_appearance()
+          for preference in appearance_window_preferences() {
+            handle.set_theme(preference)
             @async.sleep(100)
+            assert_eq(@proton.system_appearance(), system)
             assert_eq(appearance_events.val, 0)
-            let system = @proton.system_appearance()
-            for preference in appearance_window_preferences() {
-              handle.set_theme(preference)
-              @async.sleep(100)
-              assert_eq(@proton.system_appearance(), system)
-              assert_eq(appearance_events.val, 0)
-            }
-            handle.close()
-          },
-          no_wait=true,
-        ),
-      )
-    },
-    on_close=fn(_) { () },
-  )
+          }
+          handle.close()
+        },
+        no_wait=true,
+      ),
+    )
+  })
   ..identifier("dev.proton.e2e-fixtures")
   .run_or_abort()
 }

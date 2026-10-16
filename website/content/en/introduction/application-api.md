@@ -64,9 +64,13 @@ validation, registration order, and lifecycle behavior are unchanged.
 
 | Hook | Meaning |
 | --- | --- |
-| `app_lifecycle(on_start, on_shutdown)` | Application-level state; the start result is passed to shutdown |
-| `window_lifecycle(on_ready, on_close)` | Per-window state; the ready result is passed to close |
+| `setup(callback)` | Awaited application setup before initial windows open |
+| `setup_window(callback)` | Awaited setup for each ready window instance |
 | `WindowConfig.close_handler` | Async allow/deny decision before window closure |
+
+`setup` and `setup_window` append awaited lifecycle operations; they are not `on_*` observation callbacks or replaceable `set_*_handler` decisions. Setup errors fail initialization. Register cleanup only while its scope is active.
+
+Register resource cleanup with `ApplicationContext.add_cleanup` or `WindowContext.add_cleanup` immediately after acquisition. Cleanup waits for child tasks to stop, runs in reverse registration order, and is protected from cancellation. Already registered cleanup also runs if setup later fails or is canceled; failures are collected without skipping remaining cleanup. A reopened window has a new scope.
 
 Application and window contexts expose task groups and window management. Window contexts additionally expose their handle and event emitter. A window's state must not outlive the resources it refers to.
 
@@ -86,9 +90,9 @@ A start hook may await `context.windows().open(id)`. A committed exit stops star
 
 Use application task groups for work that belongs to the application, and window task groups for work that belongs to a window. Their scopes are canceled and drained on shutdown; detached work outside these scopes is not made lifecycle-safe by holding a window handle.
 
-Each lifecycle hook that successfully returns state installs its paired cleanup hook. A hook that fails before returning has not produced state to pass to its paired cleanup; previously established scopes still clean up. Cleanup hooks run under cancellation protection. Reported cleanup failures can accompany the original failure in `AppRunError`, rather than replacing it.
+Setup callbacks return `Unit`; resources stay in ordinary closures. Calling `context.add_cleanup` immediately registers a cleanup operation with that running scope. If setup fails or is canceled after registration, cleanup still runs. Cleanup cannot spawn new tasks in the terminating group. Reported cleanup failures accompany the original failure in `AppRunError`, rather than replacing it. Application cleanup diagnostics use `ApplicationShutdown(detail)`; window cleanup diagnostics use `WindowClose(window, detail)` to identify the owning instance declaration.
 
-Ready/close hooks own per-window state; creation and browser event callbacks report observations. A renderer can navigate or crash while its native window remains alive. Page tasks and subscriptions must therefore also respect page lifetime, as described in [commands](#commands) and [events](#events).
+Window setup and its registered cleanup own per-window state; creation and browser event callbacks report observations. A renderer can navigate or crash while its native window remains alive. Page tasks and subscriptions must therefore also respect page lifetime, as described in [commands](#commands) and [events](#events).
 
 **Quit decisions and forced exit**
 
@@ -260,7 +264,7 @@ Native operations can raise `WindowSessionError`. A handle is not valid indefini
 
 **Close semantics**
 
-`WindowConfig.close_handler` configures an async callback that receives the window handle and returns `WindowCloseDecision::Allow` or `Deny`. `window_lifecycle.on_close` is cleanup after closure; it is not a veto hook. The default last-window policy is `Quit`. `KeepRunning` leaves the application running with no open windows and requires an explicit exit path. See [application lifecycle](#application-lifecycle).
+`WindowConfig.close_handler` configures an async callback that receives the window handle and returns `WindowCloseDecision::Allow` or `Deny`. `WindowContext.add_cleanup` is cleanup after closure; it is not a veto hook. The default last-window policy is `Quit`. `KeepRunning` leaves the application running with no open windows and requires an explicit exit path. See [application lifecycle](#application-lifecycle).
 
 **Child browser views**
 
@@ -355,7 +359,7 @@ Creation notifications (`on_session_created`, `on_window_created`,
 `on_web_contents_created`) and final `on_quit` notifications run synchronously
 in registration order. They are not asynchronous setup or cleanup hooks.
 Creation does not imply page readiness or run before initial navigation. Use
-`app_lifecycle` and `window_lifecycle` for awaited setup and paired cleanup.
+`setup` and `setup_window` for awaited setup; register cleanup with `context.add_cleanup`.
 
 `WebContentsPolicy(navigation_handler?=..., new_window_handler?=...)` belongs to
 one page. Supply it through `WindowConfig.web_contents_policy` for a window's

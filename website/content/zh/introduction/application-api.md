@@ -58,9 +58,13 @@ app.run()
 
 | 钩子 | 含义 |
 | --- | --- |
-| `app_lifecycle(on_start, on_shutdown)` | 应用级状态；启动钩子的返回值传给退出钩子 |
-| `window_lifecycle(on_ready, on_close)` | 窗口级状态；ready 返回值传给 close |
+| `setup(callback)` | 等待应用初始化完成后再打开初始窗口 |
+| `setup_window(callback)` | 等待每个窗口实例的就绪初始化完成 |
 | `WindowConfig.close_handler` | 窗口关闭前的异步允许／拒绝决策 |
+
+`setup` 和 `setup_window` 追加需要等待的生命周期操作，不是 `on_*` 观察通知，也不是会替换前值的 `set_*_handler` 决策入口。初始化错误会使启动失败。只在所属作用域仍然有效时注册清理。
+
+获取资源后立即通过 `ApplicationContext.add_cleanup` 或 `WindowContext.add_cleanup` 注册清理。清理等待所属子任务结束，按注册顺序逆序执行，并受到取消保护。即使初始化随后失败或取消，已注册的清理仍执行；清理失败会汇总，不会跳过其余清理。窗口重开后拥有新的作用域。
 
 应用和窗口上下文提供任务组与窗口管理器。窗口上下文还提供窗口句柄和事件发送器。窗口状态不应比其引用的资源存活更久。
 
@@ -80,9 +84,9 @@ app.run()
 
 应用任务放入应用 task group，窗口任务放入窗口 task group。退出时相应作用域取消并等待收尾；仅仅持有窗口句柄，不会使作用域之外的后台工作自动拥有正确的生命周期。
 
-每个成功返回状态的生命周期钩子会安装配对清理钩子。若钩子在返回前失败，就没有可传给配对清理的状态，但此前成功建立的作用域仍会清理。清理钩子受取消保护；清理失败可以与原始错误一起出现在 AppRunError 中，而不会简单覆盖原始诊断。
+setup 回调返回 `Unit`，资源由普通闭包捕获。调用 `context.add_cleanup` 时就会将清理操作登记到当前运行作用域；随后初始化失败或取消，仍会执行已登记的清理。清理不能向正在结束的任务组启动新任务。清理失败与原始错误一起出现在 `AppRunError` 中，不会覆盖原始诊断。应用清理错误使用 `ApplicationShutdown(detail)`，窗口清理错误使用 `WindowClose(window, detail)` 标明所属窗口声明。
 
-ready／close 钩子管理窗口状态；创建通知和浏览器事件用于观察。renderer 导航或崩溃时，原生窗口仍可能存活，页面任务与订阅还必须遵守[命令](#命令)和[事件](#事件)说明的页面有效期。
+窗口 setup 与它注册的清理管理窗口状态；创建通知和浏览器事件用于观察。renderer 导航或崩溃时，原生窗口仍可能存活，页面任务与订阅还必须遵守[命令](#命令)和[事件](#事件)说明的页面有效期。
 
 **退出决策与强制退出**
 
@@ -250,7 +254,7 @@ hide() 保留窗口实例、浏览器和相关任务。close() 发起销毁流�
 
 **关闭语义**
 
-`WindowConfig.close_handler` 配置异步回调；回调接收窗口句柄，返回 `WindowCloseDecision::Allow` 或 `Deny`。`window_lifecycle.on_close` 是关闭后的清理钩子，不能否决关闭。最后窗口关闭策略默认为 `Quit`；`KeepRunning` 让应用在无窗口时继续运行，需要应用提供显式退出入口。参见[应用生命周期](#应用生命周期)。
+`WindowConfig.close_handler` 配置异步回调；回调接收窗口句柄，返回 `WindowCloseDecision::Allow` 或 `Deny`。`WindowContext.add_cleanup` 是关闭后的清理钩子，不能否决关闭。最后窗口关闭策略默认为 `Quit`；`KeepRunning` 让应用在无窗口时继续运行，需要应用提供显式退出入口。参见[应用生命周期](#应用生命周期)。
 
 **子浏览器视图**
 
@@ -342,7 +346,7 @@ net 扩展在宿主执行 HTTP 请求，返回状态、响应头及 UTF-8 文本
 创建通知（`on_session_created`、`on_window_created`、`on_web_contents_created`）
 和最终 `on_quit` 通知按注册顺序同步执行，不是异步初始化或清理钩子。
 创建不代表页面就绪，也不保证早于首次导航；需要等待的初始化与配套清理由
-`app_lifecycle` 和 `window_lifecycle` 承担。
+`setup` 和 `setup_window` 承担，并通过 `context.add_cleanup` 注册清理。
 
 `WebContentsPolicy(navigation_handler?=..., new_window_handler?=...)` 属于具体页面。
 窗口主页面通过 `WindowConfig.web_contents_policy` 配置；子视图通过

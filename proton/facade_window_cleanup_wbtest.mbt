@@ -28,52 +28,42 @@ async fn window_cleanup_failure(startup_failure~ : Bool) -> Unit {
       WindowConfig("Secondary", AppEntry::Html("<h1>Secondary</h1>")),
       open_on_start=false,
     )
-    ..app_lifecycle(
-      on_start=context => {
-        let gate = @env.get_env_var("PROTON_E2E_LIFECYCLE_GATE").unwrap()
-        @mbfs.write_string_to_file(gate + ".ready", "ready")
-        while !@mbfs.path_exists(gate) {
-          @async.sleep(10)
+    ..setup(context => {
+      let gate = @env.get_env_var("PROTON_E2E_LIFECYCLE_GATE").unwrap()
+      @mbfs.write_string_to_file(gate + ".ready", "ready")
+      while !@mbfs.path_exists(gate) {
+        @async.sleep(10)
+      }
+      if startup_failure {
+        ignore(context.windows().open("secondary"))
+      } else {
+        let opening = context
+          .task_group()
+          .spawn(no_wait=true, () => ignore(context.windows().open("secondary")))
+        while context.windows().find("secondary") is None {
+          @async.sleep(1)
         }
-        if startup_failure {
-          ignore(context.windows().open("secondary"))
-        } else {
-          let opening = context
-            .task_group()
-            .spawn(no_wait=true, () => {
-              ignore(context.windows().open("secondary"))
-            })
-          while context.windows().find("secondary") is None {
-            @async.sleep(1)
-          }
-          session.val = Some(
-            context.windows().find("secondary").unwrap().session,
-          )
-          opening.cancel()
-          opening.wait() catch {
-            error => {
-              assert_true(error is @async.WaitedTaskAlreadyCancelled)
-              cancellation_seen.val = true
-            }
+        session.val = Some(context.windows().find("secondary").unwrap().session)
+        opening.cancel()
+        opening.wait() catch {
+          error => {
+            assert_true(error is @async.WaitedTaskAlreadyCancelled)
+            cancellation_seen.val = true
           }
         }
-        assert_false(secondary_ready.val)
-      },
-      on_shutdown=_ => (),
-    )
-    ..window_lifecycle(
-      on_ready=fn(context) -> Unit raise {
-        if context.handle().id() == "secondary" {
-          secondary_ready.val = true
-          session.val = Some(context.handle().session)
-          fail("INJECTED_STARTUP_FAILURE")
-        } else {
-          main_ready.val = true
-          fail("main activated after cleanup failure")
-        }
-      },
-      on_close=_ => (),
-    )
+      }
+      assert_false(secondary_ready.val)
+    })
+    ..setup_window(context => {
+      if context.handle().id() == "secondary" {
+        secondary_ready.val = true
+        session.val = Some(context.handle().session)
+        fail("INJECTED_STARTUP_FAILURE")
+      } else {
+        main_ready.val = true
+        fail("main activated after cleanup failure")
+      }
+    })
   try
     app.run_with_destroy(window => {
       if destroy_calls.val == 1 {

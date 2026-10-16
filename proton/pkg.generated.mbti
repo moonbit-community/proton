@@ -155,9 +155,9 @@ pub fn CommandExtensionLifecycleError::to_string(Self) -> String
 
 pub(all) suberror LifecycleHookError {
   ApplicationStart(index~ : Int, detail~ : String)
-  ApplicationShutdown(index~ : Int, detail~ : String)
+  ApplicationShutdown(detail~ : String)
   WindowReady(index~ : Int, detail~ : String)
-  WindowClose(index~ : Int, detail~ : String)
+  WindowClose(window~ : String, detail~ : String)
 } derive(@debug.Debug)
 pub fn LifecycleHookError::message(Self) -> String
 pub fn LifecycleHookError::output(Self, &Logger) -> Unit
@@ -262,7 +262,6 @@ type App
 pub fn App::App(WindowConfig) -> Self
 pub fn App::accessibility(Self, AccessibilityMode) -> Unit
 pub fn App::add_window(Self, String, WindowConfig, open_on_start? : Bool) -> Unit
-pub fn[State] App::app_lifecycle(Self, on_start~ : async (ApplicationContext) -> State, on_shutdown~ : async (State) -> Unit) -> Unit
 pub fn App::bridge_startup_timeout_ms(Self, Int) -> Unit
 pub fn App::capability(Self, @extension.RendererCapability, targets? : Array[RendererTarget]) -> Unit
 pub fn App::commands(Self, (@command.CommandRegistrar) -> Unit raise, targets? : Array[RendererTarget]) -> Unit
@@ -302,6 +301,8 @@ pub fn App::set_download_handler(Self, async (WebContentsHandle, DownloadRequest
 pub fn App::set_media_permission_handler(Self, async (WebContentsHandle, MediaPermissionRequest) -> BrowserPermissionDecision noraise) -> Unit
 pub fn App::set_path(Self, AppPathKind, String) -> Unit raise AppPathError
 pub fn App::set_will_quit_handler(Self, async (ApplicationContext) -> ApplicationQuitDecision noraise) -> Unit
+pub fn App::setup(Self, async (ApplicationContext) -> Unit) -> Unit
+pub fn App::setup_window(Self, async (WindowContext) -> Unit) -> Unit
 pub fn App::single_instance(Self, enabled? : Bool) -> Unit
 pub fn App::update_channel(Self, String, Array[String], check_on_launch? : Bool, freshness_days? : Int) -> Unit
 pub fn App::url_scheme(Self, String) -> Unit
@@ -309,7 +310,6 @@ pub fn App::version(Self) -> String raise @proton_config.AppConfigError
 pub fn App::web_request_cancel_prefix(Self, String) -> Unit
 pub fn App::web_request_header_prefix(Self, String, String, String) -> Unit
 pub fn App::web_request_redirect_prefix(Self, String, String) -> Unit
-pub fn[State] App::window_lifecycle(Self, on_ready~ : async (WindowContext) -> State, on_close~ : async (State) -> Unit) -> Unit
 
 pub(all) enum AppPathKind {
   Home
@@ -375,6 +375,7 @@ pub struct ApplicationContext {
   url_schemes : Array[String]
   // private fields
 }
+pub fn ApplicationContext::add_cleanup(Self, async () -> Unit) -> Unit
 pub fn ApplicationContext::badge_count(Self) -> Int raise AppControlError
 pub async fn ApplicationContext::check_for_update(Self) -> UpdateCheck
 pub fn ApplicationContext::dock_badge(Self) -> String raise AppControlError
@@ -1132,7 +1133,9 @@ pub struct WindowContext {
   tasks : @async.TaskGroup[Unit]
   events : WindowEventEmitter
   locale_preferences : @locale.LocalePreferences
+  // private fields
 }
+pub fn WindowContext::add_cleanup(Self, async () -> Unit) -> Unit
 pub fn WindowContext::events(Self) -> WindowEventEmitter
 pub fn WindowContext::handle(Self) -> WindowHandle
 pub fn WindowContext::id(Self) -> String

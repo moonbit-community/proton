@@ -191,14 +191,11 @@ async fn main {
   @proton.html("Window Opacity", html(), width=880, height=620, debug=true)
   ..identifier("dev.proton.window-opacity")
   ..commands(register_commands)
-  ..window_lifecycle(
-    on_ready=context => {
-      let window = context.handle()
-      window_slot.val = Some(window)
-      opacity_state.val = 1.0
-      window
-    },
-    on_close=fn(_window) { window_slot.val = None },
-  )
+  ..setup_window(context => {
+    let window = context.handle()
+    window_slot.val = Some(window)
+    opacity_state.val = 1.0
+    context.add_cleanup(() => window_slot.val = None)
+  })
   .run_or_abort()
 }

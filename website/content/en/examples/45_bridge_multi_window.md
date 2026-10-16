@@ -13,6 +13,7 @@ The identify command returns both the supplied label and CommandContext.window_i
 Excerpt from the entry point; use the source link above for the complete context.
 
 ```moonbit
+///|
 async fn main {
   @proton.html(
     "Bridge Multi A",
@@ -35,10 +36,7 @@ async fn main {
     @proton.RendererTarget::entry(),
     @proton.RendererTarget::entry(window="secondary"),
   ])
-  ..app_lifecycle(
-    on_start=async fn(context) { ignore(context.windows().open("secondary")) },
-    on_shutdown=fn(_state) {  },
-  )
+  ..setup(context => ignore(context.windows().open("secondary")))
   ..identifier("dev.proton.45-bridge-multi-window")
   .run_or_abort()
 }

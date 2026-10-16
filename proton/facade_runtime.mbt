@@ -405,7 +405,7 @@ async fn run_manifest(
     let bridge_enabled = requires_renderer_bridge(
       command_host,
       forward_menu_events,
-      config.window_lifecycle_hooks.length() > 0,
+      config.window_setup.length() > 0,
     )
     if bridge_enabled && !@native.bridge_permission_grants_supported() {
       raise UnsupportedNativeFeature(feature="bridge_permission_grants")
@@ -475,12 +475,7 @@ async fn run_manifest(
         let application_start = application_tasks.spawn(
           () => {
             defer session.wakeup.signal.notify()
-            start_application_lifecycle_hooks(
-              config.application_lifecycle_hooks,
-              application_context,
-              application_tasks,
-              lifecycle_failures,
-            )
+            run_application_setup(config.application_setup, application_context)
           },
           no_wait=true,
           allow_failure=true,
@@ -611,9 +606,9 @@ async fn run_manifest(
 fn requires_renderer_bridge(
   command_host : CommandHostRuntime?,
   forward_menu_events : Bool,
-  has_window_lifecycle_hooks : Bool,
+  has_window_setup : Bool,
 ) -> Bool {
-  command_host is Some(_) || forward_menu_events || has_window_lifecycle_hooks
+  command_host is Some(_) || forward_menu_events || has_window_setup
 }
 
 ///|
@@ -1122,12 +1117,12 @@ async fn run_window_lifecycle_scope(
   handle : WindowHandle,
   windows : WindowManager,
   events : WindowEventEmitter,
-  hooks : Array[WindowLifecycleHook],
+  hooks : Array[async (WindowContext) -> Unit],
   lifecycle_failures : Array[AppCleanupError],
   locale_preferences : @locale.LocalePreferences,
 ) -> Unit {
   @async.with_task_group(tasks => {
-    start_window_lifecycle_hooks(
+    run_window_setup(
       hooks,
       WindowContext(
         running.id,
@@ -1136,9 +1131,8 @@ async fn run_window_lifecycle_scope(
         tasks,
         events,
         locale_preferences,
+        cleanup_failures=lifecycle_failures,
       ),
-      tasks,
-      lifecycle_failures,
     ) catch {
       error => {
         running.lifetime.finish_start(Some(normalize_async_run_error(error)))

@@ -13,10 +13,10 @@ let app_readiness : AppReadiness = { ready: false, }
 ///|
 /// Reports whether this process finished Proton application startup.
 ///
-/// Readiness becomes true once the configured `app_lifecycle` hooks completed
+/// Readiness becomes true once the configured `setup` hooks completed
 /// and the initial windows became ready, and returns to false when Proton
 /// starts tearing the runtime down. Electron's `ready` event corresponds to
-/// `App::app_lifecycle(on_start=...)`, which still observes `false`.
+/// `App::setup(...)`, which still observes `false`.
 pub fn is_ready() -> Bool {
   app_readiness.ready
 }

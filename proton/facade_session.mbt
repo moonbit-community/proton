@@ -148,6 +148,7 @@ fn RuntimeSession::application_context(
 ) -> ApplicationContext {
   ApplicationContext(
     updates=self.updates,
+    cleanup_failures=self.lifecycle_failures,
     session=self.session_handle(),
     close_coordinator=self.close_coordinator,
     self.application_tasks,
@@ -814,7 +815,7 @@ async fn RuntimeSession::activate_window(
           handle,
           manager,
           window_events,
-          self.config.window_lifecycle_hooks,
+          self.config.window_setup,
           self.lifecycle_failures,
           self.environment.locale_preferences,
         )

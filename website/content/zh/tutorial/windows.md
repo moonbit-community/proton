@@ -20,14 +20,11 @@ async fn main {
       height=320,
     ),
   )
-  ..window_lifecycle(
-    on_ready=context => {
-      let id = context.handle().id()
-      println("Ready: " + id)
-      id
-    },
-    on_close=id => println("Closed: " + id),
-  )
+  ..setup_window(context => {
+    let id = context.handle().id()
+    println("Ready: " + id)
+    context.add_cleanup(() => println("Closed: " + id))
+  })
   .run_or_abort()
 }
 ```
@@ -43,19 +40,18 @@ async fn main {
 例如，在上面的 Help 声明中加入 `open_on_start=false`，然后在 `.run_or_abort()` 之前添加以下构建器调用，即可从应用启动钩子打开它：
 
 ```moonbit
-..app_lifecycle(
-  on_start=context => { ignore(context.windows().open("help")) },
-  on_shutdown=_ => (),
-)
+..setup(context => {
+  ignore(context.windows().open("help"))
+})
 ```
 
 后续用户操作也可以通过保留的应用上下文调用相同的窗口管理器操作。第二个窗口不需要第二套 Proton 运行时。
 
 ## 使用与释放句柄
 
-`on_ready` 中的 `context.handle()` 返回当前 `WindowHandle`，可用于 `focus()`、`hide()`、`show()`、`close()` 等操作。浏览器操作通过 `handle.web_contents()` 获取。
+`setup_window` 中的 `context.handle()` 返回当前 `WindowHandle`，可用于 `focus()`、`hide()`、`show()`、`close()` 等操作。浏览器操作通过 `handle.web_contents()` 获取。
 
-生命周期回调的返回值会成为对应 `on_close` 的参数。示例返回窗口 ID，Todo 模板则用这个 ID 移除保存的事件目标。将窗口所属状态放在这一生命周期内管理，关闭后停止使用句柄。
+清理闭包直接捕获窗口 ID。Todo 模板也以此方式移除保存的事件目标。获取窗口所属资源后立即注册清理，后续初始化失败时仍能释放资源。窗口重开后拥有新的清理作用域。关闭后停止使用原生句柄。
 
 ## 决定应用何时退出
 
@@ -67,7 +63,7 @@ async fn main {
 
 此时关闭全部窗口不会结束进程。在实际应用采用该策略前，应先提供明确的退出操作。
 
-需要异步决定是否允许关闭时，设置 `WindowConfig.close_handler`，返回 `WindowCloseDecision::Allow` 继续关闭，返回 `Deny` 保持窗口打开。确认对话框或未保存文档检查应放在这里，`on_close` 则用于关闭后的清理。
+需要异步决定是否允许关闭时，设置 `WindowConfig.close_handler`，返回 `WindowCloseDecision::Allow` 继续关闭，返回 `Deny` 保持窗口打开。确认对话框或未保存文档检查应放在这里，`context.add_cleanup` 则注册关闭后的清理。
 
 ## 平台相关的窗口行为
 

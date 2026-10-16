@@ -226,18 +226,15 @@ async fn main {
       show_result("view", result)
     }
   })
-  ..window_lifecycle(
-    on_ready=context => {
-      let window = context.handle()
-      window_slot.val = Some(window)
-      view_slot.val = window.view("content")
-      window
-    },
-    on_close=fn(_window) {
+  ..setup_window(context => {
+    let window = context.handle()
+    window_slot.val = Some(window)
+    view_slot.val = window.view("content")
+    context.add_cleanup(() => {
       view_slot.val = None
       window_slot.val = None
-    },
-  )
+    })
+  })
   ..identifier("dev.proton.70-find-in-page")
   .run_or_abort()
 }

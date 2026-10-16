@@ -568,19 +568,16 @@ async fn main {
   ..identifier("dev.proton.78-taskbar-status")
   ..commands(register_commands)
   ..on_thumbar_button_click(fn(_window, id) noraise { report_click(id) })
-  ..window_lifecycle(
-    on_ready=context => {
-      let window = context.handle()
-      window_slot.val = Some(window)
-      browser_slot.val = Some(window.web_contents())
-      window
-    },
-    on_close=fn(_window) {
+  ..setup_window(context => {
+    let window = context.handle()
+    window_slot.val = Some(window)
+    browser_slot.val = Some(window.web_contents())
+    context.add_cleanup(() => {
       window_slot.val = None
       browser_slot.val = None
       release_overlay_icon()
       release_thumbar_icons()
-    },
-  )
+    })
+  })
   .run_or_abort()
 }

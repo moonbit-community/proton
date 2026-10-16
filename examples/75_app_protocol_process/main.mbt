@@ -141,12 +141,9 @@ async fn main {
   ..single_instance()
   ..url_scheme(scheme)
   ..commands(register_commands)
-  ..app_lifecycle(
-    on_start=context => {
-      application_slot.val = Some(context)
-      context
-    },
-    on_shutdown=fn(_context) { application_slot.val = None },
-  )
+  ..setup(context => {
+    application_slot.val = Some(context)
+    context.add_cleanup(() => application_slot.val = None)
+  })
   .run_or_abort()
 }

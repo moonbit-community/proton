@@ -297,24 +297,21 @@ async fn main {
     open_on_start=false,
   )
   ..commands(register_commands)
-  ..window_lifecycle(
-    on_ready=context => {
-      let window = context.handle()
-      window_manager_slot.val = Some(context.windows())
-      if context.id() == "main" {
-        window_slot.val = Some(window)
-      } else if context.id() == "review-child" {
-        child_slot.val = Some(window)
-      }
-      window
-    },
-    on_close=fn(window) {
+  ..setup_window(context => {
+    let window = context.handle()
+    window_manager_slot.val = Some(context.windows())
+    if context.id() == "main" {
+      window_slot.val = Some(window)
+    } else if context.id() == "review-child" {
+      child_slot.val = Some(window)
+    }
+    context.add_cleanup(() => {
       if window.id() == "main" {
         window_slot.val = None
       } else if window.id() == "review-child" {
         child_slot.val = None
       }
-    },
-  )
+    })
+  })
   .run_or_abort()
 }

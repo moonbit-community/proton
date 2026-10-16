@@ -265,16 +265,13 @@ async fn main {
     log_process_step("render-process-gone " + line)
   })
   ..commands(register_commands)
-  ..app_lifecycle(
-    on_start=context => {
-      log_process_step("lifecycle start (session observers have returned)")
-      application_slot.val = Some(context)
-      context
-    },
-    on_shutdown=fn(_context) {
+  ..setup(context => {
+    log_process_step("lifecycle start (session observers have returned)")
+    application_slot.val = Some(context)
+    context.add_cleanup(() => {
       application_slot.val = None
       log_process_step("lifecycle shutdown")
-    },
-  )
+    })
+  })
   .run_or_abort()
 }
