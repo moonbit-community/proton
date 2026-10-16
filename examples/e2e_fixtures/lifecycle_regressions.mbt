@@ -2591,3 +2591,59 @@ pub async fn run_navigation_regression() -> Unit {
   .run()
   println("LIFECYCLE_PASSED navigation")
 }
+
+///|
+/// A failed setup must stop navigation decisions before its async cleanup runs.
+pub async fn run_navigation_cleanup_regression() -> Unit {
+  let disposed = Ref(false)
+  let cleaned = Ref(false)
+  let late_calls = Ref(0)
+  let tasks : Ref[@async.TaskGroup[Unit]?] = Ref(None)
+  let gate = @env.get_env_var("PROTON_E2E_LIFECYCLE_GATE").unwrap()
+  let app = @proton.App(
+      @proton.WindowConfig(
+        "Navigation cleanup",
+        @proton.AppEntry::Html("<title>Navigation cleanup</title>"),
+        web_contents_policy=@proton.WebContentsPolicy(navigation_handler=(
+          _,
+          request,
+        ) => {
+          if request.url.has_suffix("/late") {
+            late_calls.val += 1
+            if disposed.val {
+              // Calling this after cleanup starts would abort the process.
+              ignore(tasks.val.unwrap().spawn(no_wait=true, () => ()))
+            }
+          }
+          Allow
+        }),
+      ),
+    )
+    ..identifier("dev.proton.navigation-cleanup")
+    ..setup_window(context => {
+      lifecycle_probe_gate()
+      tasks.val = Some(context.task_group())
+      context.add_cleanup(() => {
+        disposed.val = true
+        @mbfs.write_string_to_file(gate + ".cleanup-ready", "ready")
+        while !@mbfs.path_exists(gate + ".cleanup-release") {
+          @async.sleep(10)
+        }
+        cleaned.val = true
+      })
+      fail("EXPECTED_NAVIGATION_SETUP_FAILURE")
+    })
+  let failed = try {
+    app.run()
+    false
+  } catch {
+    error => {
+      assert_true(error.message().contains("EXPECTED_NAVIGATION_SETUP_FAILURE"))
+      true
+    }
+  }
+  assert_true(failed)
+  assert_true(disposed.val && cleaned.val)
+  assert_eq(late_calls.val, 0)
+  println("LIFECYCLE_PASSED navigation-cleanup")
+}

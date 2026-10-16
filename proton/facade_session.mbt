@@ -266,6 +266,7 @@ fn add_view_to_running_window(
       raise AlreadyExists(id=view_id)
     }
   }
+  // Register the view before its first navigation can synchronously ask policy.
   let created = @native.View::View(running.window, config.to_native()) catch {
     error =>
       raise window_operation_failed(
@@ -282,6 +283,26 @@ fn add_view_to_running_window(
     observed_loading: None,
   }
   running.views.push(running_view)
+  if config.initial_url != "" && config.initial_url != "about:blank" {
+    created.load_url(config.initial_url) catch {
+      error => {
+        created.destroy() catch {
+          cleanup =>
+            raise OperationFailed(
+              action="load initial URL in view " + view_id,
+              status=error.status(),
+              detail=error.message() +
+                "; destroy view failed: " +
+                cleanup.message(),
+            )
+        }
+        raise window_operation_failed(
+          "load initial URL in view " + view_id,
+          error,
+        )
+      }
+    }
+  }
   running_view
 }
 
@@ -737,11 +758,10 @@ fn RuntimeSession::create_window(
     observed_state: None,
     observed_browser_loading: None,
   }
-  errdefer (created_window.destroy() catch {
-    error =>
-      self.lifecycle_failures.push(
-        WindowDestroy(status=error.status(), detail=error.message()),
-      )
+  // Loading can call the synchronous navigation handler before returning.
+  self.windows.push(running)
+  errdefer (self.retire_window(running) catch {
+    error => self.lifecycle_failures.push(error)
   })
   if running.config.close_handler is Some(_) {
     created_window.set_close_interception(true) catch {
@@ -768,7 +788,6 @@ fn RuntimeSession::create_window(
       },
     )
   }
-  self.windows.push(running)
   self.has_created_window = true
   // A new window starts a new last-window policy period: closing it again may
   // request quit even when an earlier automatic request was prevented.
@@ -3050,6 +3069,7 @@ fn RuntimeSession::decide_navigation(
   guard self.find_window_by_native_id(window_id) is Some(window) else {
     return false
   }
+  guard window.is_active() else { return false }
   guard self.contents_handle(window, view_id) is Some(contents) else {
     return false
   }

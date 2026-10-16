@@ -187,6 +187,7 @@ moon -C examples run 01_run --target native
 | Per-window close decisions; replaceable quit decisions; synchronous final observers and scope-owned async cleanup | [81 Quit event chain](81_quit_event_chain/README.md) |
 | Synchronous session/window/contents creation notifications append in registration order | [83 Process events](83_process_events/README.md) |
 | Synchronous initial/cross-origin navigation, POST preservation, redirects and blob denial | `e2e_fixtures/lifecycle_regressions.mbt`, `run_navigation_regression` |
+| Navigation rejection while failed window setup performs async cleanup | `e2e_fixtures/lifecycle_regressions.mbt`, `run_navigation_cleanup_regression` |
 | Initial child navigation denial, declared/reopened windows, dynamic views, and overlapping async notifications | `e2e_fixtures/lifecycle_regressions.mbt`, `run_window_config_regression` |
 
 The shared fixtures run without opening desktop windows:
