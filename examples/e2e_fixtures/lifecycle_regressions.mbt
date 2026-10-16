@@ -2439,3 +2439,155 @@ pub async fn run_session_lifetime_regression() -> Unit {
   }
   println("LIFECYCLE_PASSED session-lifetime")
 }
+
+///|
+/// Preserves original navigations while making synchronous page-local decisions.
+pub async fn run_navigation_regression() -> Unit {
+  let first = @http.Server(@socket.Addr::parse("127.0.0.1:0"), headers={
+    "Content-Type": "text/html; charset=utf-8",
+  })
+  defer first.close()
+  let second = @http.Server(@socket.Addr::parse("127.0.0.1:0"), headers={
+    "Content-Type": "text/html; charset=utf-8",
+  })
+  defer second.close()
+  let origin = "http://127.0.0.1:" + first.addr.port().to_string()
+  let other = "http://127.0.0.1:" + second.addr.port().to_string()
+  let requests : Array[(@proton.NavigationRequest, String?)] = []
+  let served : Array[String] = []
+  let failures : Array[String] = []
+  let post_bodies : Array[String] = []
+  let policy = @proton.WebContentsPolicy(navigation_handler=(contents, request) => {
+    requests.push((request, contents.view_id()))
+    if request.url.has_suffix("/deny") || request.url.has_prefix("blob:") {
+      Deny
+    } else {
+      Allow
+    }
+  })
+  @proton.App(
+    @proton.WindowConfig(
+      "Navigation",
+      @proton.AppEntry::Html("<title>Initial navigation</title>"),
+      web_contents_policy=policy,
+      views=[
+        (
+          "child",
+          @proton.ViewConfig(
+            initial_url=origin + "/child",
+            width=100,
+            height=100,
+            web_contents_policy=policy,
+          ),
+        ),
+      ],
+    ),
+  )
+  ..identifier("dev.proton.navigation")
+  ..setup(context => {
+    for server in [first, second] {
+      ignore(
+        context
+        .task_group()
+        .spawn(no_wait=true, () => {
+          while true {
+            let (connection, _) = server.accept()
+            ignore(
+              context
+              .task_group()
+              .spawn(no_wait=true, () => {
+                defer connection.close()
+                let request = connection.read_request() catch {
+                  @io.ReaderClosed => return
+                  error => raise error
+                }
+                served.push(request.path)
+                if request.meth is Post {
+                  post_bodies.push(connection.read_all().text())
+                }
+                if request.path == "/redirect" {
+                  connection.send_response(302, "Found", extra_headers={
+                    "Location": other + "/final",
+                  })
+                } else {
+                  connection.send_response(200, "OK")
+                  connection.write_string("<title>" + request.path + "</title>")
+                }
+                connection.end_response()
+              }),
+            )
+          }
+        }),
+      )
+    }
+  })
+  ..on_web_contents_event((_, event) => {
+    if event is LoadFailed(url~, ..) {
+      failures.push(url)
+    }
+  })
+  ..setup_window(context => {
+    lifecycle_probe_gate()
+    let browser = context.handle().web_contents()
+    let wait_title : async (String) -> Unit = title => {
+      while browser.state().title != title {
+        @async.sleep(10)
+      }
+    }
+    assert_true(
+      requests.any(item => {
+        item.0.url == "https://proton.localhost/" && item.1 is None
+      }),
+    )
+    browser.load_url(origin + "/first")
+    wait_title("/first")
+    browser.eval("location.href='" + other + "/cross'")
+    wait_title("/cross")
+    browser.eval(
+      "const f=document.createElement('form');f.method='POST';f.action='" +
+      origin +
+      "/post';const input=document.createElement('input');" +
+      "input.name='payload';input.value='a+b &中文';f.appendChild(input);" +
+      "document.body.appendChild(f);f.submit()",
+    )
+    wait_title("/post")
+    assert_eq(post_bodies, ["payload=a%2Bb+%26%E4%B8%AD%E6%96%87"])
+    assert_true(requests.any(item => item.0.http_method == "POST"))
+    browser.load_url(origin + "/redirect")
+    wait_title("/final")
+    assert_true(
+      requests.any(item => item.0.url == other + "/final" && item.0.redirect),
+    )
+    browser.load_url(origin + "/deny")
+    while !failures.contains(origin + "/deny") {
+      @async.sleep(10)
+    }
+    assert_false(served.contains("/deny"))
+    browser.eval(
+      "location.href=URL.createObjectURL(new Blob(['<title>Forbidden</title>'],{type:'text/html'}))",
+    )
+    while !failures.any(url => url.has_prefix("blob:")) {
+      @async.sleep(10)
+    }
+    assert_eq(browser.state().title, "/final")
+    while !served.contains("/child") {
+      @async.sleep(10)
+    }
+    assert_true(
+      requests.any(item => {
+        item.0.url == origin + "/child" && item.1 == Some("child")
+      }),
+    )
+    assert_eq(
+      requests.filter(item => item.0.url == origin + "/first").length(),
+      1,
+    )
+    assert_eq(
+      requests.filter(item => item.0.url == other + "/cross").length(),
+      1,
+    )
+    context.handle().close()
+  })
+  .run()
+  println("LIFECYCLE_PASSED navigation")
+}

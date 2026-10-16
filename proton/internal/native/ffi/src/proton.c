@@ -339,6 +339,41 @@ int32_t proton_runtime_destroy_ready(proton_runtime_handle_t runtime,
   return PROTON_OK;
 }
 
+/* Takes ownership of data even if registration fails. */
+MOONBIT_FFI_EXPORT int32_t proton_runtime_set_navigation_handler(
+    proton_runtime_handle_t runtime, proton_navigation_handler_fn handler,
+    void *data) {
+  proton_runtime_slot_t *slot = NULL;
+  int32_t status = proton_get_runtime(runtime, &slot);
+  if (status != PROTON_OK) {
+    moonbit_decref(data);
+    return status;
+  }
+  void *previous = slot->navigation_handler_data;
+  slot->navigation_handler = handler;
+  slot->navigation_handler_data = data;
+  if (previous != NULL) moonbit_decref(previous);
+  return PROTON_OK;
+}
+
+int32_t proton_decide_navigation(int64_t window, int64_t view,
+    const char *url, const char *method, int32_t user_gesture, int32_t redirect) {
+  proton_runtime_slot_t *slot = proton_get_active_runtime();
+  if (slot == NULL || slot->navigation_handler == NULL ||
+      proton_get_runtime(slot, &slot) != PROTON_OK) return 0;
+  proton_navigation_handler_fn handler = slot->navigation_handler;
+  void *data = slot->navigation_handler_data;
+  /* The trampoline consumes its arguments. Keep the registered closure alive,
+     including if user code replaces it while handling this navigation. */
+  moonbit_incref(data);
+  size_t url_len = strlen(url), method_len = strlen(method);
+  moonbit_bytes_t url_bytes = moonbit_make_bytes((int32_t)url_len + 1, 0);
+  moonbit_bytes_t method_bytes = moonbit_make_bytes((int32_t)method_len + 1, 0);
+  memcpy(url_bytes, url, url_len);
+  memcpy(method_bytes, method, method_len);
+  return handler(data, window, view, url_bytes, method_bytes, user_gesture, redirect);
+}
+
 int32_t proton_runtime_finish_destroy(proton_runtime_handle_t runtime) {
   proton_runtime_slot_t *slot = NULL;
   int32_t status = proton_get_runtime_for_destroy(runtime, &slot);
@@ -365,6 +400,11 @@ int32_t proton_runtime_finish_destroy(proton_runtime_handle_t runtime) {
       return proton_set_engine_status(status, engine_error);
     }
     slot->engine_runtime = NULL;
+  }
+  if (slot->navigation_handler_data != NULL) {
+    moonbit_decref(slot->navigation_handler_data);
+    slot->navigation_handler_data = NULL;
+    slot->navigation_handler = NULL;
   }
   proton_runtime_slot_destroy(slot);
   g_last_error[0] = '\0';

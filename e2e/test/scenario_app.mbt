@@ -50,6 +50,7 @@ async fn run_scenario_app_child() -> Unit {
       @e2e_fixtures.run_session_lifetime_regression()
     Some("lifecycle:web-contents") =>
       @e2e_fixtures.run_web_contents_regression()
+    Some("lifecycle:navigation") => @e2e_fixtures.run_navigation_regression()
     Some("lifecycle:window-config") =>
       @e2e_fixtures.run_window_config_regression()
     Some("lifecycle:task-metrics") =>

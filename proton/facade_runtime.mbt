@@ -468,6 +468,20 @@ async fn run_manifest(
           windows, command_host, wakeup, forward_menu_events, bridge_enabled, app_instance,
           application_tasks, window_tasks, lifecycle_failures, destroy_window,
         )
+        runtime.set_navigation_handler((
+          window,
+          view,
+          url,
+          http_method,
+          gesture,
+          redirect,
+        ) => {
+          session.decide_navigation(
+            window, view, url, http_method, gesture, redirect,
+          )
+        }) catch {
+          error => raise native_run_error("install navigation handler", error)
+        }
         let application_context = session.application_context()
         // Electron reports the session as soon as it exists, before the
         // application start hooks create any window of their own.

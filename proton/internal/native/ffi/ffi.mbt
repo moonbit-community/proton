@@ -1808,3 +1808,21 @@ pub extern "C" fn proton_update_validate_running_image_ffi(
   error : FixedArray[Byte],
   error_len : Int32,
 ) -> Int32 = "proton_update_validate_running_image"
+
+///|
+#owned(handler)
+pub extern "C" fn runtime_set_navigation_handler(
+  runtime : RuntimeHandle,
+  invoke : FuncRef[
+    (
+      (Int64, Int64, Bytes, Bytes, Int32, Int32) -> Int32,
+      Int64,
+      Int64,
+      Bytes,
+      Bytes,
+      Int32,
+      Int32,
+    ) -> Int32,
+  ],
+  handler : (Int64, Int64, Bytes, Bytes, Int32, Int32) -> Int32,
+) -> Int32 = "proton_runtime_set_navigation_handler"

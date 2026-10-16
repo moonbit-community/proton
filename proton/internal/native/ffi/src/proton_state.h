@@ -44,11 +44,17 @@ typedef enum proton_view_lifecycle {
   PROTON_VIEW_DESTROYED = 2,
 } proton_view_lifecycle_t;
 
+/* The closure is owned by the runtime; calls stay on its owner thread. */
+typedef int32_t (*proton_navigation_handler_fn)(void *, int64_t, int64_t,
+    uint8_t *, uint8_t *, int32_t, int32_t);
+
 struct proton_runtime_slot {
   proton_runtime_lifecycle_t lifecycle;
   bool destroy_prepared;
   proton_engine_runtime_t *engine_runtime;
   int64_t app_instance;
+  proton_navigation_handler_fn navigation_handler;
+  void *navigation_handler_data;
   proton_thread_id_t owner_thread;
   proton_event_queue_t events;
   int64_t next_bridge_request_id;

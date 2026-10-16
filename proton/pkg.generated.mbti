@@ -1090,10 +1090,10 @@ pub fn WebContentsHandle::window_id(Self) -> String
 pub fn WebContentsHandle::zoom_percent(Self) -> Int raise WindowSessionError
 
 pub(all) struct WebContentsPolicy {
-  navigation_handler : (async (WebContentsHandle, NavigationRequest) -> NavigationDecision noraise)?
+  navigation_handler : ((WebContentsHandle, NavigationRequest) -> NavigationDecision)?
   new_window_handler : (async (WebContentsHandle, NewWindowRequest) -> NewWindowDecision noraise)?
 }
-pub fn WebContentsPolicy::WebContentsPolicy(navigation_handler? : async (WebContentsHandle, NavigationRequest) -> NavigationDecision noraise, new_window_handler? : async (WebContentsHandle, NewWindowRequest) -> NewWindowDecision noraise) -> Self
+pub fn WebContentsPolicy::WebContentsPolicy(navigation_handler? : (WebContentsHandle, NavigationRequest) -> NavigationDecision, new_window_handler? : async (WebContentsHandle, NewWindowRequest) -> NewWindowDecision noraise) -> Self
 
 pub(all) struct WindowButtonPosition {
   x : Int

@@ -20,7 +20,10 @@ MoonBit validates runtime, window, view, bridge, and web request configuration,
 parses colors, and traverses menu and Jump List definitions. The typed private
 FFI receives validated values and explicit parent/category selections. C owns
 native storage and platform calls; rule matching invoked on CEF threads stays
-native and never calls into MoonBit.
+native. The synchronous navigation decision is the sole native callback into
+MoonBit: it runs on the runtime's owner/UI thread, cannot suspend or raise, and
+returns before the original navigation continues. Notifications and asynchronous
+decisions remain queued.
 
 Pure-memory builders and dequeued events are managed MoonBit values. Cookie
 snapshots remain owned by their event. Bridge and web request holders release

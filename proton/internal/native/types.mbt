@@ -327,13 +327,6 @@ pub extend NativeNotificationResult with Debug::{to_repr}
 
 ///|
 pub(all) enum NativeBrowserRequest {
-  Navigation(
-    request_id~ : Int64,
-    url~ : String,
-    http_method~ : String,
-    user_gesture~ : Bool,
-    redirect~ : Bool
-  )
   NewWindow(request_id~ : Int64, url~ : String, user_gesture~ : Bool)
   Download(
     request_id~ : Int64,
@@ -854,7 +847,6 @@ pub fn RuntimeEvent::event_type(self : RuntimeEvent) -> String {
     TaskbarButtonClicked(_, _) => "taskbar_button_clicked"
     NotificationResult(_) => "notification_result"
     NotificationClicked(_) => "notification_clicked"
-    BrowserRequest(_, _, Navigation(..)) => "browser_navigation_requested"
     BrowserRequest(_, _, NewWindow(..)) => "browser_new_window_requested"
     BrowserRequest(_, _, Download(..)) => "browser_download_requested"
     BrowserRequest(_, _, Certificate(..)) => "browser_certificate_error"

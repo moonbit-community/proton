@@ -3038,6 +3038,38 @@ fn RuntimeSession::dispatch_browser_event(
 }
 
 ///|
+fn RuntimeSession::decide_navigation(
+  self : RuntimeSession,
+  window_id : Int64,
+  view_id : Int64?,
+  url : String,
+  http_method : String,
+  user_gesture : Bool,
+  redirect : Bool,
+) -> Bool {
+  guard self.find_window_by_native_id(window_id) is Some(window) else {
+    return false
+  }
+  guard self.contents_handle(window, view_id) is Some(contents) else {
+    return false
+  }
+  let policy = match view_id {
+    None => window.config.web_contents_policy
+    Some(id) => {
+      guard window.find_view_by_native_id(id) is Some(view) else {
+        return false
+      }
+      view.web_contents_policy
+    }
+  }
+  match policy.navigation_handler {
+    Some(handler) =>
+      handler(contents, { url, http_method, user_gesture, redirect, }) is Allow
+    None => true
+  }
+}
+
+///|
 fn RuntimeSession::start_browser_request(
   self : RuntimeSession,
   window_id : Int64?,
@@ -3055,8 +3087,7 @@ fn RuntimeSession::start_browser_request(
     }
   }
   let request_id = match request {
-    Navigation(request_id~, ..)
-    | NewWindow(request_id~, ..)
+    NewWindow(request_id~, ..)
     | Download(request_id~, ..)
     | Certificate(request_id~, ..)
     | Media(request_id~, ..) => request_id
@@ -3065,18 +3096,6 @@ fn RuntimeSession::start_browser_request(
     () => {
       defer self.wakeup.signal.notify()
       match request {
-        Navigation(url~, http_method~, user_gesture~, redirect~, ..) =>
-          match policy.navigation_handler {
-            Some(handler) =>
-              match
-                handler(browser, { url, http_method, user_gesture, redirect, }) {
-                NavigationDecision::Allow =>
-                  BrowserResponse::{ action: "allow", path: None, }
-                NavigationDecision::Deny =>
-                  BrowserResponse::{ action: "deny", path: None, }
-              }
-            None => BrowserResponse::{ action: "deny", path: None, }
-          }
         NewWindow(url~, user_gesture~, ..) => {
           let decision = match policy.new_window_handler {
             Some(handler) => handler(browser, { url, user_gesture, })

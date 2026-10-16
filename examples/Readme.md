@@ -186,11 +186,13 @@ moon -C examples run 01_run --target native
 | Main-page and dynamic child popup policies are independent | [52 Web contents view](52_web_contents_view/README.md) |
 | Per-window close decisions; replaceable quit decisions; synchronous final observers and scope-owned async cleanup | [81 Quit event chain](81_quit_event_chain/README.md) |
 | Synchronous session/window/contents creation notifications append in registration order | [83 Process events](83_process_events/README.md) |
+| Synchronous initial/cross-origin navigation, POST preservation, redirects and blob denial | `e2e_fixtures/lifecycle_regressions.mbt`, `run_navigation_regression` |
 | Initial child navigation denial, declared/reopened windows, dynamic views, and overlapping async notifications | `e2e_fixtures/lifecycle_regressions.mbt`, `run_window_config_regression` |
 
 The shared fixtures run without opening desktop windows:
 
 ```sh
+PROTON_E2E_LIFECYCLE_CASE=navigation moon -C e2e run test --target native -- --lifecycle-regressions
 PROTON_E2E_LIFECYCLE_CASE=window-config moon -C e2e run test --target native -- --lifecycle-regressions
 PROTON_E2E_LIFECYCLE_CASE=web-contents moon -C e2e run test --target native -- --lifecycle-regressions
 moon -C e2e run test --target native -- --quit-chain
@@ -198,8 +200,8 @@ moon -C e2e run test --target native -- --quit-chain
 
 The browser-control certificate and media steps require their documented
 network/platform preconditions; a successful build does not verify those OS
-interactions. Navigation `Allow` has a [known replay limitation](https://github.com/moonbit-community/proton/issues/469)
-and is not claimed as a passing initial-navigation regression.
+interactions. The headless navigation regression verifies synchronous decisions
+through the native browser path, including the initial navigation.
 
 All runnable examples should import `moonbit-community/proton`. Runtime behavior
 is configured through the App builder; `proton.project.json` is present only

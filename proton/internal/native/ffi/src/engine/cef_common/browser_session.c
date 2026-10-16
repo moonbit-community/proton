@@ -1,6 +1,7 @@
 #include "browser_session.h"
 
 #include "../../proton_event.h"
+#include "../../proton_internal.h"
 
 #include "include/capi/cef_download_item_capi.h"
 #include "include/capi/cef_browser_capi.h"
@@ -19,7 +20,6 @@
 #endif
 
 typedef enum {
-  PROTON_BROWSER_REQUEST_NAVIGATION = 1,
   PROTON_BROWSER_REQUEST_NEW_WINDOW = 2,
   PROTON_BROWSER_REQUEST_DOWNLOAD = 3,
   PROTON_BROWSER_REQUEST_CERTIFICATE = 4,
@@ -31,8 +31,6 @@ typedef struct proton_browser_pending {
   proton_browser_request_kind_t kind;
   char *url;
   uint32_t permissions;
-  cef_frame_t *frame;
-  cef_request_t *request;
   cef_before_download_callback_t *download;
   uint32_t download_id;
   cef_callback_t *certificate;
@@ -70,12 +68,6 @@ typedef struct proton_pdf_print_callback {
   int32_t request_id;
 } proton_pdf_print_callback_t;
 
-typedef struct proton_browser_navigation_bypass {
-  char *url;
-  char *method;
-  struct proton_browser_navigation_bypass *next;
-} proton_browser_navigation_bypass_t;
-
 struct proton_browser_session {
   proton_browser_policy_t policy;
   proton_web_request_config_t *web_request_config;
@@ -85,7 +77,6 @@ struct proton_browser_session {
   uint64_t next_request_id;
   proton_browser_pending_t *pending;
   proton_browser_download_t *downloads;
-  proton_browser_navigation_bypass_t *navigation_bypasses;
   proton_browser_signal_fn signal;
   void *signal_user_data;
   char *url;
@@ -489,13 +480,6 @@ static void proton_browser_pending_release(proton_browser_pending_t *pending) {
   if (pending == NULL) {
     return;
   }
-  if (pending->frame != NULL) {
-    pending->frame->base.release((cef_base_ref_counted_t *)pending->frame);
-  }
-  if (pending->request != NULL) {
-    pending->request->base.release(
-        (cef_base_ref_counted_t *)pending->request);
-  }
   if (pending->download != NULL) {
     pending->download->base.release(
         (cef_base_ref_counted_t *)pending->download);
@@ -532,15 +516,6 @@ void proton_browser_session_destroy(proton_browser_session_t *session) {
     }
     free(download);
     download = next;
-  }
-  proton_browser_navigation_bypass_t *bypass =
-      session->navigation_bypasses;
-  while (bypass != NULL) {
-    proton_browser_navigation_bypass_t *next = bypass->next;
-    free(bypass->url);
-    free(bypass->method);
-    free(bypass);
-    bypass = next;
   }
   free(session->url);
   free(session->title);
@@ -797,108 +772,20 @@ static char *proton_browser_request_method(cef_request_t *request) {
   return proton_browser_userfree_to_utf8(request->get_method(request));
 }
 
-static int proton_browser_consume_navigation_bypass(
-    proton_browser_session_t *session, const char *url, const char *method) {
-  proton_browser_navigation_bypass_t **cursor =
-      &session->navigation_bypasses;
-  while (*cursor != NULL) {
-    proton_browser_navigation_bypass_t *candidate = *cursor;
-    if (strcmp(candidate->url, url) == 0 &&
-        strcmp(candidate->method, method) == 0) {
-      *cursor = candidate->next;
-      free(candidate->url);
-      free(candidate->method);
-      free(candidate);
-      return 1;
-    }
-    cursor = &candidate->next;
-  }
-  return 0;
-}
-
-static int proton_browser_add_navigation_bypass(
-    proton_browser_session_t *session, const char *url, const char *method) {
-  proton_browser_navigation_bypass_t *bypass =
-      (proton_browser_navigation_bypass_t *)calloc(1, sizeof(*bypass));
-  if (bypass == NULL) {
-    return 0;
-  }
-  bypass->url = proton_browser_copy_string(url);
-  bypass->method = proton_browser_copy_string(method);
-  if (bypass->url == NULL || bypass->method == NULL) {
-    free(bypass->url);
-    free(bypass->method);
-    free(bypass);
-    return 0;
-  }
-  bypass->next = session->navigation_bypasses;
-  session->navigation_bypasses = bypass;
-  return 1;
-}
-
 int proton_browser_session_before_browse(
     proton_browser_session_t *session, cef_frame_t *frame,
     cef_request_t *request, int user_gesture, int is_redirect) {
-  if (session == NULL) {
-    return 0;
-  }
-  if (frame == NULL || frame->is_main == NULL || !frame->is_main(frame)) {
-    return 0;
-  }
+  if (session == NULL || frame == NULL || !frame->is_main(frame)) return 0;
+  if (session->policy.navigation == PROTON_BROWSER_POLICY_ALLOW) return 0;
+  if (session->policy.navigation == PROTON_BROWSER_POLICY_DENY) return 1;
   char *url = proton_browser_request_url(request);
   char *method = proton_browser_request_method(request);
-  if (url == NULL || method == NULL) {
-    free(url);
-    free(method);
-    return 1;
-  }
-  if (proton_browser_consume_navigation_bypass(session, url, method)) {
-    free(url);
-    free(method);
-    return 0;
-  }
-  if (session->policy.navigation == PROTON_BROWSER_POLICY_ALLOW) {
-    free(url);
-    free(method);
-    return 0;
-  }
-  if (session->policy.navigation == PROTON_BROWSER_POLICY_DENY) {
-    free(url);
-    free(method);
-    return 1;
-  }
-  proton_browser_pending_t *pending = proton_browser_pending_new(
-      session, PROTON_BROWSER_REQUEST_NAVIGATION, url);
+  int allow = url != NULL && method != NULL &&
+      proton_decide_navigation(session->window, session->view, url, method,
+                               user_gesture, is_redirect);
   free(url);
-  if (pending == NULL) {
-    free(method);
-    return 1;
-  }
-  pending->frame = frame;
-  if (frame != NULL) {
-    frame->base.add_ref((cef_base_ref_counted_t *)frame);
-  }
-  pending->request = request;
-  if (request != NULL) {
-    request->base.add_ref((cef_base_ref_counted_t *)request);
-  }
-  proton_event_t *event = proton_browser_request_event(
-      session, pending, PROTON_EVENT_BROWSER_NAVIGATION_REQUESTED);
-  if (event == NULL || !proton_event_set_text(&event->text_b, method)) {
-    proton_event_destroy(event);
-    free(method);
-    proton_browser_pending_remove(session, pending);
-    proton_browser_pending_release(pending);
-    return 1;
-  }
   free(method);
-  event->bool_a = user_gesture;
-  event->bool_b = is_redirect;
-  if (!proton_browser_enqueue_event(session, event)) {
-    proton_browser_pending_remove(session, pending);
-    proton_browser_pending_release(pending);
-  }
-  return 1;
+  return !allow;
 }
 
 int proton_browser_session_request_new_window(
@@ -1211,22 +1098,6 @@ int32_t proton_browser_session_respond(
   }
   int32_t status = PROTON_OK;
   switch (pending->kind) {
-  case PROTON_BROWSER_REQUEST_NAVIGATION:
-    if (strcmp(action, "allow") == 0 && pending->frame != NULL &&
-        pending->request != NULL) {
-      char *method = proton_browser_request_method(pending->request);
-      if (method == NULL ||
-          !proton_browser_add_navigation_bypass(
-              session, pending->url, method)) {
-        status = PROTON_ERR_ENGINE;
-      } else {
-        pending->frame->load_request(pending->frame, pending->request);
-      }
-      free(method);
-    } else if (strcmp(action, "deny") != 0) {
-      status = PROTON_ERR_INVALID_ARGUMENT;
-    }
-    break;
   case PROTON_BROWSER_REQUEST_NEW_WINDOW:
     if (strcmp(action, "current") == 0) {
       /* New-window callbacks do not provide a durable target frame. The caller
