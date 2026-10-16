@@ -153,6 +153,7 @@ and every other launch forwards its activation and exits. A running
 | `release_single_instance_lock()` | `app.releaseSingleInstanceLock()` | Releases the identity so the next launch acquires it instead of forwarding; the releasing process keeps running and stops receiving activations |
 
 ```moonbit
+..setup(context => {
   println(context.has_single_instance_lock().to_string())
   context.release_single_instance_lock() catch {
     _ => ()
@@ -429,6 +430,7 @@ windows. Once runtime teardown begins, retained session handles fail with
 Child pages do not receive the application command bridge.
 
 ```moonbit
+..setup(context => {
   let session = context.session()
   ignore(session.get_cookies(url="https://example.com/"))
   // Use the existing application profile before opening a window.

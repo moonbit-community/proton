@@ -40,7 +40,9 @@ async fn main {
 例如，在上面的 Help 声明中加入 `open_on_start=false`，然后在 `.run_or_abort()` 之前添加以下构建器调用，即可从应用启动钩子打开它：
 
 ```moonbit
-
+..setup(context => {
+  ignore(context.windows().open("help"))
+})
 ```
 
 后续用户操作也可以通过保留的应用上下文调用相同的窗口管理器操作。第二个窗口不需要第二套 Proton 运行时。

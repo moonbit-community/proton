@@ -40,7 +40,9 @@ The primary window's ID is `main`. Secondary IDs must be nonempty, unique, and d
 For example, add `open_on_start=false` to the Help declaration above, and add this builder call before `.run_or_abort()` to open it from the application startup hook:
 
 ```moonbit
-
+..setup(context => {
+  ignore(context.windows().open("help"))
+})
 ```
 
 A later user action can call the same window manager operation from a retained application context. Do not create a second Proton runtime for a second window.
