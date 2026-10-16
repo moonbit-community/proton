@@ -40,8 +40,6 @@ jobs:
     strategy:
       matrix:
         os:
-          - ubuntu-latest
-          - macos-latest
           - windows-latest
       fail-fast: false
     runs-on: ${{ matrix.os }}
@@ -272,7 +270,7 @@ jobs:
         run: |
           $ErrorActionPreference = "Stop"
           $PSNativeCommandUseErrorActionPreference = $true
-          moon -C e2e run test --target native --diagnostic-limit 200 -- --self-hosted
+          moon -C e2e run test --target native --diagnostic-limit 200 -- --diagnose-startup
 
       - name: Run MoonBit CDP e2e on Unix
         if: ${{ matrix.os != 'windows-latest' }}

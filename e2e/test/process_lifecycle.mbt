@@ -380,19 +380,39 @@ async fn run_pending_lifecycle_probe_once(
   let run_id = next_app_run_id()
   @async.with_task_group(group => {
     let app = spawn_scenario_app(group, root, output_root, name, run_id)
+    let mut phase = "CDP target discovery"
+    errdefer println(
+      "[startup-diagnostic] phase=" +
+      phase +
+      " exit=" +
+      app_exit_code(app.process)
+      .map(code => code.to_string())
+      .unwrap_or("running") +
+      app_diagnostic_suffix(app),
+    )
     let target = wait_for_app_cdp_target(app, timeout)
     let mut stopped = false
     defer (if !stopped { app.process.cancel() })
     ignore(
       wait_for_spawned_app_cdp(app, cdp_http_endpoint_from(target), timeout),
     )
+    phase = "page connection"
     let page = connect_spawned_page(group, app, target, timeout)
     let browser = @client.connect_cdp_browser_target_with_timeout(
       group,
       cdp_target_from(target),
       timeout_ms=timeout,
     )
+    phase = "bridge readiness"
+    println(
+      "[startup-diagnostic] initial page=" +
+      evaluate_json(
+        page, "({url:location.href,title:document.title,state:document.readyState,bridge:typeof window.__MoonBit__?.core?.invokeOp,native:typeof window.__protonNativeInvokeOp})",
+        false,
+      ).stringify(),
+    )
     wait_for_ready(page, scenario_ready_expression(name), timeout)
+    phase = "pending command"
     let pending = evaluate_json(
       page,
       (
@@ -414,7 +434,9 @@ async fn run_pending_lifecycle_probe_once(
       true,
     )
     guard pending == true else { fail("slow command did not remain pending") }
+    phase = "page connection close"
     page.close()
+    phase = "application shutdown"
     let shutdown = finish_scenario_app_with_connected_browser(
       app, target, browser,
     )
@@ -429,11 +451,24 @@ async fn run_pending_lifecycle_probe_once(
 ///|
 async fn run_pending_lifecycle_probe(root : String, timeout : Int32) -> Unit {
   let output_root = @fs.tmpdir(prefix="proton-e2e-lifecycle-")
-  defer remove_dev_extension_tree(output_root)
+  let mut succeeded = false
+  defer (if succeeded {
+    remove_dev_extension_tree(output_root)
+  } else {
+    println("[startup-diagnostic] retained at " + output_root)
+  })
+  errdefer (if @env.get_env_var("GITHUB_ENV") is Some(env_file) {
+    @fs.write_file(
+      env_file,
+      "PROTON_E2E_FAILURE_DIR=" + output_root + "\n",
+      append=true,
+    )
+  })
   install_scenario_helper(root, output_root)
   run_e2e_operation_with_timeout(timeout, "41_app_commands pending lifecycle", () => {
     run_pending_lifecycle_probe_once(root, output_root, timeout)
   })
+  succeeded = true
 }
 
 ///|
