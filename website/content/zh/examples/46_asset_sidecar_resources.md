@@ -2,7 +2,7 @@
 
 本例加载 HTML 入口及独立的 JavaScript、CSS 和 worker 文件，展示页面从应用资源加载时如何组织文件和相对路径。
 
-[46_asset_sidecar_resources](https://github.com/moonbit-community/proton/tree/bdb169302952db553deda6de015887c7a6a19831/examples/46_asset_sidecar_resources) · 关键文件：[main.mbt](https://github.com/moonbit-community/proton/tree/bdb169302952db553deda6de015887c7a6a19831/examples/46_asset_sidecar_resources/main.mbt), [app/app.html](https://github.com/moonbit-community/proton/tree/bdb169302952db553deda6de015887c7a6a19831/examples/46_asset_sidecar_resources/app/app.html), [app/app.js](https://github.com/moonbit-community/proton/tree/bdb169302952db553deda6de015887c7a6a19831/examples/46_asset_sidecar_resources/app/app.js), [app/app.css](https://github.com/moonbit-community/proton/tree/bdb169302952db553deda6de015887c7a6a19831/examples/46_asset_sidecar_resources/app/app.css), [app/worker.js](https://github.com/moonbit-community/proton/tree/bdb169302952db553deda6de015887c7a6a19831/examples/46_asset_sidecar_resources/app/worker.js)
+[46_asset_sidecar_resources](https://github.com/moonbit-community/proton/tree/6c7c6810b492ffdc57b0908fc926d67db6656eef/examples/46_asset_sidecar_resources) · 关键文件：[main.mbt](https://github.com/moonbit-community/proton/tree/6c7c6810b492ffdc57b0908fc926d67db6656eef/examples/46_asset_sidecar_resources/main.mbt), [app/app.html](https://github.com/moonbit-community/proton/tree/6c7c6810b492ffdc57b0908fc926d67db6656eef/examples/46_asset_sidecar_resources/app/app.html), [app/app.js](https://github.com/moonbit-community/proton/tree/6c7c6810b492ffdc57b0908fc926d67db6656eef/examples/46_asset_sidecar_resources/app/app.js), [app/app.css](https://github.com/moonbit-community/proton/tree/6c7c6810b492ffdc57b0908fc926d67db6656eef/examples/46_asset_sidecar_resources/app/app.css), [app/worker.js](https://github.com/moonbit-community/proton/tree/6c7c6810b492ffdc57b0908fc926d67db6656eef/examples/46_asset_sidecar_resources/app/worker.js)
 
 ## 行为
 
@@ -37,4 +37,4 @@ moon -C examples run 46_asset_sidecar_resources --target native
 
 ## 限制与使用边界
 
-从 examples 目录运行，使相对资源路径正确解析。分发时必须包含完整资源树，不能只带 HTML。
+`moon -C examples` 将 examples 目录选作工作目录，用于解析相对资源路径。分发时必须包含完整资源树，不能只带 HTML。

@@ -73,6 +73,8 @@
 
 文档类型包含必填的 `name`、`extensions`，`role` 默认为 `Viewer`。规范应用标识位于顶层 `identifier`，不是 package 字段。修改产品名称不会改变应用身份。
 
+使用自动更新时，`package.version` 同时决定发布顺序，必须使用三个无前导零、无后缀的非负 `Int32` 分量，每次更新严格递增。`package --version` 同时覆盖打包应用与更新元数据中的版本，不存在 `revision` 字段。参见[更新元数据](../command-line-interface/packaging.md#更新产物与元数据)。
+
 ## `package.sign`
 
 | 字段 | 类型 | 默认值与含义 |

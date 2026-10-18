@@ -1,5 +1,49 @@
 # Release Notes
 
+## 0.5.0
+
+0.5.0 将应用配置改为 MoonBit 瀑布语法，以作用域 setup 与 cleanup 替代成对生命周期钩子，并将浏览器决策放到所属页面或会话上。应用更新协议也有变化，现有应用需要迁移源码。
+
+**不兼容变更与迁移**
+
+| 范围 | 0.4.0 | 0.5.0 |
+| --- | --- | --- |
+| App 配置 | 配置方法返回 `App`，使用 `.` 链式调用 | 方法返回 `Unit`，配置改用 `..config(...)`、`..commands(...)` 等；查询和 `run()` 保留单点 |
+| 应用生命周期 | `app_lifecycle(on_start=..., on_shutdown=...)` | `setup(context => { ... })`；状态保存在闭包中，立即用 `context.add_cleanup(...)` 注册清理 |
+| 窗口生命周期 | `window_lifecycle(on_ready=..., on_close=...)` | `setup_window(context => { ... })` 与 `WindowContext.add_cleanup`；重新打开窗口会建立新作用域 |
+| 退出决策 | `on_before_quit`、`on_will_quit` | `set_before_quit_handler`、`set_will_quit_handler`；每个入口替换此前的处理器 |
+| 会话决策 | `on_certificate_error`、`on_media_permission_request`、`on_download_request` | `set_certificate_error_handler`、`set_media_permission_handler`、`set_download_handler` |
+| 通用权限回调 | `on_permission_request`、`PermissionRequest` | 移除，改用专用证书及媒体权限处理器 |
+| 窗口关闭 | `App.on_window_close_request` | 各窗口的 `WindowConfig.close_handler` |
+| 导航／新窗口 | 应用级 `on_navigation_request`、`on_new_window_request` | `WindowConfig` 或 `ViewConfig` 上的 `WebContentsPolicy`；子视图不继承父窗口策略 |
+| 创建及最终退出通知 | 异步 `on_session_created`、`on_window_created`、`on_web_contents_created`、`on_quit` | 同步且不抛错；需要等待的工作使用 setup／cleanup |
+| 句柄表示 | 公开的函数值实现字段 | 运行时创建的句柄与公开方法；移除字段分发及自行构造句柄的代码 |
+| 应用更新 | 独立 `revision`、schema 2、`rsa-sha256:<modulus>:<exponent>` 公钥 | 应用 `version`、schema 3、标准 `PUBLIC KEY` 或 `RSA PUBLIC KEY` PEM 文本 |
+
+导航决策现在是**同步**的，不能挂起或抛错。它直接允许或拒绝原主 frame 导航，包括首次加载、跨域请求和被拦截的 `blob:` 导航；不再通过取消后重放实现 Allow。需要异步确认的应用主动导航，应先等待用户确认，再调用 `load_url`。新窗口、关闭、退出、证书、媒体和下载决策仍为异步。[回调契约](../introduction/application-api.md#宿主回调契约)
+
+`on_*` 追加观察者，`set_*_handler` 替换决策处理器。异步观察者不阻止原操作继续，可以相互重叠；setup 会被等待，错误可使启动失败。通过 `add_cleanup` 注册的清理在作用域任务结束后逆序执行并受到取消保护，初始化部分失败或取消时也执行。只需要初始化或清理时，不必再传入另一端的空回调。[生命周期](../introduction/application-api.md#应用生命周期)
+
+匹配 `LifecycleHookError` 时，应用清理改为 `ApplicationShutdown(detail)`，不再带钩子索引；窗口清理改为 `WindowClose(window, detail)`，携带窗口声明 ID。
+
+更新发布流程移除 `--updater-revision` 和 `updater public-key` 命令；`package --version` 或 `package.version` 是唯一的应用发布版本，同版本重新构建不构成更新。通过 OpenSSL 导出标准 PEM 公钥。已有客户端继续保留 schema 2 端点，迁移到 schema 3 需要手动升级或专门准备的过渡版本。[更新打包](../command-line-interface/packaging.md#更新产物与元数据)
+
+未使用的 `proton/catalog` 包已移除。扩展操作仍从命令绑定产生，应用继续通过 capability 注册并授权。
+
+**新增与修复**
+
+- **Dock 与徽章：** `ApplicationContext` 新增数字徽章及 macOS Dock 文本／提醒 API。不支持徽章的平台返回 `false`；macOS 专属 Dock 操作在其它平台抛出 `UnsupportedPlatform`。[平台约定](../introduction/application-api.md#进程控制与指标)
+- **创建通知：** 创建观察者中添加的视图只通知一次，已被此前观察者移除的视图不再收到创建通知。窗口开始清理后拒绝迟到导航，不再用正在释放的资源执行应用策略。
+- **Windows 输入焦点：** 原生窗口框架激活及 `focus()` 会恢复浏览器键盘／输入法焦点，包括此前聚焦的可见子视图。修复了一条焦点丢失路径，应用仍应在 Windows 验证受影响的输入法场景。
+- **更新下载：** macOS 选用应用 ZIP，Windows 选用 NSIS 安装器，Linux 选用 AppImage。HTTPS 下载支持相对重定向，最多五跳；产物流式写盘，使用已认证的 `Int64` 大小，1 MiB 元数据上限不限制应用产物。响应头与接收字节校验拒绝大小不匹配。[下载约定](../introduction/application-api.md#应用更新)
+- **CDP 自动化：** 可选的原生 `proton_cdp` 包使用同一发布版本。默认连接已有调试端点，只有显式调用启动操作时才会启动 Chrome 窗口。[CDP 参考](../command-line-interface/debugging.md#原生-cdp-自动化)
+
+**升级要求**
+
+使用支持显式 `Int32`／`UInt32` 的 stable MoonBit 工具链（2026-10-12 或更新版本）。isomorphic 模板使用 Warren 0.4.5，Rabbita 仍为 0.16.4，async 仍为 0.22.4。CEF 版本不变，但 helper 与 Proton 发布版本对应。
+
+将 CLI 和应用的 `proton_*` 依赖升级至 0.5.0，执行 `proton_cli cef setup`，迁移上述调用后重新打包，使 helper 和应用版本元数据匹配。安装 CLI 不会重写现有源码或更新端点。[完整源码变更](https://github.com/moonbit-community/proton/compare/ae8f69ed637afda91b79b7c06f95ffb4d6a954d2...6c7c6810b492ffdc57b0908fc926d67db6656eef)
+
 ## 0.4.0
 
 0.4.0 统一了窗口与浏览器 API，让应用与 CLI 共用类型化配置，并将更新安装纳入应用退出流程。本版包含不兼容的 API 变更。

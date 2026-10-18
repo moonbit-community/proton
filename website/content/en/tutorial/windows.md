@@ -67,6 +67,6 @@ Set `WindowConfig.close_handler` for an asynchronous close decision: return `Win
 
 ## Platform-specific window behavior
 
-Native window decorations and available controls differ across platforms. Check the [window API](https://github.com/moonbit-community/proton/blob/bdb169302952db553deda6de015887c7a6a19831/proton/pkg.generated.mbti) before relying on platform-specific methods. Keep frontend titlebar layout and native configuration together when using an overlay titlebar.
+Native window decorations and available controls differ across platforms. Check the [window API](https://github.com/moonbit-community/proton/blob/6c7c6810b492ffdc57b0908fc926d67db6656eef/proton/pkg.generated.mbti) before relying on platform-specific methods. Keep frontend titlebar layout and native configuration together when using an overlay titlebar.
 
 A secondary page is also a separate capability target. Grant only the host operations it needs; see [native capabilities](capabilities.md).

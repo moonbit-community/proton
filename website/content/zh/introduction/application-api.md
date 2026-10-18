@@ -14,7 +14,7 @@
 | 进程所有权与激活 | 单实例构建器、上下文方法 | [进程控制](#进程控制与指标) |
 | 路径、文件与构建元数据 | 项目配置、应用路径 | [Configuration](../configuration/project.md) |
 
-完整方法、类型化错误和默认参数见[版本化 API 索引](https://github.com/moonbit-community/proton/blob/bdb169302952db553deda6de015887c7a6a19831/proton/pkg.generated.mbti)。本页说明各入口的适用场景、状态所有权，以及启动、取消和退出期间的行为。
+完整方法、类型化错误和默认参数见[版本化 API 索引](https://github.com/moonbit-community/proton/blob/6c7c6810b492ffdc57b0908fc926d67db6656eef/proton/pkg.generated.mbti)。本页说明各入口的适用场景、状态所有权，以及启动、取消和退出期间的行为。
 
 ## 应用生命周期
 
@@ -29,7 +29,7 @@
 | `file(title, path, ...)` | 本地 HTML 文件 |
 | `asset(title, path, ...)` | 托管应用资源入口 |
 
-各函数返回 `App` 构建器，共同选项包括宽度、高度、调试模式和是否允许调整大小。`entry_html`、`entry_url`、`entry_file`、`entry_asset` 可修改已有构建器的入口。
+各函数返回 `App` 构建器，共同选项包括宽度、高度、调试模式和是否允许调整大小。主窗口入口属于 `WindowConfig`；需要替换主窗口声明时，调用 `App.main_window(config)`。
 
 **配置应用**
 
@@ -46,7 +46,7 @@ app.run()
 
 直接调用 `app.single_instance()` 返回 `Unit`。构造函数仍返回 `App`；`app.name()` 等查询保留各自的返回类型，`run()` 和 `run_or_abort()` 仍是普通异步调用。
 
-迁移原有构建链时，将配置调用前的 `.` 改为 `..`，查询和最终的 `run()` / `run_or_abort()` 保留单点。配置校验、注册顺序和生命周期行为不变。
+迁移原有构建链时，将配置调用前的 `.` 改为 `..`，查询和最终的 `run()` / `run_or_abort()` 保留单点。返回类型的变化不影响配置校验和注册顺序；生命周期及回调迁移见下文。
 
 **应用身份**
 
@@ -76,9 +76,9 @@ app.run()
 
 启动先校验配置、解析身份与路径、初始化日志，并在启用单实例时获取锁。次实例成功转发激活请求后返回，不会创建自己的应用运行时。
 
-主实例先建立会话，再执行应用启动钩子。启动钩子成功建立应用状态后，Proton 打开尚未由启动钩子打开的启动窗口，等待所需 bridge 初始化，再通过 ready 钩子激活初始窗口。初始激活成功后应用才进入 ready；声明窗口或收到原生创建通知都不代表已经 ready。
+主实例先同步通知 `on_session_created` 观察者，再等待 `setup` 回调。之后打开尚未由 setup 打开的启动窗口，等待所需 bridge 初始化，并等待每个初始窗口的 `setup_window` 完成。初始窗口激活成功后应用才 ready；声明窗口或收到创建通知不等于 ready。
 
-启动钩子可以等待 `context.windows().open(id)`。已提交的退出会停止启动；被拒绝的退出请求会保留应用运行，提出 quit 请求本身不等于已提交退出。
+应用 setup 回调可以等待 `context.windows().open(id)`。已提交的退出会停止启动；被拒绝的退出请求会保留应用运行，提出 quit 请求本身不等于已提交退出。
 
 **任务与清理所有权**
 
@@ -167,7 +167,7 @@ setup 回调返回 `Unit`，资源由普通闭包捕获。调用 `context.add_cl
 
 Proton 不对命令载荷设置固定的大小上限。载荷通过 JSON 序列化，仍受可用内存与底层传输约束。大消息会增加序列化、复制和解析开销。
 
-0.4.0 没有固定的全局并发请求准入上限。应用仍应根据资源和顺序要求限制昂贵工作；bridge 不会将彼此独立的业务操作自动串行为事务。
+0.5.0 没有固定的全局并发请求准入上限。应用仍应根据资源和顺序要求限制昂贵工作；bridge 不会将彼此独立的业务操作自动串行为事务。
 
 ## 事件
 
@@ -187,7 +187,7 @@ Proton 不对命令载荷设置固定的大小上限。载荷通过 JSON 序列�
 
 `proton_client.subscribe(event, listener, failure)` 通过 `FromJson` 解码载荷，返回 `Subscription`。`Subscription.close()` 释放监听器。订阅建立可能抛出 `ClientFailure`；事件解码失败通过 failure 回调报告 `EventDecode`。
 
-`proton_rabbita.subscribe` 将订阅所有权接入 Rabbita，选项包括订阅 key、重试次数、ready 命令和 client 覆盖。完整签名见 [Rabbita API](https://github.com/moonbit-community/proton/blob/bdb169302952db553deda6de015887c7a6a19831/rabbita/pkg.generated.mbti)。
+`proton_rabbita.subscribe` 将订阅所有权接入 Rabbita，选项包括订阅 key、重试次数、ready 命令和 client 覆盖。完整签名见 [Rabbita API](https://github.com/moonbit-community/proton/blob/6c7c6810b492ffdc57b0908fc926d67db6656eef/rabbita/pkg.generated.mbti)。
 
 JavaScript 接口为 `window.__MoonBit__.app.on(name, callback)`。回调接收包含 `payload` 的事件对象；注册返回取消订阅函数。
 
@@ -218,7 +218,9 @@ on_window_created、on_render_process_gone 等应用生命周期通知是宿主�
 
 附加窗口默认在启动时打开。`open_on_start=false` 将打开推迟到 `WindowManager.open(id)`。`ApplicationContext.windows()` 和 `WindowContext.windows()` 提供窗口管理器。所有窗口属于同一个应用运行时。
 
-`WindowConfig(title, entry, ...)` 保存尺寸、尺寸提示、主题、标题栏样式、红绿灯位置及初始 `views`。使用 `App(config)` 定义主窗口，`App.main_window(config)` 替换其启动配置，`App.add_window(id, config, ...)` 声明附加窗口。注册时会复制 views 数组。简单主窗口仍可使用 `html`、`url`、`file`、`asset` 快捷入口。
+`WindowConfig(title, entry, ...)` 保存尺寸、尺寸提示、主题、标题栏样式、红绿灯位置、初始 `views`、`close_handler` 和 `web_contents_policy`。使用 `App(config)` 定义主窗口，`App.main_window(config)` 替换其启动配置，`App.add_window(id, config, ...)` 声明附加窗口。注册时会复制 views 数组。简单主窗口仍可使用 `html`、`url`、`file`、`asset` 快捷入口。
+
+窗口、子视图和 web-contents 句柄由运行时创建。通过公开方法操作，不自行构造、复制其内部表示或调用已移除的函数值实现字段。按对象类型使用 `id()`、`window_id()` 和可选的 `view_id()` 识别来源。
 
 **打开操作与实例身份**
 
@@ -282,7 +284,7 @@ on_render_process_gone 同时覆盖主页面和子视图，无需额外订阅 on
 
 **无障碍与无窗口执行**
 
-Web 内容使用 Chromium 原生无障碍树。页面应提供语义化 HTML、ARIA、键盘导航和可见焦点。默认遵循平台无障碍策略；`App.accessibility(AccessibilityMode::AlwaysEnabled)` 使无障碍树在整个运行期间保持可用。参见[各平台无障碍行为](https://github.com/moonbit-community/proton/blob/main/proton/README.md#accessibility)。
+Web 内容使用 Chromium 原生无障碍树。页面应提供语义化 HTML、ARIA、键盘导航和可见焦点。默认遵循平台无障碍策略；`App.accessibility(AccessibilityMode::AlwaysEnabled)` 使无障碍树在整个运行期间保持可用。参见[各平台无障碍行为](https://github.com/moonbit-community/proton/blob/6c7c6810b492ffdc57b0908fc926d67db6656eef/proton/README.md#accessibility)。
 
 `App.headless()` 或 `PROTON_HEADLESS=1` 使用离屏渲染，不创建原生顶层窗口。原生对话框、菜单、标题栏等依赖窗口的 UI 不可用。Linux 仍需要 X11 display，例如 Xvfb。因此，浏览器自动化与原生窗口行为需要不同的验证环境。
 
@@ -317,7 +319,7 @@ Web 内容使用 Chromium 原生无障碍树。页面应提供语义化 HTML、A
 
 **平台差异与选择**
 
-以下是 0.4.0 已实现能力的主要边界，不承诺缺少桌面服务时仍可用：
+以下是 0.5.0 已实现能力的主要边界，不承诺缺少桌面服务时仍可用：
 
 | 能力 | macOS | Windows | Linux |
 | --- | --- | --- | --- |
@@ -333,15 +335,49 @@ capability 授权与操作系统授权不同。声明屏幕或媒体能力不会
 
 net 扩展在宿主执行 HTTP 请求，返回状态、响应头及 UTF-8 文本；它不等于浏览器 fetch，不共享浏览器 cookie jar，也不自动跟随重定向。二进制数据不是该文本响应接口的无损用途。process 扩展创建的进程属于扩展应用生命周期，wait 回收句柄，kill 后仍需 wait，应用退出会取消并回收剩余子进程。
 
-完整扩展清单及各范围类型见[扩展 API](https://github.com/moonbit-community/proton/blob/bdb169302952db553deda6de015887c7a6a19831/extensions/pkg.generated.mbti)。访问某个 API 前分别确认：目标授权、操作系统授权、平台后端支持。
+完整扩展清单及各范围类型见[扩展 API](https://github.com/moonbit-community/proton/blob/6c7c6810b492ffdc57b0908fc926d67db6656eef/extensions/pkg.generated.mbti)。访问某个 API 前分别确认：目标授权、操作系统授权、平台后端支持。
 
 ## 宿主回调契约
 
 `on_*` 方法追加观察者。`set_before_quit_handler`、`set_will_quit_handler`、
 `set_certificate_error_handler`、`set_media_permission_handler` 和
-`set_download_handler` 各自替换唯一的决策处理器。框架等待决策结果；异步通知
+`set_download_handler` 各自替换唯一的决策处理器。框架等待异步决策结果；异步通知
 不会阻止原操作继续，挂起期间可以与后续通知重叠，不保证完成顺序。
 这些回调均为 `noraise`，应在回调内部处理可预期的操作失败。保存句柄不会延长原生对象寿命。
+
+**观察通知**
+
+所有观察回调返回 `Unit`，不能抛错。重复调用 `on_*` 可以注册多个观察者。
+
+| 方法 | 回调参数 | 执行方式 |
+| --- | --- | --- |
+| `on_session_created` | `ApplicationSession` | 同步；应用 setup 之前 |
+| `on_window_created` | `WindowHandle` | 同步；实例已创建，浏览器未必就绪 |
+| `on_web_contents_created` | `WebContentsHandle` | 同步；主页面或子视图实例已创建 |
+| `on_quit` | `ApplicationContext`、退出码 | 同步；退出已提交，运行时销毁之前 |
+| `on_window_event` | `WindowHandle`、`WindowEvent` | 异步 |
+| `on_web_contents_event` | `WebContentsHandle`、`WebContentsEvent` | 异步 |
+| `on_render_process_gone` | `WebContentsHandle`、`RenderProcessGoneDetails` | 异步；主页面和子视图均可接收，不需要额外的事件订阅 |
+| `on_download_event` | `WebContentsHandle`、`DownloadEvent` | 异步 |
+| `on_launch_input` | `ApplicationContext`、`RuntimeLaunchInput` | 异步 |
+| `on_system_appearance_change` | `SystemAppearance` | 异步 |
+| `on_thumbar_button_click` | `WindowHandle`、按钮 ID | 异步 |
+| `on_update_available` | `PendingUpdate` | 异步 |
+
+**决策处理器**
+
+| 注册入口／字段 | 返回值 | 默认行为 |
+| --- | --- | --- |
+| `App.set_before_quit_handler` | `ApplicationQuitDecision` | 允许退出 |
+| `App.set_will_quit_handler` | `ApplicationQuitDecision` | 允许退出 |
+| `App.set_certificate_error_handler` | `BrowserPermissionDecision` | 拒绝 |
+| `App.set_media_permission_handler` | `BrowserPermissionDecision` | 拒绝 |
+| `App.set_download_handler` | `DownloadDecision` | 拒绝 |
+| `WindowConfig.close_handler` | `WindowCloseDecision` | 允许关闭 |
+| `WebContentsPolicy.navigation_handler` | `NavigationDecision` | 允许导航 |
+| `WebContentsPolicy.new_window_handler` | `NewWindowDecision` | 拒绝新浏览上下文 |
+
+除导航外，决策回调均为异步且 `noraise`；导航回调为同步且 `noraise`。上下文或 contents 参数标识请求所属对象，并不延长其有效期。
 
 创建通知（`on_session_created`、`on_window_created`、`on_web_contents_created`）
 和最终 `on_quit` 通知按注册顺序同步执行，不是异步初始化或清理钩子。
@@ -354,10 +390,28 @@ net 扩展在宿主执行 HTTP 请求，返回状态、响应头及 UTF-8 文本
 子视图不继承父窗口的处理器；需要共用时显式复用策略值。默认允许导航、拒绝新浏览上下文。
 
 `navigation_handler` 是同步函数，不能挂起或抛错。它在原导航继续前返回
-`NavigationDecision::Allow` 或 `Deny`，适用于首次加载、跨域请求和被拦截的
-`blob:` 导航。处理器在 UI 线程执行，应尽快返回。同文档的 hash 导航和
-`history.pushState` 不经过此拦截。需要异步确认时，先等待确认完成，再调用
+`NavigationDecision::Allow` 或 `Deny`，仅处理主 frame 的文档导航，包括首次加载、跨域请求和被拦截的
+`blob:` 导航；iframe 导航不经过此处理器。处理器在 UI 线程执行，应尽快返回。同文档的 hash 导航、
+`history.pushState` 和子资源加载不经过此拦截。需要异步确认时，先等待确认完成，再调用
 `contents.load_url(url)`。`new_window_handler` 仍是异步函数。
+
+```moonbit
+let policy = @proton.WebContentsPolicy(navigation_handler=fn(_contents, request) {
+  if request.url.has_prefix("https://proton.localhost/") ||
+    request.url.has_prefix("https://example.com/") {
+    @proton.NavigationDecision::Allow
+  } else {
+    @proton.NavigationDecision::Deny
+  }
+})
+let app = @proton.App(@proton.WindowConfig(
+  "Restricted page",
+  @proton.AppEntry::Html("<a href='https://example.com/'>Open example</a>"),
+  web_contents_policy=policy,
+))..config(@proton.load_config())
+```
+
+子视图通过 `ViewConfig(..., web_contents_policy=policy)` 使用同样的策略。窗口进入清理后直接拒绝导航，不再调用策略处理器；不要通过保留处理器继续使用正在释放的窗口资源。
 
 `WindowConfig.close_handler` 属于具体窗口，也参与应用退出流程；未配置时允许关闭。
 证书、媒体权限和下载决策作用于唯一的应用会话，默认拒绝，不存在覆盖专用处理器的通用权限入口。
@@ -389,7 +443,7 @@ on_session_created 在应用启动钩子创建窗口前提供 partition 和解�
 
 操作要求应用运行时存活，不要求页面存活；错误类型为 `SessionError`。`KeepRunning` 无窗口期间仍可使用句柄；应用退出会唤醒待完成的 Cookie 查询并使保留的会话句柄失效。并发 Cookie 查询相互独立。清理浏览器存储不会删除应用自己管理的文件，也不等于完成业务登出；后端凭据和 UI 状态需单独处理。
 
-完整属性及 StorageDataKind 变体见[API 参考](https://github.com/moonbit-community/proton/blob/bdb169302952db553deda6de015887c7a6a19831/proton/pkg.generated.mbti)。
+完整属性及 StorageDataKind 变体见[API 参考](https://github.com/moonbit-community/proton/blob/6c7c6810b492ffdc57b0908fc926d67db6656eef/proton/pkg.generated.mbti)。
 
 ## 应用更新
 
@@ -397,7 +451,7 @@ on_session_created 在应用启动钩子创建窗口前提供 partition 和解�
 
 **更新渠道与检查**
 
-endpoint 必须是 HTTPS，至少配置一个受信任 RSA 公钥。默认开启自动检查，manifest 新鲜度默认为 30 天且必须为正数。传入 PEM 公钥文本（`PUBLIC KEY` 或 `RSA PUBLIC KEY`），不是文件路径。运行时负责解析 PEM 并校验 RSA 公钥，不接受私钥或证书。公钥数组可在密钥轮换时容纳多个受信任的签名公钥。
+endpoint 必须是 HTTPS，至少配置一个受信任的 2048 位或更长的 RSA 公钥。默认开启自动检查，manifest 新鲜度默认为 30 天且必须为正数。传入 PEM 公钥文本（`PUBLIC KEY` 或 `RSA PUBLIC KEY`），不是文件路径。运行时负责解析 PEM 并校验 RSA 公钥，不接受私钥或证书。公钥数组可在密钥轮换时容纳多个受信任的签名公钥。
 
 自动检查在启动成功后进行，失败写入日志而不使应用启动失败。显式检查使用 ApplicationContext.check_for_update()，处理结果与异常。NotConfigured 与 UpToDate 不同；应用结束后，保留的上下文不再拥有活动更新渠道。
 
@@ -407,7 +461,7 @@ PendingUpdate 表示 manifest 已通过信任、新鲜度和版本检查。它�
 
 `PendingUpdate.download()` 将产物写入私有暂存区域，并校验大小、摘要和签名。所有平台上都不会替换应用文件或退出。相同版本的下载已准备好时，重复调用不会再次下载。
 
-元数据、签名和产物下载最多跟随五次重定向，支持相对地址，所有目标必须保持 HTTPS。产物大小按正的 64 位整数处理。自更新产物在 macOS 必须为应用 ZIP，Windows 为 NSIS 安装器，Linux 为 AppImage；DMG 仍可用于手动安装。
+元数据、签名和产物下载最多跟随五次重定向，支持相对地址，所有目标必须保持 HTTPS。manifest 和独立签名响应各有 1 MiB 上限；产物正文流式写入暂存文件，不受这个元数据上限限制。已认证 manifest 中正的 `Int64` 大小是预期字节数；`Content-Length` 不匹配、正文不足或超量都会使下载失败。自更新产物在 macOS 必须为应用 ZIP，Windows 为 NSIS 安装器，Linux 为 AppImage；DMG 仍可用于手动安装。
 
 下载完成后，在用户选择应用更新时调用 `ApplicationContext.quit_and_install()`：
 
@@ -427,7 +481,7 @@ match context.check_for_update() {
 
 **发布者责任**
 
-应用 identifier 保持稳定，每次发布更新都提升 `package.version`。版本使用三个数字分量（`major.minor.patch`），不支持预发布或构建后缀；同版本重新构建不视为更新。[CLI package](../command-line-interface/commands.md#package) 的更新元数据选项指定产物位置和发布时间，manifest 使用应用打包版本。
+应用 identifier 保持稳定，每次发布更新都提升 `package.version`。版本使用三个无前导零的非负 `Int32` 分量（`major.minor.patch`），按数值比较，不支持预发布或构建后缀；同版本重新构建不视为更新。[CLI package](../command-line-interface/commands.md#package) 的更新元数据选项指定产物位置和发布时间，manifest 使用应用打包版本。
 
 Schema 3 替代原先依赖 revision 的 schema 2：已有客户端继续使用旧端点，需要手动升级或专门准备的过渡版本，才能迁移到独立的 schema 3 端点。
 
@@ -456,7 +510,21 @@ ApplicationContext.has_single_instance_lock() 查询所有权，release_single_i
 
 `ApplicationContext.focus(steal=...)` 在 macOS 激活应用，`steal` 决定是否允许替换另一个前台应用；在 Windows 和 Linux 聚焦第一个可见窗口。应用级 `hide`、`show`、`is_active` 和 `is_hidden` 仅适用于 macOS，其它平台抛出 `AppControlError::UnsupportedPlatform`。`@proton.is_ready()` 报告应用就绪状态。
 
-CEF 通过 `on_render_process_gone` 报告 renderer 终止，但不提供同等的其它子进程退出通知，因此不支持 Electron 的 `child-process-gone`。浏览器操作映射及其它不支持的 Electron 对应项见[页面控制参考](https://github.com/moonbit-community/proton/blob/main/proton/README.md#page-history-and-inserted-css)。
+CEF 通过 `on_render_process_gone` 报告 renderer 终止，但不提供同等的其它子进程退出通知，因此不支持 Electron 的 `child-process-gone`。浏览器操作映射及其它不支持的 Electron 对应项见[页面控制参考](https://github.com/moonbit-community/proton/blob/6c7c6810b492ffdc57b0908fc926d67db6656eef/proton/README.md#page-history-and-inserted-css)。
+
+**Dock 与应用徽章**
+
+这些操作属于有效的 `ApplicationContext`，不属于某个窗口。参数无效或原生操作失败时，处理 `AppControlError`。
+
+| API | macOS | Windows／Linux |
+| --- | --- | --- |
+| `set_badge_count(count) -> Bool` | 设置数字 Dock 徽章并返回 `true`；零清除徽章 | 返回 `false`，不设置徽章 |
+| `badge_count() -> Int32` | 返回最近一次通过 `set_badge_count` 设置的数量 | 返回零 |
+| `dock_set_badge(text)`／`dock_badge()` | 设置／读取任意 Dock 徽章文本；空文本清除徽章 | 抛出 `UnsupportedPlatform` |
+| `dock_bounce(kind=Informational) -> Int32` | 请求 Dock 提醒并返回取消 ID | 抛出 `UnsupportedPlatform` |
+| `dock_cancel_bounce(request_id)` | 取消对应的提醒请求 | 抛出 `UnsupportedPlatform` |
+
+徽章数量不能为负数。`DockBounceType::Informational` 跳动一次，`Critical` 持续到应用激活或请求取消；应用已经激活时 AppKit 忽略提醒。数字读取返回 Proton 保存的数量，不查询 `dock_set_badge` 写入的任意文本。这组应用 API 与 Windows 窗口任务栏的 `set_overlay_icon` 不同。
 
 **任务指标**
 
@@ -466,8 +534,8 @@ ApplicationContext.task_metrics() 返回 Chromium task 的 AppTaskMetric 列表�
 
 ## API 参考
 
-- [应用 API](https://github.com/moonbit-community/proton/blob/bdb169302952db553deda6de015887c7a6a19831/proton/pkg.generated.mbti)
-- [扩展 API](https://github.com/moonbit-community/proton/blob/bdb169302952db553deda6de015887c7a6a19831/extensions/pkg.generated.mbti)
-- [类型化契约](https://github.com/moonbit-community/proton/blob/bdb169302952db553deda6de015887c7a6a19831/contract/pkg.generated.mbti)
-- [前端客户端](https://github.com/moonbit-community/proton/blob/bdb169302952db553deda6de015887c7a6a19831/client/pkg.generated.mbti)
-- [Rabbita 集成](https://github.com/moonbit-community/proton/blob/bdb169302952db553deda6de015887c7a6a19831/rabbita/pkg.generated.mbti)
+- [应用 API](https://github.com/moonbit-community/proton/blob/6c7c6810b492ffdc57b0908fc926d67db6656eef/proton/pkg.generated.mbti)
+- [扩展 API](https://github.com/moonbit-community/proton/blob/6c7c6810b492ffdc57b0908fc926d67db6656eef/extensions/pkg.generated.mbti)
+- [类型化契约](https://github.com/moonbit-community/proton/blob/6c7c6810b492ffdc57b0908fc926d67db6656eef/contract/pkg.generated.mbti)
+- [前端客户端](https://github.com/moonbit-community/proton/blob/6c7c6810b492ffdc57b0908fc926d67db6656eef/client/pkg.generated.mbti)
+- [Rabbita 集成](https://github.com/moonbit-community/proton/blob/6c7c6810b492ffdc57b0908fc926d67db6656eef/rabbita/pkg.generated.mbti)

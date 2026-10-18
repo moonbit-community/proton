@@ -58,6 +58,8 @@ These objects have distinct lifetimes: a page can reload or its renderer can ter
 
 Native UI objects are managed by their creating thread. Proton connects native event processing to the `moonbitlang/async` external event loop: native callbacks enqueue records and wake the scheduler, then MoonBit handles events and application callbacks. Asynchronous application tasks can yield execution, but expensive synchronous work still occupies the host event loop.
 
+The synchronous navigation decision is the exception: it calls the page policy directly on the owner/UI thread before navigation proceeds. It cannot suspend or raise and must return promptly; it does not run a nested event loop.
+
 Renderers and the host have separate execution environments. Proton injects a bridge into pages, delivers frontend requests to registered host handlers and returns their results or errors. The host can also send event notifications. Payloads are serialized; shared type definitions do not create shared memory.
 
 `proton_contract` describes typed commands and events, and `proton_client` supports MoonBit frontend calls. JavaScript frontends use the page bridge directly. Host command bindings and capabilities select which operations are available to which pages. See [commands](application-api.md#commands), [events](application-api.md#events) and [capabilities](application-api.md#extensions-and-capabilities) for protocol, cancellation and authorization behavior.

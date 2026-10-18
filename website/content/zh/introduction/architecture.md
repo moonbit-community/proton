@@ -58,6 +58,8 @@ Proton 将原生 MoonBit 应用与 Chromium 浏览器引擎组合为桌面应用
 
 原生 UI 对象由创建它们的线程管理。Proton 将原生事件处理接入 `moonbitlang/async` 的外部事件循环：原生回调排队记录并唤醒调度器，MoonBit 再处理事件和应用回调。应用异步任务可以让出执行，但同步的耗时工作仍会占用宿主事件循环。
 
+同步导航决策是例外：它在原导航继续前，直接在所属 UI 线程调用页面策略。处理器不能挂起或抛错，应尽快返回，也不会运行嵌套事件循环。
+
 renderer 与宿主有独立的执行环境。Proton 在页面中注入 bridge，将前端请求送到宿主注册的处理器，再把结果或错误交回页面；宿主也可以发送事件通知。载荷经过序列化，共享类型定义不会使两端共享内存。
 
 `proton_contract` 描述类型化命令和事件，`proton_client` 供 MoonBit 前端调用；JavaScript 前端直接使用页面 bridge。宿主通过命令绑定和 capability 决定向哪些页面开放哪些操作。具体协议、取消和授权行为见[命令](application-api.md#命令)、[事件](application-api.md#事件)及[能力](application-api.md#扩展与能力)。

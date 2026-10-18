@@ -73,6 +73,8 @@ These fields belong to the `package` object in `proton.project.json`.
 
 A document type contains required `name` and `extensions`; `role` defaults to `Viewer`. The canonical identifier is the top-level `identifier`, not a package field. Changing the product name does not change application identity.
 
+For automatic updates, `package.version` is also the release ordering value. It must use three non-negative `Int32` components without leading zeros or suffixes, and each update must strictly increase it. `package --version` overrides that value consistently in the packaged application and update metadata. There is no `revision` field. See [update metadata](../command-line-interface/packaging.md#update-artifacts-and-metadata).
+
 ## `package.sign`
 
 | Field | Type | Default / meaning |
