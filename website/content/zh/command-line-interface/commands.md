@@ -142,6 +142,8 @@ proton_cli package [options]
 
 `--format` 等命令行列表覆盖对应配置列表。应用标识来自配置顶层的 `identifier`，`package` 没有 `--identifier` 选项。`--release` 不隐含签名；dry run 成功不代表产物创建或运行验证成功。平台格式、配置默认值和资源规则见[打包](packaging.md)。
 
+更新参数输出对应平台自更新产物的待签名 manifest 片段。支持的格式、生成文件与发布者的签名职责见[更新产物与元数据](packaging.md#更新产物与元数据)。
+
 ### 签名环境
 
 凭据通过环境配置，不是命令选项。

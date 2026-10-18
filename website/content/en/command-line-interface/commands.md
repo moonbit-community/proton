@@ -142,6 +142,8 @@ Builds and assembles the application, frontend assets, CEF runtime, matching hel
 
 CLI lists such as `--format` override configured lists. Application identity comes from the top-level configuration `identifier`; `package` has no `--identifier` option. `--release` does not imply signing. A successful dry run does not verify artifact creation or runtime behavior. See [packaging](packaging.md) for platform formats, configuration defaults and resource rules.
 
+The updater options emit an unsigned manifest fragment for the platform-specific self-update artifact. Supported formats, generated files, and publisher signing responsibilities are defined in [Update artifacts and metadata](packaging.md#update-artifacts-and-metadata).
+
 ### Signing environment
 
 Credentials are environment configuration, not command options.

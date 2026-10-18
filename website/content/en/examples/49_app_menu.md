@@ -2,7 +2,7 @@
 
 This example builds a native application menu and updates its command state while the window is running. It connects menu actions to a live window handle and releases that reference when the window closes.
 
-[49_app_menu](https://github.com/moonbit-community/proton/tree/bdb169302952db553deda6de015887c7a6a19831/examples/49_app_menu) · Source files: [main.mbt](https://github.com/moonbit-community/proton/tree/bdb169302952db553deda6de015887c7a6a19831/examples/49_app_menu/main.mbt)
+[49_app_menu](https://github.com/moonbit-community/proton/tree/6c7c6810b492ffdc57b0908fc926d67db6656eef/examples/49_app_menu) · Source files: [main.mbt](https://github.com/moonbit-community/proton/tree/6c7c6810b492ffdc57b0908fc926d67db6656eef/examples/49_app_menu/main.mbt)
 
 ## Behavior
 
@@ -34,7 +34,7 @@ async fn main {
 }
 ```
 
-The menu is native UI configured on the builder. Command handlers change or inspect its state through a live window handle. The ready hook stores that handle; the close hook clears it so later commands cannot deliberately reuse a closed instance.
+The menu is native UI configured on the builder. Command handlers change or inspect its state through a live window handle. `setup_window` stores that handle and registers cleanup with `context.add_cleanup`, so later commands cannot deliberately reuse a closed instance.
 
 Keep stable menu command ids separate from translated labels. Native role items delegate standard platform behavior, while application command items need application handling. For multiple windows, replace the example's single window slot with explicit ownership per window.
 

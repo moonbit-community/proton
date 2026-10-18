@@ -2,7 +2,7 @@
 
 This example loads an HTML entry together with separate JavaScript, CSS and worker files. It demonstrates the resource layout needed when a page is served from application assets rather than a development server.
 
-[46_asset_sidecar_resources](https://github.com/moonbit-community/proton/tree/bdb169302952db553deda6de015887c7a6a19831/examples/46_asset_sidecar_resources) · Source files: [main.mbt](https://github.com/moonbit-community/proton/tree/bdb169302952db553deda6de015887c7a6a19831/examples/46_asset_sidecar_resources/main.mbt), [app/app.html](https://github.com/moonbit-community/proton/tree/bdb169302952db553deda6de015887c7a6a19831/examples/46_asset_sidecar_resources/app/app.html), [app/app.js](https://github.com/moonbit-community/proton/tree/bdb169302952db553deda6de015887c7a6a19831/examples/46_asset_sidecar_resources/app/app.js), [app/app.css](https://github.com/moonbit-community/proton/tree/bdb169302952db553deda6de015887c7a6a19831/examples/46_asset_sidecar_resources/app/app.css), [app/worker.js](https://github.com/moonbit-community/proton/tree/bdb169302952db553deda6de015887c7a6a19831/examples/46_asset_sidecar_resources/app/worker.js)
+[46_asset_sidecar_resources](https://github.com/moonbit-community/proton/tree/6c7c6810b492ffdc57b0908fc926d67db6656eef/examples/46_asset_sidecar_resources) · Source files: [main.mbt](https://github.com/moonbit-community/proton/tree/6c7c6810b492ffdc57b0908fc926d67db6656eef/examples/46_asset_sidecar_resources/main.mbt), [app/app.html](https://github.com/moonbit-community/proton/tree/6c7c6810b492ffdc57b0908fc926d67db6656eef/examples/46_asset_sidecar_resources/app/app.html), [app/app.js](https://github.com/moonbit-community/proton/tree/6c7c6810b492ffdc57b0908fc926d67db6656eef/examples/46_asset_sidecar_resources/app/app.js), [app/app.css](https://github.com/moonbit-community/proton/tree/6c7c6810b492ffdc57b0908fc926d67db6656eef/examples/46_asset_sidecar_resources/app/app.css), [app/worker.js](https://github.com/moonbit-community/proton/tree/6c7c6810b492ffdc57b0908fc926d67db6656eef/examples/46_asset_sidecar_resources/app/worker.js)
 
 ## Behavior
 
@@ -37,4 +37,4 @@ moon -C examples run 46_asset_sidecar_resources --target native
 
 ## Limits and interpretation
 
-Run from the examples directory so the relative asset path resolves correctly. Deployments must package the complete resource tree, not only the HTML file.
+`moon -C examples` selects the examples directory as the working directory for the relative asset path. Deployments must package the complete resource tree, not only the HTML file.

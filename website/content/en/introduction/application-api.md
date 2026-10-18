@@ -14,7 +14,7 @@ The root `moonbit-community/proton` package is the public application facade. Us
 | Process ownership and activation | single-instance builder, context methods | [Process control](#process-control-and-metrics) |
 | Paths, files and build metadata | project configuration and application paths | [Configuration](../configuration/project.md) |
 
-For the complete set of methods, overloads, typed errors and defaults, use the [versioned API index](https://github.com/moonbit-community/proton/blob/bdb169302952db553deda6de015887c7a6a19831/proton/pkg.generated.mbti). This reference describes when to use each entry point, which object owns its state, and how it behaves during startup, cancellation and shutdown.
+For the complete set of methods, overloads, typed errors and defaults, use the [versioned API index](https://github.com/moonbit-community/proton/blob/6c7c6810b492ffdc57b0908fc926d67db6656eef/proton/pkg.generated.mbti). This reference describes when to use each entry point, which object owns its state, and how it behaves during startup, cancellation and shutdown.
 
 ## Application lifecycle
 
@@ -29,7 +29,7 @@ For the complete set of methods, overloads, typed errors and defaults, use the [
 | `file(title, path, ...)` | Local HTML file |
 | `asset(title, path, ...)` | Managed application asset entry |
 
-Each returns an `App` builder. Shared options include width, height, debug mode and resizability. `entry_html`, `entry_url`, `entry_file` and `entry_asset` configure the entry on an existing builder.
+Each returns an `App` builder. Shared options include width, height, debug mode and resizability. To replace the primary window declaration, pass a new `WindowConfig` to `App.main_window(config)`; the entry belongs to that configuration.
 
 **Configuring an application**
 
@@ -51,8 +51,7 @@ return `App`; queries such as `app.name()` retain their result types. `run()` an
 `run_or_abort()` remain ordinary async calls.
 
 To migrate an existing builder chain, change its configuration calls from `.` to
-`..`. Keep `.` for queries and the final `run()` / `run_or_abort()`. Configuration
-validation, registration order, and lifecycle behavior are unchanged.
+`..`. Keep `.` for queries and the final `run()` / `run_or_abort()`. The return-type change does not alter configuration validation or registration order. Lifecycle and callback migrations are described below.
 
 **Identity**
 
@@ -82,9 +81,9 @@ Calling `run()` starts the configured application and awaits its lifecycle. It i
 
 Startup validates configuration, resolves identity and paths, initializes logging, and acquires the single-instance lock when configured. A secondary instance that forwards its activation returns without creating an application runtime.
 
-For the primary instance, session creation precedes application start hooks. Successful start hooks establish the application state. Proton then opens declared startup windows that were not already opened by a start hook, waits for the required bridge initialization, and activates the initial windows through their ready hooks. Application readiness follows successful initial activation; configuring a window or receiving a native creation event does not establish readiness.
+For the primary instance, synchronous `on_session_created` observers run before awaited `setup` callbacks. Proton then opens declared startup windows that setup did not already open, waits for the required bridge initialization, and awaits `setup_window` for each initial window. Application readiness follows successful initial activation; configuring a window or receiving a creation notification does not establish readiness.
 
-A start hook may await `context.windows().open(id)`. A committed exit stops startup. A denied quit request leaves the application running; requesting quit is not itself a committed exit.
+An application setup callback may await `context.windows().open(id)`. A committed exit stops startup. A denied quit request leaves the application running; requesting quit is not itself a committed exit.
 
 **Task and cleanup ownership**
 
@@ -177,7 +176,7 @@ response type.
 
 Proton does not impose a fixed payload-size limit on commands. Payloads are serialized as JSON and remain subject to memory and underlying transport constraints. Large messages increase serialization, copying and parsing costs.
 
-Request concurrency has no global fixed admission limit in 0.4.0. Applications still need to bound expensive work according to their own resource and ordering requirements; the bridge does not serialize unrelated business operations into a transaction.
+Request concurrency has no global fixed admission limit in 0.5.0. Applications still need to bound expensive work according to their own resource and ordering requirements; the bridge does not serialize unrelated business operations into a transaction.
 
 ## Events
 
@@ -197,7 +196,7 @@ Host payloads require `ToJson`. Window emitters belong to window lifetime; a sav
 
 `proton_client.subscribe(event, listener, failure)` decodes payloads through `FromJson` and returns a `Subscription`. `Subscription.close()` releases the listener. Subscription setup can raise `ClientFailure`; event decoding failures are reported as `EventDecode` through the failure callback.
 
-`proton_rabbita.subscribe` integrates subscription ownership into Rabbita. Its options include a subscription key, retry count, ready command and client override; full signatures are in the [Rabbita API](https://github.com/moonbit-community/proton/blob/bdb169302952db553deda6de015887c7a6a19831/rabbita/pkg.generated.mbti).
+`proton_rabbita.subscribe` integrates subscription ownership into Rabbita. Its options include a subscription key, retry count, ready command and client override; full signatures are in the [Rabbita API](https://github.com/moonbit-community/proton/blob/6c7c6810b492ffdc57b0908fc926d67db6656eef/rabbita/pkg.generated.mbti).
 
 The JavaScript interface is `window.__MoonBit__.app.on(name, callback)`. The callback receives an event envelope containing `payload`; registration returns an unsubscribe function.
 
@@ -228,7 +227,9 @@ The primary window ID is `main`. `App.add_window(id, config, open_on_start?)` de
 
 Secondary windows open at startup by default. `open_on_start=false` defers opening until `WindowManager.open(id)`. `ApplicationContext.windows()` and `WindowContext.windows()` expose the manager. All windows belong to one application runtime.
 
-`WindowConfig(title, entry, ...)` holds dimensions, size hint, theme, titlebar style, traffic-light position, and initial `views`. Use `App(config)` for the primary window, `App.main_window(config)` to replace its startup configuration, and `App.add_window(id, config, ...)` for secondary windows. Registrations snapshot the views array. The `html`, `url`, `file`, and `asset` shortcuts remain available for a simple primary window.
+`WindowConfig(title, entry, ...)` holds dimensions, size hint, theme, titlebar style, traffic-light position, initial `views`, `close_handler`, and `web_contents_policy`. Use `App(config)` for the primary window, `App.main_window(config)` to replace its startup configuration, and `App.add_window(id, config, ...)` for secondary windows. Registrations snapshot the views array. The `html`, `url`, `file`, and `asset` shortcuts remain available for a simple primary window.
+
+Window, view, and web-contents handles are runtime-created values. Use their public methods; do not construct them, copy their representation, or call the former function-valued implementation fields. Identity is available through `id()`, `window_id()` and optional `view_id()` as appropriate.
 
 **Opening and instance identity**
 
@@ -292,7 +293,7 @@ A view declaration sets initial geometry; it does not provide automatic layout. 
 
 **Accessibility and headless execution**
 
-Web content uses Chromium's native accessibility tree. Use semantic HTML, ARIA, keyboard navigation and visible focus. Accessibility follows the platform's policy by default; `App.accessibility(AccessibilityMode::AlwaysEnabled)` keeps the tree available throughout the runtime. See [platform accessibility behavior](https://github.com/moonbit-community/proton/blob/main/proton/README.md#accessibility).
+Web content uses Chromium's native accessibility tree. Use semantic HTML, ARIA, keyboard navigation and visible focus. Accessibility follows the platform's policy by default; `App.accessibility(AccessibilityMode::AlwaysEnabled)` keeps the tree available throughout the runtime. See [platform accessibility behavior](https://github.com/moonbit-community/proton/blob/6c7c6810b492ffdc57b0908fc926d67db6656eef/proton/README.md#accessibility).
 
 `App.headless()` or `PROTON_HEADLESS=1` selects off-screen rendering without native top-level windows. Native dialogs, menus, titlebars and other window-bound UI are unavailable. Linux still requires an X11 display, such as Xvfb. Browser automation and native-window behavior therefore require different validation environments.
 
@@ -327,7 +328,7 @@ Capability-specific scope types are documented in the extension API; platform co
 
 **Platform differences and selection**
 
-These are key boundaries of implemented 0.4.0 capabilities, not a promise of availability without desktop services:
+These are key boundaries of implemented 0.5.0 capabilities, not a promise of availability without desktop services:
 
 | Capability | macOS | Windows | Linux |
 | --- | --- | --- | --- |
@@ -343,17 +344,51 @@ Capability grants are separate from operating-system authorization. Declaring a 
 
 The net extension performs host HTTP requests and returns status, headers and UTF-8 text. It is not browser fetch, does not share the browser cookie jar and does not follow redirects automatically. Its text response is not a lossless binary transfer interface. Processes spawned by the process extension belong to its application lifetime: wait collects handles, kill still needs wait, and application shutdown cancels and reaps remaining children.
 
-See the [extension API](https://github.com/moonbit-community/proton/blob/bdb169302952db553deda6de015887c7a6a19831/extensions/pkg.generated.mbti) for the complete inventory and scope types. Check target grants, OS permission and platform backend support independently.
+See the [extension API](https://github.com/moonbit-community/proton/blob/6c7c6810b492ffdc57b0908fc926d67db6656eef/extensions/pkg.generated.mbti) for the complete inventory and scope types. Check target grants, OS permission and platform backend support independently.
 
 ## Host callback contracts
 
 `on_*` methods append observers. `set_before_quit_handler`,
 `set_will_quit_handler`, `set_certificate_error_handler`,
 `set_media_permission_handler`, and `set_download_handler` each replace one
-decision handler. Decisions are awaited; async notifications do not block their
+decision handler. Async decisions are awaited; async notifications do not block their
 source operation and may overlap while suspended. No completion order is
 promised. Handle expected errors inside these `noraise` callbacks; holding a
 handle does not extend the lifetime of its native object.
+
+**Observers**
+
+All observers return `Unit` and cannot raise. Register multiple observers with repeated `on_*` calls.
+
+| Method | Callback arguments | Execution |
+| --- | --- | --- |
+| `on_session_created` | `ApplicationSession` | Synchronous; before application setup |
+| `on_window_created` | `WindowHandle` | Synchronous; instance created, browser not necessarily ready |
+| `on_web_contents_created` | `WebContentsHandle` | Synchronous; main page or child instance created |
+| `on_quit` | `ApplicationContext`, exit code | Synchronous; exit committed, before runtime teardown |
+| `on_window_event` | `WindowHandle`, `WindowEvent` | Async |
+| `on_web_contents_event` | `WebContentsHandle`, `WebContentsEvent` | Async |
+| `on_render_process_gone` | `WebContentsHandle`, `RenderProcessGoneDetails` | Async; covers main and child renderers without another event subscription |
+| `on_download_event` | `WebContentsHandle`, `DownloadEvent` | Async |
+| `on_launch_input` | `ApplicationContext`, `RuntimeLaunchInput` | Async |
+| `on_system_appearance_change` | `SystemAppearance` | Async |
+| `on_thumbar_button_click` | `WindowHandle`, button ID | Async |
+| `on_update_available` | `PendingUpdate` | Async |
+
+**Decision handlers**
+
+| Registration / field | Result | Default |
+| --- | --- | --- |
+| `App.set_before_quit_handler` | `ApplicationQuitDecision` | Allow quit |
+| `App.set_will_quit_handler` | `ApplicationQuitDecision` | Allow quit |
+| `App.set_certificate_error_handler` | `BrowserPermissionDecision` | Deny |
+| `App.set_media_permission_handler` | `BrowserPermissionDecision` | Deny |
+| `App.set_download_handler` | `DownloadDecision` | Deny |
+| `WindowConfig.close_handler` | `WindowCloseDecision` | Allow close |
+| `WebContentsPolicy.navigation_handler` | `NavigationDecision` | Allow navigation |
+| `WebContentsPolicy.new_window_handler` | `NewWindowDecision` | Deny new browsing context |
+
+All decision callbacks except navigation are async and `noraise`; navigation is synchronous and `noraise`. The context or contents argument identifies the request owner, not a grant of additional lifetime.
 
 Creation notifications (`on_session_created`, `on_window_created`,
 `on_web_contents_created`) and final `on_quit` notifications run synchronously
@@ -370,11 +405,29 @@ allowed by default; new browsing contexts are denied by default.
 
 `navigation_handler` is synchronous and cannot suspend or raise. It returns
 `NavigationDecision::Allow` or `Deny` before the original navigation proceeds,
-including initial loads, cross-origin requests and intercepted `blob:` navigations.
+for main-frame document loads, including initial loads, cross-origin requests and intercepted `blob:` navigations. Iframe navigation is not routed through this handler.
 Keep it short because it runs on the UI thread. Same-document changes such as
-hash navigation and `history.pushState` are not intercepted. For asynchronous
+hash navigation and `history.pushState`, and subresource loads, are not intercepted. For asynchronous
 confirmation, await the confirmation before calling `contents.load_url(url)`.
 `new_window_handler` remains asynchronous.
+
+```moonbit
+let policy = @proton.WebContentsPolicy(navigation_handler=fn(_contents, request) {
+  if request.url.has_prefix("https://proton.localhost/") ||
+    request.url.has_prefix("https://example.com/") {
+    @proton.NavigationDecision::Allow
+  } else {
+    @proton.NavigationDecision::Deny
+  }
+})
+let app = @proton.App(@proton.WindowConfig(
+  "Restricted page",
+  @proton.AppEntry::Html("<a href='https://example.com/'>Open example</a>"),
+  web_contents_policy=policy,
+))..config(@proton.load_config())
+```
+
+Use the same policy in `ViewConfig(..., web_contents_policy=policy)` to apply it to a child. A window entering cleanup rejects navigation without calling its policy again; do not retain a handler as a way to continue window-owned work during cleanup.
 
 `WindowConfig.close_handler` belongs to that window and also participates in
 application quit. An absent handler allows closing. Certificate, media and
@@ -409,7 +462,7 @@ The `on_session_created` callback exposes the partition and resolved data path b
 
 Operations raise `SessionError` and require a live application runtime, not a live page. Handles remain usable with no windows under `KeepRunning`; application teardown wakes pending cookie readers and invalidates retained session handles. Concurrent cookie reads are independent. A clearing operation does not erase application-owned files or implement an application logout protocol; invalidate backend credentials and UI state separately.
 
-Full attributes and `StorageDataKind` variants are in the [API reference](https://github.com/moonbit-community/proton/blob/bdb169302952db553deda6de015887c7a6a19831/proton/pkg.generated.mbti).
+Full attributes and `StorageDataKind` variants are in the [API reference](https://github.com/moonbit-community/proton/blob/6c7c6810b492ffdc57b0908fc926d67db6656eef/proton/pkg.generated.mbti).
 
 ## Application updates
 
@@ -417,7 +470,7 @@ Application updates replace the distributed application, not the development CLI
 
 **Channel and checks**
 
-The endpoint must use HTTPS and there must be at least one trusted RSA public key. Automatic checking defaults to enabled; manifest freshness defaults to 30 days and must be positive. Pass each public key as PEM text (`PUBLIC KEY` or `RSA PUBLIC KEY`), not as a file path. The runtime parses the PEM and validates the RSA key; private keys and certificates are rejected. The public-key array allows more than one trusted signing key during rotation.
+The endpoint must use HTTPS and there must be at least one trusted RSA public key of at least 2048 bits. Automatic checking defaults to enabled; manifest freshness defaults to 30 days and must be positive. Pass each public key as PEM text (`PUBLIC KEY` or `RSA PUBLIC KEY`), not as a file path. The runtime parses the PEM and validates the RSA key; private keys and certificates are rejected. The public-key array allows more than one trusted signing key during rotation.
 
 The automatic check runs after successful startup and reports failures through logging without making startup fail. For explicit checks, use `ApplicationContext.check_for_update()` and handle its result and errors. `NotConfigured` is distinct from `UpToDate`; a context used after its application ends no longer has an active channel.
 
@@ -427,7 +480,7 @@ An offered `PendingUpdate` has passed manifest trust, freshness and version chec
 
 `PendingUpdate.download()` writes the artifact into a private stage and verifies its size, digest and signature. It does not replace application files or exit on any platform. Repeated downloads of the same prepared version are a no-op.
 
-Metadata, signature and artifact downloads follow at most five redirects, resolving relative locations and requiring HTTPS for every target. Artifact sizes are positive 64-bit integers. Self-update artifacts must be an app ZIP on macOS, an NSIS installer on Windows, or an AppImage on Linux. DMGs remain available for manual installation.
+Metadata, signature and artifact downloads follow at most five redirects, resolving relative locations and requiring HTTPS for every target. Manifest and detached-signature responses are each limited to 1 MiB. Artifact bodies are streamed to staging and are not subject to that metadata limit; the positive `Int64` size in the authenticated manifest is the expected byte count. A conflicting `Content-Length` or an incomplete/oversized body fails the download. Self-update artifacts must be an app ZIP on macOS, an NSIS installer on Windows, or an AppImage on Linux. DMGs remain available for manual installation.
 
 After downloading, call `ApplicationContext.quit_and_install()` when the user chooses to apply the update:
 
@@ -447,7 +500,7 @@ The method returns when the request is accepted, not when the new version is rea
 
 **Publisher responsibilities**
 
-Keep the application identifier stable and increase `package.version` for every update. Versions use three numeric components (`major.minor.patch`); pre-release and build suffixes are not supported. A rebuild with the same version is not an update. The updater metadata options in [CLI package](../command-line-interface/commands.md#package) describe the artifact location and publication instant; the manifest uses the packaged application version.
+Keep the application identifier stable and increase `package.version` for every update. Versions use three non-negative `Int32` components (`major.minor.patch`), compared numerically without leading zeros; pre-release and build suffixes are not supported. A rebuild with the same version is not an update. The updater metadata options in [CLI package](../command-line-interface/commands.md#package) describe the artifact location and publication instant; the manifest uses the packaged application version.
 
 Schema 3 replaces the old revision-based schema 2: retain the old endpoint for existing clients. Those installations require a manual upgrade or an explicitly prepared transition release before using a separate schema 3 endpoint.
 
@@ -476,7 +529,21 @@ Application focus, hide/show, active/hidden queries and readiness describe the a
 
 `ApplicationContext.focus(steal=...)` activates the application on macOS; `steal` controls whether another foreground application may be displaced. On Windows and Linux it focuses the first visible window. The application-level `hide`, `show`, `is_active` and `is_hidden` methods are macOS-only and raise `AppControlError::UnsupportedPlatform` elsewhere. `@proton.is_ready()` reports application readiness.
 
-CEF reports renderer termination through `on_render_process_gone`, but does not expose equivalent non-renderer child-process exit notifications. Electron's `child-process-gone` is therefore unsupported. Browser-operation mappings and other unsupported Electron equivalents are listed in the [page-control reference](https://github.com/moonbit-community/proton/blob/main/proton/README.md#page-history-and-inserted-css).
+CEF reports renderer termination through `on_render_process_gone`, but does not expose equivalent non-renderer child-process exit notifications. Electron's `child-process-gone` is therefore unsupported. Browser-operation mappings and other unsupported Electron equivalents are listed in the [page-control reference](https://github.com/moonbit-community/proton/blob/6c7c6810b492ffdc57b0908fc926d67db6656eef/proton/README.md#page-history-and-inserted-css).
+
+**Dock and application badges**
+
+These operations belong to a live `ApplicationContext`, not a window. Handle `AppControlError` for invalid arguments or native failures.
+
+| API | macOS | Windows / Linux |
+| --- | --- | --- |
+| `set_badge_count(count) -> Bool` | Sets the numeric Dock badge and returns `true`; zero clears it | Returns `false`; no badge applied |
+| `badge_count() -> Int32` | Returns the last count set through `set_badge_count` | Returns zero |
+| `dock_set_badge(text)` / `dock_badge()` | Set/read arbitrary Dock badge text; empty text clears it | Raise `UnsupportedPlatform` |
+| `dock_bounce(kind=Informational) -> Int32` | Requests Dock attention and returns a cancellation ID | Raise `UnsupportedPlatform` |
+| `dock_cancel_bounce(request_id)` | Cancels the corresponding attention request | Raise `UnsupportedPlatform` |
+
+Negative badge counts are rejected. `DockBounceType::Informational` bounces once; `Critical` continues until activation or cancellation. AppKit ignores attention requests while the app is already active. Numeric badge readback is Proton's stored count, not a query of the arbitrary text written with `dock_set_badge`. The badge APIs are separate from a window's Windows taskbar `set_overlay_icon`.
 
 **Task metrics**
 
@@ -486,8 +553,8 @@ CPU is zero until a sampling interval has passed; 100% represents one fully used
 
 ## API references
 
-- [Application API](https://github.com/moonbit-community/proton/blob/bdb169302952db553deda6de015887c7a6a19831/proton/pkg.generated.mbti)
-- [Extension API](https://github.com/moonbit-community/proton/blob/bdb169302952db553deda6de015887c7a6a19831/extensions/pkg.generated.mbti)
-- [Typed contracts](https://github.com/moonbit-community/proton/blob/bdb169302952db553deda6de015887c7a6a19831/contract/pkg.generated.mbti)
-- [Frontend client](https://github.com/moonbit-community/proton/blob/bdb169302952db553deda6de015887c7a6a19831/client/pkg.generated.mbti)
-- [Rabbita integration](https://github.com/moonbit-community/proton/blob/bdb169302952db553deda6de015887c7a6a19831/rabbita/pkg.generated.mbti)
+- [Application API](https://github.com/moonbit-community/proton/blob/6c7c6810b492ffdc57b0908fc926d67db6656eef/proton/pkg.generated.mbti)
+- [Extension API](https://github.com/moonbit-community/proton/blob/6c7c6810b492ffdc57b0908fc926d67db6656eef/extensions/pkg.generated.mbti)
+- [Typed contracts](https://github.com/moonbit-community/proton/blob/6c7c6810b492ffdc57b0908fc926d67db6656eef/contract/pkg.generated.mbti)
+- [Frontend client](https://github.com/moonbit-community/proton/blob/6c7c6810b492ffdc57b0908fc926d67db6656eef/client/pkg.generated.mbti)
+- [Rabbita integration](https://github.com/moonbit-community/proton/blob/6c7c6810b492ffdc57b0908fc926d67db6656eef/rabbita/pkg.generated.mbti)

@@ -1,5 +1,49 @@
 # Release Notes
 
+## 0.5.0
+
+0.5.0 changes application configuration to MoonBit cascade syntax, replaces paired lifecycle hooks with scoped setup and cleanup, and assigns browser decisions to their owning page or session. It also changes the application update protocol. Existing applications need source changes.
+
+**Breaking changes and migration**
+
+| Area | 0.4.0 | 0.5.0 |
+| --- | --- | --- |
+| App configuration | Configuration methods return `App`; chain with `.` | Methods return `Unit`; use `..config(...)`, `..commands(...)`, etc. Keep `.` for queries and `run()` |
+| Application lifecycle | `app_lifecycle(on_start=..., on_shutdown=...)` | `setup(context => { ... })`; retain state in closures and register teardown immediately with `context.add_cleanup(...)` |
+| Window lifecycle | `window_lifecycle(on_ready=..., on_close=...)` | `setup_window(context => { ... })` and `WindowContext.add_cleanup`; reopening creates a fresh scope |
+| Quit decisions | `on_before_quit`, `on_will_quit` | `set_before_quit_handler`, `set_will_quit_handler`; each replaces the previous handler |
+| Session decisions | `on_certificate_error`, `on_media_permission_request`, `on_download_request` | `set_certificate_error_handler`, `set_media_permission_handler`, `set_download_handler` |
+| General permission hook | `on_permission_request`, `PermissionRequest` | Removed; register the specific certificate and media handlers |
+| Window closing | `App.on_window_close_request` | `WindowConfig.close_handler` for each window |
+| Navigation / new windows | Application-wide `on_navigation_request`, `on_new_window_request` | `WebContentsPolicy` on `WindowConfig` or `ViewConfig`; children do not inherit parent policy |
+| Creation and final quit observers | Async `on_session_created`, `on_window_created`, `on_web_contents_created`, `on_quit` | Synchronous, non-raising callbacks; use setup/cleanup for awaited work |
+| Handle representation | Public function-valued implementation fields | Runtime-created handles with methods; remove field-based dispatch or synthetic handle construction |
+| Updates | Separate `revision`, schema 2, `rsa-sha256:<modulus>:<exponent>` keys | Application `version`, schema 3, standard `PUBLIC KEY` or `RSA PUBLIC KEY` PEM text |
+
+Navigation decisions are now **synchronous** and cannot suspend or raise. They allow or deny the original main-frame navigation, including the initial load, cross-origin requests and intercepted `blob:` navigation. Proton no longer cancels and replays an allowed navigation. Await user confirmation before issuing an application-controlled `load_url` when asynchronous confirmation is needed. New-window, close, quit, certificate, media and download decisions remain asynchronous. [Callback contracts](../introduction/application-api.md#host-callback-contracts)
+
+`on_*` observers append; `set_*_handler` decisions replace. Async observers do not hold up the source operation and may overlap. Setup callbacks are awaited and may fail startup. Cleanup registered with `add_cleanup` runs after scoped tasks stop, in reverse order and under cancellation protection, including after partial setup failure or cancellation. Replace no-op start/stop callbacks with only the setup or cleanup actually needed. [Lifecycle](../introduction/application-api.md#application-lifecycle)
+
+When matching `LifecycleHookError`, application cleanup now reports `ApplicationShutdown(detail)` without a hook index; window cleanup reports `WindowClose(window, detail)` using the window declaration ID.
+
+For update publishers, remove `--updater-revision` and the `updater public-key` command. `package --version` or `package.version` is the single application release value; a rebuild with the same version is not an update. Export a standard PEM public key with OpenSSL. Keep schema 2 endpoints available for old clients; migrating those installations to schema 3 requires a manual upgrade or a deliberately prepared transition release. [Update packaging](../command-line-interface/packaging.md#update-artifacts-and-metadata)
+
+The unused `proton/catalog` package is removed. Extension operations continue to come from registered command bindings; capabilities remain the application registration and authorization entry point.
+
+**Additions and fixes**
+
+- **Dock and badges:** `ApplicationContext` gains numeric badge operations and macOS Dock text/attention APIs. Numeric badge setters return `false` on unsupported platforms; macOS-only Dock operations raise `UnsupportedPlatform` elsewhere. [Platform contracts](../introduction/application-api.md#process-control-and-metrics)
+- **Creation notifications:** views added from a creation observer are announced once; a view removed by an earlier observer is not announced afterwards. Window cleanup rejects late navigation without invoking application policy against resources being released.
+- **Windows input focus:** native-frame activation and `focus()` restore browser keyboard/IME focus, including the previously focused visible child view. This addresses a lost-focus path; applications should still verify their affected IME scenarios on Windows.
+- **Update downloads:** macOS selects app ZIPs, Windows selects NSIS installers, and Linux selects AppImages. HTTPS downloads resolve relative redirects with a five-hop limit. Artifacts stream to disk with authenticated `Int64` sizes; the 1 MiB metadata limit does not cap application artifacts. Header and received-byte checks reject size mismatches. [Download contract](../introduction/application-api.md#application-updates)
+- **CDP automation:** the optional native `proton_cdp` package follows the same release version. It connects to an existing debugging endpoint and does not launch a Chrome window unless a launch operation is explicitly requested. [CDP reference](../command-line-interface/debugging.md#native-cdp-automation)
+
+**Upgrade requirements**
+
+Use the stable MoonBit toolchain with explicit `Int32` / `UInt32` support (2026-10-12 or newer). The isomorphic template uses Warren 0.4.5; Rabbita remains 0.16.4 and async remains 0.22.4. CEF is unchanged, but the helper is release-specific.
+
+Update the CLI and application `proton_*` dependencies to 0.5.0, run `proton_cli cef setup`, migrate the calls above, and rebuild packaged applications so their helper and version metadata match. CLI installation does not rewrite existing source or updater endpoints. [Complete source changes](https://github.com/moonbit-community/proton/compare/ae8f69ed637afda91b79b7c06f95ffb4d6a954d2...6c7c6810b492ffdc57b0908fc926d67db6656eef)
+
 ## 0.4.0
 
 0.4.0 unifies window and browser APIs, shares typed configuration between the application and CLI, and coordinates update installation with application shutdown. This release includes breaking API changes.

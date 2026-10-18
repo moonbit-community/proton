@@ -62,7 +62,38 @@ Packaged frontend files load without the development server. Backend resource pa
 
 `package.prepare` runs once from the project configuration directory after the frontend and native executable have been built, before resources are assembled. Use it to generate declared package-only resources or additional binaries. A nonzero exit stops packaging.
 
-`proton_cli build` and `proton_cli package --dry-run` do not execute this hook. The standalone `proton_package` tool packages already-built executables and supplied payloads; it does not discover projects, run build/preparation commands or assemble CEF. See the [standalone packager](https://github.com/moonbit-community/proton/blob/main/package/README.md).
+`proton_cli build` and `proton_cli package --dry-run` do not execute this hook. The standalone `proton_package` tool packages already-built executables and supplied payloads; it does not discover projects, run build/preparation commands or assemble CEF. See the [standalone packager](https://github.com/moonbit-community/proton/blob/6c7c6810b492ffdc57b0908fc926d67db6656eef/package/README.md).
+
+## Update artifacts and metadata
+
+Updater metadata is optional. `package --updater-base-url <https-url> --updater-published-at <instant>` requires both options and uses the effective `package.version` (including a `--version` override). There is no separate update revision.
+
+| Host | Required output format | Selected self-update artifact |
+| --- | --- | --- |
+| macOS | `zip` | `.app.zip`; a DMG is not an automatic-update payload |
+| Windows | `nsis` | `-setup.exe`; an app directory or ZIP is not an installer |
+| Linux | `appimage` | `.AppImage` |
+
+If the selected packaging formats do not produce that artifact, metadata generation fails. It does not turn another format into an update payload.
+
+The command writes `<artifact>.sha256` and `latest-<platform>.json` beside the artifacts. The JSON is a schema 3 **fragment**, not a ready-to-publish channel: the artifact signature is intentionally empty. Its fields are:
+
+| Field | Contract |
+| --- | --- |
+| `schema_version` | `3`; schema 2 is not accepted by the new updater |
+| `version` | Effective application version, exactly `major.minor.patch`; numeric comparison, no leading zeros or suffixes |
+| `published_at` | UTC `YYYY-MM-DDTHH:MM:SSZ` |
+| `notes_url` | Optional release-notes URL when assembling the final manifest |
+| `platforms` | Entries keyed by `darwin-arm64`, `win32-x64`, or `linux-x64` |
+| `platforms.<id>.kind` | `full` |
+| `platforms.<id>.url` | HTTPS artifact URL built from the base URL and filename |
+| `platforms.<id>.size` | Positive `Int64` byte count |
+| `platforms.<id>.sha256` | Lowercase hexadecimal SHA-256 digest |
+| `platforms.<id>.signature` | Lowercase hexadecimal RSA/SHA-256 artifact signature |
+
+The publisher signs the artifact with its own private key and fills in `signature`. Platform entries for the same application version can be assembled into one manifest. Sign the final manifest bytes too: the runtime fetches the configured endpoint and `<endpoint>.sig`, where the latter contains the detached RSA/SHA-256 signature as hexadecimal text. Editing the manifest after signing invalidates that signature. Publish the artifacts, complete manifest and detached signature together over HTTPS.
+
+`--sign` / `--notarize` sign operating-system distributions; they do not fill in updater signatures. Proton neither accepts a private signing key through these updater options nor uploads files. Public-key generation/import and the installation lifecycle are documented under [Application updates](../introduction/application-api.md#application-updates).
 
 ## URL schemes and document types
 
