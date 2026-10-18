@@ -1,6 +1,6 @@
 name = "moonbit-community/proton/examples/dev_extension_frontend"
 
-version = "0.4.0"
+version = "0.5.0"
 
 license = "Apache-2.0"
 
