@@ -1,15 +1,4 @@
 ///|
-fn[T, E : Error] try_result_client_discovery_test(
-  f : () -> T raise E,
-) -> Result[T, E] {
-  try f() catch {
-    e => Err(e)
-  } noraise {
-    value => Ok(value)
-  }
-}
-
-///|
 test "parse cdp target accepts websocket urls" {
   guard @client.parse_cdp_target("ws://localhost:9222/devtools/browser/id")
     is WebSocket("ws://localhost:9222/devtools/browser/id") else {
@@ -46,20 +35,29 @@ test "parse cdp target accepts http discovery endpoints" {
 
 ///|
 test "parse cdp target rejects invalid ports and unsupported values" {
-  let zero : Result[@client.CdpTarget, @client.DiscoveryError] = try_result_client_discovery_test(() => {
-      @client.parse_cdp_target("0")
-    },
-  )
+  let zero : Result[@client.CdpTarget, @client.DiscoveryError] = try
+    @client.parse_cdp_target("0")
+  catch {
+    e => Err(e)
+  } noraise {
+    v => Ok(v)
+  }
   guard zero is Err(InvalidTarget(_)) else { fail("port 0 should be invalid") }
-  let ftp : Result[@client.CdpTarget, @client.DiscoveryError] = try_result_client_discovery_test(() => {
-      @client.parse_cdp_target("ftp://localhost")
-    },
-  )
+  let ftp : Result[@client.CdpTarget, @client.DiscoveryError] = try
+    @client.parse_cdp_target("ftp://localhost")
+  catch {
+    e => Err(e)
+  } noraise {
+    v => Ok(v)
+  }
   guard ftp is Err(InvalidTarget(_)) else { fail("ftp should be invalid") }
-  let empty : Result[@client.CdpTarget, @client.DiscoveryError] = try_result_client_discovery_test(() => {
-      @client.parse_cdp_target("   ")
-    },
-  )
+  let empty : Result[@client.CdpTarget, @client.DiscoveryError] = try
+    @client.parse_cdp_target("   ")
+  catch {
+    e => Err(e)
+  } noraise {
+    v => Ok(v)
+  }
   guard empty is Err(InvalidTarget("   ")) else {
     fail("empty target should be invalid")
   }
@@ -101,13 +99,16 @@ test "select discovered targets by page defaults and filters" {
 
 ///|
 test "select discovered target reports no match" {
-  let result : Result[@client.CdpDiscoveredTarget, @client.DiscoveryError] = try_result_client_discovery_test(() => {
-      @client.select_discovered_page_target(
-        sample_discovered_targets(),
-        target_id="missing",
-      )
-    },
-  )
+  let result : Result[@client.CdpDiscoveredTarget, @client.DiscoveryError] = try
+    @client.select_discovered_page_target(
+      sample_discovered_targets(),
+      target_id="missing",
+    )
+  catch {
+    e => Err(e)
+  } noraise {
+    v => Ok(v)
+  }
   guard result is Err(NoMatchingTarget("id=missing type=page")) else {
     fail("expected NoMatchingTarget")
   }
@@ -183,10 +184,13 @@ test "build devtools frontend url from browser websocket endpoint" {
 
 ///|
 test "reject /json/version response without websocket url" {
-  let result : Result[String, @client.DiscoveryError] = try_result_client_discovery_test(() => {
-      @client.web_socket_url_from_version_json({})
-    },
-  )
+  let result : Result[String, @client.DiscoveryError] = try
+    @client.web_socket_url_from_version_json({})
+  catch {
+    e => Err(e)
+  } noraise {
+    v => Ok(v)
+  }
   guard result is Err(MissingWebSocketDebuggerUrl) else {
     fail("expected MissingWebSocketDebuggerUrl")
   }
@@ -261,17 +265,23 @@ test "discovery errors expose stable diagnostic paths" {
 
 ///|
 test "version websocket extraction rejects invalid shapes" {
-  let not_object : Result[String, @client.DiscoveryError] = try_result_client_discovery_test(() => {
-      @client.web_socket_url_from_version_json([])
-    },
-  )
+  let not_object : Result[String, @client.DiscoveryError] = try
+    @client.web_socket_url_from_version_json([])
+  catch {
+    e => Err(e)
+  } noraise {
+    v => Ok(v)
+  }
   guard not_object is Err(InvalidVersionResponse) else {
     fail("expected invalid version object")
   }
-  let wrong_type : Result[String, @client.DiscoveryError] = try_result_client_discovery_test(() => {
-      @client.web_socket_url_from_version_json({ "webSocketDebuggerUrl": 1 })
-    },
-  )
+  let wrong_type : Result[String, @client.DiscoveryError] = try
+    @client.web_socket_url_from_version_json({ "webSocketDebuggerUrl": 1 })
+  catch {
+    e => Err(e)
+  } noraise {
+    v => Ok(v)
+  }
   guard wrong_type is Err(InvalidVersionResponse) else {
     fail("expected invalid websocket type")
   }

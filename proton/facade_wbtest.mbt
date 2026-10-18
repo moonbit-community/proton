@@ -2337,16 +2337,22 @@ test "application identity sources cannot be combined" {
 
 ///|
 test "explicit identity must match packaged application metadata" {
-  debug_inspect(
+  let matched : Result[String, AppConfigurationError] = Ok(
     verify_packaged_application_identifier(
       "dev.proton.inline", "dev.proton.inline",
     ),
-    content="Ok(\"dev.proton.inline\")",
-  )
-  guard verify_packaged_application_identifier(
+  ) catch {
+    error => Err(error)
+  }
+  debug_inspect(matched, content="Ok(\"dev.proton.inline\")")
+  let mismatched : Result[String, AppConfigurationError] = Ok(
+    verify_packaged_application_identifier(
       "dev.proton.inline", "dev.proton.packaged",
-    )
-    is Err(InvalidSetting(name="identifier", message~)) else {
+    ),
+  ) catch {
+    error => Err(error)
+  }
+  guard mismatched is Err(InvalidSetting(name="identifier", message~)) else {
     fail("expected packaged identity mismatch")
   }
   assert_true(message.contains("dev.proton.packaged"))
