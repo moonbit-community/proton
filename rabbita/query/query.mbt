@@ -1,6 +1,6 @@
 ///|
-/// Application-local prototype, not a public Proton API. Previous data retains
-/// its input so a caller cannot mistake one directory/query's data for another.
+/// A component-owned read. Previous data retains its input so a caller cannot
+/// mistake one directory/query's data for another.
 pub(all) enum State[Input, Value] {
   Loading(input~ : Input, previous~ : (Input, Value)?)
   Ready(input~ : Input, value~ : Value)

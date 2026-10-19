@@ -110,10 +110,6 @@ function verifyGeneratedTree() {
     "backend/todo/backend_wbtest.mbt",
     "backend/todo/commands.mbt",
     "backend/todo/moon.pkg",
-    "frontend/internal/query/README.md",
-    "frontend/internal/query/moon.pkg",
-    "frontend/internal/query/query.mbt",
-    "frontend/internal/query/query_wbtest.mbt",
     "frontend/main/main.mbt",
     "frontend/main/model_wbtest.mbt",
     "frontend/main/moon.pkg",
@@ -583,6 +579,7 @@ async function probeDirectoryBrowser(client) {
   const url = await client.evaluate('new URL("directory.html", location.href).href');
   await client.send("Page.navigate", {url});
   await waitForExpression(client, 'document.body.innerText.includes("alpha.txt")', "initial real directory read");
+  assert(await client.evaluate('document.body.innerText.includes("Client requests: 1")'), "directory query bypassed its injected client");
   await client.evaluate(`(() => {
     const core = window.__MoonBit__.core;
     const invoke = core.invokeJson.bind(core);

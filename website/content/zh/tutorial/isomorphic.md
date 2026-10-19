@@ -62,7 +62,7 @@ todo-app/
 - **backend** 编译为原生代码。`todo/backend.mbt` 保存 Todo 状态和业务操作，`todo/commands.mbt` 绑定操作，`app/main.mbt` 启动应用。
 - **frontend** 编译为 JavaScript。`main/main.mbt` 定义 Rabbita 界面，`public/` 保存 HTML 和样式表。
 
-模板中的 `frontend/internal/query` 管理查询状态与订阅。它属于生成的应用，可以随应用一起修改，并不是 Proton 公共 API。
+Proton 0.5.0 生成的 `frontend/internal/query` 管理查询状态与订阅。后续版本将这份实现移入公共包 `moonbit-community/proton_rabbita/query`，模板直接导入该包。升级到包含该包的版本后，将本地查询包的导入替换为 `moonbit-community/proton_rabbita/query`，检查本地定制，再删除旧包。`@query.create`、`state`、`set_input` 和 `refresh` 的用法保持不变。
 
 应用命令通过普通 bind 调用注册，这个模板无需命令代码生成规则。
 
@@ -219,7 +219,7 @@ proton_cli dev
 
 模板的 `todo_app` 创建 `list_todos` 查询，并用 `todos_changed` 使其失效。应用内的查询辅助包先订阅，再获取数据，在输入变化时取消被替代的旧请求。
 
-修改响应刷新发起操作的界面，事件则使观察者的数据失效。两者可能重叠，所以辅助包跟踪请求代次，避免旧结果覆盖新的搜索。这些是 `frontend/internal/query` 中的应用代码，不是另一个服务器，也不是 Proton 的公共状态管理框架。
+修改响应刷新发起操作的界面，事件则使观察者的数据失效。两者可能重叠，所以辅助包跟踪请求代次，避免旧结果覆盖新的搜索。0.5.0 模板将这部分逻辑放在 `frontend/internal/query`，后续版本由 `proton_rabbita/query` 提供。它只管理组件拥有的读取，不提供共享缓存或自动重试策略。
 
 ## 构建完成后的应用
 

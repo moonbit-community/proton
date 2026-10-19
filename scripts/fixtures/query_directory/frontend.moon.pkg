@@ -1,8 +1,9 @@
 import {
   "e2e/todo_shared" @shared,
   "moonbit-community/rabbita",
+  "moonbit-community/proton_client",
   "moonbit-community/rabbita/html",
-  "e2e/todo_frontend/internal/query",
+  "moonbit-community/proton_rabbita/query",
 }
 
 supported_targets = "js"
