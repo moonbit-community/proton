@@ -246,7 +246,7 @@ test "view renderer termination events preserve view identity and details" {
 
 ///|
 test "find result events preserve targets and match details" {
-  let result = NativeFindInPageResult::{
+  let result = FindInPageResult::{
     request_id: 4,
     active_match_ordinal: 2,
     matches: 6,
@@ -445,7 +445,7 @@ test "window progress rejects NaN before native handle access" {
     lifecycle: WindowLive,
     close_interception_enabled: false,
   }
-  try window.set_progress_bar(0.0 / 0.0, ProgressMode::Automatic) catch {
+  try window.set_progress_bar(0.0 / 0.0, ProgressBarMode::Automatic) catch {
     InvalidArgument(message~) =>
       inspect(message, content="progress must not be NaN")
     _ => fail("expected invalid progress")
@@ -456,12 +456,12 @@ test "window progress rejects NaN before native handle access" {
 
 ///|
 test "progress modes keep the native state codes" {
-  assert_eq(ProgressMode::Automatic.native_value(), 0)
-  assert_eq(ProgressMode::Normal.native_value(), 1)
-  assert_eq(ProgressMode::Indeterminate.native_value(), 2)
-  assert_eq(ProgressMode::Error.native_value(), 3)
-  assert_eq(ProgressMode::Paused.native_value(), 4)
-  assert_eq(ProgressMode::Cleared.native_value(), 5)
+  assert_eq(ProgressBarMode::Automatic.native_value(), 0)
+  assert_eq(ProgressBarMode::Normal.native_value(), 1)
+  assert_eq(ProgressBarMode::Indeterminate.native_value(), 2)
+  assert_eq(ProgressBarMode::Error.native_value(), 3)
+  assert_eq(ProgressBarMode::Paused.native_value(), 4)
+  assert_eq(ProgressBarMode::Cleared.native_value(), 5)
 }
 
 ///|

@@ -17,57 +17,6 @@ pub extend WindowSizeHint with Debug::{to_repr}
 pub extend WindowSizeHint with Show::{to_string, output}
 
 ///|
-/// Controls whether web content remains below or extends beneath the native
-/// titlebar. Platforms without overlay support keep the default titlebar.
-pub(all) enum TitlebarStyle {
-  Default
-  Overlay
-} derive(Debug, Eq)
-
-///|
-pub extend TitlebarStyle with Eq::{not_equal, equal}
-
-///|
-pub extend TitlebarStyle with Debug::{to_repr}
-
-///|
-pub extend TitlebarStyle with Show::{to_string, output}
-
-///|
-pub impl Show for TitlebarStyle with fn output(self, logger) {
-  match self {
-    Default => logger.write_string("Default")
-    Overlay => logger.write_string("Overlay")
-  }
-}
-
-///|
-/// Controls how Proton chooses the native window chrome theme.
-pub(all) enum WindowThemePreference {
-  System
-  Light
-  Dark
-} derive(Debug, Eq)
-
-///|
-pub extend WindowThemePreference with Eq::{not_equal, equal}
-
-///|
-pub extend WindowThemePreference with Debug::{to_repr}
-
-///|
-pub extend WindowThemePreference with Show::{to_string, output}
-
-///|
-pub impl Show for WindowThemePreference with fn output(self, logger) {
-  match self {
-    System => logger.write_string("System")
-    Light => logger.write_string("Light")
-    Dark => logger.write_string("Dark")
-  }
-}
-
-///|
 pub impl Show for WindowSizeHint with fn output(self, logger) {
   match self {
     None => logger.write_string("None")
@@ -190,3 +139,6 @@ pub fn AppWindowManifest::AppWindowManifest(
 ) -> AppWindowManifest {
   AppWindowManifest::{ id, window, entry, open_on_start, }
 }
+
+///|
+pub using @types {type TitlebarStyle, type WindowThemePreference}

@@ -146,18 +146,6 @@ pub extend RuntimeWaitReady with Eq::{not_equal, equal}
 pub extend RuntimeWaitReady with Debug::{to_repr}
 
 ///|
-pub(all) enum AccessibilityMode {
-  Automatic = 0
-  AlwaysEnabled = 1
-} derive(Debug, Eq)
-
-///|
-pub extend AccessibilityMode with Eq::{not_equal, equal}
-
-///|
-pub extend AccessibilityMode with Debug::{to_repr}
-
-///|
 /// Inputs forwarded by a second operating-system application instance.
 pub(all) struct AppActivation {
   abi_version : Int32
@@ -249,24 +237,6 @@ pub extend NativeResourceRequest with Eq::{not_equal, equal}
 pub extend NativeResourceRequest with Debug::{to_repr}
 
 ///|
-pub(all) struct NativeFindInPageResult {
-  request_id : Int32
-  active_match_ordinal : Int32
-  matches : Int32
-  selection_x : Int32
-  selection_y : Int32
-  selection_width : Int32
-  selection_height : Int32
-  final_update : Bool
-} derive(Debug, Eq)
-
-///|
-pub extend NativeFindInPageResult with Eq::{not_equal, equal}
-
-///|
-pub extend NativeFindInPageResult with Debug::{to_repr}
-
-///|
 pub(all) struct PdfPrintSettings {
   landscape : Bool
   print_background : Bool
@@ -298,20 +268,6 @@ pub extend RuntimeEvent with Eq::{not_equal, equal}
 
 ///|
 pub extend RuntimeEvent with Debug::{to_repr}
-
-///|
-/// A macOS application activation delivered by Launch Services or the Dock.
-pub(all) enum RuntimeLaunchInput {
-  OpenUrls(Array[String])
-  OpenFiles(Array[String])
-  Reopen
-} derive(Debug, Eq)
-
-///|
-pub extend RuntimeLaunchInput with Eq::{not_equal, equal}
-
-///|
-pub extend RuntimeLaunchInput with Debug::{to_repr}
 
 ///|
 pub(all) enum NativeNotificationResult {
@@ -429,29 +385,6 @@ pub extend BridgeLifecycleState with Eq::{not_equal, equal}
 pub extend BridgeLifecycleState with Debug::{to_repr}
 
 ///|
-pub(all) struct BridgeDiagnostic {
-  stage : String
-  code : String
-  message : String
-  page_instance : String
-  url : String
-  owner : String?
-  source_url : String?
-  source_line : String?
-  line : Int32?
-  column : Int32?
-  stack : String?
-  additional_failure_count : Int32?
-  details_truncated : Bool
-} derive(Debug, Eq)
-
-///|
-pub extend BridgeDiagnostic with Eq::{not_equal, equal}
-
-///|
-pub extend BridgeDiagnostic with Debug::{to_repr}
-
-///|
 pub(all) struct BridgeRequest {
   request_id : Int64
   window : Int64
@@ -513,7 +446,7 @@ enum NativeBrowserEvent {
   Navigated(String)
   TitleUpdated(String)
   LoadFailed(String, Int32, String)
-  FindResult(NativeFindInPageResult)
+  FindResult(FindInPageResult)
   ResourceResponse(String, Int32)
   ResourceCompleted(String, Int32, Int64)
   ResourceRequested(String, String, Bool)
@@ -571,20 +504,6 @@ pub extend NativeCookieRecord with Eq::{not_equal, equal}
 pub extend NativeCookieRecord with Debug::{to_repr}
 
 ///|
-pub(all) enum CookieSameSite {
-  Unspecified = 0
-  NoRestriction = 1
-  Lax = 2
-  Strict = 3
-} derive(Debug, Eq)
-
-///|
-pub extend CookieSameSite with Eq::{not_equal, equal}
-
-///|
-pub extend CookieSameSite with Debug::{to_repr}
-
-///|
 fn CookieSameSite::native_value(self : CookieSameSite) -> Int32 {
   match self {
     Unspecified => 0
@@ -593,90 +512,6 @@ fn CookieSameSite::native_value(self : CookieSameSite) -> Int32 {
     Strict => 3
   }
 }
-
-///|
-/// Geometry and scaling information for the monitor containing a window.
-pub(all) struct WindowMonitor {
-  x : Int32
-  y : Int32
-  width : Int32
-  height : Int32
-  work_x : Int32
-  work_y : Int32
-  work_width : Int32
-  work_height : Int32
-  scale_factor_percent : Int32
-} derive(Debug, Eq)
-
-///|
-pub extend WindowMonitor with Eq::{not_equal, equal}
-
-///|
-pub extend WindowMonitor with Debug::{to_repr}
-
-///|
-/// A point-in-time native window state snapshot.
-///
-/// `theme` is the effective theme after resolving `theme_preference`.
-pub(all) struct WindowState {
-  x : Int32
-  y : Int32
-  width : Int32
-  height : Int32
-  monitor : WindowMonitor
-  zoom_percent : Int32
-  visible : Bool
-  focused : Bool
-  minimized : Bool
-  maximized : Bool
-  fullscreen : Bool
-  always_on_top : Bool
-  theme : WindowTheme
-} derive(Debug, Eq)
-
-///|
-/// A point-in-time state snapshot for a window's main browser page.
-pub(all) struct BrowserState {
-  url : String
-  title : String
-  is_loading : Bool
-  can_go_back : Bool
-  can_go_forward : Bool
-} derive(Debug, Eq)
-
-///|
-pub extend BrowserState with Eq::{not_equal, equal}
-
-///|
-pub extend BrowserState with Debug::{to_repr}
-
-///|
-/// Information about a single connected display.
-pub(all) struct ScreenInfo {
-  id : Int32
-  x : Int32
-  y : Int32
-  width : Int32
-  height : Int32
-  work_x : Int32
-  work_y : Int32
-  work_width : Int32
-  work_height : Int32
-  scale_factor_percent : Int32
-  is_primary : Bool
-} derive(Debug, Eq)
-
-///|
-pub extend ScreenInfo with Eq::{not_equal, equal}
-
-///|
-pub extend ScreenInfo with Debug::{to_repr}
-
-///|
-pub extend WindowState with Eq::{not_equal, equal}
-
-///|
-pub extend WindowState with Debug::{to_repr}
 
 ///|
 /// An application-level native menu bar.
@@ -731,47 +566,6 @@ pub extend MenuItem with Eq::{not_equal, equal}
 
 ///|
 pub extend MenuItem with Debug::{to_repr}
-
-///|
-/// A standard top-level application menu role.
-pub(all) enum MenuRole {
-  Application
-  File
-  Edit
-  View
-  Window
-  Help
-} derive(Debug, Eq)
-
-///|
-pub extend MenuRole with Eq::{not_equal, equal}
-
-///|
-pub extend MenuRole with Debug::{to_repr}
-
-///|
-/// A standard native menu action.
-pub(all) enum MenuItemRole {
-  Quit
-  Hide
-  HideOthers
-  ShowAll
-  Close
-  Minimize
-  Zoom
-  Undo
-  Redo
-  Cut
-  Copy
-  Paste
-  SelectAll
-} derive(Debug, Eq)
-
-///|
-pub extend MenuItemRole with Eq::{not_equal, equal}
-
-///|
-pub extend MenuItemRole with Debug::{to_repr}
 
 ///|
 pub(all) struct BridgeConfig {
@@ -1063,7 +857,7 @@ pub fn RuntimeEvent::renderer_process_termination(
 ///|
 pub fn RuntimeEvent::find_in_page_result(
   self : RuntimeEvent,
-) -> NativeFindInPageResult? {
+) -> FindInPageResult? {
   match self {
     BrowserEvent(_, _, FindResult(result)) => Some(result)
     _ => None
@@ -1393,43 +1187,6 @@ pub extend WindowRef with Eq::{not_equal, equal}
 pub extend WindowRef with Debug::{to_repr}
 
 ///|
-pub(all) enum TitlebarStyle {
-  Default
-  Overlay
-} derive(Debug, Eq)
-
-///|
-pub extend TitlebarStyle with Eq::{not_equal, equal}
-
-///|
-pub extend TitlebarStyle with Debug::{to_repr}
-
-///|
-pub(all) enum WindowTheme {
-  Light = 1
-  Dark = 2
-} derive(Debug, Eq)
-
-///|
-pub extend WindowTheme with Eq::{not_equal, equal}
-
-///|
-pub extend WindowTheme with Debug::{to_repr}
-
-///|
-pub(all) enum WindowThemePreference {
-  System = 0
-  Light = 1
-  Dark = 2
-} derive(Debug, Eq)
-
-///|
-pub extend WindowThemePreference with Eq::{not_equal, equal}
-
-///|
-pub extend WindowThemePreference with Debug::{to_repr}
-
-///|
 fn WindowThemePreference::native_value(self : WindowThemePreference) -> Int32 {
   match self {
     System => 0
@@ -1439,25 +1196,7 @@ fn WindowThemePreference::native_value(self : WindowThemePreference) -> Int32 {
 }
 
 ///|
-/// Explicit progress states, mirroring Electron's `NativeWindow::ProgressState`.
-/// `Automatic` keeps the progress value semantics instead of forcing a state.
-pub(all) enum ProgressMode {
-  Automatic
-  Normal
-  Indeterminate
-  Error
-  Paused
-  Cleared
-} derive(Debug, Eq)
-
-///|
-pub extend ProgressMode with Eq::{not_equal, equal}
-
-///|
-pub extend ProgressMode with Debug::{to_repr}
-
-///|
-fn ProgressMode::native_value(self : ProgressMode) -> Int32 {
+fn ProgressBarMode::native_value(self : ProgressBarMode) -> Int32 {
   match self {
     Automatic => 0
     Normal => 1
@@ -1467,23 +1206,6 @@ fn ProgressMode::native_value(self : ProgressMode) -> Int32 {
     Cleared => 5
   }
 }
-
-///|
-/// Taskbar thumbnail-toolbar button flags, mirroring Electron's `flags` array.
-/// A button is enabled unless `Disabled` or `NonInteractive` is present.
-pub(all) enum ThumbarButtonFlag {
-  Disabled
-  DismissOnClick
-  NoBackground
-  Hidden
-  NonInteractive
-} derive(Debug, Eq)
-
-///|
-pub extend ThumbarButtonFlag with Eq::{not_equal, equal}
-
-///|
-pub extend ThumbarButtonFlag with Debug::{to_repr}
 
 ///|
 /// Native flag bits, matching the PROTON_THUMBAR_FLAG_* values in the C ABI.
@@ -1508,32 +1230,6 @@ pub(all) struct ThumbarButton {
 }
 
 ///|
-/// One item inside a custom jump list category.
-pub(all) struct JumpListItem {
-  kind : JumpListItemKind
-  path : String
-  arguments : String
-  title : String
-  description : String
-  icon_path : String
-  icon_index : Int32
-  working_directory : String
-}
-
-///|
-pub(all) enum JumpListItemKind {
-  Task
-  Separator
-  File
-} derive(Debug, Eq)
-
-///|
-pub extend JumpListItemKind with Eq::{not_equal, equal}
-
-///|
-pub extend JumpListItemKind with Debug::{to_repr}
-
-///|
 fn JumpListItemKind::native_value(self : JumpListItemKind) -> Int32 {
   match self {
     Task => 0
@@ -1541,28 +1237,6 @@ fn JumpListItemKind::native_value(self : JumpListItemKind) -> Int32 {
     File => 2
   }
 }
-
-///|
-/// One category of the custom jump list.
-pub(all) struct JumpListCategory {
-  kind : JumpListCategoryKind
-  name : String
-  items : Array[JumpListItem]
-}
-
-///|
-pub(all) enum JumpListCategoryKind {
-  Tasks
-  Custom
-  Recent
-  Frequent
-} derive(Debug, Eq)
-
-///|
-pub extend JumpListCategoryKind with Eq::{not_equal, equal}
-
-///|
-pub extend JumpListCategoryKind with Debug::{to_repr}
 
 ///|
 fn JumpListCategoryKind::native_value(self : JumpListCategoryKind) -> Int32 {
@@ -1573,24 +1247,6 @@ fn JumpListCategoryKind::native_value(self : JumpListCategoryKind) -> Int32 {
     Frequent => 3
   }
 }
-
-///|
-/// The result Windows reports for a jump list update, matching the strings
-/// Electron returns from `setJumpList`.
-pub(all) enum JumpListResult {
-  Ok
-  Error
-  InvalidSeparator
-  FileTypeRegistrationError
-  CustomCategoryAccessDenied
-  Unsupported
-} derive(Debug, Eq)
-
-///|
-pub extend JumpListResult with Eq::{not_equal, equal}
-
-///|
-pub extend JumpListResult with Debug::{to_repr}
 
 ///|
 fn jump_list_result_from_code(code : Int32) -> JumpListResult {
@@ -1624,21 +1280,6 @@ fn cached_runtime_info() -> RuntimeInfo raise NativeError {
     }
   }
 }
-
-///|
-/// Controls how the configured width and height constrain native resizing.
-pub(all) enum WindowSizeHint {
-  Unconstrained
-  Fixed
-  Min
-  Max
-} derive(Debug, Eq)
-
-///|
-pub extend WindowSizeHint with Eq::{not_equal, equal}
-
-///|
-pub extend WindowSizeHint with Debug::{to_repr}
 
 ///|
 pub(all) enum BrowserPolicyMode {
@@ -2151,24 +1792,6 @@ struct View {
 }
 
 ///|
-/// A point-in-time web contents view state snapshot. Bounds use a top-left
-/// origin in the owning window's content coordinate space.
-pub(all) struct ViewState {
-  x : Int32
-  y : Int32
-  width : Int32
-  height : Int32
-  visible : Bool
-  z_order : Int32
-} derive(Debug, Eq)
-
-///|
-pub extend ViewState with Eq::{not_equal, equal}
-
-///|
-pub extend ViewState with Debug::{to_repr}
-
-///|
 /// Native configuration for one web contents view. `width` and `height` are
 /// required because the native browser needs an initial rectangle; `x`/`y`
 /// default to `0`, `visible` to `true`, `z_order` to `0`, and `initial_url`
@@ -2228,8 +1851,6 @@ pub fn web_contents_view_supported() -> Bool {
 }
 
 ///|
-
-///|
 /// A page operation target retaining its window or view owner.
 pub(all) enum Contents {
   PrimaryPage(Window)
@@ -2238,3 +1859,35 @@ pub(all) enum Contents {
 
 ///|
 pub using @native_ffi {type BrowserOperation}
+
+///|
+pub using @types {
+  type AccessibilityMode,
+  type AnimationSettings,
+  type AppTaskMetric,
+  type AppTaskType,
+  type BridgeDiagnostic,
+  type BrowserState,
+  type CookieSameSite,
+  type FindInPageResult,
+  type JumpListCategory,
+  type JumpListCategoryKind,
+  type JumpListItem,
+  type JumpListItemKind,
+  type JumpListResult,
+  type MediaAccessKind,
+  type MediaAccessStatus,
+  type MenuItemRole,
+  type MenuRole,
+  type ProgressBarMode,
+  type RuntimeLaunchInput,
+  type ScreenInfo,
+  type ThumbarButtonFlag,
+  type TitlebarStyle,
+  type ViewState,
+  type WindowMonitor,
+  type WindowSizeHint,
+  type WindowState,
+  type WindowTheme,
+  type WindowThemePreference,
+}

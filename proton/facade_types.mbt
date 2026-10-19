@@ -1,18 +1,4 @@
 ///|
-/// An operating-system request delivered to an already running application.
-pub(all) enum RuntimeLaunchInput {
-  OpenUrls(Array[String])
-  OpenFiles(Array[String])
-  Reopen
-} derive(Eq, Debug)
-
-///|
-pub extend RuntimeLaunchInput with Eq::{not_equal, equal}
-
-///|
-pub extend RuntimeLaunchInput with Debug::{to_repr}
-
-///|
 /// Controls what Proton does after the last application window closes.
 pub(all) enum LastWindowClosedPolicy {
   Quit
@@ -40,19 +26,6 @@ pub extend ApplicationQuitDecision with Eq::{not_equal, equal}
 
 ///|
 pub extend ApplicationQuitDecision with Debug::{to_repr}
-
-///|
-/// Controls when Proton enables the browser accessibility tree.
-pub(all) enum AccessibilityMode {
-  Automatic
-  AlwaysEnabled
-} derive(Eq, Debug)
-
-///|
-pub extend AccessibilityMode with Eq::{not_equal, equal}
-
-///|
-pub extend AccessibilityMode with Debug::{to_repr}
 
 ///|
 /// Selects browser storage that can be cleared from a live Proton session.
@@ -815,26 +788,6 @@ fn window_state_events(
 }
 
 ///|
-/// One update from an active page search. The selection rectangle uses the
-/// target web contents coordinate space.
-pub(all) struct FindInPageResult {
-  request_id : Int32
-  active_match_ordinal : Int32
-  matches : Int32
-  selection_x : Int32
-  selection_y : Int32
-  selection_width : Int32
-  selection_height : Int32
-  final_update : Bool
-} derive(Debug, Eq)
-
-///|
-pub extend FindInPageResult with Eq::{not_equal, equal}
-
-///|
-pub extend FindInPageResult with Debug::{to_repr}
-
-///|
 /// Margins used when printing browser contents to PDF.
 pub(all) enum PdfPrintMargins {
   Default
@@ -1271,60 +1224,6 @@ pub extend NavigationHistory with Eq::{not_equal, equal}
 pub extend NavigationHistory with Debug::{to_repr}
 
 ///|
-/// The kind of browser task represented by a metric.
-pub(all) enum AppTaskType {
-  Unknown
-  /// The application's own browser process.
-  Browser
-  /// Chromium's GPU process, when it runs separately.
-  Gpu
-  Zygote
-  Utility
-  /// A page renderer task.
-  Renderer
-  Extension
-  Guest
-  Plugin
-  SandboxHelper
-  /// A dedicated, shared, or service worker task.
-  Worker
-} derive(Debug, Eq)
-
-///|
-pub extend AppTaskType with Eq::{not_equal, equal}
-
-///|
-pub extend AppTaskType with Debug::{to_repr}
-
-///|
-/// A browser task and the resource usage of its hosting process.
-///
-/// Multiple tasks can share a process and repeat its full CPU and memory
-/// usage. These values are not per-task usage and must not be summed across
-/// records. The task ID is not a PID; no process grouping key is available.
-pub(all) struct AppTaskMetric {
-  /// CEF's task identifier, stable for the lifetime of the task; not a PID.
-  task_id : Int64
-  task_type : AppTaskType
-  /// Full CPU usage of the hosting process since the previous sample.
-  /// 100% is one fully used core; zero until a sampling interval has passed.
-  /// Shared-process tasks repeat this value; do not sum across records.
-  process_cpu_percent : Double
-  /// Full private memory footprint of the hosting process in bytes, or -1
-  /// before measurement. Shared-process tasks repeat this value; do not sum.
-  process_memory_bytes : Int64
-  /// Platform task name, such as `Network Service`; empty when Chromium has
-  /// none for the task.
-  name : String
-} derive(Debug, Eq)
-
-///|
-pub extend AppTaskMetric with Eq::{not_equal, equal}
-
-///|
-pub extend AppTaskMetric with Debug::{to_repr}
-
-///|
 priv enum BridgeRequestLifecycleState {
   Running = 0
   Responding = 1
@@ -1337,21 +1236,6 @@ priv enum BridgeRequestLifecycleState {
 priv struct AppLifecycle {
   mut state : AppLifecycleState
 }
-
-///|
-/// SameSite policy for a browser cookie.
-pub(all) enum CookieSameSite {
-  Unspecified
-  NoRestriction
-  Lax
-  Strict
-} derive(Debug, Eq)
-
-///|
-pub extend CookieSameSite with Eq::{not_equal, equal}
-
-///|
-pub extend CookieSameSite with Debug::{to_repr}
 
 ///|
 /// One cookie returned by the browser session.
@@ -1371,8 +1255,6 @@ pub extend Cookie with Eq::{not_equal, equal}
 
 ///|
 pub extend Cookie with Debug::{to_repr}
-
-///|
 
 ///|
 /// Failures while resolving and validating an application's configuration.

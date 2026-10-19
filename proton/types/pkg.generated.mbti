@@ -1,0 +1,349 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbit-community/proton/types"
+
+import {
+  "moonbitlang/core/debug",
+}
+
+// Values
+
+// Errors
+
+// Types and methods
+pub(all) enum AccessibilityMode {
+  Automatic
+  AlwaysEnabled
+} derive(Eq, @debug.Debug)
+pub fn AccessibilityMode::equal(Self, Self) -> Bool
+pub fn AccessibilityMode::not_equal(Self, Self) -> Bool
+pub fn AccessibilityMode::to_repr(Self) -> @debug.Repr
+
+pub(all) struct AnimationSettings {
+  should_render_rich_animation : Bool
+  scroll_animations_enabled_by_system : Bool
+  prefers_reduced_motion : Bool
+} derive(Eq, @debug.Debug)
+pub fn AnimationSettings::equal(Self, Self) -> Bool
+pub fn AnimationSettings::not_equal(Self, Self) -> Bool
+pub fn AnimationSettings::to_repr(Self) -> @debug.Repr
+
+pub(all) struct AppTaskMetric {
+  task_id : Int64
+  task_type : AppTaskType
+  process_cpu_percent : Double
+  process_memory_bytes : Int64
+  name : String
+} derive(Eq, @debug.Debug)
+pub fn AppTaskMetric::equal(Self, Self) -> Bool
+pub fn AppTaskMetric::not_equal(Self, Self) -> Bool
+pub fn AppTaskMetric::to_repr(Self) -> @debug.Repr
+
+pub(all) enum AppTaskType {
+  Unknown
+  Browser
+  Gpu
+  Zygote
+  Utility
+  Renderer
+  Extension
+  Guest
+  Plugin
+  SandboxHelper
+  Worker
+} derive(Eq, @debug.Debug)
+pub fn AppTaskType::equal(Self, Self) -> Bool
+pub fn AppTaskType::not_equal(Self, Self) -> Bool
+pub fn AppTaskType::to_repr(Self) -> @debug.Repr
+
+pub(all) struct BridgeDiagnostic {
+  stage : String
+  code : String
+  message : String
+  page_instance : String
+  url : String
+  owner : String?
+  source_url : String?
+  source_line : String?
+  line : Int?
+  column : Int?
+  stack : String?
+  additional_failure_count : Int?
+  details_truncated : Bool
+} derive(Eq, @debug.Debug)
+pub fn BridgeDiagnostic::equal(Self, Self) -> Bool
+pub fn BridgeDiagnostic::not_equal(Self, Self) -> Bool
+pub fn BridgeDiagnostic::to_repr(Self) -> @debug.Repr
+
+pub(all) struct BrowserState {
+  url : String
+  title : String
+  is_loading : Bool
+  can_go_back : Bool
+  can_go_forward : Bool
+} derive(Eq, @debug.Debug)
+pub fn BrowserState::equal(Self, Self) -> Bool
+pub fn BrowserState::not_equal(Self, Self) -> Bool
+pub fn BrowserState::to_repr(Self) -> @debug.Repr
+
+pub(all) enum CookieSameSite {
+  Unspecified
+  NoRestriction
+  Lax
+  Strict
+} derive(Eq, @debug.Debug)
+pub fn CookieSameSite::equal(Self, Self) -> Bool
+pub fn CookieSameSite::not_equal(Self, Self) -> Bool
+pub fn CookieSameSite::to_repr(Self) -> @debug.Repr
+
+pub(all) struct FindInPageResult {
+  request_id : Int
+  active_match_ordinal : Int
+  matches : Int
+  selection_x : Int
+  selection_y : Int
+  selection_width : Int
+  selection_height : Int
+  final_update : Bool
+} derive(Eq, @debug.Debug)
+pub fn FindInPageResult::equal(Self, Self) -> Bool
+pub fn FindInPageResult::not_equal(Self, Self) -> Bool
+pub fn FindInPageResult::to_repr(Self) -> @debug.Repr
+
+pub(all) struct JumpListCategory {
+  kind : JumpListCategoryKind
+  name : String
+  items : Array[JumpListItem]
+}
+
+pub(all) enum JumpListCategoryKind {
+  Tasks
+  Custom
+  Recent
+  Frequent
+} derive(Eq, @debug.Debug)
+pub fn JumpListCategoryKind::equal(Self, Self) -> Bool
+pub fn JumpListCategoryKind::not_equal(Self, Self) -> Bool
+pub fn JumpListCategoryKind::to_repr(Self) -> @debug.Repr
+
+pub(all) struct JumpListItem {
+  kind : JumpListItemKind
+  path : String
+  arguments : String
+  title : String
+  description : String
+  icon_path : String
+  icon_index : Int
+  working_directory : String
+}
+
+pub(all) enum JumpListItemKind {
+  Task
+  Separator
+  File
+} derive(Eq, @debug.Debug)
+pub fn JumpListItemKind::equal(Self, Self) -> Bool
+pub fn JumpListItemKind::not_equal(Self, Self) -> Bool
+pub fn JumpListItemKind::to_repr(Self) -> @debug.Repr
+
+pub(all) enum JumpListResult {
+  Ok
+  Error
+  InvalidSeparator
+  FileTypeRegistrationError
+  CustomCategoryAccessDenied
+  Unsupported
+} derive(Eq, @debug.Debug)
+pub fn JumpListResult::equal(Self, Self) -> Bool
+pub fn JumpListResult::not_equal(Self, Self) -> Bool
+pub fn JumpListResult::to_repr(Self) -> @debug.Repr
+
+pub(all) enum MediaAccessKind {
+  Microphone
+  Camera
+  Screen
+} derive(Eq, @debug.Debug)
+pub fn MediaAccessKind::equal(Self, Self) -> Bool
+pub fn MediaAccessKind::not_equal(Self, Self) -> Bool
+pub fn MediaAccessKind::to_repr(Self) -> @debug.Repr
+
+pub(all) enum MediaAccessStatus {
+  Unknown
+  NotDetermined
+  Granted
+  Denied
+  Restricted
+} derive(Eq, @debug.Debug)
+pub fn MediaAccessStatus::equal(Self, Self) -> Bool
+pub fn MediaAccessStatus::not_equal(Self, Self) -> Bool
+pub fn MediaAccessStatus::to_repr(Self) -> @debug.Repr
+
+pub(all) enum MenuItemRole {
+  Quit
+  Hide
+  HideOthers
+  ShowAll
+  Close
+  Minimize
+  Zoom
+  Undo
+  Redo
+  Cut
+  Copy
+  Paste
+  SelectAll
+} derive(Eq, @debug.Debug)
+pub fn MenuItemRole::equal(Self, Self) -> Bool
+pub fn MenuItemRole::not_equal(Self, Self) -> Bool
+pub fn MenuItemRole::to_repr(Self) -> @debug.Repr
+
+pub(all) enum MenuRole {
+  Application
+  File
+  Edit
+  View
+  Window
+  Help
+} derive(Eq, @debug.Debug)
+pub fn MenuRole::equal(Self, Self) -> Bool
+pub fn MenuRole::not_equal(Self, Self) -> Bool
+pub fn MenuRole::to_repr(Self) -> @debug.Repr
+
+pub(all) enum ProgressBarMode {
+  Automatic
+  Normal
+  Indeterminate
+  Error
+  Paused
+  Cleared
+} derive(Eq, @debug.Debug)
+pub fn ProgressBarMode::equal(Self, Self) -> Bool
+pub fn ProgressBarMode::not_equal(Self, Self) -> Bool
+pub fn ProgressBarMode::to_repr(Self) -> @debug.Repr
+
+pub(all) enum RuntimeLaunchInput {
+  OpenUrls(Array[String])
+  OpenFiles(Array[String])
+  Reopen
+} derive(Eq, @debug.Debug)
+pub fn RuntimeLaunchInput::equal(Self, Self) -> Bool
+pub fn RuntimeLaunchInput::not_equal(Self, Self) -> Bool
+pub fn RuntimeLaunchInput::to_repr(Self) -> @debug.Repr
+
+pub(all) struct ScreenInfo {
+  id : Int
+  x : Int
+  y : Int
+  width : Int
+  height : Int
+  work_x : Int
+  work_y : Int
+  work_width : Int
+  work_height : Int
+  scale_factor_percent : Int
+  is_primary : Bool
+} derive(Eq, @debug.Debug)
+pub fn ScreenInfo::equal(Self, Self) -> Bool
+pub fn ScreenInfo::not_equal(Self, Self) -> Bool
+pub fn ScreenInfo::to_repr(Self) -> @debug.Repr
+
+pub(all) enum ThumbarButtonFlag {
+  Disabled
+  DismissOnClick
+  NoBackground
+  Hidden
+  NonInteractive
+} derive(Eq, @debug.Debug)
+pub fn ThumbarButtonFlag::equal(Self, Self) -> Bool
+pub fn ThumbarButtonFlag::not_equal(Self, Self) -> Bool
+pub fn ThumbarButtonFlag::to_repr(Self) -> @debug.Repr
+
+pub(all) enum TitlebarStyle {
+  Default
+  Overlay
+} derive(Eq, @debug.Debug)
+pub fn TitlebarStyle::equal(Self, Self) -> Bool
+pub fn TitlebarStyle::not_equal(Self, Self) -> Bool
+pub fn TitlebarStyle::output(Self, &Logger) -> Unit
+pub fn TitlebarStyle::to_repr(Self) -> @debug.Repr
+pub fn TitlebarStyle::to_string(Self) -> String
+pub impl Show for TitlebarStyle
+
+pub(all) struct ViewState {
+  x : Int
+  y : Int
+  width : Int
+  height : Int
+  visible : Bool
+  z_order : Int
+} derive(Eq, @debug.Debug)
+pub fn ViewState::equal(Self, Self) -> Bool
+pub fn ViewState::not_equal(Self, Self) -> Bool
+pub fn ViewState::to_repr(Self) -> @debug.Repr
+
+pub(all) struct WindowMonitor {
+  x : Int
+  y : Int
+  width : Int
+  height : Int
+  work_x : Int
+  work_y : Int
+  work_width : Int
+  work_height : Int
+  scale_factor_percent : Int
+} derive(Eq, @debug.Debug)
+pub fn WindowMonitor::equal(Self, Self) -> Bool
+pub fn WindowMonitor::not_equal(Self, Self) -> Bool
+pub fn WindowMonitor::to_repr(Self) -> @debug.Repr
+
+pub(all) enum WindowSizeHint {
+  Unconstrained
+  Fixed
+  Min
+  Max
+} derive(Eq, @debug.Debug)
+pub fn WindowSizeHint::equal(Self, Self) -> Bool
+pub fn WindowSizeHint::not_equal(Self, Self) -> Bool
+pub fn WindowSizeHint::to_repr(Self) -> @debug.Repr
+
+pub(all) struct WindowState {
+  x : Int
+  y : Int
+  width : Int
+  height : Int
+  monitor : WindowMonitor
+  zoom_percent : Int
+  visible : Bool
+  focused : Bool
+  minimized : Bool
+  maximized : Bool
+  fullscreen : Bool
+  always_on_top : Bool
+  theme : WindowTheme
+} derive(Eq, @debug.Debug)
+pub fn WindowState::equal(Self, Self) -> Bool
+pub fn WindowState::not_equal(Self, Self) -> Bool
+pub fn WindowState::to_repr(Self) -> @debug.Repr
+
+pub(all) enum WindowTheme {
+  Light
+  Dark
+} derive(Eq, @debug.Debug)
+pub fn WindowTheme::equal(Self, Self) -> Bool
+pub fn WindowTheme::not_equal(Self, Self) -> Bool
+pub fn WindowTheme::to_repr(Self) -> @debug.Repr
+
+pub(all) enum WindowThemePreference {
+  System
+  Light
+  Dark
+} derive(Eq, @debug.Debug)
+pub fn WindowThemePreference::equal(Self, Self) -> Bool
+pub fn WindowThemePreference::not_equal(Self, Self) -> Bool
+pub fn WindowThemePreference::output(Self, &Logger) -> Unit
+pub fn WindowThemePreference::to_repr(Self) -> @debug.Repr
+pub fn WindowThemePreference::to_string(Self) -> String
+pub impl Show for WindowThemePreference
+
+// Type aliases
+
+// Traits

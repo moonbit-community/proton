@@ -1823,19 +1823,6 @@ test "empty navigation history reports no active entry" {
 }
 
 ///|
-test "application task metric types map from the native vocabulary" {
-  assert_true(AppTaskType::from_native(@native.AppTaskType::Browser) is Browser)
-  assert_true(
-    AppTaskType::from_native(@native.AppTaskType::Renderer) is Renderer,
-  )
-  assert_true(AppTaskType::from_native(@native.AppTaskType::Worker) is Worker)
-  assert_true(
-    AppTaskType::from_native(@native.AppTaskType::SandboxHelper)
-    is SandboxHelper,
-  )
-}
-
-///|
 test "renderer termination statuses map to Electron reasons" {
   assert_eq(
     render_process_gone_reason(0),

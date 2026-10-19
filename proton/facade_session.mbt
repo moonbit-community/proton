@@ -434,7 +434,7 @@ fn RuntimeSession::session_handle(self : RuntimeSession) -> SessionHandle {
         path?,
         secure~,
         http_only~,
-        same_site=same_site.to_native(),
+        same_site~,
       ) catch {
         error => raise session_operation_failed("set cookie", error)
       }
@@ -636,7 +636,7 @@ fn RuntimeSession::read_window_state(
   native_id : Int64,
 ) -> WindowState raise WindowSessionError {
   let running = self.resolve_window(id, native_id)
-  WindowState::from_native(running.window.state()) catch {
+  running.window.state() catch {
     error =>
       raise window_operation_failed("read window " + id + " state", error)
   }
@@ -984,11 +984,9 @@ fn RuntimeSession::advance_window_opens(
       let error = match state {
         Some(state) =>
           BridgeStartupError(
-            BridgeDiagnostic::from_native(
-              bridge_startup_timeout_diagnostic(
-                state,
-                self.config.bridge_startup_timeout_ms,
-              ),
+            bridge_startup_timeout_diagnostic(
+              state,
+              self.config.bridge_startup_timeout_ms,
             ),
           )
         None => EntryLoadError(ClosedDuringStartup)
@@ -1725,7 +1723,7 @@ pub fn WindowHandle::set_progress_bar(
   mode~ : ProgressBarMode = ProgressBarMode::Automatic,
 ) -> Unit raise WindowSessionError {
   self.with_window("set progress bar", window => {
-    window.set_progress_bar(progress, mode.to_native())
+    window.set_progress_bar(progress, mode)
   })
 }
 
@@ -1920,7 +1918,7 @@ pub fn ViewHandle::state(
     self.id,
     self.native_id,
   )
-  ViewState::from_native(running.view.state()) catch {
+  running.view.state() catch {
     error =>
       raise window_operation_failed(
         "read view " + self.id + " state in window " + self.window_id,
@@ -2230,8 +2228,8 @@ pub fn WebContentsHandle::state(
 ) -> BrowserState raise WindowSessionError {
   self.with_target("read browser state in", target => {
     match target {
-      PrimaryPage(window) => BrowserState::from_native(window.browser_state())
-      ChildView(view) => BrowserState::from_native(view.browser_state())
+      PrimaryPage(window) => window.browser_state()
+      ChildView(view) => view.browser_state()
     }
   })
 }
@@ -2510,9 +2508,7 @@ async fn RuntimeSession::wait_for_bridge_startup(
         None => return
         Some(state) =>
           raise BridgeStartupError(
-            BridgeDiagnostic::from_native(
-              bridge_startup_timeout_diagnostic(state, timeout_ms),
-            ),
+            bridge_startup_timeout_diagnostic(state, timeout_ms),
           )
       }
     }
@@ -2795,9 +2791,8 @@ fn RuntimeSession::dispatch_window_event(
       match self.find_window_by_native_id(window_id) {
         Some(window) => {
           let handle = self.window_handle(window)
-          let current = WindowState::from_native(state)
-          let events = window_state_events(window.observed_state, current)
-          window.observed_state = Some(current)
+          let events = window_state_events(window.observed_state, state)
+          window.observed_state = Some(state)
           for event in events {
             for handler in self.config.window_event_handlers {
               ignore(
@@ -2958,11 +2953,7 @@ fn RuntimeSession::dispatch_browser_event(
                 ),
               )
             ("browser_found_in_page", _, _, Some(result)) =>
-              Some(
-                WebContentsEvent::FoundInPage(
-                  result=FindInPageResult::from_native(result),
-                ),
-              )
+              Some(WebContentsEvent::FoundInPage(result~))
             ("browser_resource_response", Some(info), _, _) =>
               Some(
                 WebContentsEvent::ResourceResponse(
@@ -3586,16 +3577,7 @@ fn RuntimeSession::dispatch_launch_input_event(
     }
     None =>
       match event.launch_input() {
-        Some(native_input) =>
-          self.dispatch_launch_input(
-            match native_input {
-              @native.RuntimeLaunchInput::OpenUrls(urls) =>
-                RuntimeLaunchInput::OpenUrls(urls)
-              @native.RuntimeLaunchInput::OpenFiles(files) =>
-                RuntimeLaunchInput::OpenFiles(files)
-              @native.RuntimeLaunchInput::Reopen => RuntimeLaunchInput::Reopen
-            },
-          )
+        Some(native_input) => self.dispatch_launch_input(native_input)
         None => ()
       }
   }
@@ -3801,9 +3783,7 @@ fn RuntimeSession::check_bridge_failures(
     // Renderer failure has its own notification; do not report it twice.
     if diagnostic.code != renderer_process_terminated_failure_code {
       let browser = self.browser_handle(running)
-      let event = WebContentsEvent::BridgeFailed(
-        diagnostic=BridgeDiagnostic::from_native(diagnostic),
-      )
+      let event = WebContentsEvent::BridgeFailed(diagnostic~)
       for handler in self.config.contents_event_handlers {
         ignore(
           self.window_tasks.spawn(() => handler(browser, event), no_wait=true),

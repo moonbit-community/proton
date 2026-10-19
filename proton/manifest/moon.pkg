@@ -1,3 +1,7 @@
+import {
+  "moonbit-community/proton/types",
+}
+
 supported_targets = "native"
 
 options(

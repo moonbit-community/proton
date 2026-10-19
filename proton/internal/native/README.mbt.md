@@ -6,6 +6,10 @@ boundary. Applications use the root `moonbit-community/proton` facade instead.
 The private ownership layer uses Proton-owned `Runtime` and `Window` values.
 The root facade does not expose these values or raw native handles.
 
+Public value types live in `proton/types` and are re-exported by the root facade.
+The facade and native layer share their definitions; platform encodings, native
+handles, and lifecycle state remain private to this package.
+
 ```mbt check
 ///|
 test "native boundary is linked" {

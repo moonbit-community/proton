@@ -98,28 +98,6 @@ async fn CookieCompletionStore::wait(
 }
 
 ///|
-fn CookieSameSite::to_native(self : CookieSameSite) -> @native.CookieSameSite {
-  match self {
-    Unspecified => @native.CookieSameSite::Unspecified
-    NoRestriction => @native.CookieSameSite::NoRestriction
-    Lax => @native.CookieSameSite::Lax
-    Strict => @native.CookieSameSite::Strict
-  }
-}
-
-///|
-fn cookie_same_site_from_native(
-  value : @native.CookieSameSite,
-) -> CookieSameSite {
-  match value {
-    @native.CookieSameSite::Unspecified => Unspecified
-    @native.CookieSameSite::NoRestriction => NoRestriction
-    @native.CookieSameSite::Lax => Lax
-    @native.CookieSameSite::Strict => Strict
-  }
-}
-
-///|
 fn cookie_expiration_date(record : @native.NativeCookieRecord) -> Double? {
   match record.expires {
     Some(expires) =>
@@ -140,7 +118,7 @@ fn cookies_from_native(
     path: record.path,
     secure: record.secure,
     http_only: record.http_only,
-    same_site: cookie_same_site_from_native(record.same_site),
+    same_site: record.same_site,
     expiration_date: cookie_expiration_date(record),
   })
 }

@@ -8,6 +8,7 @@ import {
   "moonbit-community/proton/internal/locale",
   "moonbit-community/proton/internal/native",
   "moonbit-community/proton/manifest",
+  "moonbit-community/proton/types",
   "moonbit-community/proton/updater",
   "moonbit-community/proton_config",
   "moonbit-community/proton_contract",
@@ -36,19 +37,19 @@ pub fn native_image() -> NativeImage raise NativeImageError
 
 pub fn resource_dir() -> String
 
-pub fn screens() -> Array[ScreenInfo] raise ScreenQueryError
+pub fn screens() -> Array[@types.ScreenInfo] raise ScreenQueryError
 
-pub fn set_jump_list(Array[JumpListCategory]?) -> JumpListResult raise AppControlError
+pub fn set_jump_list(Array[@types.JumpListCategory]?) -> @types.JumpListResult raise AppControlError
 
 pub fn system_accent_color() -> String raise SystemPreferencesError
 
-pub fn system_animation_settings() -> AnimationSettings raise SystemPreferencesError
+pub fn system_animation_settings() -> @types.AnimationSettings raise SystemPreferencesError
 
 pub fn system_appearance() -> SystemAppearance raise SystemAppearanceError
 
 pub fn system_is_trusted_accessibility_client(Bool) -> Bool raise SystemPreferencesError
 
-pub fn system_media_access_status(MediaAccessKind) -> MediaAccessStatus raise SystemPreferencesError
+pub fn system_media_access_status(@types.MediaAccessKind) -> @types.MediaAccessStatus raise SystemPreferencesError
 
 pub fn system_preferred_languages() -> Array[@locale.Locale] raise SystemLocaleError
 
@@ -132,8 +133,8 @@ pub(all) suberror AppRunError {
   CommandExtensionLifecycleError(CommandExtensionLifecycleError)
   LifecycleHookError(LifecycleHookError)
   EntryLoadError(AppEntryError)
-  BridgeStartupError(BridgeDiagnostic)
-  BridgeRuntimeError(BridgeDiagnostic)
+  BridgeStartupError(@types.BridgeDiagnostic)
+  BridgeRuntimeError(@types.BridgeDiagnostic)
   CleanupFailed(primary~ : String?, failures~ : Array[AppCleanupError])
   UnexpectedTaskFailure(detail~ : String)
 } derive(@debug.Debug)
@@ -241,26 +242,9 @@ pub fn WindowSessionError::to_repr(Self) -> @debug.Repr
 pub fn WindowSessionError::to_string(Self) -> String
 
 // Types and methods
-pub(all) enum AccessibilityMode {
-  Automatic
-  AlwaysEnabled
-} derive(Eq, @debug.Debug)
-pub fn AccessibilityMode::equal(Self, Self) -> Bool
-pub fn AccessibilityMode::not_equal(Self, Self) -> Bool
-pub fn AccessibilityMode::to_repr(Self) -> @debug.Repr
-
-pub(all) struct AnimationSettings {
-  should_render_rich_animation : Bool
-  scroll_animations_enabled_by_system : Bool
-  prefers_reduced_motion : Bool
-} derive(Eq, @debug.Debug)
-pub fn AnimationSettings::equal(Self, Self) -> Bool
-pub fn AnimationSettings::not_equal(Self, Self) -> Bool
-pub fn AnimationSettings::to_repr(Self) -> @debug.Repr
-
 type App
 pub fn App::App(WindowConfig) -> Self
-pub fn App::accessibility(Self, AccessibilityMode) -> Unit
+pub fn App::accessibility(Self, @types.AccessibilityMode) -> Unit
 pub fn App::add_window(Self, String, WindowConfig, open_on_start? : Bool) -> Unit
 pub fn App::bridge_startup_timeout_ms(Self, Int) -> Unit
 pub fn App::capability(Self, @extension.RendererCapability, targets? : Array[RendererTarget]) -> Unit
@@ -278,7 +262,7 @@ pub fn App::main_window(Self, WindowConfig) -> Unit
 pub fn App::menu(Self, MenuBar) -> Unit
 pub fn App::name(Self) -> String raise @proton_config.AppConfigError
 pub fn App::on_download_event(Self, async (WebContentsHandle, DownloadEvent) -> Unit noraise) -> Unit
-pub fn App::on_launch_input(Self, async (ApplicationContext, RuntimeLaunchInput) -> Unit noraise) -> Unit
+pub fn App::on_launch_input(Self, async (ApplicationContext, @types.RuntimeLaunchInput) -> Unit noraise) -> Unit
 pub fn App::on_quit(Self, (ApplicationContext, Int) -> Unit) -> Unit
 pub fn App::on_render_process_gone(Self, async (WebContentsHandle, RenderProcessGoneDetails) -> Unit noraise) -> Unit
 pub fn App::on_session_created(Self, (ApplicationSession) -> Unit) -> Unit
@@ -333,34 +317,6 @@ pub fn AppPathKind::equal(Self, Self) -> Bool
 pub fn AppPathKind::not_equal(Self, Self) -> Bool
 pub fn AppPathKind::to_repr(Self) -> @debug.Repr
 
-pub(all) struct AppTaskMetric {
-  task_id : Int64
-  task_type : AppTaskType
-  process_cpu_percent : Double
-  process_memory_bytes : Int64
-  name : String
-} derive(Eq, @debug.Debug)
-pub fn AppTaskMetric::equal(Self, Self) -> Bool
-pub fn AppTaskMetric::not_equal(Self, Self) -> Bool
-pub fn AppTaskMetric::to_repr(Self) -> @debug.Repr
-
-pub(all) enum AppTaskType {
-  Unknown
-  Browser
-  Gpu
-  Zygote
-  Utility
-  Renderer
-  Extension
-  Guest
-  Plugin
-  SandboxHelper
-  Worker
-} derive(Eq, @debug.Debug)
-pub fn AppTaskType::equal(Self, Self) -> Bool
-pub fn AppTaskType::not_equal(Self, Self) -> Bool
-pub fn AppTaskType::to_repr(Self) -> @debug.Repr
-
 pub struct ApplicationContext {
   tasks : @async.TaskGroup[Unit]
   windows : WindowManager
@@ -401,7 +357,7 @@ pub fn ApplicationContext::set_as_default_protocol_client(Self, String, executab
 pub fn ApplicationContext::set_badge_count(Self, Int) -> Bool raise AppControlError
 pub fn ApplicationContext::show(Self) -> Unit raise AppControlError
 pub fn ApplicationContext::task_group(Self) -> @async.TaskGroup[Unit]
-pub fn ApplicationContext::task_metrics(Self) -> Array[AppTaskMetric] raise AppControlError
+pub fn ApplicationContext::task_metrics(Self) -> Array[@types.AppTaskMetric] raise AppControlError
 pub fn ApplicationContext::windows(Self) -> WindowManager
 
 pub(all) enum ApplicationQuitDecision {
@@ -420,25 +376,6 @@ pub fn ApplicationSession::equal(Self, Self) -> Bool
 pub fn ApplicationSession::not_equal(Self, Self) -> Bool
 pub fn ApplicationSession::to_repr(Self) -> @debug.Repr
 
-pub(all) struct BridgeDiagnostic {
-  stage : String
-  code : String
-  message : String
-  page_instance : String
-  url : String
-  owner : String?
-  source_url : String?
-  source_line : String?
-  line : Int?
-  column : Int?
-  stack : String?
-  additional_failure_count : Int?
-  details_truncated : Bool
-} derive(Eq, @debug.Debug)
-pub fn BridgeDiagnostic::equal(Self, Self) -> Bool
-pub fn BridgeDiagnostic::not_equal(Self, Self) -> Bool
-pub fn BridgeDiagnostic::to_repr(Self) -> @debug.Repr
-
 pub(all) enum BrowserPermissionDecision {
   Allow
   Deny
@@ -446,17 +383,6 @@ pub(all) enum BrowserPermissionDecision {
 pub fn BrowserPermissionDecision::equal(Self, Self) -> Bool
 pub fn BrowserPermissionDecision::not_equal(Self, Self) -> Bool
 pub fn BrowserPermissionDecision::to_repr(Self) -> @debug.Repr
-
-pub(all) struct BrowserState {
-  url : String
-  title : String
-  is_loading : Bool
-  can_go_back : Bool
-  can_go_forward : Bool
-} derive(Eq, @debug.Debug)
-pub fn BrowserState::equal(Self, Self) -> Bool
-pub fn BrowserState::not_equal(Self, Self) -> Bool
-pub fn BrowserState::to_repr(Self) -> @debug.Repr
 
 pub(all) struct CertificateError {
   url : String
@@ -481,22 +407,12 @@ pub(all) struct Cookie {
   path : String
   secure : Bool
   http_only : Bool
-  same_site : CookieSameSite
+  same_site : @types.CookieSameSite
   expiration_date : Double?
 } derive(Eq, @debug.Debug)
 pub fn Cookie::equal(Self, Self) -> Bool
 pub fn Cookie::not_equal(Self, Self) -> Bool
 pub fn Cookie::to_repr(Self) -> @debug.Repr
-
-pub(all) enum CookieSameSite {
-  Unspecified
-  NoRestriction
-  Lax
-  Strict
-} derive(Eq, @debug.Debug)
-pub fn CookieSameSite::equal(Self, Self) -> Bool
-pub fn CookieSameSite::not_equal(Self, Self) -> Bool
-pub fn CookieSameSite::to_repr(Self) -> @debug.Repr
 
 pub(all) enum DockBounceType {
   Informational
@@ -535,68 +451,6 @@ pub fn DownloadRequest::equal(Self, Self) -> Bool
 pub fn DownloadRequest::not_equal(Self, Self) -> Bool
 pub fn DownloadRequest::to_repr(Self) -> @debug.Repr
 
-pub(all) struct FindInPageResult {
-  request_id : Int
-  active_match_ordinal : Int
-  matches : Int
-  selection_x : Int
-  selection_y : Int
-  selection_width : Int
-  selection_height : Int
-  final_update : Bool
-} derive(Eq, @debug.Debug)
-pub fn FindInPageResult::equal(Self, Self) -> Bool
-pub fn FindInPageResult::not_equal(Self, Self) -> Bool
-pub fn FindInPageResult::to_repr(Self) -> @debug.Repr
-
-pub(all) struct JumpListCategory {
-  kind : JumpListCategoryKind
-  name : String
-  items : Array[JumpListItem]
-}
-
-pub(all) enum JumpListCategoryKind {
-  Tasks
-  Custom
-  Recent
-  Frequent
-} derive(Eq, @debug.Debug)
-pub fn JumpListCategoryKind::equal(Self, Self) -> Bool
-pub fn JumpListCategoryKind::not_equal(Self, Self) -> Bool
-pub fn JumpListCategoryKind::to_repr(Self) -> @debug.Repr
-
-pub(all) struct JumpListItem {
-  kind : JumpListItemKind
-  path : String
-  arguments : String
-  title : String
-  description : String
-  icon_path : String
-  icon_index : Int
-  working_directory : String
-}
-
-pub(all) enum JumpListItemKind {
-  Task
-  Separator
-  File
-} derive(Eq, @debug.Debug)
-pub fn JumpListItemKind::equal(Self, Self) -> Bool
-pub fn JumpListItemKind::not_equal(Self, Self) -> Bool
-pub fn JumpListItemKind::to_repr(Self) -> @debug.Repr
-
-pub(all) enum JumpListResult {
-  Ok
-  Error
-  InvalidSeparator
-  FileTypeRegistrationError
-  CustomCategoryAccessDenied
-  Unsupported
-} derive(Eq, @debug.Debug)
-pub fn JumpListResult::equal(Self, Self) -> Bool
-pub fn JumpListResult::not_equal(Self, Self) -> Bool
-pub fn JumpListResult::to_repr(Self) -> @debug.Repr
-
 pub(all) enum LastWindowClosedPolicy {
   Quit
   KeepRunning
@@ -604,26 +458,6 @@ pub(all) enum LastWindowClosedPolicy {
 pub fn LastWindowClosedPolicy::equal(Self, Self) -> Bool
 pub fn LastWindowClosedPolicy::not_equal(Self, Self) -> Bool
 pub fn LastWindowClosedPolicy::to_repr(Self) -> @debug.Repr
-
-pub(all) enum MediaAccessKind {
-  Microphone
-  Camera
-  Screen
-} derive(Eq, @debug.Debug)
-pub fn MediaAccessKind::equal(Self, Self) -> Bool
-pub fn MediaAccessKind::not_equal(Self, Self) -> Bool
-pub fn MediaAccessKind::to_repr(Self) -> @debug.Repr
-
-pub(all) enum MediaAccessStatus {
-  Unknown
-  NotDetermined
-  Granted
-  Denied
-  Restricted
-} derive(Eq, @debug.Debug)
-pub fn MediaAccessStatus::equal(Self, Self) -> Bool
-pub fn MediaAccessStatus::not_equal(Self, Self) -> Bool
-pub fn MediaAccessStatus::to_repr(Self) -> @debug.Repr
 
 pub(all) struct MediaPermissionRequest {
   origin : String
@@ -635,12 +469,12 @@ pub fn MediaPermissionRequest::to_repr(Self) -> @debug.Repr
 
 pub struct Menu {
   label : String?
-  role : MenuRole?
+  role : @types.MenuRole?
   items : Array[MenuItem]?
 }
 pub fn Menu::Menu(String, items~ : Array[MenuItem]) -> Self
 pub fn Menu::popup(Self, WindowHandle, Int, Int) -> Unit raise WindowSessionError
-pub fn Menu::role(MenuRole, label? : String, items? : Array[MenuItem]) -> Self
+pub fn Menu::role(@types.MenuRole, label? : String, items? : Array[MenuItem]) -> Self
 
 pub struct MenuBar {
   menus : Array[Menu]
@@ -652,47 +486,16 @@ pub struct MenuItem {
   id : String?
   label : String?
   key : String?
-  role : MenuItemRole?
+  role : @types.MenuItemRole?
   submenu : Menu?
   enabled : Bool
   visible : Bool
   checked : Bool?
 }
 pub fn MenuItem::command(String, String, key? : String, enabled? : Bool, visible? : Bool, checked? : Bool) -> Self
-pub fn MenuItem::role(MenuItemRole, label? : String, key? : String) -> Self
+pub fn MenuItem::role(@types.MenuItemRole, label? : String, key? : String) -> Self
 pub fn MenuItem::separator() -> Self
 pub fn MenuItem::submenu(String, items~ : Array[Self]) -> Self
-
-pub(all) enum MenuItemRole {
-  Quit
-  Hide
-  HideOthers
-  ShowAll
-  Close
-  Minimize
-  Zoom
-  Undo
-  Redo
-  Cut
-  Copy
-  Paste
-  SelectAll
-} derive(Eq, @debug.Debug)
-pub fn MenuItemRole::equal(Self, Self) -> Bool
-pub fn MenuItemRole::not_equal(Self, Self) -> Bool
-pub fn MenuItemRole::to_repr(Self) -> @debug.Repr
-
-pub(all) enum MenuRole {
-  Application
-  File
-  Edit
-  View
-  Window
-  Help
-} derive(Eq, @debug.Debug)
-pub fn MenuRole::equal(Self, Self) -> Bool
-pub fn MenuRole::not_equal(Self, Self) -> Bool
-pub fn MenuRole::to_repr(Self) -> @debug.Repr
 
 pub struct NativeImage {
   image : @native.NativeImage
@@ -839,18 +642,6 @@ pub fn PendingUpdate::notes_url(Self) -> String?
 pub fn PendingUpdate::size(Self) -> Int64
 pub fn PendingUpdate::version(Self) -> String
 
-pub(all) enum ProgressBarMode {
-  Automatic
-  Normal
-  Indeterminate
-  Error
-  Paused
-  Cleared
-} derive(Eq, @debug.Debug)
-pub fn ProgressBarMode::equal(Self, Self) -> Bool
-pub fn ProgressBarMode::not_equal(Self, Self) -> Bool
-pub fn ProgressBarMode::to_repr(Self) -> @debug.Repr
-
 pub(all) struct RelaunchOptions {
   executable : String?
   arguments : Array[String]?
@@ -888,35 +679,9 @@ pub struct RendererTarget {
 pub fn RendererTarget::bundled(window? : String) -> Self
 pub fn RendererTarget::entry(window? : String) -> Self
 
-pub(all) enum RuntimeLaunchInput {
-  OpenUrls(Array[String])
-  OpenFiles(Array[String])
-  Reopen
-} derive(Eq, @debug.Debug)
-pub fn RuntimeLaunchInput::equal(Self, Self) -> Bool
-pub fn RuntimeLaunchInput::not_equal(Self, Self) -> Bool
-pub fn RuntimeLaunchInput::to_repr(Self) -> @debug.Repr
-
-pub(all) struct ScreenInfo {
-  id : Int
-  x : Int
-  y : Int
-  width : Int
-  height : Int
-  work_x : Int
-  work_y : Int
-  work_width : Int
-  work_height : Int
-  scale_factor_percent : Int
-  is_primary : Bool
-} derive(Eq, @debug.Debug)
-pub fn ScreenInfo::equal(Self, Self) -> Bool
-pub fn ScreenInfo::not_equal(Self, Self) -> Bool
-pub fn ScreenInfo::to_repr(Self) -> @debug.Repr
-
 pub struct SessionHandle {
   read_cookies : async (String?, Bool) -> Array[Cookie]
-  write_cookie : (String, String, String, String?, String?, Bool, Bool, CookieSameSite) -> Unit raise SessionError
+  write_cookie : (String, String, String, String?, String?, Bool, Bool, @types.CookieSameSite) -> Unit raise SessionError
   remove_cookies : (String?, String?) -> Unit raise SessionError
   flush_cookie_store : () -> Unit raise SessionError
   clear_http_cache : () -> Unit raise SessionError
@@ -933,7 +698,7 @@ pub fn SessionHandle::close_all_connections(Self) -> Unit raise SessionError
 pub fn SessionHandle::delete_cookies(Self, url? : String, name? : String) -> Unit raise SessionError
 pub fn SessionHandle::flush_cookies(Self) -> Unit raise SessionError
 pub async fn SessionHandle::get_cookies(Self, url? : String, include_http_only? : Bool) -> Array[Cookie]
-pub fn SessionHandle::set_cookie(Self, String, String, String, domain? : String, path? : String, secure? : Bool, http_only? : Bool, same_site? : CookieSameSite) -> Unit raise SessionError
+pub fn SessionHandle::set_cookie(Self, String, String, String, domain? : String, path? : String, secure? : Bool, http_only? : Bool, same_site? : @types.CookieSameSite) -> Unit raise SessionError
 
 pub(all) enum StorageDataKind {
   Cookies
@@ -956,27 +721,8 @@ pub(all) struct ThumbarButton {
   id : String
   icon : NativeImage
   tooltip : String
-  flags : Array[ThumbarButtonFlag]
+  flags : Array[@types.ThumbarButtonFlag]
 }
-
-pub(all) enum ThumbarButtonFlag {
-  Disabled
-  DismissOnClick
-  NoBackground
-  Hidden
-  NonInteractive
-} derive(Eq, @debug.Debug)
-pub fn ThumbarButtonFlag::equal(Self, Self) -> Bool
-pub fn ThumbarButtonFlag::not_equal(Self, Self) -> Bool
-pub fn ThumbarButtonFlag::to_repr(Self) -> @debug.Repr
-
-pub(all) enum TitlebarStyle {
-  Default
-  Overlay
-} derive(Eq, @debug.Debug)
-pub fn TitlebarStyle::equal(Self, Self) -> Bool
-pub fn TitlebarStyle::not_equal(Self, Self) -> Bool
-pub fn TitlebarStyle::to_repr(Self) -> @debug.Repr
 
 pub enum UpdateCheck {
   NotConfigured
@@ -1008,32 +754,20 @@ pub fn ViewHandle::id(Self) -> String
 pub fn ViewHandle::set_bounds(Self, x~ : Int, y~ : Int, width~ : Int, height~ : Int) -> Unit raise WindowSessionError
 pub fn ViewHandle::set_visible(Self, Bool) -> Unit raise WindowSessionError
 pub fn ViewHandle::set_z_order(Self, Int) -> Unit raise WindowSessionError
-pub fn ViewHandle::state(Self) -> ViewState raise WindowSessionError
+pub fn ViewHandle::state(Self) -> @types.ViewState raise WindowSessionError
 pub fn ViewHandle::web_contents(Self) -> WebContentsHandle
 pub fn ViewHandle::window_id(Self) -> String
 
-pub(all) struct ViewState {
-  x : Int
-  y : Int
-  width : Int
-  height : Int
-  visible : Bool
-  z_order : Int
-} derive(Eq, @debug.Debug)
-pub fn ViewState::equal(Self, Self) -> Bool
-pub fn ViewState::not_equal(Self, Self) -> Bool
-pub fn ViewState::to_repr(Self) -> @debug.Repr
-
 pub(all) enum WebContentsEvent {
   Closed
-  BridgeFailed(diagnostic~ : BridgeDiagnostic)
+  BridgeFailed(diagnostic~ : @types.BridgeDiagnostic)
   LoadingChanged(is_loading~ : Bool)
   DidStartLoading
   DidFinishLoad
   Navigated(url~ : String)
   TitleUpdated(title~ : String)
   LoadFailed(url~ : String, error_code~ : Int, error_text~ : String)
-  FoundInPage(result~ : FindInPageResult)
+  FoundInPage(result~ : @types.FindInPageResult)
   ResourceResponse(url~ : String, status_code~ : Int)
   ResourceCompleted(url~ : String, status~ : Int, received_bytes~ : Int64)
   ResourceRequested(url~ : String, request_method~ : String, will_cancel~ : Bool)
@@ -1080,7 +814,7 @@ pub fn WebContentsHandle::select_all(Self) -> Unit raise WindowSessionError
 pub fn WebContentsHandle::session(Self) -> SessionHandle
 pub fn WebContentsHandle::set_audio_muted(Self, Bool) -> Unit raise WindowSessionError
 pub fn WebContentsHandle::set_zoom_percent(Self, Int) -> Unit raise WindowSessionError
-pub fn WebContentsHandle::state(Self) -> BrowserState raise WindowSessionError
+pub fn WebContentsHandle::state(Self) -> @types.BrowserState raise WindowSessionError
 pub fn WebContentsHandle::stop(Self) -> Unit raise WindowSessionError
 pub fn WebContentsHandle::stop_find_in_page(Self, clear_selection? : Bool) -> Unit raise WindowSessionError
 pub fn WebContentsHandle::toggle_devtools(Self) -> Unit raise WindowSessionError
@@ -1116,15 +850,15 @@ pub(all) struct WindowConfig {
   entry : @manifest.AppEntry
   width : Int
   height : Int
-  size_hint : WindowSizeHint
-  titlebar_style : TitlebarStyle
-  theme : WindowThemePreference
+  size_hint : @types.WindowSizeHint
+  titlebar_style : @types.TitlebarStyle
+  theme : @types.WindowThemePreference
   traffic_light_position : WindowButtonPosition?
   views : Array[(String, ViewConfig)]
   close_handler : (async (WindowHandle) -> WindowCloseDecision noraise)?
   web_contents_policy : WebContentsPolicy
 }
-pub fn WindowConfig::WindowConfig(String, @manifest.AppEntry, width? : Int, height? : Int, size_hint? : WindowSizeHint, titlebar_style? : TitlebarStyle, theme? : WindowThemePreference, traffic_light_position? : WindowButtonPosition, views? : Array[(String, ViewConfig)], close_handler? : async (WindowHandle) -> WindowCloseDecision noraise, web_contents_policy? : WebContentsPolicy) -> Self
+pub fn WindowConfig::WindowConfig(String, @manifest.AppEntry, width? : Int, height? : Int, size_hint? : @types.WindowSizeHint, titlebar_style? : @types.TitlebarStyle, theme? : @types.WindowThemePreference, traffic_light_position? : WindowButtonPosition, views? : Array[(String, ViewConfig)], close_handler? : async (WindowHandle) -> WindowCloseDecision noraise, web_contents_policy? : WebContentsPolicy) -> Self
 
 pub struct WindowContext {
   id : String
@@ -1145,7 +879,7 @@ pub fn WindowContext::task_group(Self) -> @async.TaskGroup[Unit]
 pub fn WindowContext::windows(Self) -> WindowManager
 
 pub(all) enum WindowEvent {
-  StateChanged(WindowState)
+  StateChanged(@types.WindowState)
   Closed
   ReadyToShow
   Moved
@@ -1220,11 +954,11 @@ pub fn WindowHandle::set_opacity(Self, Double) -> Unit raise WindowSessionError
 pub fn WindowHandle::set_overlay_icon(Self, NativeImage?, String) -> Unit raise WindowSessionError
 pub fn WindowHandle::set_parent(Self, Self?, modal? : Bool) -> Unit raise WindowSessionError
 pub fn WindowHandle::set_position(Self, Int, Int) -> Unit raise WindowSessionError
-pub fn WindowHandle::set_progress_bar(Self, Double, mode? : ProgressBarMode) -> Unit raise WindowSessionError
+pub fn WindowHandle::set_progress_bar(Self, Double, mode? : @types.ProgressBarMode) -> Unit raise WindowSessionError
 pub fn WindowHandle::set_resizable(Self, Bool) -> Unit raise WindowSessionError
 pub fn WindowHandle::set_size(Self, Int, Int) -> Unit raise WindowSessionError
 pub fn WindowHandle::set_skip_taskbar(Self, Bool) -> Unit raise WindowSessionError
-pub fn WindowHandle::set_theme(Self, WindowThemePreference) -> Unit raise WindowSessionError
+pub fn WindowHandle::set_theme(Self, @types.WindowThemePreference) -> Unit raise WindowSessionError
 pub fn WindowHandle::set_thumbar_buttons(Self, Array[ThumbarButton]) -> Bool raise WindowSessionError
 pub fn WindowHandle::set_thumbnail_tooltip(Self, String) -> Unit raise WindowSessionError
 pub fn WindowHandle::set_title(Self, String) -> Unit raise WindowSessionError
@@ -1234,7 +968,7 @@ pub fn WindowHandle::set_window_button_visibility(Self, Bool) -> Unit raise Wind
 pub fn WindowHandle::show(Self) -> Unit raise WindowSessionError
 pub fn WindowHandle::show_inactive(Self) -> Unit raise WindowSessionError
 pub fn WindowHandle::size(Self) -> (Int, Int) raise WindowSessionError
-pub fn WindowHandle::state(Self) -> WindowState raise WindowSessionError
+pub fn WindowHandle::state(Self) -> @types.WindowState raise WindowSessionError
 pub fn WindowHandle::view(Self, String) -> ViewHandle?
 pub fn WindowHandle::views(Self) -> Array[ViewHandle]
 pub fn WindowHandle::web_contents(Self) -> WebContentsHandle
@@ -1248,75 +982,26 @@ pub struct WindowManager {
 pub fn WindowManager::find(Self, String) -> WindowHandle?
 pub async fn WindowManager::open(Self, String) -> WindowHandle
 
-pub(all) struct WindowMonitor {
-  x : Int
-  y : Int
-  width : Int
-  height : Int
-  work_x : Int
-  work_y : Int
-  work_width : Int
-  work_height : Int
-  scale_factor_percent : Int
-} derive(Eq, @debug.Debug)
-pub fn WindowMonitor::equal(Self, Self) -> Bool
-pub fn WindowMonitor::not_equal(Self, Self) -> Bool
-pub fn WindowMonitor::to_repr(Self) -> @debug.Repr
-
-pub(all) enum WindowSizeHint {
-  Unconstrained
-  Fixed
-  Min
-  Max
-} derive(Eq, @debug.Debug)
-pub fn WindowSizeHint::equal(Self, Self) -> Bool
-pub fn WindowSizeHint::not_equal(Self, Self) -> Bool
-pub fn WindowSizeHint::to_repr(Self) -> @debug.Repr
-
-pub(all) struct WindowState {
-  x : Int
-  y : Int
-  width : Int
-  height : Int
-  monitor : WindowMonitor
-  zoom_percent : Int
-  visible : Bool
-  focused : Bool
-  minimized : Bool
-  maximized : Bool
-  fullscreen : Bool
-  always_on_top : Bool
-  theme : WindowTheme
-} derive(Eq, @debug.Debug)
-pub fn WindowState::equal(Self, Self) -> Bool
-pub fn WindowState::not_equal(Self, Self) -> Bool
-pub fn WindowState::to_repr(Self) -> @debug.Repr
-
-pub(all) enum WindowTheme {
-  Light
-  Dark
-} derive(Eq, @debug.Debug)
-pub fn WindowTheme::equal(Self, Self) -> Bool
-pub fn WindowTheme::not_equal(Self, Self) -> Bool
-pub fn WindowTheme::to_repr(Self) -> @debug.Repr
-
-pub(all) enum WindowThemePreference {
-  System
-  Light
-  Dark
-} derive(Eq, @debug.Debug)
-pub fn WindowThemePreference::equal(Self, Self) -> Bool
-pub fn WindowThemePreference::not_equal(Self, Self) -> Bool
-pub fn WindowThemePreference::to_repr(Self) -> @debug.Repr
-
 // Type aliases
+pub using @types {type AccessibilityMode}
+
+pub using @types {type AnimationSettings}
+
 pub using @proton_config {type AppConfig}
 
 pub using @proton_config {type AppConfigError}
 
 pub using @manifest {type AppEntry}
 
+pub using @types {type AppTaskMetric}
+
+pub using @types {type AppTaskType}
+
 pub using @proton_config {type BackendConfig}
+
+pub using @types {type BridgeDiagnostic}
+
+pub using @types {type BrowserState}
 
 pub using @core {type AppCommandRequestContext as CommandContext}
 
@@ -1324,13 +1009,35 @@ pub using @command {type CommandRegistrar}
 
 pub using @core {type CommandWindow}
 
+pub using @types {type CookieSameSite}
+
 pub using @proton_config {type DocumentType}
 
+pub using @types {type FindInPageResult}
+
 pub using @proton_config {type FrontendConfig}
+
+pub using @types {type JumpListCategory}
+
+pub using @types {type JumpListCategoryKind}
+
+pub using @types {type JumpListItem}
+
+pub using @types {type JumpListItemKind}
+
+pub using @types {type JumpListResult}
 
 pub using @locale {type Locale}
 
 pub using @locale {type LocaleParseError}
+
+pub using @types {type MediaAccessKind}
+
+pub using @types {type MediaAccessStatus}
+
+pub using @types {type MenuItemRole}
+
+pub using @types {type MenuRole}
 
 pub using @proton_config {type PackageConfig}
 
@@ -1340,6 +1047,28 @@ pub using @command {type PermissionScopeValidationError}
 
 pub using @proton_config {type PlatformPackageConfig}
 
+pub using @types {type ProgressBarMode}
+
+pub using @types {type RuntimeLaunchInput}
+
+pub using @types {type ScreenInfo}
+
 pub using @proton_config {type SignConfig}
+
+pub using @types {type ThumbarButtonFlag}
+
+pub using @types {type TitlebarStyle}
+
+pub using @types {type ViewState}
+
+pub using @types {type WindowMonitor}
+
+pub using @types {type WindowSizeHint}
+
+pub using @types {type WindowState}
+
+pub using @types {type WindowTheme}
+
+pub using @types {type WindowThemePreference}
 
 // Traits

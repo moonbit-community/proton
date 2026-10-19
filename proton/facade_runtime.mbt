@@ -134,16 +134,6 @@ async fn App::run_with_destroy(
 }
 
 ///|
-fn AccessibilityMode::to_native(
-  self : AccessibilityMode,
-) -> @native.AccessibilityMode {
-  match self {
-    Automatic => @native.AccessibilityMode::Automatic
-    AlwaysEnabled => @native.AccessibilityMode::AlwaysEnabled
-  }
-}
-
-///|
 fn log_runtime_failure(error : AppRunError) -> Unit {
   @xlog.error(category="proton.runtime") <?
     {
@@ -259,7 +249,7 @@ async fn run_manifest(
       accept_languages=environment.locale_preferences.accept_languages(),
       remote_debugging~,
       headless=config.headless,
-      accessibility_mode=config.accessibility_mode.to_native(),
+      accessibility_mode=config.accessibility_mode,
     ).with_framework_dialog_labels(catalog.dialog_ok, catalog.dialog_cancel),
   ) catch {
     error => raise native_run_error("create runtime", error)
@@ -750,18 +740,8 @@ fn native_window_config(
       @manifest.WindowSizeHint::Min => @native.WindowSizeHint::Min
       @manifest.WindowSizeHint::Max => @native.WindowSizeHint::Max
     },
-    titlebar_style=match window.titlebar_style {
-      @manifest.TitlebarStyle::Default => @native.TitlebarStyle::Default
-      @manifest.TitlebarStyle::Overlay => @native.TitlebarStyle::Overlay
-    },
-    theme=match window.theme_preference {
-      @manifest.WindowThemePreference::System =>
-        @native.WindowThemePreference::System
-      @manifest.WindowThemePreference::Light =>
-        @native.WindowThemePreference::Light
-      @manifest.WindowThemePreference::Dark =>
-        @native.WindowThemePreference::Dark
-    },
+    titlebar_style=window.titlebar_style,
+    theme=window.theme_preference,
     browser~,
     bridge?,
     web_request_cancel_prefixes~,
@@ -941,15 +921,12 @@ fn refresh_window_bridge_startup_state(
             error,
           )
       } noraise {
-        diagnostic =>
-          raise BridgeStartupError(BridgeDiagnostic::from_native(diagnostic))
+        diagnostic => raise BridgeStartupError(diagnostic)
       }
     "ineligible" =>
       raise BridgeStartupError(
-        BridgeDiagnostic::from_native(
-          bridge_protocol_diagnostic(
-            state, "bridge_entry_origin_ineligible", "the application entry is not eligible for the native bridge",
-          ),
+        bridge_protocol_diagnostic(
+          state, "bridge_entry_origin_ineligible", "the application entry is not eligible for the native bridge",
         ),
       )
     _ => false
