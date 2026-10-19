@@ -53,7 +53,7 @@ static LRESULT CALLBACK proton_notification_wnd_proc(HWND hwnd,
         proton_event_t *event =
             proton_event_create(PROTON_EVENT_NOTIFICATION_CLICKED);
         if (event != NULL) {
-          event->success = 0;
+          event->has_payload = 0;
           (void)proton_event_publish(event);
         }
         return 0;
