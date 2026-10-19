@@ -19,13 +19,13 @@ import {
 // Values
 pub fn app_path() -> String
 
-pub fn asset(String, String, width? : Int, height? : Int, debug? : Bool, resizable? : Bool) -> App
+pub fn asset(String, String, width? : Int32, height? : Int32, debug? : Bool, resizable? : Bool) -> App
 
 pub async fn check_for_update() -> UpdateCheck
 
-pub fn file(String, String, width? : Int, height? : Int, debug? : Bool, resizable? : Bool) -> App
+pub fn file(String, String, width? : Int32, height? : Int32, debug? : Bool, resizable? : Bool) -> App
 
-pub fn html(String, String, width? : Int, height? : Int, debug? : Bool, resizable? : Bool) -> App
+pub fn html(String, String, width? : Int32, height? : Int32, debug? : Bool, resizable? : Bool) -> App
 
 pub fn is_packaged() -> Bool
 
@@ -53,16 +53,16 @@ pub fn system_media_access_status(@types.MediaAccessKind) -> @types.MediaAccessS
 
 pub fn system_preferred_languages() -> Array[@locale.Locale] raise SystemLocaleError
 
-pub fn url(String, String, width? : Int, height? : Int, debug? : Bool, resizable? : Bool) -> App
+pub fn url(String, String, width? : Int32, height? : Int32, debug? : Bool, resizable? : Bool) -> App
 
-pub fn view(String, width~ : Int, height~ : Int, x? : Int, y? : Int, visible? : Bool, z_order? : Int, background_color? : String) -> ViewConfig
+pub fn view(String, width~ : Int32, height~ : Int32, x? : Int32, y? : Int32, visible? : Bool, z_order? : Int32, background_color? : String) -> ViewConfig
 
 // Errors
 pub(all) suberror AppCleanupError {
   CommandExtension(CommandExtensionLifecycleError)
   LifecycleHook(LifecycleHookError)
-  WindowDestroy(status~ : Int, detail~ : String)
-  RuntimeDestroy(status~ : Int, detail~ : String)
+  WindowDestroy(status~ : Int32, detail~ : String)
+  RuntimeDestroy(status~ : Int32, detail~ : String)
 } derive(@debug.Debug)
 pub fn AppCleanupError::message(Self) -> String
 pub fn AppCleanupError::output(Self, &Logger) -> Unit
@@ -89,7 +89,7 @@ pub(all) suberror AppControlError {
   UndeclaredProtocolScheme(scheme~ : String)
   InvalidExecutable(path~ : String)
   UnsupportedPlatform(action~ : String)
-  NativeControlFailure(action~ : String, status~ : Int, detail~ : String)
+  NativeControlFailure(action~ : String, status~ : Int32, detail~ : String)
 } derive(Eq, @debug.Debug)
 pub fn AppControlError::equal(Self, Self) -> Bool
 pub fn AppControlError::message(Self) -> String
@@ -100,7 +100,7 @@ pub fn AppControlError::to_string(Self) -> String
 
 pub(all) suberror AppEntryError {
   ReadFailed(path~ : String, detail~ : String)
-  PlatformLoad(action~ : String, status~ : Int, detail~ : String)
+  PlatformLoad(action~ : String, status~ : Int32, detail~ : String)
   ClosedDuringStartup
 } derive(@debug.Debug)
 pub fn AppEntryError::message(Self) -> String
@@ -116,8 +116,8 @@ pub(all) suberror AppPathError {
   MissingExecutablePath
   UnsupportedPath(kind~ : String, platform~ : String)
   InvalidPathOverride(kind~ : String, path~ : String, reason~ : String)
-  SystemPath(kind~ : String, status~ : Int, detail~ : String)
-  PlatformProbe(status~ : Int, detail~ : String)
+  SystemPath(kind~ : String, status~ : Int32, detail~ : String)
+  PlatformProbe(status~ : Int32, detail~ : String)
 } derive(Eq, @debug.Debug)
 pub fn AppPathError::equal(Self, Self) -> Bool
 pub fn AppPathError::message(Self) -> String
@@ -129,7 +129,7 @@ pub(all) suberror AppRunError {
   ConfigurationError(AppConfigurationError)
   LoggingInitializationFailed(detail~ : String)
   UnsupportedNativeFeature(feature~ : String)
-  RuntimeOperationFailed(action~ : String, status~ : Int, detail~ : String)
+  RuntimeOperationFailed(action~ : String, status~ : Int32, detail~ : String)
   CommandExtensionLifecycleError(CommandExtensionLifecycleError)
   LifecycleHookError(LifecycleHookError)
   EntryLoadError(AppEntryError)
@@ -155,9 +155,9 @@ pub fn CommandExtensionLifecycleError::to_repr(Self) -> @debug.Repr
 pub fn CommandExtensionLifecycleError::to_string(Self) -> String
 
 pub(all) suberror LifecycleHookError {
-  ApplicationStart(index~ : Int, detail~ : String)
+  ApplicationStart(index~ : Int32, detail~ : String)
   ApplicationShutdown(detail~ : String)
-  WindowReady(index~ : Int, detail~ : String)
+  WindowReady(index~ : Int32, detail~ : String)
   WindowClose(window~ : String, detail~ : String)
 } derive(@debug.Debug)
 pub fn LifecycleHookError::message(Self) -> String
@@ -166,7 +166,7 @@ pub fn LifecycleHookError::to_repr(Self) -> @debug.Repr
 pub fn LifecycleHookError::to_string(Self) -> String
 
 pub(all) suberror NativeImageError {
-  OperationFailed(action~ : String, status~ : Int, detail~ : String)
+  OperationFailed(action~ : String, status~ : Int32, detail~ : String)
 } derive(Eq, @debug.Debug)
 pub fn NativeImageError::equal(Self, Self) -> Bool
 pub fn NativeImageError::message(Self) -> String
@@ -176,7 +176,7 @@ pub fn NativeImageError::to_repr(Self) -> @debug.Repr
 pub fn NativeImageError::to_string(Self) -> String
 
 pub(all) suberror NotificationDeliveryError {
-  NativeFailure(status~ : Int, detail~ : String)
+  NativeFailure(status~ : Int32, detail~ : String)
   WaitInterrupted(detail~ : String)
   DeliveryFailed(message~ : String)
 } derive(Eq, @debug.Debug)
@@ -186,7 +186,7 @@ pub fn NotificationDeliveryError::not_equal(Self, Self) -> Bool
 pub fn NotificationDeliveryError::to_repr(Self) -> @debug.Repr
 
 pub(all) suberror ScreenQueryError {
-  QueryFailed(status~ : Int, detail~ : String)
+  QueryFailed(status~ : Int32, detail~ : String)
 } derive(@debug.Debug)
 pub fn ScreenQueryError::message(Self) -> String
 pub fn ScreenQueryError::output(Self, &Logger) -> Unit
@@ -194,20 +194,20 @@ pub fn ScreenQueryError::to_repr(Self) -> @debug.Repr
 pub fn ScreenQueryError::to_string(Self) -> String
 
 pub(all) suberror SessionError {
-  OperationFailed(action~ : String, status~ : Int, detail~ : String)
+  OperationFailed(action~ : String, status~ : Int32, detail~ : String)
 } derive(@debug.Debug)
 pub fn SessionError::message(Self) -> String
 pub fn SessionError::to_repr(Self) -> @debug.Repr
 
 pub(all) suberror SystemAppearanceError {
-  SystemAppearanceUnavailable(status~ : Int, detail~ : String)
+  SystemAppearanceUnavailable(status~ : Int32, detail~ : String)
 }
 pub fn SystemAppearanceError::message(Self) -> String
 pub fn SystemAppearanceError::output(Self, &Logger) -> Unit
 pub fn SystemAppearanceError::to_string(Self) -> String
 
 pub(all) suberror SystemLocaleError {
-  NativeQuery(status~ : Int, detail~ : String)
+  NativeQuery(status~ : Int32, detail~ : String)
 } derive(@debug.Debug)
 pub fn SystemLocaleError::message(Self) -> String
 pub fn SystemLocaleError::output(Self, &Logger) -> Unit
@@ -215,7 +215,7 @@ pub fn SystemLocaleError::to_repr(Self) -> @debug.Repr
 pub fn SystemLocaleError::to_string(Self) -> String
 
 pub(all) suberror SystemPreferencesError {
-  SystemPreferencesUnavailable(query~ : String, status~ : Int, detail~ : String)
+  SystemPreferencesUnavailable(query~ : String, status~ : Int32, detail~ : String)
 } derive(Eq, @debug.Debug)
 pub fn SystemPreferencesError::equal(Self, Self) -> Bool
 pub fn SystemPreferencesError::message(Self) -> String
@@ -233,7 +233,7 @@ pub(all) suberror WindowSessionError {
   AlreadyExists(id~ : String)
   StaleView(id~ : String)
   Cancelled
-  OperationFailed(action~ : String, status~ : Int, detail~ : String)
+  OperationFailed(action~ : String, status~ : Int32, detail~ : String)
   StartupFailed(id~ : String, error~ : AppRunError)
 } derive(@debug.Debug)
 pub fn WindowSessionError::message(Self) -> String
@@ -246,13 +246,13 @@ type App
 pub fn App::App(WindowConfig) -> Self
 pub fn App::accessibility(Self, @types.AccessibilityMode) -> Unit
 pub fn App::add_window(Self, String, WindowConfig, open_on_start? : Bool) -> Unit
-pub fn App::bridge_startup_timeout_ms(Self, Int) -> Unit
+pub fn App::bridge_startup_timeout_ms(Self, Int32) -> Unit
 pub fn App::capability(Self, @extension.RendererCapability, targets? : Array[RendererTarget]) -> Unit
 pub fn App::commands(Self, (@command.CommandRegistrar) -> Unit raise, targets? : Array[RendererTarget]) -> Unit
 pub fn App::config(Self, @proton_config.AppConfig) -> Unit
 pub fn App::data_dir(Self) -> String raise AppPathError
 pub fn App::debug(Self, enabled? : Bool) -> Unit
-pub fn App::debug_level(Self, Int) -> Unit
+pub fn App::debug_level(Self, Int32) -> Unit
 pub fn App::document_extension(Self, String) -> Unit
 pub fn App::headless(Self, enabled? : Bool) -> Unit
 pub fn App::identifier(Self, String) -> Unit
@@ -263,7 +263,7 @@ pub fn App::menu(Self, MenuBar) -> Unit
 pub fn App::name(Self) -> String raise @proton_config.AppConfigError
 pub fn App::on_download_event(Self, async (WebContentsHandle, DownloadEvent) -> Unit noraise) -> Unit
 pub fn App::on_launch_input(Self, async (ApplicationContext, @types.RuntimeLaunchInput) -> Unit noraise) -> Unit
-pub fn App::on_quit(Self, (ApplicationContext, Int) -> Unit) -> Unit
+pub fn App::on_quit(Self, (ApplicationContext, Int32) -> Unit) -> Unit
 pub fn App::on_render_process_gone(Self, async (WebContentsHandle, RenderProcessGoneDetails) -> Unit noraise) -> Unit
 pub fn App::on_session_created(Self, (ApplicationSession) -> Unit) -> Unit
 pub fn App::on_system_appearance_change(Self, async (SystemAppearance) -> Unit noraise) -> Unit
@@ -288,7 +288,7 @@ pub fn App::set_will_quit_handler(Self, async (ApplicationContext) -> Applicatio
 pub fn App::setup(Self, async (ApplicationContext) -> Unit) -> Unit
 pub fn App::setup_window(Self, async (WindowContext) -> Unit) -> Unit
 pub fn App::single_instance(Self, enabled? : Bool) -> Unit
-pub fn App::update_channel(Self, String, Array[String], check_on_launch? : Bool, freshness_days? : Int) -> Unit
+pub fn App::update_channel(Self, String, Array[String], check_on_launch? : Bool, freshness_days? : Int32) -> Unit
 pub fn App::url_scheme(Self, String) -> Unit
 pub fn App::version(Self) -> String raise @proton_config.AppConfigError
 pub fn App::web_request_cancel_prefix(Self, String) -> Unit
@@ -321,8 +321,8 @@ pub struct ApplicationContext {
   tasks : @async.TaskGroup[Unit]
   windows : WindowManager
   locale_preferences : @locale.LocalePreferences
-  request_quit : (Int) -> Unit
-  request_exit : (Int) -> Unit
+  request_quit : (Int32) -> Unit
+  request_exit : (Int32) -> Unit
   has_single_instance_lock : () -> Bool
   release_single_instance_lock : () -> Unit raise AppControlError
   application_identifier : String
@@ -332,13 +332,13 @@ pub struct ApplicationContext {
   // private fields
 }
 pub fn ApplicationContext::add_cleanup(Self, async () -> Unit) -> Unit
-pub fn ApplicationContext::badge_count(Self) -> Int raise AppControlError
+pub fn ApplicationContext::badge_count(Self) -> Int32 raise AppControlError
 pub async fn ApplicationContext::check_for_update(Self) -> UpdateCheck
 pub fn ApplicationContext::dock_badge(Self) -> String raise AppControlError
-pub fn ApplicationContext::dock_bounce(Self, kind? : DockBounceType) -> Int raise AppControlError
-pub fn ApplicationContext::dock_cancel_bounce(Self, Int) -> Unit raise AppControlError
+pub fn ApplicationContext::dock_bounce(Self, kind? : DockBounceType) -> Int32 raise AppControlError
+pub fn ApplicationContext::dock_cancel_bounce(Self, Int32) -> Unit raise AppControlError
 pub fn ApplicationContext::dock_set_badge(Self, String) -> Unit raise AppControlError
-pub fn ApplicationContext::exit(Self, exit_code? : Int) -> Unit
+pub fn ApplicationContext::exit(Self, exit_code? : Int32) -> Unit
 pub fn ApplicationContext::focus(Self, steal? : Bool) -> Unit raise AppControlError
 pub fn ApplicationContext::has_single_instance_lock(Self) -> Bool
 pub fn ApplicationContext::hide(Self) -> Unit raise AppControlError
@@ -347,14 +347,14 @@ pub fn ApplicationContext::is_default_protocol_client(Self, String, executable? 
 pub fn ApplicationContext::is_hidden(Self) -> Bool raise AppControlError
 pub fn ApplicationContext::locale(Self) -> @locale.Locale
 pub fn ApplicationContext::preferred_languages(Self) -> Array[@locale.Locale]
-pub fn ApplicationContext::quit(Self, exit_code? : Int) -> Unit
+pub fn ApplicationContext::quit(Self, exit_code? : Int32) -> Unit
 pub fn ApplicationContext::quit_and_install(Self) -> Unit raise AppControlError
 pub fn ApplicationContext::relaunch(Self, options? : RelaunchOptions) -> Unit raise AppControlError
 pub fn ApplicationContext::release_single_instance_lock(Self) -> Unit raise AppControlError
 pub fn ApplicationContext::remove_default_protocol_client(Self, String, executable? : String, arguments? : Array[String]) -> Bool raise AppControlError
 pub fn ApplicationContext::session(Self) -> SessionHandle
 pub fn ApplicationContext::set_as_default_protocol_client(Self, String, executable? : String, arguments? : Array[String]) -> Bool raise AppControlError
-pub fn ApplicationContext::set_badge_count(Self, Int) -> Bool raise AppControlError
+pub fn ApplicationContext::set_badge_count(Self, Int32) -> Bool raise AppControlError
 pub fn ApplicationContext::show(Self) -> Unit raise AppControlError
 pub fn ApplicationContext::task_group(Self) -> @async.TaskGroup[Unit]
 pub fn ApplicationContext::task_metrics(Self) -> Array[@types.AppTaskMetric] raise AppControlError
@@ -386,7 +386,7 @@ pub fn BrowserPermissionDecision::to_repr(Self) -> @debug.Repr
 
 pub(all) struct CertificateError {
   url : String
-  error_code : Int
+  error_code : Int32
 } derive(Eq, @debug.Debug)
 pub fn CertificateError::equal(Self, Self) -> Bool
 pub fn CertificateError::not_equal(Self, Self) -> Bool
@@ -432,18 +432,18 @@ pub fn DownloadDecision::not_equal(Self, Self) -> Bool
 pub fn DownloadDecision::to_repr(Self) -> @debug.Repr
 
 pub(all) struct DownloadEvent {
-  id : Int
+  id : Int32
   state : String
   received_bytes : Int64
   total_bytes : Int64
-  percent : Int
+  percent : Int32
 } derive(Eq, @debug.Debug)
 pub fn DownloadEvent::equal(Self, Self) -> Bool
 pub fn DownloadEvent::not_equal(Self, Self) -> Bool
 pub fn DownloadEvent::to_repr(Self) -> @debug.Repr
 
 pub(all) struct DownloadRequest {
-  id : Int
+  id : Int32
   url : String
   suggested_name : String
 } derive(Eq, @debug.Debug)
@@ -461,7 +461,7 @@ pub fn LastWindowClosedPolicy::to_repr(Self) -> @debug.Repr
 
 pub(all) struct MediaPermissionRequest {
   origin : String
-  permissions : Int
+  permissions : Int32
 } derive(Eq, @debug.Debug)
 pub fn MediaPermissionRequest::equal(Self, Self) -> Bool
 pub fn MediaPermissionRequest::not_equal(Self, Self) -> Bool
@@ -473,7 +473,7 @@ pub struct Menu {
   items : Array[MenuItem]?
 }
 pub fn Menu::Menu(String, items~ : Array[MenuItem]) -> Self
-pub fn Menu::popup(Self, WindowHandle, Int, Int) -> Unit raise WindowSessionError
+pub fn Menu::popup(Self, WindowHandle, Int32, Int32) -> Unit raise WindowSessionError
 pub fn Menu::role(@types.MenuRole, label? : String, items? : Array[MenuItem]) -> Self
 
 pub struct MenuBar {
@@ -482,7 +482,7 @@ pub struct MenuBar {
 pub fn MenuBar::MenuBar(menus~ : Array[Menu]) -> Self
 
 pub struct MenuItem {
-  kind : Int
+  kind : Int32
   id : String?
   label : String?
   key : String?
@@ -500,15 +500,15 @@ pub fn MenuItem::submenu(String, items~ : Array[Self]) -> Self
 pub struct NativeImage {
   image : @native.NativeImage
 }
-pub fn NativeImage::add_bitmap(Self, Bytes, Int, Int, scale_factor? : Double) -> Unit raise NativeImageError
+pub fn NativeImage::add_bitmap(Self, Bytes, Int32, Int32, scale_factor? : Double) -> Unit raise NativeImageError
 pub fn NativeImage::add_jpeg(Self, Bytes, scale_factor? : Double) -> Unit raise NativeImageError
 pub fn NativeImage::add_png(Self, Bytes, scale_factor? : Double) -> Unit raise NativeImageError
 pub fn NativeImage::destroy(Self) -> Unit raise NativeImageError
 pub fn NativeImage::is_empty(Self) -> Bool raise NativeImageError
-pub fn NativeImage::size(Self) -> (Int, Int) raise NativeImageError
-pub fn NativeImage::to_bitmap(Self, scale_factor? : Double) -> (Bytes, Int, Int) raise NativeImageError
-pub fn NativeImage::to_jpeg(Self, scale_factor? : Double, quality? : Int) -> (Bytes, Int, Int) raise NativeImageError
-pub fn NativeImage::to_png(Self, scale_factor? : Double, with_transparency? : Bool) -> (Bytes, Int, Int) raise NativeImageError
+pub fn NativeImage::size(Self) -> (Int32, Int32) raise NativeImageError
+pub fn NativeImage::to_bitmap(Self, scale_factor? : Double) -> (Bytes, Int32, Int32) raise NativeImageError
+pub fn NativeImage::to_jpeg(Self, scale_factor? : Double, quality? : Int32) -> (Bytes, Int32, Int32) raise NativeImageError
+pub fn NativeImage::to_png(Self, scale_factor? : Double, with_transparency? : Bool) -> (Bytes, Int32, Int32) raise NativeImageError
 
 pub(all) enum NavigationDecision {
   Allow
@@ -526,7 +526,7 @@ pub(all) struct NavigationEntry {
   transition : NavigationTransition
   transition_qualifiers : Array[NavigationTransitionQualifier]
   has_post_data : Bool
-  http_status_code : Int
+  http_status_code : Int32
 } derive(Eq, @debug.Debug)
 pub fn NavigationEntry::equal(Self, Self) -> Bool
 pub fn NavigationEntry::not_equal(Self, Self) -> Bool
@@ -534,14 +534,14 @@ pub fn NavigationEntry::to_repr(Self) -> @debug.Repr
 
 pub(all) struct NavigationHistory {
   entries : Array[NavigationEntry]
-  active_index : Int
+  active_index : Int32
 } derive(Eq, @debug.Debug)
 pub fn NavigationHistory::active_entry(Self) -> NavigationEntry?
 pub fn NavigationHistory::can_go_back(Self) -> Bool
 pub fn NavigationHistory::can_go_forward(Self) -> Bool
-pub fn NavigationHistory::entry_at(Self, Int) -> NavigationEntry?
+pub fn NavigationHistory::entry_at(Self, Int32) -> NavigationEntry?
 pub fn NavigationHistory::equal(Self, Self) -> Bool
-pub fn NavigationHistory::length(Self) -> Int
+pub fn NavigationHistory::length(Self) -> Int32
 pub fn NavigationHistory::not_equal(Self, Self) -> Bool
 pub fn NavigationHistory::to_repr(Self) -> @debug.Repr
 
@@ -567,7 +567,7 @@ pub(all) enum NavigationTransition {
   Reload
   Keyword
   KeywordGenerated
-  Other(Int)
+  Other(Int32)
 } derive(Eq, @debug.Debug)
 pub fn NavigationTransition::equal(Self, Self) -> Bool
 pub fn NavigationTransition::not_equal(Self, Self) -> Bool
@@ -653,7 +653,7 @@ pub fn RelaunchOptions::to_repr(Self) -> @debug.Repr
 
 pub(all) struct RenderProcessGoneDetails {
   reason : RenderProcessGoneReason
-  exit_code : Int
+  exit_code : Int32
 } derive(Eq, @debug.Debug)
 pub fn RenderProcessGoneDetails::equal(Self, Self) -> Bool
 pub fn RenderProcessGoneDetails::not_equal(Self, Self) -> Bool
@@ -731,17 +731,17 @@ pub enum UpdateCheck {
 }
 
 pub struct ViewConfig {
-  x : Int
-  y : Int
-  width : Int
-  height : Int
+  x : Int32
+  y : Int32
+  width : Int32
+  height : Int32
   visible : Bool
-  z_order : Int
+  z_order : Int32
   initial_url : String
   background_color : String?
   web_contents_policy : WebContentsPolicy
 }
-pub fn ViewConfig::ViewConfig(width~ : Int, height~ : Int, x? : Int, y? : Int, visible? : Bool, z_order? : Int, initial_url? : String, background_color? : String, web_contents_policy? : WebContentsPolicy) -> Self
+pub fn ViewConfig::ViewConfig(width~ : Int32, height~ : Int32, x? : Int32, y? : Int32, visible? : Bool, z_order? : Int32, initial_url? : String, background_color? : String, web_contents_policy? : WebContentsPolicy) -> Self
 
 pub struct ViewHandle {
   id : String
@@ -751,9 +751,9 @@ pub struct ViewHandle {
 }
 pub fn ViewHandle::close(Self) -> Unit raise WindowSessionError
 pub fn ViewHandle::id(Self) -> String
-pub fn ViewHandle::set_bounds(Self, x~ : Int, y~ : Int, width~ : Int, height~ : Int) -> Unit raise WindowSessionError
+pub fn ViewHandle::set_bounds(Self, x~ : Int32, y~ : Int32, width~ : Int32, height~ : Int32) -> Unit raise WindowSessionError
 pub fn ViewHandle::set_visible(Self, Bool) -> Unit raise WindowSessionError
-pub fn ViewHandle::set_z_order(Self, Int) -> Unit raise WindowSessionError
+pub fn ViewHandle::set_z_order(Self, Int32) -> Unit raise WindowSessionError
 pub fn ViewHandle::state(Self) -> @types.ViewState raise WindowSessionError
 pub fn ViewHandle::web_contents(Self) -> WebContentsHandle
 pub fn ViewHandle::window_id(Self) -> String
@@ -766,12 +766,12 @@ pub(all) enum WebContentsEvent {
   DidFinishLoad
   Navigated(url~ : String)
   TitleUpdated(title~ : String)
-  LoadFailed(url~ : String, error_code~ : Int, error_text~ : String)
+  LoadFailed(url~ : String, error_code~ : Int32, error_text~ : String)
   FoundInPage(result~ : @types.FindInPageResult)
-  ResourceResponse(url~ : String, status_code~ : Int)
-  ResourceCompleted(url~ : String, status~ : Int, received_bytes~ : Int64)
+  ResourceResponse(url~ : String, status_code~ : Int32)
+  ResourceCompleted(url~ : String, status~ : Int32, received_bytes~ : Int64)
   ResourceRequested(url~ : String, request_method~ : String, will_cancel~ : Bool)
-  RendererProcessTerminated(url~ : String, status~ : Int, error_code~ : Int, detail~ : String)
+  RendererProcessTerminated(url~ : String, status~ : Int32, error_code~ : Int32, detail~ : String)
 } derive(Eq, @debug.Debug)
 pub fn WebContentsEvent::equal(Self, Self) -> Bool
 pub fn WebContentsEvent::not_equal(Self, Self) -> Bool
@@ -785,14 +785,14 @@ pub struct WebContentsHandle {
 pub fn WebContentsHandle::back(Self) -> Unit raise WindowSessionError
 pub fn WebContentsHandle::can_go_back(Self) -> Bool raise WindowSessionError
 pub fn WebContentsHandle::can_go_forward(Self) -> Bool raise WindowSessionError
-pub fn WebContentsHandle::cancel_download(Self, Int) -> Unit raise WindowSessionError
+pub fn WebContentsHandle::cancel_download(Self, Int32) -> Unit raise WindowSessionError
 pub fn WebContentsHandle::close_devtools(Self) -> Unit raise WindowSessionError
 pub fn WebContentsHandle::copy(Self) -> Unit raise WindowSessionError
 pub fn WebContentsHandle::cut(Self) -> Unit raise WindowSessionError
 pub fn WebContentsHandle::delete(Self) -> Unit raise WindowSessionError
 pub fn WebContentsHandle::download_url(Self, String) -> Unit raise WindowSessionError
 pub fn WebContentsHandle::eval(Self, String) -> Unit raise WindowSessionError
-pub fn WebContentsHandle::find_in_page(Self, String, forward? : Bool, match_case? : Bool, find_next? : Bool) -> Int raise WindowSessionError
+pub fn WebContentsHandle::find_in_page(Self, String, forward? : Bool, match_case? : Bool, find_next? : Bool) -> Int32 raise WindowSessionError
 pub fn WebContentsHandle::focus(Self) -> Unit raise WindowSessionError
 pub fn WebContentsHandle::forward(Self) -> Unit raise WindowSessionError
 pub fn WebContentsHandle::insert_css(Self, String) -> Int64 raise WindowSessionError
@@ -813,7 +813,7 @@ pub fn WebContentsHandle::remove_inserted_css(Self, Int64) -> Unit raise WindowS
 pub fn WebContentsHandle::select_all(Self) -> Unit raise WindowSessionError
 pub fn WebContentsHandle::session(Self) -> SessionHandle
 pub fn WebContentsHandle::set_audio_muted(Self, Bool) -> Unit raise WindowSessionError
-pub fn WebContentsHandle::set_zoom_percent(Self, Int) -> Unit raise WindowSessionError
+pub fn WebContentsHandle::set_zoom_percent(Self, Int32) -> Unit raise WindowSessionError
 pub fn WebContentsHandle::state(Self) -> @types.BrowserState raise WindowSessionError
 pub fn WebContentsHandle::stop(Self) -> Unit raise WindowSessionError
 pub fn WebContentsHandle::stop_find_in_page(Self, clear_selection? : Bool) -> Unit raise WindowSessionError
@@ -821,7 +821,7 @@ pub fn WebContentsHandle::toggle_devtools(Self) -> Unit raise WindowSessionError
 pub fn WebContentsHandle::undo(Self) -> Unit raise WindowSessionError
 pub fn WebContentsHandle::view_id(Self) -> String?
 pub fn WebContentsHandle::window_id(Self) -> String
-pub fn WebContentsHandle::zoom_percent(Self) -> Int raise WindowSessionError
+pub fn WebContentsHandle::zoom_percent(Self) -> Int32 raise WindowSessionError
 
 pub(all) struct WebContentsPolicy {
   navigation_handler : ((WebContentsHandle, NavigationRequest) -> NavigationDecision)?
@@ -830,8 +830,8 @@ pub(all) struct WebContentsPolicy {
 pub fn WebContentsPolicy::WebContentsPolicy(navigation_handler? : (WebContentsHandle, NavigationRequest) -> NavigationDecision, new_window_handler? : async (WebContentsHandle, NewWindowRequest) -> NewWindowDecision noraise) -> Self
 
 pub(all) struct WindowButtonPosition {
-  x : Int
-  y : Int
+  x : Int32
+  y : Int32
 } derive(Eq, @debug.Debug)
 pub fn WindowButtonPosition::equal(Self, Self) -> Bool
 pub fn WindowButtonPosition::not_equal(Self, Self) -> Bool
@@ -848,8 +848,8 @@ pub fn WindowCloseDecision::to_repr(Self) -> @debug.Repr
 pub(all) struct WindowConfig {
   title : String
   entry : @manifest.AppEntry
-  width : Int
-  height : Int
+  width : Int32
+  height : Int32
   size_hint : @types.WindowSizeHint
   titlebar_style : @types.TitlebarStyle
   theme : @types.WindowThemePreference
@@ -858,7 +858,7 @@ pub(all) struct WindowConfig {
   close_handler : (async (WindowHandle) -> WindowCloseDecision noraise)?
   web_contents_policy : WebContentsPolicy
 }
-pub fn WindowConfig::WindowConfig(String, @manifest.AppEntry, width? : Int, height? : Int, size_hint? : @types.WindowSizeHint, titlebar_style? : @types.TitlebarStyle, theme? : @types.WindowThemePreference, traffic_light_position? : WindowButtonPosition, views? : Array[(String, ViewConfig)], close_handler? : async (WindowHandle) -> WindowCloseDecision noraise, web_contents_policy? : WebContentsPolicy) -> Self
+pub fn WindowConfig::WindowConfig(String, @manifest.AppEntry, width? : Int32, height? : Int32, size_hint? : @types.WindowSizeHint, titlebar_style? : @types.TitlebarStyle, theme? : @types.WindowThemePreference, traffic_light_position? : WindowButtonPosition, views? : Array[(String, ViewConfig)], close_handler? : async (WindowHandle) -> WindowCloseDecision noraise, web_contents_policy? : WebContentsPolicy) -> Self
 
 pub struct WindowContext {
   id : String
@@ -910,10 +910,10 @@ pub struct WindowHandle {
   // private fields
 }
 pub fn WindowHandle::add_view(Self, String, ViewConfig) -> ViewHandle raise WindowSessionError
-pub fn WindowHandle::bounds(Self) -> (Int, Int, Int, Int) raise WindowSessionError
+pub fn WindowHandle::bounds(Self) -> (Int32, Int32, Int32, Int32) raise WindowSessionError
 pub fn WindowHandle::center(Self) -> Unit raise WindowSessionError
 pub fn WindowHandle::close(Self) -> Unit raise WindowSessionError
-pub fn WindowHandle::content_size(Self) -> (Int, Int) raise WindowSessionError
+pub fn WindowHandle::content_size(Self) -> (Int32, Int32) raise WindowSessionError
 pub fn WindowHandle::flash_frame(Self, Bool) -> Unit raise WindowSessionError
 pub fn WindowHandle::focus(Self) -> Unit raise WindowSessionError
 pub fn WindowHandle::hide(Self) -> Unit raise WindowSessionError
@@ -926,16 +926,16 @@ pub fn WindowHandle::is_minimized(Self) -> Bool raise WindowSessionError
 pub fn WindowHandle::is_visible(Self) -> Bool raise WindowSessionError
 pub fn WindowHandle::maximize(Self) -> Unit raise WindowSessionError
 pub fn WindowHandle::minimize(Self) -> Unit raise WindowSessionError
-pub fn WindowHandle::position(Self) -> (Int, Int) raise WindowSessionError
+pub fn WindowHandle::position(Self) -> (Int32, Int32) raise WindowSessionError
 pub fn WindowHandle::remove_view(Self, String) -> Unit raise WindowSessionError
 pub fn WindowHandle::restore(Self) -> Unit raise WindowSessionError
 pub fn WindowHandle::set_always_on_top(Self, Bool) -> Unit raise WindowSessionError
 pub fn WindowHandle::set_aspect_ratio(Self, Double) -> Unit raise WindowSessionError
 pub fn WindowHandle::set_background_color(Self, String) -> Unit raise WindowSessionError
-pub fn WindowHandle::set_bounds(Self, x~ : Int, y~ : Int, width~ : Int, height~ : Int) -> Unit raise WindowSessionError
+pub fn WindowHandle::set_bounds(Self, x~ : Int32, y~ : Int32, width~ : Int32, height~ : Int32) -> Unit raise WindowSessionError
 pub fn WindowHandle::set_closable(Self, Bool) -> Unit raise WindowSessionError
 pub fn WindowHandle::set_content_protection(Self, Bool) -> Unit raise WindowSessionError
-pub fn WindowHandle::set_content_size(Self, Int, Int) -> Unit raise WindowSessionError
+pub fn WindowHandle::set_content_size(Self, Int32, Int32) -> Unit raise WindowSessionError
 pub fn WindowHandle::set_enabled(Self, Bool) -> Unit raise WindowSessionError
 pub fn WindowHandle::set_focusable(Self, Bool) -> Unit raise WindowSessionError
 pub fn WindowHandle::set_fullscreen(Self, Bool) -> Unit raise WindowSessionError
@@ -945,18 +945,18 @@ pub fn WindowHandle::set_icon(Self, String) -> Unit raise WindowSessionError
 pub fn WindowHandle::set_ignore_mouse_events(Self, Bool, Bool) -> Unit raise WindowSessionError
 pub fn WindowHandle::set_kiosk(Self, Bool) -> Unit raise WindowSessionError
 pub fn WindowHandle::set_maximizable(Self, Bool) -> Unit raise WindowSessionError
-pub fn WindowHandle::set_maximum_size(Self, Int, Int) -> Unit raise WindowSessionError
+pub fn WindowHandle::set_maximum_size(Self, Int32, Int32) -> Unit raise WindowSessionError
 pub fn WindowHandle::set_menu(Self, MenuBar?) -> Unit raise WindowSessionError
 pub fn WindowHandle::set_minimizable(Self, Bool) -> Unit raise WindowSessionError
-pub fn WindowHandle::set_minimum_size(Self, Int, Int) -> Unit raise WindowSessionError
+pub fn WindowHandle::set_minimum_size(Self, Int32, Int32) -> Unit raise WindowSessionError
 pub fn WindowHandle::set_movable(Self, Bool) -> Unit raise WindowSessionError
 pub fn WindowHandle::set_opacity(Self, Double) -> Unit raise WindowSessionError
 pub fn WindowHandle::set_overlay_icon(Self, NativeImage?, String) -> Unit raise WindowSessionError
 pub fn WindowHandle::set_parent(Self, Self?, modal? : Bool) -> Unit raise WindowSessionError
-pub fn WindowHandle::set_position(Self, Int, Int) -> Unit raise WindowSessionError
+pub fn WindowHandle::set_position(Self, Int32, Int32) -> Unit raise WindowSessionError
 pub fn WindowHandle::set_progress_bar(Self, Double, mode? : @types.ProgressBarMode) -> Unit raise WindowSessionError
 pub fn WindowHandle::set_resizable(Self, Bool) -> Unit raise WindowSessionError
-pub fn WindowHandle::set_size(Self, Int, Int) -> Unit raise WindowSessionError
+pub fn WindowHandle::set_size(Self, Int32, Int32) -> Unit raise WindowSessionError
 pub fn WindowHandle::set_skip_taskbar(Self, Bool) -> Unit raise WindowSessionError
 pub fn WindowHandle::set_theme(Self, @types.WindowThemePreference) -> Unit raise WindowSessionError
 pub fn WindowHandle::set_thumbar_buttons(Self, Array[ThumbarButton]) -> Bool raise WindowSessionError
@@ -967,13 +967,13 @@ pub fn WindowHandle::set_window_button_position(Self, WindowButtonPosition?) -> 
 pub fn WindowHandle::set_window_button_visibility(Self, Bool) -> Unit raise WindowSessionError
 pub fn WindowHandle::show(Self) -> Unit raise WindowSessionError
 pub fn WindowHandle::show_inactive(Self) -> Unit raise WindowSessionError
-pub fn WindowHandle::size(Self) -> (Int, Int) raise WindowSessionError
+pub fn WindowHandle::size(Self) -> (Int32, Int32) raise WindowSessionError
 pub fn WindowHandle::state(Self) -> @types.WindowState raise WindowSessionError
 pub fn WindowHandle::view(Self, String) -> ViewHandle?
 pub fn WindowHandle::views(Self) -> Array[ViewHandle]
 pub fn WindowHandle::web_contents(Self) -> WebContentsHandle
 pub fn WindowHandle::window_button_position(Self) -> WindowButtonPosition? raise WindowSessionError
-pub fn WindowHandle::zoom_percent(Self) -> Int raise WindowSessionError
+pub fn WindowHandle::zoom_percent(Self) -> Int32 raise WindowSessionError
 
 pub struct WindowManager {
   open_window : async (String) -> WindowHandle

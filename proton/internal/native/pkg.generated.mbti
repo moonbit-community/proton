@@ -11,13 +11,13 @@ import {
 }
 
 // Values
-pub fn app_badge_count() -> Int raise NativeError
+pub fn app_badge_count() -> Int32 raise NativeError
 
 pub fn app_dock_badge() -> String raise NativeError
 
-pub fn app_dock_bounce(Int) -> Int raise NativeError
+pub fn app_dock_bounce(Int32) -> Int32 raise NativeError
 
-pub fn app_dock_cancel_bounce(Int) -> Unit raise NativeError
+pub fn app_dock_cancel_bounce(Int32) -> Unit raise NativeError
 
 pub fn app_dock_set_badge(String) -> Unit raise NativeError
 
@@ -29,7 +29,7 @@ pub fn app_is_active() -> Bool raise NativeError
 
 pub fn app_is_hidden() -> Bool raise NativeError
 
-pub fn app_set_badge_count(Int) -> Bool raise NativeError
+pub fn app_set_badge_count(Int32) -> Bool raise NativeError
 
 pub fn app_show() -> Unit raise NativeError
 
@@ -43,7 +43,7 @@ pub fn host_loop_begin() -> Unit raise NativeError
 
 pub fn host_loop_end() -> Unit
 
-pub fn host_loop_poll(timeout_ms? : Int) -> RuntimeWaitReady raise NativeError
+pub fn host_loop_poll(timeout_ms? : Int32) -> RuntimeWaitReady raise NativeError
 
 pub fn jump_list_apply(Array[@types.JumpListCategory]?) -> @types.JumpListResult raise NativeError
 
@@ -53,13 +53,13 @@ pub fn native_theme_query() -> (Bool, Bool) raise NativeError
 
 pub fn notification_cleanup() -> Unit raise NativeError
 
-pub fn notification_set_badge_count(Int) -> Unit raise NativeError
+pub fn notification_set_badge_count(Int32) -> Unit raise NativeError
 
 pub fn notification_show(String, String, payload? : String) -> Unit raise NativeError
 
 pub fn notification_supported() -> Bool raise NativeError
 
-pub fn process_exit(Int) -> Unit
+pub fn process_exit(Int32) -> Unit
 
 pub fn process_run_relaunches() -> Unit raise NativeError
 
@@ -73,13 +73,13 @@ pub fn protocol_client_set(String, String, String, Array[String]) -> Bool raise 
 
 pub fn runtime_info() -> RuntimeInfo raise NativeError
 
-pub let runtime_wait_all : Int
+pub let runtime_wait_all : Int32
 
-pub let runtime_wait_event : Int
+pub let runtime_wait_event : Int32
 
-pub let runtime_wait_none : Int
+pub let runtime_wait_none : Int32
 
-pub let runtime_wait_platform : Int
+pub let runtime_wait_platform : Int32
 
 pub fn screens() -> Array[@types.ScreenInfo] raise NativeError
 
@@ -115,11 +115,11 @@ pub fn update_validate_running_image() -> Unit raise NativeError
 
 pub fn web_contents_view_supported() -> Bool
 
-pub fn window_size_in_screen_coordinates(Int, Int, Int) -> (Int, Int)
+pub fn window_size_in_screen_coordinates(Int32, Int32, Int32) -> (Int32, Int32)
 
 // Errors
 pub(all) suberror NativeError {
-  Status(status~ : Int, message~ : String)
+  Status(status~ : Int32, message~ : String)
   InvalidArgument(message~ : String)
   InvalidPayload(context~ : String, message~ : String)
 } derive(Eq, @debug.Debug)
@@ -136,13 +136,13 @@ pub fn NativeError::is_update_version_mismatch(Self) -> Bool
 pub fn NativeError::message(Self) -> String
 pub fn NativeError::not_equal(Self, Self) -> Bool
 pub fn NativeError::output(Self, &Logger) -> Unit
-pub fn NativeError::status(Self) -> Int
+pub fn NativeError::status(Self) -> Int32
 pub fn NativeError::to_repr(Self) -> @debug.Repr
 pub fn NativeError::to_string(Self) -> String
 
 // Types and methods
 pub(all) struct AppActivation {
-  abi_version : Int
+  abi_version : Int32
   urls : Array[String]
   files : Array[String]
   reopen : Bool
@@ -253,7 +253,7 @@ pub(all) struct BrowserEventInfo {
   url : String?
   title : String?
   is_loading : Bool?
-  error_code : Int?
+  error_code : Int32?
   error_text : String?
   received_bytes : Int64?
 } derive(Eq, @debug.Debug)
@@ -287,9 +287,9 @@ pub(all) enum Contents {
   PrimaryPage(Window)
   ChildView(View)
 }
-pub fn Contents::cancel_download(Self, Int) -> Unit raise NativeError
+pub fn Contents::cancel_download(Self, Int32) -> Unit raise NativeError
 pub fn Contents::perform(Self, @ffi.BrowserOperation) -> Unit raise NativeError
-pub fn Contents::print_to_pdf(Self, String, PdfPrintSettings) -> Int raise NativeError
+pub fn Contents::print_to_pdf(Self, String, PdfPrintSettings) -> Int32 raise NativeError
 
 pub(all) enum DialogLevel {
   Info
@@ -329,9 +329,9 @@ pub fn NativeBrowserEvent::to_repr(Self) -> @debug.Repr
 
 pub(all) enum NativeBrowserRequest {
   NewWindow(request_id~ : Int64, url~ : String, user_gesture~ : Bool)
-  Download(request_id~ : Int64, download_id~ : Int, url~ : String, suggested_name~ : String)
-  Certificate(request_id~ : Int64, url~ : String, error_code~ : Int)
-  Media(request_id~ : Int64, origin~ : String, permissions~ : Int)
+  Download(request_id~ : Int64, download_id~ : Int32, url~ : String, suggested_name~ : String)
+  Certificate(request_id~ : Int64, url~ : String, error_code~ : Int32)
+  Media(request_id~ : Int64, origin~ : String, permissions~ : Int32)
 } derive(Eq, @debug.Debug)
 pub fn NativeBrowserRequest::equal(Self, Self) -> Bool
 pub fn NativeBrowserRequest::not_equal(Self, Self) -> Bool
@@ -370,27 +370,27 @@ pub fn NativeDialogCompletion::not_equal(Self, Self) -> Bool
 pub fn NativeDialogCompletion::to_repr(Self) -> @debug.Repr
 
 pub(all) struct NativeDownloadUpdate {
-  download_id : Int
+  download_id : Int32
   state : String
   received_bytes : Int64
   total_bytes : Int64
-  percent : Int
+  percent : Int32
 } derive(Eq, @debug.Debug)
 pub fn NativeDownloadUpdate::equal(Self, Self) -> Bool
 pub fn NativeDownloadUpdate::not_equal(Self, Self) -> Bool
 pub fn NativeDownloadUpdate::to_repr(Self) -> @debug.Repr
 
 type NativeImage
-pub fn NativeImage::add_bitmap(Self, Bytes, Int, Int, scale_factor? : Double) -> Unit raise NativeError
+pub fn NativeImage::add_bitmap(Self, Bytes, Int32, Int32, scale_factor? : Double) -> Unit raise NativeError
 pub fn NativeImage::add_jpeg(Self, Bytes, scale_factor? : Double) -> Unit raise NativeError
 pub fn NativeImage::add_png(Self, Bytes, scale_factor? : Double) -> Unit raise NativeError
 pub fn NativeImage::create_empty() -> Self raise NativeError
 pub fn NativeImage::destroy(Self) -> Unit raise NativeError
 pub fn NativeImage::is_empty(Self) -> Bool raise NativeError
-pub fn NativeImage::size(Self) -> (Int, Int) raise NativeError
-pub fn NativeImage::to_bitmap(Self, scale_factor? : Double) -> (Bytes, Int, Int) raise NativeError
-pub fn NativeImage::to_jpeg(Self, scale_factor? : Double, quality? : Int) -> (Bytes, Int, Int) raise NativeError
-pub fn NativeImage::to_png(Self, scale_factor? : Double, with_transparency? : Bool) -> (Bytes, Int, Int) raise NativeError
+pub fn NativeImage::size(Self) -> (Int32, Int32) raise NativeError
+pub fn NativeImage::to_bitmap(Self, scale_factor? : Double) -> (Bytes, Int32, Int32) raise NativeError
+pub fn NativeImage::to_jpeg(Self, scale_factor? : Double, quality? : Int32) -> (Bytes, Int32, Int32) raise NativeError
+pub fn NativeImage::to_png(Self, scale_factor? : Double, with_transparency? : Bool) -> (Bytes, Int32, Int32) raise NativeError
 
 pub(all) enum NativeNotificationResult {
   Delivered
@@ -401,7 +401,7 @@ pub fn NativeNotificationResult::not_equal(Self, Self) -> Bool
 pub fn NativeNotificationResult::to_repr(Self) -> @debug.Repr
 
 pub(all) struct NativePdfPrintResult {
-  request_id : Int
+  request_id : Int32
   path : String
   success : Bool
 } derive(Eq, @debug.Debug)
@@ -432,10 +432,10 @@ pub(all) struct NavigationEntry {
   display_url : String
   original_url : String
   title : String
-  transition : Int
-  qualifiers : Int
+  transition : Int32
+  qualifiers : Int32
   has_post_data : Bool
-  http_status_code : Int
+  http_status_code : Int32
 } derive(Eq, @debug.Debug, @json.FromJson)
 pub fn NavigationEntry::equal(Self, Self) -> Bool
 pub fn NavigationEntry::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
@@ -444,7 +444,7 @@ pub fn NavigationEntry::to_repr(Self) -> @debug.Repr
 
 pub(all) struct NavigationHistory {
   entries : Array[NavigationEntry]
-  active_index : Int
+  active_index : Int32
 } derive(Eq, @debug.Debug, @json.FromJson)
 pub fn NavigationHistory::equal(Self, Self) -> Bool
 pub fn NavigationHistory::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
@@ -458,7 +458,7 @@ pub(all) struct PdfPrintSettings {
   paper_width : Double
   paper_height : Double
   prefer_css_page_size : Bool
-  margin_type : Int
+  margin_type : Int32
   margin_top : Double
   margin_right : Double
   margin_bottom : Double
@@ -476,7 +476,7 @@ pub fn PdfPrintSettings::to_repr(Self) -> @debug.Repr
 
 pub(all) enum ProcessResult {
   MainProcess
-  SubprocessHandled(Int)
+  SubprocessHandled(Int32)
 } derive(Eq, @debug.Debug)
 pub fn ProcessResult::equal(Self, Self) -> Bool
 pub fn ProcessResult::not_equal(Self, Self) -> Bool
@@ -485,7 +485,7 @@ pub fn ProcessResult::to_repr(Self) -> @debug.Repr
 pub(all) enum RemoteDebugging {
   Disabled
   Ephemeral
-  Fixed(Int)
+  Fixed(Int32)
 } derive(Eq, @debug.Debug)
 pub fn RemoteDebugging::equal(Self, Self) -> Bool
 pub fn RemoteDebugging::not_equal(Self, Self) -> Bool
@@ -493,8 +493,8 @@ pub fn RemoteDebugging::to_repr(Self) -> @debug.Repr
 
 pub(all) struct RendererProcessTerminationInfo {
   url : String
-  status : Int
-  error_code : Int
+  status : Int32
+  error_code : Int32
   detail : String
 } derive(Eq, @debug.Debug)
 pub fn RendererProcessTerminationInfo::equal(Self, Self) -> Bool
@@ -509,7 +509,7 @@ pub fn Runtime::clear_auth_cache(Self) -> Unit raise NativeError
 pub fn Runtime::clear_cache(Self) -> Unit raise NativeError
 pub fn Runtime::clear_certificate_exceptions(Self) -> Unit raise NativeError
 pub fn Runtime::close_all_connections(Self) -> Unit raise NativeError
-pub fn Runtime::complete_resource_request(Self, Int64, Int, String, Bytes) -> Unit raise NativeError
+pub fn Runtime::complete_resource_request(Self, Int64, Int32, String, Bytes) -> Unit raise NativeError
 pub fn Runtime::cookie_begin_get(Self, String?, Bool) -> Int64 raise NativeError
 pub fn Runtime::cookie_delete(Self, String?, String?) -> Unit raise NativeError
 pub fn Runtime::cookie_flush(Self) -> Unit raise NativeError
@@ -577,13 +577,13 @@ pub fn RuntimeInfo::not_equal(Self, Self) -> Bool
 pub fn RuntimeInfo::to_repr(Self) -> @debug.Repr
 
 pub(all) struct RuntimeWaitReady {
-  mask : Int
+  mask : Int32
 } derive(Eq, @debug.Debug)
 pub fn RuntimeWaitReady::equal(Self, Self) -> Bool
 pub fn RuntimeWaitReady::has_event(Self) -> Bool
 pub fn RuntimeWaitReady::has_platform(Self) -> Bool
 pub fn RuntimeWaitReady::is_timeout(Self) -> Bool
-pub fn RuntimeWaitReady::mask(Self) -> Int
+pub fn RuntimeWaitReady::mask(Self) -> Int32
 pub fn RuntimeWaitReady::not_equal(Self, Self) -> Bool
 pub fn RuntimeWaitReady::to_repr(Self) -> @debug.Repr
 
@@ -635,7 +635,7 @@ pub fn View::browser_state(Self) -> @types.BrowserState raise NativeError
 pub fn View::destroy(Self) -> Unit raise NativeError
 pub fn View::download_url(Self, String) -> Unit raise NativeError
 pub fn View::eval(Self, String) -> Unit raise NativeError
-pub fn View::find_in_page(Self, String, Bool, Bool, Bool) -> Int raise NativeError
+pub fn View::find_in_page(Self, String, Bool, Bool, Bool) -> Int32 raise NativeError
 pub fn View::id(Self) -> Int64
 pub fn View::insert_page_css(Self, String) -> Int64 raise NativeError
 pub fn View::is_audio_muted(Self) -> Bool raise NativeError
@@ -647,16 +647,16 @@ pub fn View::print(Self) -> Unit raise NativeError
 pub fn View::remove_page_css(Self, Int64) -> Unit raise NativeError
 pub fn View::respond_browser_request(Self, Int64, String, path? : String) -> Unit raise NativeError
 pub fn View::set_audio_muted(Self, Bool) -> Unit raise NativeError
-pub fn View::set_bounds(Self, x~ : Int, y~ : Int, width~ : Int, height~ : Int) -> Unit raise NativeError
+pub fn View::set_bounds(Self, x~ : Int32, y~ : Int32, width~ : Int32, height~ : Int32) -> Unit raise NativeError
 pub fn View::set_visible(Self, Bool) -> Unit raise NativeError
-pub fn View::set_z_order(Self, Int) -> Unit raise NativeError
-pub fn View::set_zoom_percent(Self, Int) -> Unit raise NativeError
+pub fn View::set_z_order(Self, Int32) -> Unit raise NativeError
+pub fn View::set_zoom_percent(Self, Int32) -> Unit raise NativeError
 pub fn View::state(Self) -> @types.ViewState raise NativeError
 pub fn View::stop_find_in_page(Self, Bool) -> Unit raise NativeError
-pub fn View::zoom_percent(Self) -> Int raise NativeError
+pub fn View::zoom_percent(Self) -> Int32 raise NativeError
 
 type ViewConfig derive(Eq, @debug.Debug)
-pub fn ViewConfig::ViewConfig(width~ : Int, height~ : Int, x? : Int, y? : Int, visible? : Bool, z_order? : Int, initial_url? : String, background_color? : String, navigation? : BrowserPolicyMode, new_window? : BrowserPolicyMode) -> Self
+pub fn ViewConfig::ViewConfig(width~ : Int32, height~ : Int32, x? : Int32, y? : Int32, visible? : Bool, z_order? : Int32, initial_url? : String, background_color? : String, navigation? : BrowserPolicyMode, new_window? : BrowserPolicyMode) -> Self
 pub fn ViewConfig::equal(Self, Self) -> Bool
 pub fn ViewConfig::not_equal(Self, Self) -> Bool
 pub fn ViewConfig::to_repr(Self) -> @debug.Repr
@@ -667,14 +667,14 @@ pub fn Window::as_ref(Self) -> WindowRef
 pub fn Window::bridge_lifecycle_state(Self) -> BridgeLifecycleState? raise NativeError
 pub fn Window::browser_is_focused(Self) -> Bool raise NativeError
 pub fn Window::browser_state(Self) -> @types.BrowserState raise NativeError
-pub fn Window::button_position(Self) -> (Int, Int)? raise NativeError
+pub fn Window::button_position(Self) -> (Int32, Int32)? raise NativeError
 pub fn Window::close(Self) -> Unit raise NativeError
-pub fn Window::content_size(Self) -> (Int, Int) raise NativeError
+pub fn Window::content_size(Self) -> (Int32, Int32) raise NativeError
 pub fn Window::destroy(Self, before_destroy? : () -> Unit raise NativeError) -> Unit raise NativeError
 pub fn Window::download_url(Self, String) -> Unit raise NativeError
 pub fn Window::emit_bridge_event_json(Self, String) -> Unit raise NativeError
 pub fn Window::eval(Self, String) -> Unit raise NativeError
-pub fn Window::find_in_page(Self, String, Bool, Bool, Bool) -> Int raise NativeError
+pub fn Window::find_in_page(Self, String, Bool, Bool, Bool) -> Int32 raise NativeError
 pub fn Window::flash_frame(Self, Bool) -> Unit raise NativeError
 pub fn Window::focus(Self) -> Unit raise NativeError
 pub fn Window::hide(Self) -> Unit raise NativeError
@@ -687,7 +687,7 @@ pub fn Window::maximize(Self) -> Unit raise NativeError
 pub fn Window::minimize(Self) -> Unit raise NativeError
 pub fn Window::navigation_history(Self) -> NavigationHistory raise NativeError
 pub fn Window::navigation_state(Self) -> (Bool, Bool) raise NativeError
-pub fn Window::popup_menu(Self, MenuBar, Int, Int) -> Unit raise NativeError
+pub fn Window::popup_menu(Self, MenuBar, Int32, Int32) -> Unit raise NativeError
 pub fn Window::print(Self) -> Unit raise NativeError
 pub fn Window::remove_page_css(Self, Int64) -> Unit raise NativeError
 pub fn Window::respond_browser_request(Self, Int64, String, path? : String) -> Unit raise NativeError
@@ -697,12 +697,12 @@ pub fn Window::set_always_on_top(Self, Bool) -> Unit raise NativeError
 pub fn Window::set_aspect_ratio(Self, Double) -> Unit raise NativeError
 pub fn Window::set_audio_muted(Self, Bool) -> Unit raise NativeError
 pub fn Window::set_background_color(Self, String) -> Unit raise NativeError
-pub fn Window::set_button_position(Self, (Int, Int)?) -> Unit raise NativeError
+pub fn Window::set_button_position(Self, (Int32, Int32)?) -> Unit raise NativeError
 pub fn Window::set_button_visibility(Self, Bool) -> Unit raise NativeError
 pub fn Window::set_closable(Self, Bool) -> Unit raise NativeError
 pub fn Window::set_close_interception(Self, Bool) -> Unit raise NativeError
 pub fn Window::set_content_protection(Self, Bool) -> Unit raise NativeError
-pub fn Window::set_content_size(Self, Int, Int) -> Unit raise NativeError
+pub fn Window::set_content_size(Self, Int32, Int32) -> Unit raise NativeError
 pub fn Window::set_enabled(Self, Bool) -> Unit raise NativeError
 pub fn Window::set_focusable(Self, Bool) -> Unit raise NativeError
 pub fn Window::set_fullscreen(Self, Bool) -> Unit raise NativeError
@@ -712,24 +712,24 @@ pub fn Window::set_icon(Self, String) -> Unit raise NativeError
 pub fn Window::set_ignore_mouse_events(Self, Bool, Bool) -> Unit raise NativeError
 pub fn Window::set_kiosk(Self, Bool) -> Unit raise NativeError
 pub fn Window::set_maximizable(Self, Bool) -> Unit raise NativeError
-pub fn Window::set_maximum_size(Self, Int, Int) -> Unit raise NativeError
+pub fn Window::set_maximum_size(Self, Int32, Int32) -> Unit raise NativeError
 pub fn Window::set_minimizable(Self, Bool) -> Unit raise NativeError
-pub fn Window::set_minimum_size(Self, Int, Int) -> Unit raise NativeError
+pub fn Window::set_minimum_size(Self, Int32, Int32) -> Unit raise NativeError
 pub fn Window::set_movable(Self, Bool) -> Unit raise NativeError
 pub fn Window::set_opacity(Self, Double) -> Unit raise NativeError
 pub fn Window::set_overlay_icon(Self, NativeImage?, String) -> Unit raise NativeError
 pub fn Window::set_parent(Self, WindowRef?, Bool) -> Unit raise NativeError
-pub fn Window::set_position(Self, Int, Int) -> Unit raise NativeError
+pub fn Window::set_position(Self, Int32, Int32) -> Unit raise NativeError
 pub fn Window::set_progress_bar(Self, Double, @types.ProgressBarMode) -> Unit raise NativeError
 pub fn Window::set_resizable(Self, Bool) -> Unit raise NativeError
-pub fn Window::set_size(Self, Int, Int) -> Unit raise NativeError
+pub fn Window::set_size(Self, Int32, Int32) -> Unit raise NativeError
 pub fn Window::set_skip_taskbar(Self, Bool) -> Unit raise NativeError
 pub fn Window::set_theme(Self, @types.WindowThemePreference) -> Unit raise NativeError
 pub fn Window::set_thumbar_buttons(Self, Array[ThumbarButton]) -> Bool raise NativeError
 pub fn Window::set_thumbnail_tooltip(Self, String) -> Unit raise NativeError
 pub fn Window::set_title(Self, String) -> Unit raise NativeError
 pub fn Window::set_visible_on_all_workspaces(Self, Bool) -> Unit raise NativeError
-pub fn Window::set_zoom_percent(Self, Int) -> Unit raise NativeError
+pub fn Window::set_zoom_percent(Self, Int32) -> Unit raise NativeError
 pub fn Window::show(Self) -> Unit raise NativeError
 pub fn Window::show_inactive(Self) -> Unit raise NativeError
 pub fn Window::state(Self) -> @types.WindowState raise NativeError
@@ -737,7 +737,7 @@ pub fn Window::stop_find_in_page(Self, Bool) -> Unit raise NativeError
 pub fn Window::take_bridge_failure(Self) -> @types.BridgeDiagnostic? raise NativeError
 
 type WindowConfig derive(Eq, @debug.Debug)
-pub fn WindowConfig::WindowConfig(title? : String, width? : Int, height? : Int, initial_url? : String, size_hint? : @types.WindowSizeHint, titlebar_style? : @types.TitlebarStyle, traffic_light_position? : (Int, Int), theme? : @types.WindowThemePreference, browser? : BrowserPolicy, bridge? : BridgeConfig, web_request_cancel_prefixes? : Array[String], web_request_redirect_prefixes? : Array[(String, String)], web_request_header_prefixes? : Array[(String, String, String)]) -> Self
+pub fn WindowConfig::WindowConfig(title? : String, width? : Int32, height? : Int32, initial_url? : String, size_hint? : @types.WindowSizeHint, titlebar_style? : @types.TitlebarStyle, traffic_light_position? : (Int32, Int32), theme? : @types.WindowThemePreference, browser? : BrowserPolicy, bridge? : BridgeConfig, web_request_cancel_prefixes? : Array[String], web_request_redirect_prefixes? : Array[(String, String)], web_request_header_prefixes? : Array[(String, String, String)]) -> Self
 pub fn WindowConfig::equal(Self, Self) -> Bool
 pub fn WindowConfig::not_equal(Self, Self) -> Bool
 pub fn WindowConfig::to_repr(Self) -> @debug.Repr

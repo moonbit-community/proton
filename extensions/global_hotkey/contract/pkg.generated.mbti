@@ -74,7 +74,7 @@ pub fn GlobalHotkeyTriggered::to_json(Self) -> Json
 pub fn GlobalHotkeyTriggered::to_repr(Self) -> @debug.Repr
 
 pub(all) struct UnregisterAllReply {
-  count : Int
+  count : Int32
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 pub fn UnregisterAllReply::equal(Self, Self) -> Bool
 pub fn UnregisterAllReply::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError

@@ -64,10 +64,10 @@ pub(all) struct BridgeDiagnostic {
   owner : String?
   source_url : String?
   source_line : String?
-  line : Int?
-  column : Int?
+  line : Int32?
+  column : Int32?
   stack : String?
-  additional_failure_count : Int?
+  additional_failure_count : Int32?
   details_truncated : Bool
 } derive(Eq, @debug.Debug)
 pub fn BridgeDiagnostic::equal(Self, Self) -> Bool
@@ -96,13 +96,13 @@ pub fn CookieSameSite::not_equal(Self, Self) -> Bool
 pub fn CookieSameSite::to_repr(Self) -> @debug.Repr
 
 pub(all) struct FindInPageResult {
-  request_id : Int
-  active_match_ordinal : Int
-  matches : Int
-  selection_x : Int
-  selection_y : Int
-  selection_width : Int
-  selection_height : Int
+  request_id : Int32
+  active_match_ordinal : Int32
+  matches : Int32
+  selection_x : Int32
+  selection_y : Int32
+  selection_width : Int32
+  selection_height : Int32
   final_update : Bool
 } derive(Eq, @debug.Debug)
 pub fn FindInPageResult::equal(Self, Self) -> Bool
@@ -132,7 +132,7 @@ pub(all) struct JumpListItem {
   title : String
   description : String
   icon_path : String
-  icon_index : Int
+  icon_index : Int32
   working_directory : String
 }
 
@@ -230,16 +230,16 @@ pub fn RuntimeLaunchInput::not_equal(Self, Self) -> Bool
 pub fn RuntimeLaunchInput::to_repr(Self) -> @debug.Repr
 
 pub(all) struct ScreenInfo {
-  id : Int
-  x : Int
-  y : Int
-  width : Int
-  height : Int
-  work_x : Int
-  work_y : Int
-  work_width : Int
-  work_height : Int
-  scale_factor_percent : Int
+  id : Int32
+  x : Int32
+  y : Int32
+  width : Int32
+  height : Int32
+  work_x : Int32
+  work_y : Int32
+  work_width : Int32
+  work_height : Int32
+  scale_factor_percent : Int32
   is_primary : Bool
 } derive(Eq, @debug.Debug)
 pub fn ScreenInfo::equal(Self, Self) -> Bool
@@ -269,27 +269,27 @@ pub fn TitlebarStyle::to_string(Self) -> String
 pub impl Show for TitlebarStyle
 
 pub(all) struct ViewState {
-  x : Int
-  y : Int
-  width : Int
-  height : Int
+  x : Int32
+  y : Int32
+  width : Int32
+  height : Int32
   visible : Bool
-  z_order : Int
+  z_order : Int32
 } derive(Eq, @debug.Debug)
 pub fn ViewState::equal(Self, Self) -> Bool
 pub fn ViewState::not_equal(Self, Self) -> Bool
 pub fn ViewState::to_repr(Self) -> @debug.Repr
 
 pub(all) struct WindowMonitor {
-  x : Int
-  y : Int
-  width : Int
-  height : Int
-  work_x : Int
-  work_y : Int
-  work_width : Int
-  work_height : Int
-  scale_factor_percent : Int
+  x : Int32
+  y : Int32
+  width : Int32
+  height : Int32
+  work_x : Int32
+  work_y : Int32
+  work_width : Int32
+  work_height : Int32
+  scale_factor_percent : Int32
 } derive(Eq, @debug.Debug)
 pub fn WindowMonitor::equal(Self, Self) -> Bool
 pub fn WindowMonitor::not_equal(Self, Self) -> Bool
@@ -306,12 +306,12 @@ pub fn WindowSizeHint::not_equal(Self, Self) -> Bool
 pub fn WindowSizeHint::to_repr(Self) -> @debug.Repr
 
 pub(all) struct WindowState {
-  x : Int
-  y : Int
-  width : Int
-  height : Int
+  x : Int32
+  y : Int32
+  width : Int32
+  height : Int32
   monitor : WindowMonitor
-  zoom_percent : Int
+  zoom_percent : Int32
   visible : Bool
   focused : Bool
   minimized : Bool

@@ -33,7 +33,7 @@ pub fn NotificationActivity::to_json(Self) -> Json
 pub fn NotificationActivity::to_repr(Self) -> @debug.Repr
 
 pub(all) struct NotificationBadgeReply {
-  count : Int
+  count : Int32
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 pub fn NotificationBadgeReply::equal(Self, Self) -> Bool
 pub fn NotificationBadgeReply::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
@@ -42,7 +42,7 @@ pub fn NotificationBadgeReply::to_json(Self) -> Json
 pub fn NotificationBadgeReply::to_repr(Self) -> @debug.Repr
 
 pub(all) struct NotificationBadgeRequest {
-  count : Int
+  count : Int32
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 pub fn NotificationBadgeRequest::equal(Self, Self) -> Bool
 pub fn NotificationBadgeRequest::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError

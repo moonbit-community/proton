@@ -8,7 +8,7 @@ import {
 // Values
 pub fn configure(Output) -> Unit raise LoggingError
 
-pub fn current_process_id() -> Int
+pub fn current_process_id() -> Int32
 
 // Errors
 pub(all) suberror LoggingError {

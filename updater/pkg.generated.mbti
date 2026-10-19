@@ -6,13 +6,13 @@ import {
 }
 
 // Values
-pub let supported_schema_version : Int
+pub let supported_schema_version : Int32
 
 // Errors
 pub(all) suberror ManifestError {
   NotJson
   NotAnObject(path~ : String)
-  UnknownSchemaVersion(found~ : Int)
+  UnknownSchemaVersion(found~ : Int32)
   UnknownField(path~ : String)
   MissingField(path~ : String)
   InvalidField(path~ : String, expectation~ : String)
@@ -67,9 +67,9 @@ pub fn Timestamp::to_text(Self) -> String
 pub impl Show for Timestamp
 
 pub struct Version {
-  major : Int
-  minor : Int
-  patch : Int
+  major : Int32
+  minor : Int32
+  patch : Int32
 } derive(Eq, @debug.Debug)
 pub fn Version::equal(Self, Self) -> Bool
 pub fn Version::is_newer_than(Self, Self) -> Bool

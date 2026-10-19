@@ -31,7 +31,7 @@ pub fn KillReply::to_json(Self) -> Json
 pub fn KillReply::to_repr(Self) -> @debug.Repr
 
 pub(all) struct KillRequest {
-  process_id : Int
+  process_id : Int32
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 pub fn KillRequest::equal(Self, Self) -> Bool
 pub fn KillRequest::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
@@ -41,7 +41,7 @@ pub fn KillRequest::to_repr(Self) -> @debug.Repr
 
 pub(all) struct ProcessActivity {
   operation : String
-  process_id : Int
+  process_id : Int32
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 pub fn ProcessActivity::equal(Self, Self) -> Bool
 pub fn ProcessActivity::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
@@ -50,8 +50,8 @@ pub fn ProcessActivity::to_json(Self) -> Json
 pub fn ProcessActivity::to_repr(Self) -> @debug.Repr
 
 pub(all) struct SpawnReply {
-  process_id : Int
-  pid : Int
+  process_id : Int32
+  pid : Int32
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 pub fn SpawnReply::equal(Self, Self) -> Bool
 pub fn SpawnReply::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
@@ -71,7 +71,7 @@ pub fn SpawnRequest::to_json(Self) -> Json
 pub fn SpawnRequest::to_repr(Self) -> @debug.Repr
 
 pub(all) struct WaitReply {
-  exit_code : Int
+  exit_code : Int32
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 pub fn WaitReply::equal(Self, Self) -> Bool
 pub fn WaitReply::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
@@ -80,7 +80,7 @@ pub fn WaitReply::to_json(Self) -> Json
 pub fn WaitReply::to_repr(Self) -> @debug.Repr
 
 pub(all) struct WaitRequest {
-  process_id : Int
+  process_id : Int32
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 pub fn WaitRequest::equal(Self, Self) -> Bool
 pub fn WaitRequest::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError

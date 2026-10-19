@@ -41,10 +41,10 @@ pub fn CursorPointReply::to_json(Self) -> Json
 pub fn CursorPointReply::to_repr(Self) -> @debug.Repr
 
 pub(all) struct DisplayBounds {
-  x : Int
-  y : Int
-  width : Int
-  height : Int
+  x : Int32
+  y : Int32
+  width : Int32
+  height : Int32
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 pub fn DisplayBounds::equal(Self, Self) -> Bool
 pub fn DisplayBounds::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
@@ -53,7 +53,7 @@ pub fn DisplayBounds::to_json(Self) -> Json
 pub fn DisplayBounds::to_repr(Self) -> @debug.Repr
 
 pub(all) struct DisplayJSON {
-  id : Int
+  id : Int32
   bounds : DisplayBounds
   work_area : DisplayBounds
   scale_factor : Double
@@ -84,10 +84,10 @@ pub fn DisplaysReply::to_json(Self) -> Json
 pub fn DisplaysReply::to_repr(Self) -> @debug.Repr
 
 pub(all) struct MatchingRectRequest {
-  x : Int
-  y : Int
-  width : Int
-  height : Int
+  x : Int32
+  y : Int32
+  width : Int32
+  height : Int32
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 pub fn MatchingRectRequest::equal(Self, Self) -> Bool
 pub fn MatchingRectRequest::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
@@ -96,8 +96,8 @@ pub fn MatchingRectRequest::to_json(Self) -> Json
 pub fn MatchingRectRequest::to_repr(Self) -> @debug.Repr
 
 pub(all) struct NearestPointRequest {
-  x : Int
-  y : Int
+  x : Int32
+  y : Int32
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 pub fn NearestPointRequest::equal(Self, Self) -> Bool
 pub fn NearestPointRequest::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
@@ -106,8 +106,8 @@ pub fn NearestPointRequest::to_json(Self) -> Json
 pub fn NearestPointRequest::to_repr(Self) -> @debug.Repr
 
 pub(all) struct PointJSON {
-  x : Int
-  y : Int
+  x : Int32
+  y : Int32
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 pub fn PointJSON::equal(Self, Self) -> Bool
 pub fn PointJSON::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError

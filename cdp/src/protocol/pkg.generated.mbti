@@ -6,11 +6,11 @@ import {
 }
 
 // Values
-pub fn cdp_command(id~ : Int, method_name~ : String, params? : Json, session_id? : String) -> CdpCommandMessage
+pub fn cdp_command(id~ : Int32, method_name~ : String, params? : Json, session_id? : String) -> CdpCommandMessage
 
-pub fn cdp_remote_schema_command(id~ : Int, method_name~ : String, remote_schema~ : Json, params? : Json, session_id? : String) -> CdpCommandMessage raise ProtocolSchemaError
+pub fn cdp_remote_schema_command(id~ : Int32, method_name~ : String, remote_schema~ : Json, params? : Json, session_id? : String) -> CdpCommandMessage raise ProtocolSchemaError
 
-pub fn cdp_schema_command(id~ : Int, method_name~ : String, params? : Json, session_id? : String) -> CdpCommandMessage raise ProtocolSchemaError
+pub fn cdp_schema_command(id~ : Int32, method_name~ : String, params? : Json, session_id? : String) -> CdpCommandMessage raise ProtocolSchemaError
 
 pub fn cdp_schema_event(method_name~ : String, params? : Json, session_id? : String) -> CdpEventMessage raise ProtocolSchemaError
 
@@ -99,7 +99,7 @@ pub fn ProtocolSchemaError::to_repr(Self) -> @debug.Repr
 
 // Types and methods
 pub(all) struct CdpCommandMessage {
-  id : Int
+  id : Int32
   method_name : String
   params : Json?
   session_id : String?
@@ -112,7 +112,7 @@ pub fn CdpCommandMessage::to_repr(Self) -> @debug.Repr
 pub fn CdpCommandMessage::to_wire_json(Self) -> Json
 
 pub(all) struct CdpError {
-  code : Int
+  code : Int32
   message : String
   data : Json?
 } derive(Eq, ToJson, @debug.Debug)
@@ -141,7 +141,7 @@ pub fn CdpIncomingMessage::to_json(Self) -> Json
 pub fn CdpIncomingMessage::to_repr(Self) -> @debug.Repr
 
 pub(all) struct CdpResponseMessage {
-  id : Int
+  id : Int32
   result : Json?
   error : CdpError?
   session_id : String?
@@ -156,8 +156,8 @@ pub(all) struct ProtocolCommand {
   domain : String
   name : String
   cdp_method : String
-  parameter_count : Int
-  return_count : Int
+  parameter_count : Int32
+  return_count : Int32
   parameters : Array[String]
   returns : Array[String]
   parameter_details : Array[ProtocolFieldSummary]
@@ -165,7 +165,7 @@ pub(all) struct ProtocolCommand {
   experimental : Bool
   deprecated : Bool
 } derive(Eq, ToJson, @debug.Debug)
-pub fn ProtocolCommand::build_command(Self, id~ : Int, params? : Json, session_id? : String) -> CdpCommandMessage raise ProtocolSchemaError
+pub fn ProtocolCommand::build_command(Self, id~ : Int32, params? : Json, session_id? : String) -> CdpCommandMessage raise ProtocolSchemaError
 pub fn ProtocolCommand::equal(Self, Self) -> Bool
 pub fn ProtocolCommand::not_equal(Self, Self) -> Bool
 pub fn ProtocolCommand::parameter_names(Self) -> Array[String]
@@ -177,13 +177,13 @@ pub fn ProtocolCommand::to_repr(Self) -> @debug.Repr
 pub fn ProtocolCommand::validate_response(Self, CdpResponseMessage) -> Unit raise ProtocolSchemaError
 
 pub(all) struct ProtocolCoverage {
-  domain_count : Int
-  command_count : Int
-  event_count : Int
-  type_count : Int
-  command_registry_count : Int
-  event_registry_count : Int
-  type_registry_count : Int
+  domain_count : Int32
+  command_count : Int32
+  event_count : Int32
+  type_count : Int32
+  command_registry_count : Int32
+  event_registry_count : Int32
+  type_registry_count : Int32
   complete : Bool
 } derive(Eq, ToJson, @debug.Debug)
 pub fn ProtocolCoverage::equal(Self, Self) -> Bool
@@ -194,9 +194,9 @@ pub fn ProtocolCoverage::to_repr(Self) -> @debug.Repr
 pub(all) struct ProtocolDomainSummary {
   protocol : String
   domain : String
-  command_count : Int
-  event_count : Int
-  type_count : Int
+  command_count : Int32
+  event_count : Int32
+  type_count : Int32
   experimental : Bool
   deprecated : Bool
 } derive(Eq, ToJson, @debug.Debug)
@@ -210,7 +210,7 @@ pub(all) struct ProtocolEvent {
   domain : String
   name : String
   cdp_method : String
-  parameter_count : Int
+  parameter_count : Int32
   parameters : Array[String]
   parameter_details : Array[ProtocolFieldSummary]
   experimental : Bool
@@ -241,22 +241,22 @@ pub(all) struct ProtocolManifest {
   sources : Array[ProtocolSchemaSource]
   domains : Array[ProtocolDomainSummary]
 } derive(Eq, ToJson, @debug.Debug)
-pub fn ProtocolManifest::command_count(Self) -> Int
-pub fn ProtocolManifest::domain_count(Self) -> Int
+pub fn ProtocolManifest::command_count(Self) -> Int32
+pub fn ProtocolManifest::domain_count(Self) -> Int32
 pub fn ProtocolManifest::equal(Self, Self) -> Bool
-pub fn ProtocolManifest::event_count(Self) -> Int
+pub fn ProtocolManifest::event_count(Self) -> Int32
 pub fn ProtocolManifest::find_domain(Self, String) -> ProtocolDomainSummary?
 pub fn ProtocolManifest::not_equal(Self, Self) -> Bool
 pub fn ProtocolManifest::to_json(Self) -> Json
 pub fn ProtocolManifest::to_repr(Self) -> @debug.Repr
-pub fn ProtocolManifest::type_count(Self) -> Int
+pub fn ProtocolManifest::type_count(Self) -> Int32
 
 pub(all) struct ProtocolRemoteSummary {
   version : ProtocolVersion
-  domain_count : Int
-  command_count : Int
-  event_count : Int
-  type_count : Int
+  domain_count : Int32
+  command_count : Int32
+  event_count : Int32
+  type_count : Int32
   domains : Array[ProtocolDomainSummary]
 } derive(Eq, ToJson, @debug.Debug)
 pub fn ProtocolRemoteSummary::equal(Self, Self) -> Bool
@@ -276,14 +276,14 @@ pub fn ProtocolSchemaDiffItem::to_repr(Self) -> @debug.Repr
 pub(all) struct ProtocolSchemaDiffReport {
   local_version : ProtocolVersion
   remote_version : ProtocolVersion
-  local_domain_count : Int
-  remote_domain_count : Int
-  local_command_count : Int
-  remote_command_count : Int
-  local_event_count : Int
-  remote_event_count : Int
-  local_type_count : Int
-  remote_type_count : Int
+  local_domain_count : Int32
+  remote_domain_count : Int32
+  local_command_count : Int32
+  remote_command_count : Int32
+  local_event_count : Int32
+  remote_event_count : Int32
+  local_type_count : Int32
+  remote_type_count : Int32
   remote_only_domains : Array[String]
   local_only_domains : Array[String]
   remote_only_commands : Array[String]
@@ -318,11 +318,11 @@ pub(all) struct ProtocolSchemaSource {
   protocol : String
   path : String
   sha256 : String
-  byte_count : Int
-  domain_count : Int
-  command_count : Int
-  event_count : Int
-  type_count : Int
+  byte_count : Int32
+  domain_count : Int32
+  command_count : Int32
+  event_count : Int32
+  type_count : Int32
 } derive(Eq, ToJson, @debug.Debug)
 pub fn ProtocolSchemaSource::equal(Self, Self) -> Bool
 pub fn ProtocolSchemaSource::not_equal(Self, Self) -> Bool
@@ -334,8 +334,8 @@ pub(all) struct ProtocolType {
   domain : String
   name : String
   kind : String
-  property_count : Int
-  enum_count : Int
+  property_count : Int32
+  enum_count : Int32
   properties : Array[String]
   property_details : Array[ProtocolFieldSummary]
   enum_values : Array[String]
