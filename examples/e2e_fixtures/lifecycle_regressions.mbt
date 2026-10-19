@@ -2015,6 +2015,13 @@ pub async fn run_window_config_regression() -> Unit {
         while !popups.contains("dynamic") {
           @async.sleep(5)
         }
+        // The driver must receive the result before this view closes its CDP
+        // target. Observing the popup handler alone does not establish that.
+        let popup_gate = @env.get_env_var("PROTON_E2E_LIFECYCLE_GATE").unwrap() +
+          ".popup-evaluated"
+        while !@mbfs.path_exists(popup_gate) {
+          @async.sleep(5)
+        }
         window.remove_view("dynamic")
         for iteration in 0..<2 {
           let secondary = manager.open("secondary")
