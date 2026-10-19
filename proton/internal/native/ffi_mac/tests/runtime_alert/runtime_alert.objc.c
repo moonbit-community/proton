@@ -31,7 +31,7 @@ static int64_t completed_id;
 
 static bool capture_completion(void *context, proton_event_t *event) {
   (void)context;
-  if (event->kind == PROTON_EVENT_DIALOG_COMPLETED && event->int_a == PROTON_OK) {
+  if (event->kind == PROTON_EVENT_DIALOG_COMPLETED && event->status == PROTON_OK) {
     completed_dialogs++;
     completed_id = event->request_id;
   }

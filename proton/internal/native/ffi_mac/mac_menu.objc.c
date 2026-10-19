@@ -466,7 +466,7 @@ static void proton_engine_enqueue_menu_command(
   const char *utf8 = command_id != nil ? [command_id UTF8String] : "";
   proton_event_t *event = proton_event_create(PROTON_EVENT_MENU_COMMAND);
   if (utf8 == NULL || event == NULL ||
-      !proton_event_set_text(&event->text_a, utf8)) {
+      !proton_event_set_text(&event->command_id, utf8)) {
     proton_event_destroy(event);
     return;
   }

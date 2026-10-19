@@ -1,4 +1,108 @@
 ///|
+/// Native event ABI; checked against proton_event.h by the contract regression.
+pub(all) enum EventKind {
+  Unknown = 0
+  WindowCreated = 1
+  WindowClosed = 2
+  WindowStateChanged = 3
+  WindowCloseRequested = 4
+  BridgeLifecycleChanged = 5
+  BridgeRequestCancelled = 6
+  MenuCommand = 7
+  OpenUrls = 8
+  OpenFiles = 9
+  Reopen = 10
+  NotificationResult = 11
+  BrowserNewWindowRequested = 13
+  BrowserDownloadRequested = 14
+  BrowserCertificateError = 15
+  BrowserMediaPermissionRequested = 16
+  BrowserDownloadUpdated = 17
+  BridgeRequest = 22
+  DialogCompleted = 23
+  CookieGetCompleted = 24
+  ResourceRequested = 25
+  ResourceRequestCancelled = 26
+  NotificationClicked = 27
+  QuitRequested = 28
+  ViewClosed = 29
+  BrowserLoadingChanged = 30
+  BrowserNavigated = 31
+  BrowserTitleUpdated = 32
+  BrowserLoadFailed = 33
+  BrowserFindResult = 34
+  BrowserPdfPrintFinished = 36
+  AppActivation = 37
+  BrowserResourceResponse = 38
+  BrowserResourceCompleted = 39
+  BrowserRendererTerminated = 40
+  BrowserResourceRequested = 42
+  NativeThemeChanged = 43
+  TaskbarButtonClicked = 44
+} derive(Debug)
+
+///|
+pub extend EventKind with Debug::{to_repr}
+
+///|
+pub(all) enum EventInt64Field {
+  Window
+  View
+  RequestId
+  Revision
+  ReceivedBytes
+  TotalBytes
+} derive(Debug)
+
+///|
+pub extend EventInt64Field with Debug::{to_repr}
+
+///|
+pub(all) enum EventIntField {
+  Status
+  ErrorCode
+  DownloadId
+  Permissions
+  Percent
+  Matches
+  ActiveMatchOrdinal
+  SelectionX
+  SelectionY
+  SelectionWidth
+  SelectionHeight
+  Success
+  UserGesture
+  HasPayload
+  IsLoading
+  FinalUpdate
+  Allowed
+  DarkColors
+  HighContrastColors
+  ReopenWhenEmpty
+} derive(Debug)
+
+///|
+pub extend EventIntField with Debug::{to_repr}
+
+///|
+pub(all) enum EventTextField {
+  Url
+  Title
+  Message
+  Result
+  Path
+  CommandId
+  SuggestedName
+  State
+  Activation
+  NotificationPayload
+  Method
+} derive(Debug)
+
+///|
+pub extend EventTextField with Debug::{to_repr}
+
+///|
 /// Fixed no-argument browser operations; tags match proton_browser_operation_t.
 pub(all) enum BrowserOperation {
   Back = 0
@@ -428,15 +532,21 @@ pub extern "C" fn runtime_complete_resource_request(
 
 ///|
 #borrow(event)
-pub extern "C" fn event_kind(event : EventHandle) -> Int32 = "proton_internal_event_kind"
+pub extern "C" fn event_kind(event : EventHandle) -> EventKind = "proton_internal_event_kind"
 
 ///|
 #borrow(event)
-pub extern "C" fn event_int64(event : EventHandle, field : Int32) -> Int64 = "proton_internal_event_int64"
+pub extern "C" fn event_int64(
+  event : EventHandle,
+  field : EventInt64Field,
+) -> Int64 = "proton_internal_event_int64"
 
 ///|
 #borrow(event)
-pub extern "C" fn event_int(event : EventHandle, field : Int32) -> Int32 = "proton_internal_event_int"
+pub extern "C" fn event_int(
+  event : EventHandle,
+  field : EventIntField,
+) -> Int32 = "proton_internal_event_int"
 
 ///|
 #borrow(event)
@@ -449,7 +559,7 @@ pub extern "C" fn event_window_state_field(
 #borrow(event, buffer, out_required_len)
 pub extern "C" fn event_text(
   event : EventHandle,
-  field : Int32,
+  field : EventTextField,
   buffer : FixedArray[Byte],
   buffer_len : Int32,
   out_required_len : Ref[Int32],

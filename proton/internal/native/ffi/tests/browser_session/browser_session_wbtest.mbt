@@ -138,3 +138,156 @@ test "browser operation tags agree with the compiled C ABI" {
     assert_eq(browser_operation_abi_ffi(operation, index), 1)
   }
 }
+
+///|
+extern "C" fn event_contract_count(group : Int32) -> Int32 = "proton_test_event_contract_count"
+
+///|
+extern "C" fn event_kind_contract_name(
+  value : @ffi.EventKind,
+  group : Int32,
+) -> Bytes = "proton_test_event_contract_name"
+
+///|
+test "EventKind agrees with the C event contract" {
+  let values : Array[@ffi.EventKind] = [
+    WindowCreated,
+    WindowClosed,
+    WindowStateChanged,
+    WindowCloseRequested,
+    BridgeLifecycleChanged,
+    BridgeRequestCancelled,
+    MenuCommand,
+    OpenUrls,
+    OpenFiles,
+    Reopen,
+    NotificationResult,
+    BrowserNewWindowRequested,
+    BrowserDownloadRequested,
+    BrowserCertificateError,
+    BrowserMediaPermissionRequested,
+    BrowserDownloadUpdated,
+    BridgeRequest,
+    DialogCompleted,
+    CookieGetCompleted,
+    ResourceRequested,
+    ResourceRequestCancelled,
+    NotificationClicked,
+    QuitRequested,
+    ViewClosed,
+    BrowserLoadingChanged,
+    BrowserNavigated,
+    BrowserTitleUpdated,
+    BrowserLoadFailed,
+    BrowserFindResult,
+    BrowserPdfPrintFinished,
+    AppActivation,
+    BrowserResourceResponse,
+    BrowserResourceCompleted,
+    BrowserRendererTerminated,
+    BrowserResourceRequested,
+    NativeThemeChanged,
+    TaskbarButtonClicked,
+  ]
+  assert_eq(values.length(), event_contract_count(0))
+  for value in values {
+    assert_eq(
+      @utf8.decode_lossy(event_kind_contract_name(value, 0)),
+      "\{Repr(value)}",
+    )
+  }
+}
+
+///|
+extern "C" fn event_int64_field_contract_name(
+  value : @ffi.EventInt64Field,
+  group : Int32,
+) -> Bytes = "proton_test_event_contract_name"
+
+///|
+test "EventInt64Field agrees with the C event contract" {
+  let values : Array[@ffi.EventInt64Field] = [
+    Window,
+    View,
+    RequestId,
+    Revision,
+    ReceivedBytes,
+    TotalBytes,
+  ]
+  assert_eq(values.length(), event_contract_count(1))
+  for value in values {
+    assert_eq(
+      @utf8.decode_lossy(event_int64_field_contract_name(value, 1)),
+      "\{Repr(value)}",
+    )
+  }
+}
+
+///|
+extern "C" fn event_int_field_contract_name(
+  value : @ffi.EventIntField,
+  group : Int32,
+) -> Bytes = "proton_test_event_contract_name"
+
+///|
+test "EventIntField agrees with the C event contract" {
+  let values : Array[@ffi.EventIntField] = [
+    Status,
+    ErrorCode,
+    DownloadId,
+    Permissions,
+    Percent,
+    Matches,
+    ActiveMatchOrdinal,
+    SelectionX,
+    SelectionY,
+    SelectionWidth,
+    SelectionHeight,
+    Success,
+    UserGesture,
+    HasPayload,
+    IsLoading,
+    FinalUpdate,
+    Allowed,
+    DarkColors,
+    HighContrastColors,
+    ReopenWhenEmpty,
+  ]
+  assert_eq(values.length(), event_contract_count(2))
+  for value in values {
+    assert_eq(
+      @utf8.decode_lossy(event_int_field_contract_name(value, 2)),
+      "\{Repr(value)}",
+    )
+  }
+}
+
+///|
+extern "C" fn event_text_field_contract_name(
+  value : @ffi.EventTextField,
+  group : Int32,
+) -> Bytes = "proton_test_event_contract_name"
+
+///|
+test "EventTextField agrees with the C event contract" {
+  let values : Array[@ffi.EventTextField] = [
+    Url,
+    Title,
+    Message,
+    Result,
+    Path,
+    CommandId,
+    SuggestedName,
+    State,
+    Activation,
+    NotificationPayload,
+    Method,
+  ]
+  assert_eq(values.length(), event_contract_count(3))
+  for value in values {
+    assert_eq(
+      @utf8.decode_lossy(event_text_field_contract_name(value, 3)),
+      "\{Repr(value)}",
+    )
+  }
+}

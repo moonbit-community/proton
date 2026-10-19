@@ -179,10 +179,10 @@ static void proton_engine_publish_dialog_completed(int64_t window,
   }
   event->window = window;
   event->request_id = request_id;
-  event->int_a = status;
+  event->status = status;
   if (proton_event_set_text(
-          &event->text_a, status == PROTON_OK && result != NULL ? result : "") &&
-      proton_event_set_text(&event->text_b,
+          &event->result, status == PROTON_OK && result != NULL ? result : "") &&
+      proton_event_set_text(&event->message,
                             error_message != NULL ? error_message : "")) {
     (void)proton_event_publish(event);
   } else {

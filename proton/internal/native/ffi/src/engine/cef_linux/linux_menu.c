@@ -329,7 +329,7 @@ static void proton_engine_menu_enqueue_command(
   }
   proton_event_t *event = proton_event_create(PROTON_EVENT_MENU_COMMAND);
   if (event == NULL ||
-      !proton_event_set_text(&event->text_a, command_id)) {
+      !proton_event_set_text(&event->command_id, command_id)) {
     proton_event_destroy(event);
     return;
   }

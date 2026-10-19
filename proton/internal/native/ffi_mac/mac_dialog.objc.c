@@ -200,11 +200,11 @@ proton_engine_dialog_complete(proton_engine_dialog_request_t *request,
   if (event != NULL) {
     event->window = request->event_window;
     event->request_id = request->id;
-    event->int_a = status;
-    if (!proton_event_set_text(&event->text_a,
+    event->status = status;
+    if (!proton_event_set_text(&event->result,
                                status == PROTON_OK && result != NULL ? result
                                                                      : "") ||
-        !proton_event_set_text(&event->text_b,
+        !proton_event_set_text(&event->message,
                                error_message != NULL ? error_message : "")) {
       proton_event_destroy(event);
     } else {

@@ -600,7 +600,16 @@ int32_t proton_internal_runtime_poll_event(proton_runtime_handle_t runtime,
 }
 
 int32_t proton_internal_event_kind(const proton_event_t *event) {
-  return event == NULL ? 0 : (int32_t)event->kind;
+  if (event == NULL) {
+    return 0;
+  }
+  switch (event->kind) {
+#define PROTON_EVENT_KIND(name, tag, mb_name) case PROTON_EVENT_##name: return tag;
+    PROTON_EVENT_KINDS(PROTON_EVENT_KIND)
+#undef PROTON_EVENT_KIND
+  default:
+    return 0;
+  }
 }
 
 int64_t proton_internal_event_int64(const proton_event_t *event,
@@ -609,39 +618,25 @@ int64_t proton_internal_event_int64(const proton_event_t *event,
     return 0;
   }
   switch (field) {
-  case 0:
-    return event->window;
-  case 1:
-    return event->view;
-  case 2:
-    return event->request_id;
-  case 3:
-    return event->revision;
-  case 4:
-    return event->int64_a;
-  case 5:
-    return event->int64_b;
+#define PROTON_EVENT_FIELD(name, mb_name) \
+  case PROTON_EVENT_INT64_##name: return event->name;
+    PROTON_EVENT_INT64_FIELDS(PROTON_EVENT_FIELD)
+#undef PROTON_EVENT_FIELD
   default:
     return 0;
   }
 }
 
 int32_t proton_internal_event_int(const proton_event_t *event,
-                                  int32_t field) {
+                                    int32_t field) {
   if (event == NULL) {
     return 0;
   }
   switch (field) {
-  case 0:
-    return event->int_a;
-  case 1:
-    return event->int_b;
-  case 2:
-    return event->int_c;
-  case 3:
-    return event->bool_a;
-  case 4:
-    return event->bool_b;
+#define PROTON_EVENT_FIELD(name, mb_name) \
+  case PROTON_EVENT_INT_##name: return event->name;
+    PROTON_EVENT_INT_FIELDS(PROTON_EVENT_FIELD)
+#undef PROTON_EVENT_FIELD
   default:
     return 0;
   }
@@ -683,10 +678,13 @@ int32_t proton_internal_event_text(const proton_event_t *event, int32_t field,
     return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
                             "event is required");
   }
-  const char *text = field == 0 ? event->text_a
-                     : field == 1 ? event->text_b
-                     : field == 2 ? event->text_c
-                                  : NULL;
+  const char *text = NULL;
+  switch (field) {
+#define PROTON_EVENT_FIELD(name, mb_name) \
+  case PROTON_EVENT_TEXT_##name: text = event->name; break;
+    PROTON_EVENT_TEXT_FIELDS(PROTON_EVENT_FIELD)
+#undef PROTON_EVENT_FIELD
+  }
   return proton_internal_copy_event_text(text, buffer, buffer_len,
                                          out_required_len);
 }

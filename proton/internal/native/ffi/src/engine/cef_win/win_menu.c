@@ -423,7 +423,7 @@ static void proton_win_menu_dispatch(
     }
     if (item->kind == PROTON_MENU_ITEM_COMMAND) {
       proton_event_t *event = proton_event_create(PROTON_EVENT_MENU_COMMAND);
-      if (event != NULL && proton_event_set_text(&event->text_a, item->id)) {
+      if (event != NULL && proton_event_set_text(&event->command_id, item->id)) {
         event->window = window->public_window_id;
         (void)proton_event_publish(event);
       } else {

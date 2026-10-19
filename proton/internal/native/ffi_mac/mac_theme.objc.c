@@ -37,8 +37,8 @@ void proton_engine_publish_native_theme_change(void) {
   if (event == NULL) {
     return;
   }
-  event->bool_a = dark_colors != 0 ? 1 : 0;
-  event->bool_b = high_contrast_colors != 0 ? 1 : 0;
+  event->dark_colors = dark_colors != 0 ? 1 : 0;
+  event->high_contrast_colors = high_contrast_colors != 0 ? 1 : 0;
   if (!proton_event_publish(event)) {
     return;
   }

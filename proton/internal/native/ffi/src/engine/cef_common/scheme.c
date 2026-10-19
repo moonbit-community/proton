@@ -175,7 +175,7 @@ static int proton_engine_publish_resource_request(
   proton_event_t *event =
       proton_event_create(PROTON_EVENT_RESOURCE_REQUESTED);
   if (event == NULL ||
-      !proton_event_set_text(&event->text_a, handler->url)) {
+      !proton_event_set_text(&event->url, handler->url)) {
     proton_event_destroy(event);
     return 0;
   }

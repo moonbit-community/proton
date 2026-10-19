@@ -31,6 +31,13 @@ one native reference; CEF retains only native values, with atomic reference
 counts for cross-thread web request access. Queued events stay C-owned until
 polled. Runtime, window, view, and CEF image teardown remains explicit.
 
+`ffi/src/proton_event.h` defines the private event tags and named payload fields.
+Its field lists also define storage, readers, and owned-text disposal. The private
+FFI mirrors tags and selectors as enums; native tests compare every binding with
+the C contract. Producers and MoonBit decoding use semantic names rather than
+reinterpreting generic slots. Keep the queue and scheduler wakeup route when
+adding events; this contract does not authorize callbacks into MoonBit.
+
 Portable C sources belong to the private `ffi` package. macOS Objective-C
 sources belong to the separate `ffi_mac` package, whose package-local compiler
 flags select Objective-C without changing the compiler used by the application

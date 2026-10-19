@@ -260,12 +260,12 @@ static bool proton_app_instance_enqueue_activation(
     return false;
   }
   proton_event_t *event = proton_event_create(PROTON_EVENT_APP_ACTIVATION);
-  if (event == NULL || !proton_event_set_text(&event->text_a,
+  if (event == NULL || !proton_event_set_text(&event->activation,
                                                activation_payload)) {
     proton_event_destroy(event);
     return false;
   }
-  event->bool_a = reopen_when_empty ? 1 : 0;
+  event->reopen_when_empty = reopen_when_empty ? 1 : 0;
   event->request_id = request_id;
 
   proton_app_instance_lock(slot);

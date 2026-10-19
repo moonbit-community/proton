@@ -1287,3 +1287,38 @@ test "bridge admission and snapshot preserve invalid-handle errors" {
   })
   assert_true(error is Status(status=-2, ..))
 }
+
+///|
+test "native find publisher preserves target and every rectangle coordinate" {
+  let event = decode_native_runtime_event(@event_fixture.find_result_event())
+  guard event is BrowserEvent(7L, Some(11L), FindResult(result)) else {
+    fail("expected a child-view find result")
+  }
+  assert_eq(result.request_id, 91)
+  assert_eq(result.matches, 13)
+  assert_eq(result.active_match_ordinal, 5)
+  assert_eq(result.selection_x, -3)
+  assert_eq(result.selection_y, 17)
+  assert_eq(result.selection_width, 29)
+  assert_eq(result.selection_height, 41)
+  assert_true(result.final_update)
+}
+
+///|
+test "native renderer publisher preserves status and error code independently" {
+  let event = decode_native_runtime_event(
+    @event_fixture.renderer_terminated_event(),
+  )
+  guard event
+    is BrowserEvent(
+      7L,
+      Some(11L),
+      RendererProcessTerminated(url, status, code, detail)
+    ) else {
+    fail("expected a child-view renderer termination")
+  }
+  assert_eq(url, "https://example.test/page")
+  assert_eq(status, 3)
+  assert_eq(code, -107)
+  assert_eq(detail, "renderer stopped")
+}
