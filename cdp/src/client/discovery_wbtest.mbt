@@ -1,22 +1,18 @@
 ///|
 test "discovery private URL helpers cover authority edge cases" {
-  let invalid_ws : Result[(String, String), Error] = try
-    web_socket_url_rest("devtools/page/1")
-  catch {
-    e => Err(e)
-  } noraise {
-    v => Ok(v)
+  let invalid_ws : Result[(String, String), Error] = Ok(
+    web_socket_url_rest("devtools/page/1"),
+  ) catch {
+    error => Err(error)
   }
   guard invalid_ws is Err(DiscoveryError::InvalidTarget("devtools/page/1")) else {
     fail("expected invalid websocket URL")
   }
 
-  let empty_ws_authority : Result[String, Error] = try
-    web_socket_authority("/devtools/page/1")
-  catch {
-    e => Err(e)
-  } noraise {
-    v => Ok(v)
+  let empty_ws_authority : Result[String, Error] = Ok(
+    web_socket_authority("/devtools/page/1"),
+  ) catch {
+    error => Err(error)
   }
   guard empty_ws_authority
     is Err(DiscoveryError::InvalidTarget("/devtools/page/1")) else {
@@ -27,23 +23,19 @@ test "discovery private URL helpers cover authority edge cases" {
     http_url_authority("https://example.test:9443/json"),
     content="example.test:9443",
   )
-  let empty_http_authority : Result[String, Error] = try
-    http_url_authority("http:///json/version")
-  catch {
-    e => Err(e)
-  } noraise {
-    v => Ok(v)
+  let empty_http_authority : Result[String, Error] = Ok(
+    http_url_authority("http:///json/version"),
+  ) catch {
+    error => Err(error)
   }
   guard empty_http_authority
     is Err(DiscoveryError::InvalidTarget("http:///json/version")) else {
     fail("expected empty HTTP authority rejection")
   }
-  let invalid_http_authority : Result[String, Error] = try
-    http_url_authority("ftp://example.test")
-  catch {
-    e => Err(e)
-  } noraise {
-    v => Ok(v)
+  let invalid_http_authority : Result[String, Error] = Ok(
+    http_url_authority("ftp://example.test"),
+  ) catch {
+    error => Err(error)
   }
   guard invalid_http_authority
     is Err(DiscoveryError::InvalidTarget("ftp://example.test")) else {
@@ -71,7 +63,7 @@ test "discovery private URL helpers cover authority edge cases" {
 
 ///|
 test "discovery target parser and selector diagnostics cover optional branches" {
-  let bad_ws : Result[CdpDiscoveredTarget, Error] = try
+  let bad_ws : Result[CdpDiscoveredTarget, Error] = Ok(
     parse_discovered_target(
       {
         "id": "page-1",
@@ -79,11 +71,9 @@ test "discovery target parser and selector diagnostics cover optional branches" 
         "webSocketDebuggerUrl": "not-a-websocket",
       },
       "http://127.0.0.1:9222",
-    )
-  catch {
-    e => Err(e)
-  } noraise {
-    v => Ok(v)
+    ),
+  ) catch {
+    error => Err(error)
   }
   guard bad_ws is Err(DiscoveryError::InvalidTarget("not-a-websocket")) else {
     fail("expected invalid discovered websocket URL")
@@ -99,22 +89,18 @@ test "discovery target parser and selector diagnostics cover optional branches" 
   )
   inspect(target_selection_description(), content="any target")
 
-  let required : Result[String, Error] = try
-    discovery_required_string({}, "Browser")
-  catch {
-    e => Err(e)
-  } noraise {
-    v => Ok(v)
+  let required : Result[String, Error] = Ok(
+    discovery_required_string({}, "Browser"),
+  ) catch {
+    error => Err(error)
   }
   guard required is Err(DiscoveryError::InvalidVersionResponse) else {
     fail("expected missing required discovery string")
   }
-  let optional : Result[String?, Error] = try
-    discovery_optional_string({ "User-Agent": false }, "User-Agent")
-  catch {
-    e => Err(e)
-  } noraise {
-    v => Ok(v)
+  let optional : Result[String?, Error] = Ok(
+    discovery_optional_string({ "User-Agent": false }, "User-Agent"),
+  ) catch {
+    error => Err(error)
   }
   guard optional is Err(DiscoveryError::InvalidVersionResponse) else {
     fail("expected invalid optional discovery string")

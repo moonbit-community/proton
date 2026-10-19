@@ -57,11 +57,7 @@ test "reject non-integer response id" {
   let result : Result[
     @protocol.CdpIncomingMessage,
     @protocol.ProtocolDecodeError,
-  ] = try @protocol.parse_cdp_incoming(json) catch {
-    e => Err(e)
-  } noraise {
-    v => Ok(v)
-  }
+  ] = Ok(@protocol.parse_cdp_incoming(json)) catch { error => Err(error) }
   guard result is Err(InvalidField("id")) else { fail("expected invalid id") }
 }
 
@@ -70,12 +66,10 @@ test "reject malformed cdp error and session fields" {
   let missing_error_code : Result[
     @protocol.CdpIncomingMessage,
     @protocol.ProtocolDecodeError,
-  ] = try
-    @protocol.parse_cdp_incoming({ "id": 1, "error": { "message": "failed" } })
-  catch {
-    e => Err(e)
-  } noraise {
-    v => Ok(v)
+  ] = Ok(
+    @protocol.parse_cdp_incoming({ "id": 1, "error": { "message": "failed" } }),
+  ) catch {
+    error => Err(error)
   }
   guard missing_error_code is Err(MissingField("error.code")) else {
     fail("expected missing error code")
@@ -84,15 +78,13 @@ test "reject malformed cdp error and session fields" {
   let bad_error_code : Result[
     @protocol.CdpIncomingMessage,
     @protocol.ProtocolDecodeError,
-  ] = try
+  ] = Ok(
     @protocol.parse_cdp_incoming({
       "id": 1,
       "error": { "code": "bad", "message": "failed" },
-    })
-  catch {
-    e => Err(e)
-  } noraise {
-    v => Ok(v)
+    }),
+  ) catch {
+    error => Err(error)
   }
   guard bad_error_code is Err(InvalidField("error.code")) else {
     fail("expected invalid error code")
@@ -101,15 +93,13 @@ test "reject malformed cdp error and session fields" {
   let bad_error_message : Result[
     @protocol.CdpIncomingMessage,
     @protocol.ProtocolDecodeError,
-  ] = try
+  ] = Ok(
     @protocol.parse_cdp_incoming({
       "id": 1,
       "error": { "code": -32000, "message": false },
-    })
-  catch {
-    e => Err(e)
-  } noraise {
-    v => Ok(v)
+    }),
+  ) catch {
+    error => Err(error)
   }
   guard bad_error_message is Err(InvalidField("message")) else {
     fail("expected invalid error message")
@@ -118,15 +108,13 @@ test "reject malformed cdp error and session fields" {
   let bad_session : Result[
     @protocol.CdpIncomingMessage,
     @protocol.ProtocolDecodeError,
-  ] = try
+  ] = Ok(
     @protocol.parse_cdp_incoming({
       "method": "Page.loadEventFired",
       "sessionId": 1,
-    })
-  catch {
-    e => Err(e)
-  } noraise {
-    v => Ok(v)
+    }),
+  ) catch {
+    error => Err(error)
   }
   guard bad_session is Err(InvalidField("sessionId")) else {
     fail("expected invalid session id")
@@ -135,10 +123,8 @@ test "reject malformed cdp error and session fields" {
   let missing_method : Result[
     @protocol.CdpIncomingMessage,
     @protocol.ProtocolDecodeError,
-  ] = try @protocol.parse_cdp_incoming({ "params": {} }) catch {
-    e => Err(e)
-  } noraise {
-    v => Ok(v)
+  ] = Ok(@protocol.parse_cdp_incoming({ "params": {} })) catch {
+    error => Err(error)
   }
   guard missing_method is Err(MissingField("method")) else {
     fail("expected missing method")

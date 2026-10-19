@@ -212,12 +212,10 @@ test "generated typed event decoders parse schema-aware params" {
   inspect(trace.value.length(), content="2")
   assert_true(trace.value[0].value is { "name": "thread_name", .. })
 
-  let bad : Result[@typed.PageLoadEventFiredEventParams, Error] = try
-    @typed.PageLoadEventFiredEventParams::from_json({ "timestamp": "bad" })
-  catch {
-    e => Err(e)
-  } noraise {
-    v => Ok(v)
+  let bad : Result[@typed.PageLoadEventFiredEventParams, Error] = Ok(
+    @typed.PageLoadEventFiredEventParams::from_json({ "timestamp": "bad" }),
+  ) catch {
+    error => Err(error)
   }
   guard bad
     is Err(
@@ -260,12 +258,10 @@ test "generated typed command result decoders parse schema-aware results" {
   inspect(styles.computed_style[0].value, content="block")
   inspect(styles.extra_fields.is_appearance_base, content="false")
 
-  let missing : Result[@typed.PageNavigateResult, Error] = try
-    @typed.PageNavigateResult::from_json({})
-  catch {
-    e => Err(e)
-  } noraise {
-    v => Ok(v)
+  let missing : Result[@typed.PageNavigateResult, Error] = Ok(
+    @typed.PageNavigateResult::from_json({}),
+  ) catch {
+    error => Err(error)
   }
   guard missing
     is Err(
