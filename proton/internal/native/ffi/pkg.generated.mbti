@@ -3,6 +3,7 @@ package "moonbit-community/proton/internal/native/ffi"
 
 import {
   "moonbit-community/proton_ffi",
+  "moonbitlang/core/debug",
   "moonbitlang/core/ref",
 }
 
@@ -31,17 +32,17 @@ pub fn event_cookie_string_field(EventHandle, Int, Int, FixedArray[Byte], Int, @
 
 pub fn event_create() -> EventHandle
 
-pub fn event_int(EventHandle, Int) -> Int
+pub fn event_int(EventHandle, EventIntField) -> Int
 
-pub fn event_int64(EventHandle, Int) -> Int64
+pub fn event_int64(EventHandle, EventInt64Field) -> Int64
 
 pub fn event_item(EventHandle, Int, FixedArray[Byte], Int, @ref.Ref[Int]) -> Int
 
 pub fn event_item_count(EventHandle) -> Int
 
-pub fn event_kind(EventHandle) -> Int
+pub fn event_kind(EventHandle) -> EventKind
 
-pub fn event_text(EventHandle, Int, FixedArray[Byte], Int, @ref.Ref[Int]) -> Int
+pub fn event_text(EventHandle, EventTextField, FixedArray[Byte], Int, @ref.Ref[Int]) -> Int
 
 pub fn event_window_state_field(EventHandle, Int) -> Int
 
@@ -515,6 +516,97 @@ pub(all) enum BrowserOperation {
 }
 
 pub type EventHandle
+
+pub(all) enum EventInt64Field {
+  Window
+  View
+  RequestId
+  Revision
+  ReceivedBytes
+  TotalBytes
+} derive(@debug.Debug)
+pub fn EventInt64Field::to_repr(Self) -> @debug.Repr
+
+pub(all) enum EventIntField {
+  Status
+  ErrorCode
+  DownloadId
+  Permissions
+  Percent
+  Matches
+  ActiveMatchOrdinal
+  SelectionX
+  SelectionY
+  SelectionWidth
+  SelectionHeight
+  Success
+  UserGesture
+  HasPayload
+  IsLoading
+  FinalUpdate
+  Allowed
+  DarkColors
+  HighContrastColors
+  ReopenWhenEmpty
+} derive(@debug.Debug)
+pub fn EventIntField::to_repr(Self) -> @debug.Repr
+
+pub(all) enum EventKind {
+  Unknown
+  WindowCreated
+  WindowClosed
+  WindowStateChanged
+  WindowCloseRequested
+  BridgeLifecycleChanged
+  BridgeRequestCancelled
+  MenuCommand
+  OpenUrls
+  OpenFiles
+  Reopen
+  NotificationResult
+  BrowserNewWindowRequested
+  BrowserDownloadRequested
+  BrowserCertificateError
+  BrowserMediaPermissionRequested
+  BrowserDownloadUpdated
+  BridgeRequest
+  DialogCompleted
+  CookieGetCompleted
+  ResourceRequested
+  ResourceRequestCancelled
+  NotificationClicked
+  QuitRequested
+  ViewClosed
+  BrowserLoadingChanged
+  BrowserNavigated
+  BrowserTitleUpdated
+  BrowserLoadFailed
+  BrowserFindResult
+  BrowserPdfPrintFinished
+  AppActivation
+  BrowserResourceResponse
+  BrowserResourceCompleted
+  BrowserRendererTerminated
+  BrowserResourceRequested
+  NativeThemeChanged
+  TaskbarButtonClicked
+} derive(@debug.Debug)
+pub fn EventKind::to_repr(Self) -> @debug.Repr
+
+pub(all) enum EventTextField {
+  Url
+  Title
+  Message
+  Result
+  Path
+  CommandId
+  SuggestedName
+  State
+  Activation
+  NotificationPayload
+  Method
+} derive(@debug.Debug)
+pub fn EventTextField::to_repr(Self) -> @debug.Repr
 
 #external
 pub type ImageHandle

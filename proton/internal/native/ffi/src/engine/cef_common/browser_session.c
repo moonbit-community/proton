@@ -183,9 +183,9 @@ static cef_return_value_t CEF_CALLBACK proton_browser_on_before_resource_load(
       PROTON_EVENT_BROWSER_RESOURCE_REQUESTED, handler->window);
   if (request_event != NULL) request_event->view = handler->view;
   if (request_event != NULL && url_utf8 != NULL && method != NULL &&
-      proton_event_set_text(&request_event->text_a, url_utf8) &&
-      proton_event_set_text(&request_event->text_b, method)) {
-    request_event->bool_a = result == 0 ? 1 : 0;
+      proton_event_set_text(&request_event->url, url_utf8) &&
+      proton_event_set_text(&request_event->method, method)) {
+    request_event->allowed = result == 0 ? 1 : 0;
     (void)proton_event_publish(request_event);
   } else {
     proton_event_destroy(request_event);
@@ -243,8 +243,8 @@ static int CEF_CALLBACK proton_browser_on_resource_response(
       PROTON_EVENT_BROWSER_RESOURCE_RESPONSE, handler->window);
   if (event != NULL) event->view = handler->view;
   if (event != NULL && url_utf8 != NULL &&
-      proton_event_set_text(&event->text_a, url_utf8)) {
-    event->int_a = response->get_status(response);
+      proton_event_set_text(&event->url, url_utf8)) {
+    event->status = response->get_status(response);
     (void)proton_event_publish(event);
   } else {
     proton_event_destroy(event);
@@ -271,9 +271,9 @@ static void CEF_CALLBACK proton_browser_on_resource_load_complete(
       PROTON_EVENT_BROWSER_RESOURCE_COMPLETED, handler->window);
   if (event != NULL) event->view = handler->view;
   if (event != NULL && url_utf8 != NULL &&
-      proton_event_set_text(&event->text_a, url_utf8)) {
-    event->int_a = (int32_t)status;
-    event->int64_a = received_content_length;
+      proton_event_set_text(&event->url, url_utf8)) {
+    event->status = (int32_t)status;
+    event->received_bytes = received_content_length;
     (void)proton_event_publish(event);
   } else {
     proton_event_destroy(event);
@@ -393,9 +393,9 @@ static void CEF_CALLBACK proton_pdf_print_finished(
       PROTON_EVENT_BROWSER_PDF_PRINT_FINISHED, callback->window);
   if (event != NULL) event->view = callback->view;
   if (event != NULL && result_path != NULL &&
-      proton_event_set_text(&event->text_a, result_path)) {
+      proton_event_set_text(&event->path, result_path)) {
     event->request_id = callback->request_id;
-    event->bool_a = ok != 0 ? 1 : 0;
+    event->success = ok != 0 ? 1 : 0;
     (void)proton_event_publish(event);
   } else {
     proton_event_destroy(event);
@@ -562,7 +562,7 @@ void proton_browser_session_loading_changed(proton_browser_session_t *session,
       PROTON_EVENT_BROWSER_LOADING_CHANGED, session->window);
   if (event != NULL) event->view = session->view;
   if (event != NULL) {
-    event->bool_a = session->is_loading;
+    event->is_loading = session->is_loading;
   }
   (void)proton_browser_enqueue_event(session, event);
 }
@@ -576,7 +576,7 @@ void proton_browser_session_navigated(proton_browser_session_t *session,
   proton_event_t *event = proton_event_create_window(
       PROTON_EVENT_BROWSER_NAVIGATED, session->window);
   if (event != NULL) event->view = session->view;
-  if (event != NULL && !proton_event_set_text(&event->text_a, url)) {
+  if (event != NULL && !proton_event_set_text(&event->url, url)) {
     proton_event_destroy(event);
     event = NULL;
   }
@@ -592,7 +592,7 @@ void proton_browser_session_title_updated(proton_browser_session_t *session,
   proton_event_t *event = proton_event_create_window(
       PROTON_EVENT_BROWSER_TITLE_UPDATED, session->window);
   if (event != NULL) event->view = session->view;
-  if (event != NULL && !proton_event_set_text(&event->text_a, title)) {
+  if (event != NULL && !proton_event_set_text(&event->title, title)) {
     proton_event_destroy(event);
     event = NULL;
   }
@@ -612,13 +612,13 @@ void proton_browser_session_load_failed(proton_browser_session_t *session,
       PROTON_EVENT_BROWSER_LOAD_FAILED, session->window);
   if (event != NULL) event->view = session->view;
   if (event != NULL &&
-      (!proton_event_set_text(&event->text_a, url) ||
-       !proton_event_set_text(&event->text_b, error_text))) {
+      (!proton_event_set_text(&event->url, url) ||
+       !proton_event_set_text(&event->message, error_text))) {
     proton_event_destroy(event);
     event = NULL;
   }
   if (event != NULL) {
-    event->int_a = error_code;
+    event->error_code = error_code;
   }
   (void)proton_browser_enqueue_event(session, event);
 }
@@ -633,14 +633,14 @@ void proton_browser_session_renderer_terminated(
       PROTON_EVENT_BROWSER_RENDERER_TERMINATED, session->window);
   if (event != NULL) event->view = session->view;
   if (event != NULL &&
-      (!proton_event_set_text(&event->text_a, url) ||
-       !proton_event_set_text(&event->text_b, error_text))) {
+      (!proton_event_set_text(&event->url, url) ||
+       !proton_event_set_text(&event->message, error_text))) {
     proton_event_destroy(event);
     event = NULL;
   }
   if (event != NULL) {
-    event->int_a = status;
-    event->int_b = error_code;
+    event->status = status;
+    event->error_code = error_code;
   }
   (void)proton_browser_enqueue_event(session, event);
 }
@@ -748,7 +748,7 @@ static proton_event_t *proton_browser_request_event(
     proton_browser_session_t *session, proton_browser_pending_t *pending,
     proton_event_kind_t kind) {
   proton_event_t *event = proton_event_create(kind);
-  if (event == NULL || !proton_event_set_text(&event->text_a, pending->url)) {
+  if (event == NULL || !proton_event_set_text(&event->url, pending->url)) {
     proton_event_destroy(event);
     return NULL;
   }
@@ -809,7 +809,7 @@ int proton_browser_session_request_new_window(
   proton_event_t *event = proton_browser_request_event(
       session, pending, PROTON_EVENT_BROWSER_NEW_WINDOW_REQUESTED);
   if (event != NULL) {
-    event->bool_a = user_gesture;
+    event->user_gesture = user_gesture;
   }
   if (!proton_browser_enqueue_event(session, event)) {
     proton_browser_pending_remove(session, pending);
@@ -884,10 +884,10 @@ int proton_browser_session_before_download(
   callback->base.add_ref((cef_base_ref_counted_t *)callback);
   proton_event_t *event = proton_browser_request_event(
       session, pending, PROTON_EVENT_BROWSER_DOWNLOAD_REQUESTED);
-  int valid = event != NULL && proton_event_set_text(&event->text_b, name);
+  int valid = event != NULL && proton_event_set_text(&event->suggested_name, name);
   free(name);
   if (valid) {
-    event->int_a = (int32_t)download_id;
+    event->download_id = (int32_t)download_id;
   }
   if (!valid || !proton_browser_enqueue_event(session, event)) {
     if (!valid) {
@@ -980,13 +980,13 @@ void proton_browser_session_download_updated(
                                       : "progress";
   proton_event_t *event =
       proton_event_create(PROTON_EVENT_BROWSER_DOWNLOAD_UPDATED);
-  if (event != NULL && proton_event_set_text(&event->text_a, state)) {
+  if (event != NULL && proton_event_set_text(&event->state, state)) {
     event->window = session->window;
   event->view = session->view;
-    event->int_a = (int32_t)id;
-    event->int64_a = download_item->get_received_bytes(download_item);
-    event->int64_b = download_item->get_total_bytes(download_item);
-    event->int_b = download_item->get_percent_complete(download_item);
+    event->download_id = (int32_t)id;
+    event->received_bytes = download_item->get_received_bytes(download_item);
+    event->total_bytes = download_item->get_total_bytes(download_item);
+    event->percent = download_item->get_percent_complete(download_item);
     (void)proton_browser_enqueue_event(session, event);
   } else {
     proton_event_destroy(event);
@@ -1030,7 +1030,7 @@ int proton_browser_session_certificate_error(
   proton_event_t *event = proton_browser_request_event(
       session, pending, PROTON_EVENT_BROWSER_CERTIFICATE_ERROR);
   if (event != NULL) {
-    event->int_a = (int32_t)cert_error;
+    event->error_code = (int32_t)cert_error;
   }
   if (!proton_browser_enqueue_event(session, event)) {
     proton_browser_pending_remove(session, pending);
@@ -1064,7 +1064,7 @@ int proton_browser_session_media_permission(
   proton_event_t *event = proton_browser_request_event(
       session, pending, PROTON_EVENT_BROWSER_MEDIA_PERMISSION_REQUESTED);
   if (event != NULL) {
-    event->int_a = (int32_t)requested_permissions;
+    event->permissions = (int32_t)requested_permissions;
   }
   if (!proton_browser_enqueue_event(session, event)) {
     proton_browser_pending_remove(session, pending);
@@ -1594,13 +1594,13 @@ void proton_browser_session_find_result(
   if (event != NULL) {
     event->request_id =
         proton_browser_session_find_request_id(session, cef_identifier);
-    event->int_a = count;
-    event->int_b = active_match_ordinal;
-    event->int_c = x;
-    event->int64_a = y;
-    event->int64_b = width;
-    event->revision = height;
-    event->bool_a = final_update != 0 ? 1 : 0;
+    event->matches = count;
+    event->active_match_ordinal = active_match_ordinal;
+    event->selection_x = x;
+    event->selection_y = y;
+    event->selection_width = width;
+    event->selection_height = height;
+    event->final_update = final_update != 0 ? 1 : 0;
   }
   (void)proton_browser_enqueue_event(session, event);
 }

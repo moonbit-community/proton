@@ -176,21 +176,21 @@ static void proton_cookie_get_state_emit(proton_cookie_get_state_t *state) {
   proton_event_t *event = proton_event_create(PROTON_EVENT_COOKIE_GET_COMPLETED);
   if (event != NULL) {
     event->request_id = state->request_id;
-    event->int_a = state->status;
+    event->status = state->status;
     if (state->status == PROTON_OK) {
       if (!proton_event_set_payload(event, state->snapshot,
                                     proton_cookie_snapshot_destroy)) {
-        event->int_a = PROTON_ERR_ENGINE;
+        event->status = PROTON_ERR_ENGINE;
         proton_cookie_snapshot_destroy(state->snapshot);
         state->snapshot = NULL;
-        (void)proton_event_set_text(&event->text_a, "");
-        (void)proton_event_set_text(&event->text_b,
+        (void)proton_event_set_text(&event->result, "");
+        (void)proton_event_set_text(&event->message,
                                     "failed to allocate cookie result");
       } else {
         state->snapshot = NULL;
       }
-    } else if (!proton_event_set_text(&event->text_a, "") ||
-               !proton_event_set_text(&event->text_b, state->error)) {
+    } else if (!proton_event_set_text(&event->result, "") ||
+               !proton_event_set_text(&event->message, state->error)) {
       proton_event_destroy(event);
       event = NULL;
     }

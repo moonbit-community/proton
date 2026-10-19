@@ -27,7 +27,7 @@ bool proton_event_set_text(char **field, const char *text) {
   return *field != NULL;
 }
 void proton_event_destroy(proton_event_t *event) {
-  if (event) { free(event->text_a); free(event); }
+  if (event) { free(event->activation); free(event); }
 }
 bool proton_event_publish(proton_event_t *event) {
   LOCK();

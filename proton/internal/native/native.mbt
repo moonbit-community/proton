@@ -837,9 +837,9 @@ pub fn Window::popup_menu(
 ///|
 fn native_event_text(
   event : @native_ffi.EventHandle,
-  field : Int32,
+  field : @native_ffi.EventTextField,
 ) -> String? raise NativeError {
-  read_native_text("runtime event JSON", (buffer, buffer_len, required) => {
+  read_native_text("runtime event text", (buffer, buffer_len, required) => {
     @native_ffi.event_text(event, field, buffer, buffer_len, required)
   })
 }
@@ -847,7 +847,7 @@ fn native_event_text(
 ///|
 fn require_native_event_text(
   event : @native_ffi.EventHandle,
-  field : Int32,
+  field : @native_ffi.EventTextField,
   label : String,
 ) -> String raise NativeError {
   guard native_event_text(event, field) is Some(text) else {
@@ -1009,16 +1009,23 @@ fn native_theme_snapshot(
 fn decode_native_runtime_event(
   event : @native_ffi.EventHandle,
 ) -> RuntimeEvent raise NativeError {
-  let window = @native_ffi.event_int64(event, 0)
+  let window = @native_ffi.event_int64(event, Window)
   match @native_ffi.event_kind(event) {
-    1 => WindowCreated(window)
-    2 => WindowClosed(window)
-    3 => WindowStateChanged(window, native_window_state(event))
-    4 => WindowCloseRequested(window, @native_ffi.event_int64(event, 2))
-    5 => BridgeLifecycleChanged(window, @native_ffi.event_int64(event, 3))
-    6 => BridgeRequestCancelled(@native_ffi.event_int64(event, 2))
-    7 => {
-      let command_id = require_native_event_text(event, 0, "menu_command")
+    WindowCreated => WindowCreated(window)
+    WindowClosed => WindowClosed(window)
+    WindowStateChanged => WindowStateChanged(window, native_window_state(event))
+    WindowCloseRequested =>
+      WindowCloseRequested(window, @native_ffi.event_int64(event, RequestId))
+    BridgeLifecycleChanged =>
+      BridgeLifecycleChanged(window, @native_ffi.event_int64(event, Revision))
+    BridgeRequestCancelled =>
+      BridgeRequestCancelled(@native_ffi.event_int64(event, RequestId))
+    MenuCommand => {
+      let command_id = require_native_event_text(
+        event,
+        CommandId,
+        "menu_command",
+      )
       MenuCommand(
         command_id,
         if window == proton_invalid_handle {
@@ -1028,109 +1035,117 @@ fn decode_native_runtime_event(
         },
       )
     }
-    8 => LaunchInput(OpenUrls(native_event_items(event)))
-    9 => LaunchInput(OpenFiles(native_event_items(event)))
-    10 => LaunchInput(Reopen)
-    37 =>
+    OpenUrls => LaunchInput(OpenUrls(native_event_items(event)))
+    OpenFiles => LaunchInput(OpenFiles(native_event_items(event)))
+    Reopen => LaunchInput(Reopen)
+    AppActivation =>
       AppActivationReceived(
         decode_app_activation(
-          require_native_event_text(event, 0, "app activation"),
-          @native_ffi.event_int(event, 3) != 0,
+          require_native_event_text(event, Activation, "app activation"),
+          @native_ffi.event_int(event, ReopenWhenEmpty) != 0,
         ),
-        @native_ffi.event_int64(event, 2),
+        @native_ffi.event_int64(event, RequestId),
       )
-    11 =>
+    NotificationResult =>
       NotificationResult(
-        if @native_ffi.event_int(event, 3) != 0 {
+        if @native_ffi.event_int(event, Success) != 0 {
           Delivered
         } else {
-          Failed(require_native_event_text(event, 0, "notification result"))
+          Failed(
+            require_native_event_text(event, Message, "notification result"),
+          )
         },
       )
-    13 =>
+    BrowserNewWindowRequested =>
       BrowserRequest(
         window,
         native_event_view_id(event),
         NewWindow(
-          request_id=@native_ffi.event_int64(event, 2),
-          url=require_native_event_text(event, 0, "browser new window"),
-          user_gesture=@native_ffi.event_int(event, 3) != 0,
+          request_id=@native_ffi.event_int64(event, RequestId),
+          url=require_native_event_text(event, Url, "browser new window"),
+          user_gesture=@native_ffi.event_int(event, UserGesture) != 0,
         ),
       )
-    14 =>
+    BrowserDownloadRequested =>
       BrowserRequest(
         window,
         native_event_view_id(event),
         Download(
-          request_id=@native_ffi.event_int64(event, 2),
-          download_id=@native_ffi.event_int(event, 0),
-          url=require_native_event_text(event, 0, "browser download"),
+          request_id=@native_ffi.event_int64(event, RequestId),
+          download_id=@native_ffi.event_int(event, DownloadId),
+          url=require_native_event_text(event, Url, "browser download"),
           suggested_name=require_native_event_text(
-            event, 1, "browser download name",
+            event,
+            SuggestedName,
+            "browser download name",
           ),
         ),
       )
-    15 =>
+    BrowserCertificateError =>
       BrowserRequest(
         window,
         native_event_view_id(event),
         Certificate(
-          request_id=@native_ffi.event_int64(event, 2),
-          url=require_native_event_text(event, 0, "browser certificate"),
-          error_code=@native_ffi.event_int(event, 0),
+          request_id=@native_ffi.event_int64(event, RequestId),
+          url=require_native_event_text(event, Url, "browser certificate"),
+          error_code=@native_ffi.event_int(event, ErrorCode),
         ),
       )
-    16 =>
+    BrowserMediaPermissionRequested =>
       BrowserRequest(
         window,
         native_event_view_id(event),
         Media(
-          request_id=@native_ffi.event_int64(event, 2),
-          origin=require_native_event_text(event, 0, "browser media"),
-          permissions=@native_ffi.event_int(event, 0),
+          request_id=@native_ffi.event_int64(event, RequestId),
+          origin=require_native_event_text(event, Url, "browser media"),
+          permissions=@native_ffi.event_int(event, Permissions),
         ),
       )
-    17 =>
+    BrowserDownloadUpdated =>
       BrowserDownloadUpdated(window, native_event_view_id(event), {
-        download_id: @native_ffi.event_int(event, 0),
-        state: require_native_event_text(event, 0, "browser download update"),
-        received_bytes: @native_ffi.event_int64(event, 4),
-        total_bytes: @native_ffi.event_int64(event, 5),
-        percent: @native_ffi.event_int(event, 1),
+        download_id: @native_ffi.event_int(event, DownloadId),
+        state: require_native_event_text(
+          event,
+          State,
+          "browser download update",
+        ),
+        received_bytes: @native_ffi.event_int64(event, ReceivedBytes),
+        total_bytes: @native_ffi.event_int64(event, TotalBytes),
+        percent: @native_ffi.event_int(event, Percent),
       })
-    22 =>
+    BridgeRequest =>
       BridgeRequestReceived(
         decode_bridge_request(
-          @native_ffi.event_int64(event, 2),
+          @native_ffi.event_int64(event, RequestId),
           window,
           native_event_items(event),
         ),
       )
-    23 => {
-      let status = @native_ffi.event_int(event, 0)
+    DialogCompleted => {
+      let status = @native_ffi.event_int(event, Status)
       DialogCompleted({
-        dialog: @native_ffi.event_int64(event, 2),
+        dialog: @native_ffi.event_int64(event, RequestId),
         window: if window == proton_invalid_handle {
           None
         } else {
           Some(window)
         },
         result: if status == 0 {
-          Ok(require_native_event_text(event, 0, "dialog result"))
+          Ok(require_native_event_text(event, Result, "dialog result"))
         } else {
           Err(
             Status(
               status~,
-              message=require_native_event_text(event, 1, "dialog error"),
+              message=require_native_event_text(event, Message, "dialog error"),
             ),
           )
         },
       })
     }
-    24 => {
-      let status = @native_ffi.event_int(event, 0)
+    CookieGetCompleted => {
+      let status = @native_ffi.event_int(event, Status)
       CookieGetCompleted({
-        request_id: @native_ffi.event_int64(event, 2),
+        request_id: @native_ffi.event_int64(event, RequestId),
         window,
         result: if status == 0 {
           Ok(decode_native_cookie_snapshot(event))
@@ -1138,142 +1153,153 @@ fn decode_native_runtime_event(
           Err(
             Status(
               status~,
-              message=require_native_event_text(event, 1, "cookie error"),
+              message=require_native_event_text(event, Message, "cookie error"),
             ),
           )
         },
       })
     }
-    25 =>
+    ResourceRequested =>
       ResourceRequested({
-        request_id: @native_ffi.event_int64(event, 2),
+        request_id: @native_ffi.event_int64(event, RequestId),
         window,
         view: {
-          let view = @native_ffi.event_int64(event, 1)
+          let view = @native_ffi.event_int64(event, View)
           if view == proton_invalid_handle {
             None
           } else {
             Some(view)
           }
         },
-        url: require_native_event_text(event, 0, "resource request"),
+        url: require_native_event_text(event, Url, "resource request"),
       })
-    26 => ResourceRequestCancelled(@native_ffi.event_int64(event, 2))
-    27 =>
+    ResourceRequestCancelled =>
+      ResourceRequestCancelled(@native_ffi.event_int64(event, RequestId))
+    NotificationClicked =>
       NotificationClicked(
-        if @native_ffi.event_int(event, 3) == 0 {
+        if @native_ffi.event_int(event, HasPayload) == 0 {
           None
         } else {
-          Some(require_native_event_text(event, 0, "notification click"))
+          Some(
+            require_native_event_text(
+              event,
+              NotificationPayload,
+              "notification click",
+            ),
+          )
         },
       )
-    28 => QuitRequested
-    29 => ViewClosed(window, @native_ffi.event_int64(event, 1))
-    30 =>
+    QuitRequested => QuitRequested
+    ViewClosed => ViewClosed(window, @native_ffi.event_int64(event, View))
+    BrowserLoadingChanged =>
       BrowserEvent(
         window,
         native_event_view_id(event),
-        LoadingChanged(@native_ffi.event_int(event, 3) != 0),
+        LoadingChanged(@native_ffi.event_int(event, IsLoading) != 0),
       )
-    31 =>
+    BrowserNavigated =>
       BrowserEvent(
         window,
         native_event_view_id(event),
-        Navigated(require_native_event_text(event, 0, "browser navigation")),
+        Navigated(require_native_event_text(event, Url, "browser navigation")),
       )
-    32 =>
+    BrowserTitleUpdated =>
       BrowserEvent(
         window,
         native_event_view_id(event),
-        TitleUpdated(require_native_event_text(event, 0, "browser title")),
+        TitleUpdated(require_native_event_text(event, Title, "browser title")),
       )
-    33 =>
+    BrowserLoadFailed =>
       BrowserEvent(
         window,
         native_event_view_id(event),
         LoadFailed(
-          require_native_event_text(event, 0, "browser load URL"),
-          @native_ffi.event_int(event, 0),
-          require_native_event_text(event, 1, "browser load error"),
+          require_native_event_text(event, Url, "browser load URL"),
+          @native_ffi.event_int(event, ErrorCode),
+          require_native_event_text(event, Message, "browser load error"),
         ),
       )
-    34 =>
+    BrowserFindResult =>
       BrowserEvent(
         window,
         native_event_view_id(event),
         FindResult({
-          request_id: @native_ffi.event_int64(event, 2).to_int(),
-          active_match_ordinal: @native_ffi.event_int(event, 1),
-          matches: @native_ffi.event_int(event, 0),
-          selection_x: @native_ffi.event_int(event, 2),
-          selection_y: @native_ffi.event_int64(event, 4).to_int(),
-          selection_width: @native_ffi.event_int64(event, 5).to_int(),
-          selection_height: @native_ffi.event_int64(event, 3).to_int(),
-          final_update: @native_ffi.event_int(event, 3) != 0,
+          request_id: @native_ffi.event_int64(event, RequestId).to_int(),
+          active_match_ordinal: @native_ffi.event_int(event, ActiveMatchOrdinal),
+          matches: @native_ffi.event_int(event, Matches),
+          selection_x: @native_ffi.event_int(event, SelectionX),
+          selection_y: @native_ffi.event_int(event, SelectionY),
+          selection_width: @native_ffi.event_int(event, SelectionWidth),
+          selection_height: @native_ffi.event_int(event, SelectionHeight),
+          final_update: @native_ffi.event_int(event, FinalUpdate) != 0,
         }),
       )
-    40 =>
+    BrowserRendererTerminated =>
       BrowserEvent(
         window,
         native_event_view_id(event),
         RendererProcessTerminated(
-          require_native_event_text(event, 0, "renderer termination URL"),
-          @native_ffi.event_int(event, 0),
-          @native_ffi.event_int(event, 1),
-          require_native_event_text(event, 1, "renderer termination detail"),
+          require_native_event_text(event, Url, "renderer termination URL"),
+          @native_ffi.event_int(event, Status),
+          @native_ffi.event_int(event, ErrorCode),
+          require_native_event_text(
+            event,
+            Message,
+            "renderer termination detail",
+          ),
         ),
       )
-    38 =>
+    BrowserResourceResponse =>
       BrowserEvent(
         window,
         native_event_view_id(event),
         ResourceResponse(
-          require_native_event_text(event, 0, "resource response"),
-          @native_ffi.event_int(event, 0),
+          require_native_event_text(event, Url, "resource response"),
+          @native_ffi.event_int(event, Status),
         ),
       )
-    39 =>
+    BrowserResourceCompleted =>
       BrowserEvent(
         window,
         native_event_view_id(event),
         ResourceCompleted(
-          require_native_event_text(event, 0, "resource completion"),
-          @native_ffi.event_int(event, 0),
-          @native_ffi.event_int64(event, 4),
+          require_native_event_text(event, Url, "resource completion"),
+          @native_ffi.event_int(event, Status),
+          @native_ffi.event_int64(event, ReceivedBytes),
         ),
       )
-    42 =>
+    BrowserResourceRequested =>
       BrowserEvent(
         window,
         native_event_view_id(event),
         ResourceRequested(
-          require_native_event_text(event, 0, "resource request URL"),
-          require_native_event_text(event, 1, "resource request method"),
-          @native_ffi.event_int(event, 3) != 0,
+          require_native_event_text(event, Url, "resource request URL"),
+          require_native_event_text(event, Method, "resource request method"),
+          @native_ffi.event_int(event, Allowed) != 0,
         ),
       )
-    36 =>
+    BrowserPdfPrintFinished =>
       BrowserPdfPrinted(window, native_event_view_id(event), {
-        request_id: @native_ffi.event_int64(event, 2).to_int(),
-        path: require_native_event_text(event, 0, "PDF print path"),
-        success: @native_ffi.event_int(event, 3) != 0,
+        request_id: @native_ffi.event_int64(event, RequestId).to_int(),
+        path: require_native_event_text(event, Path, "PDF print path"),
+        success: @native_ffi.event_int(event, Success) != 0,
       })
-    43 =>
+    NativeThemeChanged =>
       NativeThemeChanged(
         native_theme_snapshot(
-          @native_ffi.event_int(event, 3),
-          @native_ffi.event_int(event, 4),
+          @native_ffi.event_int(event, DarkColors),
+          @native_ffi.event_int(event, HighContrastColors),
         ),
       )
-    44 =>
+    TaskbarButtonClicked =>
       TaskbarButtonClicked(
         window,
-        require_native_event_text(event, 0, "taskbar button click"),
+        require_native_event_text(event, CommandId, "taskbar button click"),
       )
-    kind =>
+    Unknown =>
       raise InvalidPayload(
         context="runtime event",
-        message="unsupported native event kind " + kind.to_string(),
+        message="unknown native event kind",
       )
   }
 }
@@ -3857,7 +3883,7 @@ pub fn View::respond_browser_request(
 
 ///|
 fn native_event_view_id(event : @native_ffi.EventHandle) -> Int64? {
-  let view = @native_ffi.event_int64(event, 1)
+  let view = @native_ffi.event_int64(event, View)
   if view == proton_invalid_handle {
     None
   } else {

@@ -5,6 +5,7 @@
 #include "moonbit.h"
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 typedef struct {
@@ -531,4 +532,93 @@ MOONBIT_FFI_EXPORT int32_t proton_test_browser_operation_abi(
   };
   return index >= 0 && (size_t)index < sizeof(operations) / sizeof(operations[0])
       && operation == operations[index];
+}
+
+/* Compare MoonBit enum values with the authoritative C event contract. */
+MOONBIT_FFI_EXPORT moonbit_bytes_t proton_test_event_contract_name(int32_t value,
+                                                                 int32_t group) {
+  switch (group) {
+  case 0:
+    switch (value) {
+#define PROTON_EVENT_KIND(name, tag, mb_name) \
+    case PROTON_EVENT_##name: return proton_test_copy_trace(#mb_name);
+      PROTON_EVENT_KINDS(PROTON_EVENT_KIND)
+#undef PROTON_EVENT_KIND
+    }
+    break;
+  case 1:
+    switch (value) {
+#define PROTON_EVENT_FIELD(name, mb_name) \
+    case PROTON_EVENT_INT64_##name: return proton_test_copy_trace(#mb_name);
+      PROTON_EVENT_INT64_FIELDS(PROTON_EVENT_FIELD)
+#undef PROTON_EVENT_FIELD
+    }
+    break;
+  case 2:
+    switch (value) {
+#define PROTON_EVENT_FIELD(name, mb_name) \
+    case PROTON_EVENT_INT_##name: return proton_test_copy_trace(#mb_name);
+      PROTON_EVENT_INT_FIELDS(PROTON_EVENT_FIELD)
+#undef PROTON_EVENT_FIELD
+    }
+    break;
+  case 3:
+    switch (value) {
+#define PROTON_EVENT_FIELD(name, mb_name) \
+    case PROTON_EVENT_TEXT_##name: return proton_test_copy_trace(#mb_name);
+      PROTON_EVENT_TEXT_FIELDS(PROTON_EVENT_FIELD)
+#undef PROTON_EVENT_FIELD
+    }
+    break;
+  }
+  return proton_test_copy_trace("unknown");
+}
+
+MOONBIT_FFI_EXPORT int32_t proton_test_event_contract_count(int32_t group) {
+  switch (group) {
+#define PROTON_EVENT_KIND(name, tag, mb_name) + 1
+  case 0: return 0 PROTON_EVENT_KINDS(PROTON_EVENT_KIND);
+#undef PROTON_EVENT_KIND
+#define PROTON_EVENT_FIELD(name, mb_name) + 1
+  case 1: return 0 PROTON_EVENT_INT64_FIELDS(PROTON_EVENT_FIELD);
+  case 2: return 0 PROTON_EVENT_INT_FIELDS(PROTON_EVENT_FIELD);
+  case 3: return 0 PROTON_EVENT_TEXT_FIELDS(PROTON_EVENT_FIELD);
+#undef PROTON_EVENT_FIELD
+  default: return 0;
+  }
+}
+
+static bool proton_test_capture_event(void *data, proton_event_t *event) {
+  proton_event_t *out = data;
+  proton_event_clear(out);
+  *out = *event;
+  free(event);
+  return true;
+}
+
+static proton_browser_session_t *proton_test_event_session(proton_event_t *out) {
+  proton_browser_policy_t policy = {0};
+  proton_browser_session_t *session =
+      proton_browser_session_create(&policy, NULL, NULL, NULL);
+  proton_browser_session_bind_contents(session, 7, 11);
+  proton_event_bind_sink(proton_test_capture_event, out);
+  proton_event_dispatch_begin();
+  return session;
+}
+
+MOONBIT_FFI_EXPORT void proton_test_find_result_event(proton_event_t *out) {
+  proton_browser_session_t *session = proton_test_event_session(out);
+  proton_browser_session_find_result(session, 91, 13, -3, 17, 29, 41, 5, 1);
+  proton_browser_session_destroy(session);
+  proton_event_dispatch_end();
+  proton_event_unbind_sink(out);
+}
+
+MOONBIT_FFI_EXPORT void proton_test_renderer_terminated_event(proton_event_t *out) {
+  proton_browser_session_t *session = proton_test_event_session(out);
+  proton_browser_session_renderer_terminated(
+      session, 3, -107, "https://example.test/page", "renderer stopped");
+  proton_browser_session_destroy(session);
+  proton_event_dispatch_end();
+  proton_event_unbind_sink(out);
 }

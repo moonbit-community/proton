@@ -1,6 +1,10 @@
 // Generated using `moon info`, DON'T EDIT IT
 package "moonbit-community/proton/internal/native/ffi/tests/browser_session"
 
+import {
+  "moonbit-community/proton/internal/native/ffi",
+}
+
 // Values
 pub fn denied_download_policy_trace() -> String
 
@@ -18,7 +22,11 @@ pub fn download_single_completion_trace() -> String
 
 pub fn edit_operations_trace() -> String
 
+pub fn find_result_event() -> @ffi.EventHandle
+
 pub fn header_case_trace() -> String
+
+pub fn renderer_terminated_event() -> @ffi.EventHandle
 
 pub fn resource_handler_lifetime_trace() -> String
 

@@ -16,63 +16,126 @@ typedef CRITICAL_SECTION proton_event_mutex_t;
 typedef pthread_mutex_t proton_event_mutex_t;
 #endif
 
+/* The event ABI contract. Numeric tags and named payload fields live here.
+ * MoonBit mirrors these enums; the native contract test checks their names/tags. */
+#define PROTON_EVENT_KINDS(X) \
+  X(WINDOW_CREATED, 1, WindowCreated) \
+  X(WINDOW_CLOSED, 2, WindowClosed) \
+  X(WINDOW_STATE_CHANGED, 3, WindowStateChanged) \
+  X(WINDOW_CLOSE_REQUESTED, 4, WindowCloseRequested) \
+  X(BRIDGE_LIFECYCLE_CHANGED, 5, BridgeLifecycleChanged) \
+  X(BRIDGE_REQUEST_CANCELLED, 6, BridgeRequestCancelled) \
+  X(MENU_COMMAND, 7, MenuCommand) \
+  X(OPEN_URLS, 8, OpenUrls) \
+  X(OPEN_FILES, 9, OpenFiles) \
+  X(REOPEN, 10, Reopen) \
+  X(NOTIFICATION_RESULT, 11, NotificationResult) \
+  X(BROWSER_NEW_WINDOW_REQUESTED, 13, BrowserNewWindowRequested) \
+  X(BROWSER_DOWNLOAD_REQUESTED, 14, BrowserDownloadRequested) \
+  X(BROWSER_CERTIFICATE_ERROR, 15, BrowserCertificateError) \
+  X(BROWSER_MEDIA_PERMISSION_REQUESTED, 16, BrowserMediaPermissionRequested) \
+  X(BROWSER_DOWNLOAD_UPDATED, 17, BrowserDownloadUpdated) \
+  X(BRIDGE_REQUEST, 22, BridgeRequest) \
+  X(DIALOG_COMPLETED, 23, DialogCompleted) \
+  X(COOKIE_GET_COMPLETED, 24, CookieGetCompleted) \
+  X(RESOURCE_REQUESTED, 25, ResourceRequested) \
+  X(RESOURCE_REQUEST_CANCELLED, 26, ResourceRequestCancelled) \
+  X(NOTIFICATION_CLICKED, 27, NotificationClicked) \
+  X(QUIT_REQUESTED, 28, QuitRequested) \
+  X(VIEW_CLOSED, 29, ViewClosed) \
+  X(BROWSER_LOADING_CHANGED, 30, BrowserLoadingChanged) \
+  X(BROWSER_NAVIGATED, 31, BrowserNavigated) \
+  X(BROWSER_TITLE_UPDATED, 32, BrowserTitleUpdated) \
+  X(BROWSER_LOAD_FAILED, 33, BrowserLoadFailed) \
+  X(BROWSER_FIND_RESULT, 34, BrowserFindResult) \
+  X(BROWSER_PDF_PRINT_FINISHED, 36, BrowserPdfPrintFinished) \
+  X(APP_ACTIVATION, 37, AppActivation) \
+  X(BROWSER_RESOURCE_RESPONSE, 38, BrowserResourceResponse) \
+  X(BROWSER_RESOURCE_COMPLETED, 39, BrowserResourceCompleted) \
+  X(BROWSER_RENDERER_TERMINATED, 40, BrowserRendererTerminated) \
+  X(BROWSER_RESOURCE_REQUESTED, 42, BrowserResourceRequested) \
+  X(NATIVE_THEME_CHANGED, 43, NativeThemeChanged) \
+  X(TASKBAR_BUTTON_CLICKED, 44, TaskbarButtonClicked)
+
 typedef enum proton_event_kind {
-  PROTON_EVENT_WINDOW_CREATED = 1,
-  PROTON_EVENT_WINDOW_CLOSED = 2,
-  PROTON_EVENT_WINDOW_STATE_CHANGED = 3,
-  PROTON_EVENT_WINDOW_CLOSE_REQUESTED = 4,
-  PROTON_EVENT_BRIDGE_LIFECYCLE_CHANGED = 5,
-  PROTON_EVENT_BRIDGE_REQUEST_CANCELLED = 6,
-  PROTON_EVENT_MENU_COMMAND = 7,
-  PROTON_EVENT_OPEN_URLS = 8,
-  PROTON_EVENT_OPEN_FILES = 9,
-  PROTON_EVENT_REOPEN = 10,
-  PROTON_EVENT_NOTIFICATION_RESULT = 11,
-  PROTON_EVENT_BROWSER_NEW_WINDOW_REQUESTED = 13,
-  PROTON_EVENT_BROWSER_DOWNLOAD_REQUESTED = 14,
-  PROTON_EVENT_BROWSER_CERTIFICATE_ERROR = 15,
-  PROTON_EVENT_BROWSER_MEDIA_PERMISSION_REQUESTED = 16,
-  PROTON_EVENT_BROWSER_DOWNLOAD_UPDATED = 17,
-  PROTON_EVENT_BRIDGE_REQUEST = 22,
-  PROTON_EVENT_DIALOG_COMPLETED = 23,
-  PROTON_EVENT_COOKIE_GET_COMPLETED = 24,
-  PROTON_EVENT_RESOURCE_REQUESTED = 25,
-  PROTON_EVENT_RESOURCE_REQUEST_CANCELLED = 26,
-  PROTON_EVENT_NOTIFICATION_CLICKED = 27,
-  PROTON_EVENT_QUIT_REQUESTED = 28,
-  PROTON_EVENT_VIEW_CLOSED = 29,
-  PROTON_EVENT_BROWSER_LOADING_CHANGED = 30,
-  PROTON_EVENT_BROWSER_NAVIGATED = 31,
-  PROTON_EVENT_BROWSER_TITLE_UPDATED = 32,
-  PROTON_EVENT_BROWSER_LOAD_FAILED = 33,
-  PROTON_EVENT_BROWSER_FIND_RESULT = 34,
-  PROTON_EVENT_BROWSER_PDF_PRINT_FINISHED = 36,
-  PROTON_EVENT_APP_ACTIVATION = 37,
-  PROTON_EVENT_BROWSER_RESOURCE_RESPONSE = 38,
-  PROTON_EVENT_BROWSER_RESOURCE_COMPLETED = 39,
-  PROTON_EVENT_BROWSER_RENDERER_TERMINATED = 40,
-  PROTON_EVENT_BROWSER_RESOURCE_REQUESTED = 42,
-  PROTON_EVENT_NATIVE_THEME_CHANGED = 43,
-  PROTON_EVENT_TASKBAR_BUTTON_CLICKED = 44,
+#define PROTON_EVENT_KIND(name, tag, mb_name) PROTON_EVENT_##name = tag,
+  PROTON_EVENT_KINDS(PROTON_EVENT_KIND)
+#undef PROTON_EVENT_KIND
 } proton_event_kind_t;
+
+#define PROTON_EVENT_INT64_FIELDS(X) \
+  X(window, Window) \
+  X(view, View) \
+  X(request_id, RequestId) \
+  X(revision, Revision) \
+  X(received_bytes, ReceivedBytes) \
+  X(total_bytes, TotalBytes)
+
+typedef enum proton_event_int64_field {
+#define PROTON_EVENT_FIELD(name, mb_name) PROTON_EVENT_INT64_##name,
+  PROTON_EVENT_INT64_FIELDS(PROTON_EVENT_FIELD)
+#undef PROTON_EVENT_FIELD
+} proton_event_int64_field_t;
+
+#define PROTON_EVENT_INT_FIELDS(X) \
+  X(status, Status) \
+  X(error_code, ErrorCode) \
+  X(download_id, DownloadId) \
+  X(permissions, Permissions) \
+  X(percent, Percent) \
+  X(matches, Matches) \
+  X(active_match_ordinal, ActiveMatchOrdinal) \
+  X(selection_x, SelectionX) \
+  X(selection_y, SelectionY) \
+  X(selection_width, SelectionWidth) \
+  X(selection_height, SelectionHeight) \
+  X(success, Success) \
+  X(user_gesture, UserGesture) \
+  X(has_payload, HasPayload) \
+  X(is_loading, IsLoading) \
+  X(final_update, FinalUpdate) \
+  X(allowed, Allowed) \
+  X(dark_colors, DarkColors) \
+  X(high_contrast_colors, HighContrastColors) \
+  X(reopen_when_empty, ReopenWhenEmpty)
+
+typedef enum proton_event_int_field {
+#define PROTON_EVENT_FIELD(name, mb_name) PROTON_EVENT_INT_##name,
+  PROTON_EVENT_INT_FIELDS(PROTON_EVENT_FIELD)
+#undef PROTON_EVENT_FIELD
+} proton_event_int_field_t;
+
+#define PROTON_EVENT_TEXT_FIELDS(X) \
+  X(url, Url) \
+  X(title, Title) \
+  X(message, Message) \
+  X(result, Result) \
+  X(path, Path) \
+  X(command_id, CommandId) \
+  X(suggested_name, SuggestedName) \
+  X(state, State) \
+  X(activation, Activation) \
+  X(notification_payload, NotificationPayload) \
+  X(method, Method)
+
+typedef enum proton_event_text_field {
+#define PROTON_EVENT_FIELD(name, mb_name) PROTON_EVENT_TEXT_##name,
+  PROTON_EVENT_TEXT_FIELDS(PROTON_EVENT_FIELD)
+#undef PROTON_EVENT_FIELD
+} proton_event_text_field_t;
 
 typedef struct proton_event {
   proton_event_kind_t kind;
-  int64_t window;
-  int64_t view;
-  int64_t request_id;
-  int64_t revision;
-  int64_t int64_a;
-  int64_t int64_b;
-  int32_t int_a;
-  int32_t int_b;
-  int32_t int_c;
-  int32_t bool_a;
-  int32_t bool_b;
+#define PROTON_EVENT_FIELD(name, mb_name) int64_t name;
+  PROTON_EVENT_INT64_FIELDS(PROTON_EVENT_FIELD)
+#undef PROTON_EVENT_FIELD
+#define PROTON_EVENT_FIELD(name, mb_name) int32_t name;
+  PROTON_EVENT_INT_FIELDS(PROTON_EVENT_FIELD)
+#undef PROTON_EVENT_FIELD
+#define PROTON_EVENT_FIELD(name, mb_name) char *name;
+  PROTON_EVENT_TEXT_FIELDS(PROTON_EVENT_FIELD)
+#undef PROTON_EVENT_FIELD
   int32_t window_state[21];
-  char *text_a;
-  char *text_b;
-  char *text_c;
   char **items;
   int32_t item_count;
   void *payload;

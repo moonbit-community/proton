@@ -105,3 +105,25 @@ pub fn edit_operations_trace() -> String {
   @ffi.link_runtime()
   @utf8.decode_lossy(edit_operations_trace_ffi())
 }
+
+///|
+#borrow(event)
+extern "C" fn find_result_event_ffi(event : @ffi.EventHandle) -> Unit = "proton_test_find_result_event"
+
+///|
+pub fn find_result_event() -> @ffi.EventHandle {
+  let event = @ffi.event_create()
+  find_result_event_ffi(event)
+  event
+}
+
+///|
+#borrow(event)
+extern "C" fn renderer_terminated_event_ffi(event : @ffi.EventHandle) -> Unit = "proton_test_renderer_terminated_event"
+
+///|
+pub fn renderer_terminated_event() -> @ffi.EventHandle {
+  let event = @ffi.event_create()
+  renderer_terminated_event_ffi(event)
+  event
+}

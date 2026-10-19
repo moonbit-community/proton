@@ -22,11 +22,11 @@ static void proton_notification_complete(BOOL delivered, NSError *error) {
   proton_event_t *event =
       proton_event_create(PROTON_EVENT_NOTIFICATION_RESULT);
   const char *text = [message UTF8String];
-  if (event == NULL || !proton_event_set_text(&event->text_a, text)) {
+  if (event == NULL || !proton_event_set_text(&event->message, text)) {
     proton_event_destroy(event);
     return;
   }
-  event->bool_a = delivered;
+  event->success = delivered;
   (void)proton_event_publish(event);
 }
 
@@ -45,9 +45,9 @@ static void proton_notification_publish_click(NSString *payload,
   if (event == NULL) {
     return;
   }
-  event->bool_a = has_payload;
+  event->has_payload = has_payload;
   if (has_payload &&
-      !proton_event_set_text(&event->text_a, [payload UTF8String])) {
+      !proton_event_set_text(&event->notification_payload, [payload UTF8String])) {
     proton_event_destroy(event);
     return;
   }

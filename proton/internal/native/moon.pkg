@@ -11,6 +11,7 @@ import {
   "moonbitlang/async",
   "moonbitlang/async/fs" @async_fs,
   "moonbitlang/core/debug",
+  "moonbit-community/proton/internal/native/ffi/tests/browser_session" @event_fixture,
 } for "wbtest"
 
 supported_targets = "native"

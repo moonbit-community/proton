@@ -177,8 +177,8 @@ static void proton_engine_publish_native_theme_change(
   if (event == NULL) {
     return;
   }
-  event->bool_a = dark_colors != 0 ? 1 : 0;
-  event->bool_b = high_contrast_colors != 0 ? 1 : 0;
+  event->dark_colors = dark_colors != 0 ? 1 : 0;
+  event->high_contrast_colors = high_contrast_colors != 0 ? 1 : 0;
   if (!proton_event_publish(event)) {
     return;
   }
@@ -589,7 +589,7 @@ static LRESULT CALLBACK proton_engine_window_proc(HWND hwnd,
               proton_event_create_window(PROTON_EVENT_TASKBAR_BUTTON_CLICKED,
                                          window->public_window_id);
           if (event != NULL) {
-            if (!proton_event_set_text(&event->text_a,
+            if (!proton_event_set_text(&event->command_id,
                                        window->thumbar_ids[index])) {
               proton_event_destroy(event);
             } else {

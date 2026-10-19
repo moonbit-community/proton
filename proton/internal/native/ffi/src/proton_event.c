@@ -137,9 +137,9 @@ void proton_event_clear(proton_event_t *event) {
   if (event == NULL) {
     return;
   }
-  free(event->text_a);
-  free(event->text_b);
-  free(event->text_c);
+#define PROTON_EVENT_FIELD(name, mb_name) free(event->name);
+  PROTON_EVENT_TEXT_FIELDS(PROTON_EVENT_FIELD)
+#undef PROTON_EVENT_FIELD
   for (int32_t i = 0; i < event->item_count; i++) {
     free(event->items[i]);
   }
