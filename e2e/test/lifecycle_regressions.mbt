@@ -107,7 +107,7 @@ async fn run_lifecycle_regressions(root : String, timeout : Int32) -> Unit {
     if @mbfs.path_exists(gate + ".failed-request-checked") {
       @fs.remove(gate + ".failed-request-checked")
     }
-    for suffix in [".cleanup-ready", ".cleanup-release"] {
+    for suffix in [".cleanup-ready", ".cleanup-release", ".popup-evaluated"] {
       if @mbfs.path_exists(gate + suffix) {
         @fs.remove(gate + suffix)
       }
@@ -207,15 +207,29 @@ async fn run_lifecycle_regressions(root : String, timeout : Int32) -> Unit {
               title~,
               timeout_ms=timeout,
             )
-            ignore(
-              client.send_schema_command("Runtime.evaluate", params={
-                "expression": "window.open('about:blank'); void 0",
-                "userGesture": true,
-                "returnByValue": true,
-              }),
+            let response = client.send_schema_command("Runtime.evaluate", params={
+              "expression": "window.open('about:blank'); void 0",
+              "userGesture": true,
+              "returnByValue": true,
+            }) catch {
+              error =>
+                fail(
+                  "popup evaluation failed for " +
+                  title +
+                  ": " +
+                  error.to_string() +
+                  app_output_suffix(app.output_path),
+                )
+            }
+            assert_true(
+              response.error is None,
+              msg="popup evaluation failed for " + title,
             )
             client.close()
           }
+          // Receiving the popup is earlier than receiving the CDP reply. Keep
+          // its page alive until both evaluations have completed successfully.
+          @mbfs.write_string_to_file(gate + ".popup-evaluated", "evaluated")
         }
         if name == "navigation-cleanup" {
           while !@mbfs.path_exists(gate + ".cleanup-ready") {
