@@ -10,10 +10,10 @@ import {
 // Errors
 pub(all) suberror LocaleParseError {
   Empty
-  InvalidCharacter(position~ : Int, character~ : Char)
-  EmptySubtag(index~ : Int)
-  OverlongSubtag(index~ : Int, value~ : String)
-  InvalidSubtag(index~ : Int, value~ : String, expectation~ : String)
+  InvalidCharacter(position~ : Int32, character~ : Char)
+  EmptySubtag(index~ : Int32)
+  OverlongSubtag(index~ : Int32, value~ : String)
+  InvalidSubtag(index~ : Int32, value~ : String, expectation~ : String)
   DuplicateVariant(variant~ : String)
   DuplicateExtension(singleton~ : String)
 } derive(Eq, @debug.Debug)

@@ -2,6 +2,7 @@
 package "moonbit-community/proton/manifest"
 
 import {
+  "moonbit-community/proton/types",
   "moonbitlang/core/debug",
 }
 
@@ -27,9 +28,9 @@ pub struct AppManifest {
   window : WindowManifest
   entry : AppEntry
   windows : Array[AppWindowManifest]
-  debug : Int
+  debug : Int32
 }
-pub fn AppManifest::AppManifest(WindowManifest, AppEntry, debug? : Int, windows? : Array[AppWindowManifest]) -> Self
+pub fn AppManifest::AppManifest(WindowManifest, AppEntry, debug? : Int32, windows? : Array[AppWindowManifest]) -> Self
 
 pub struct AppWindowManifest {
   id : String
@@ -45,27 +46,16 @@ pub fn AppWindowManifest::to_repr(Self) -> @debug.Repr
 pub fn AppWindowManifest::to_string(Self) -> String
 pub impl Show for AppWindowManifest
 
-pub(all) enum TitlebarStyle {
-  Default
-  Overlay
-} derive(Eq, @debug.Debug)
-pub fn TitlebarStyle::equal(Self, Self) -> Bool
-pub fn TitlebarStyle::not_equal(Self, Self) -> Bool
-pub fn TitlebarStyle::output(Self, &Logger) -> Unit
-pub fn TitlebarStyle::to_repr(Self) -> @debug.Repr
-pub fn TitlebarStyle::to_string(Self) -> String
-pub impl Show for TitlebarStyle
-
 pub struct WindowManifest {
   title : String
-  width : Int
-  height : Int
+  width : Int32
+  height : Int32
   size_hint : WindowSizeHint
-  titlebar_style : TitlebarStyle
-  theme_preference : WindowThemePreference
-  traffic_light_position : (Int, Int)?
+  titlebar_style : @types.TitlebarStyle
+  theme_preference : @types.WindowThemePreference
+  traffic_light_position : (Int32, Int32)?
 } derive(Eq, @debug.Debug)
-pub fn WindowManifest::WindowManifest(String, Int, Int, size_hint? : WindowSizeHint, titlebar_style? : TitlebarStyle, theme? : WindowThemePreference, traffic_light_position? : (Int, Int)) -> Self
+pub fn WindowManifest::WindowManifest(String, Int32, Int32, size_hint? : WindowSizeHint, titlebar_style? : @types.TitlebarStyle, theme? : @types.WindowThemePreference, traffic_light_position? : (Int32, Int32)) -> Self
 pub fn WindowManifest::equal(Self, Self) -> Bool
 pub fn WindowManifest::not_equal(Self, Self) -> Bool
 pub fn WindowManifest::output(Self, &Logger) -> Unit
@@ -86,18 +76,9 @@ pub fn WindowSizeHint::to_repr(Self) -> @debug.Repr
 pub fn WindowSizeHint::to_string(Self) -> String
 pub impl Show for WindowSizeHint
 
-pub(all) enum WindowThemePreference {
-  System
-  Light
-  Dark
-} derive(Eq, @debug.Debug)
-pub fn WindowThemePreference::equal(Self, Self) -> Bool
-pub fn WindowThemePreference::not_equal(Self, Self) -> Bool
-pub fn WindowThemePreference::output(Self, &Logger) -> Unit
-pub fn WindowThemePreference::to_repr(Self) -> @debug.Repr
-pub fn WindowThemePreference::to_string(Self) -> String
-pub impl Show for WindowThemePreference
-
 // Type aliases
+pub using @types {type TitlebarStyle}
+
+pub using @types {type WindowThemePreference}
 
 // Traits

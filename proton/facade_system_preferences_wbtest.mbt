@@ -6,40 +6,10 @@ test "system accent color and animation settings answer on this platform" {
 }
 
 ///|
-test "media access status maps every native state" {
-  assert_eq(
-    MediaAccessStatus::from_native(@native.SystemMediaAccessStatus::Unknown),
-    Unknown,
-  )
-  assert_eq(
-    MediaAccessStatus::from_native(
-      @native.SystemMediaAccessStatus::NotDetermined,
-    ),
-    NotDetermined,
-  )
-  assert_eq(
-    MediaAccessStatus::from_native(@native.SystemMediaAccessStatus::Granted),
-    Granted,
-  )
-  assert_eq(
-    MediaAccessStatus::from_native(@native.SystemMediaAccessStatus::Denied),
-    Denied,
-  )
-  assert_eq(
-    MediaAccessStatus::from_native(@native.SystemMediaAccessStatus::Restricted),
-    Restricted,
-  )
-}
-
-///|
 test "media access kinds map to their platform label" {
   assert_eq(MediaAccessKind::Microphone.label(), "microphone")
   assert_eq(MediaAccessKind::Camera.label(), "camera")
   assert_eq(MediaAccessKind::Screen.label(), "screen")
-  assert_eq(
-    MediaAccessKind::Screen.native_kind(),
-    @native.SystemMediaKind::Screen,
-  )
 }
 
 ///|

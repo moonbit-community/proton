@@ -25,7 +25,7 @@ pub struct PowerMonitor {
 pub fn PowerMonitor::PowerMonitor() -> Self raise PowerMonitorError
 pub fn PowerMonitor::destroy(Self) -> Unit
 pub fn PowerMonitor::drain_events(Self) -> Array[PowerMonitorEvent]
-pub fn PowerMonitor::idle_seconds(Self) -> Int raise PowerMonitorError
+pub fn PowerMonitor::idle_seconds(Self) -> Int32 raise PowerMonitorError
 pub fn PowerMonitor::power_source(Self) -> PowerSourceInfo raise PowerMonitorError
 pub fn PowerMonitor::start_watching(Self) -> Unit raise PowerMonitorError
 pub fn PowerMonitor::stop_watching(Self) -> Unit raise PowerMonitorError
@@ -53,7 +53,7 @@ pub fn PowerSource::to_repr(Self) -> @debug.Repr
 
 pub(all) struct PowerSourceInfo {
   source : PowerSource
-  battery_percent : Int?
+  battery_percent : Int32?
 } derive(Eq, @debug.Debug)
 pub fn PowerSourceInfo::equal(Self, Self) -> Bool
 pub fn PowerSourceInfo::not_equal(Self, Self) -> Bool

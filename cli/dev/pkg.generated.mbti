@@ -43,7 +43,7 @@ pub fn DevInstallationError::to_string(Self) -> String
 
 pub(all) suberror DevProcessError {
   Start(role~ : String, detail~ : String)
-  Exit(role~ : String, code~ : Int)
+  Exit(role~ : String, code~ : Int32)
 } derive(Eq, @debug.Debug)
 pub fn DevProcessError::equal(Self, Self) -> Bool
 pub fn DevProcessError::message(Self) -> String
@@ -62,7 +62,7 @@ pub(all) suberror DevServerError {
   PortOutOfRange(value~ : String)
   ReadyProbeUnavailable
   FrontendUrlInUse(url~ : String)
-  FrontendExited(code~ : Int)
+  FrontendExited(code~ : Int32)
   Timeout(url~ : String)
 } derive(Eq, @debug.Debug)
 pub fn DevServerError::equal(Self, Self) -> Bool

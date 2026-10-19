@@ -7,16 +7,16 @@ import {
 }
 
 // Values
-pub let minimum_modulus_bits : Int
+pub let minimum_modulus_bits : Int32
 
-pub let sha256_digest_length : Int
+pub let sha256_digest_length : Int32
 
 pub fn verify_pkcs1_sha256(PublicKey, Bytes, Bytes) -> Bool
 
 // Errors
 pub(all) suberror KeyError {
   Malformed(detail~ : String)
-  ModulusTooSmall(bits~ : Int, minimum~ : Int)
+  ModulusTooSmall(bits~ : Int32, minimum~ : Int32)
   InvalidExponent(detail~ : String)
 } derive(Eq, @debug.Debug)
 pub fn KeyError::equal(Self, Self) -> Bool
@@ -30,11 +30,11 @@ pub fn KeyError::to_string(Self) -> String
 pub struct PublicKey {
   modulus : @bigint.BigInt
   exponent : @bigint.BigInt
-  size : Int
+  size : Int32
 }
-pub fn PublicKey::bits(Self) -> Int
+pub fn PublicKey::bits(Self) -> Int32
 pub fn PublicKey::parse(String) -> Self raise KeyError
-pub fn PublicKey::size(Self) -> Int
+pub fn PublicKey::size(Self) -> Int32
 
 // Type aliases
 

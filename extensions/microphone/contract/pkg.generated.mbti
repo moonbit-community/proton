@@ -22,13 +22,13 @@ pub let parse_listing : @proton_contract.Command[ParseListingRequest, Microphone
 
 // Types and methods
 pub(all) struct CaptureConfigReply {
-  channels : Int
-  sample_rate_hz : Int
+  channels : Int32
+  sample_rate_hz : Int32
   sample_format : String
   echo_cancellation : Bool
   noise_suppression : Bool
-  bytes_per_sample : Int
-  recommended_chunk_frames : Int
+  bytes_per_sample : Int32
+  recommended_chunk_frames : Int32
   uses_voice_processing : Bool
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 pub fn CaptureConfigReply::equal(Self, Self) -> Bool
@@ -38,8 +38,8 @@ pub fn CaptureConfigReply::to_json(Self) -> Json
 pub fn CaptureConfigReply::to_repr(Self) -> @debug.Repr
 
 pub(all) struct CaptureConfigRequest {
-  channels : Int?
-  sample_rate_hz : Int?
+  channels : Int32?
+  sample_rate_hz : Int32?
   sample_format : String?
   echo_cancellation : Bool?
   noise_suppression : Bool?
@@ -52,7 +52,7 @@ pub fn CaptureConfigRequest::to_repr(Self) -> @debug.Repr
 
 pub(all) struct MicrophoneActivity {
   operation : String
-  count : Int?
+  count : Int32?
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 pub fn MicrophoneActivity::equal(Self, Self) -> Bool
 pub fn MicrophoneActivity::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError

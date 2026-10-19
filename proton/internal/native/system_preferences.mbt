@@ -1,19 +1,5 @@
 ///|
-/// Media capture kinds the platform consent store reports.
-pub(all) enum SystemMediaKind {
-  Microphone
-  Camera
-  Screen
-} derive(Eq, Debug)
-
-///|
-pub extend SystemMediaKind with Eq::{not_equal, equal}
-
-///|
-pub extend SystemMediaKind with Debug::{to_repr}
-
-///|
-fn SystemMediaKind::native_code(self : SystemMediaKind) -> Int32 {
+fn MediaAccessKind::native_code(self : MediaAccessKind) -> Int32 {
   match self {
     Microphone => 1
     Camera => 2
@@ -22,25 +8,9 @@ fn SystemMediaKind::native_code(self : SystemMediaKind) -> Int32 {
 }
 
 ///|
-/// User consent for a media capture kind, in Electron's vocabulary.
-pub(all) enum SystemMediaAccessStatus {
-  Unknown
-  NotDetermined
-  Granted
-  Denied
-  Restricted
-} derive(Eq, Debug)
-
-///|
-pub extend SystemMediaAccessStatus with Eq::{not_equal, equal}
-
-///|
-pub extend SystemMediaAccessStatus with Debug::{to_repr}
-
-///|
-fn SystemMediaAccessStatus::from_native_code(
+fn MediaAccessStatus::from_native_code(
   code : Int32,
-) -> SystemMediaAccessStatus raise NativeError {
+) -> MediaAccessStatus raise NativeError {
   match code {
     0 => Unknown
     1 => NotDetermined
@@ -56,20 +26,6 @@ fn SystemMediaAccessStatus::from_native_code(
 }
 
 ///|
-/// System animation guidance, mirroring Electron's `getAnimationSettings`.
-pub(all) struct SystemAnimationSettings {
-  rich_animation : Bool
-  scroll_animations : Bool
-  reduced_motion : Bool
-} derive(Eq, Debug)
-
-///|
-pub extend SystemAnimationSettings with Eq::{not_equal, equal}
-
-///|
-pub extend SystemAnimationSettings with Debug::{to_repr}
-
-///|
 /// Reads the system accent color as RGBA hexadecimal digits without a leading
 /// `#`. An empty value reports a platform or configuration without an accent
 /// color.
@@ -81,7 +37,7 @@ pub fn system_accent_color() -> String raise NativeError {
 
 ///|
 /// Reads the system animation guidance without requiring a running session.
-pub fn system_animation_settings() -> SystemAnimationSettings raise NativeError {
+pub fn system_animation_settings() -> AnimationSettings raise NativeError {
   let rich_animation = Ref(0)
   let scroll_animations = Ref(0)
   let reduced_motion = Ref(0)
@@ -90,10 +46,10 @@ pub fn system_animation_settings() -> SystemAnimationSettings raise NativeError 
       rich_animation, scroll_animations, reduced_motion,
     ),
   )
-  SystemAnimationSettings::{
-    rich_animation: rich_animation.val != 0,
-    scroll_animations: scroll_animations.val != 0,
-    reduced_motion: reduced_motion.val != 0,
+  AnimationSettings::{
+    should_render_rich_animation: rich_animation.val != 0,
+    scroll_animations_enabled_by_system: scroll_animations.val != 0,
+    prefers_reduced_motion: reduced_motion.val != 0,
   }
 }
 
@@ -101,8 +57,8 @@ pub fn system_animation_settings() -> SystemAnimationSettings raise NativeError 
 /// Reads the user consent status for one media capture kind. Platforms without
 /// a consent store report `UnsupportedNativeFeature`.
 pub fn system_media_access_status(
-  kind : SystemMediaKind,
-) -> SystemMediaAccessStatus raise NativeError {
+  kind : MediaAccessKind,
+) -> MediaAccessStatus raise NativeError {
   let status = Ref(0)
   check_status(
     @native_ffi.proton_system_media_access_status_ffi(
@@ -110,7 +66,7 @@ pub fn system_media_access_status(
       status,
     ),
   )
-  SystemMediaAccessStatus::from_native_code(status.val)
+  MediaAccessStatus::from_native_code(status.val)
 }
 
 ///|

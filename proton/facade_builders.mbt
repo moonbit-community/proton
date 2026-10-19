@@ -642,25 +642,6 @@ fn manifest_window_size_hint(hint : WindowSizeHint) -> @manifest.WindowSizeHint 
 }
 
 ///|
-fn manifest_titlebar_style(style : TitlebarStyle) -> @manifest.TitlebarStyle {
-  match style {
-    TitlebarStyle::Default => @manifest.TitlebarStyle::Default
-    TitlebarStyle::Overlay => @manifest.TitlebarStyle::Overlay
-  }
-}
-
-///|
-fn manifest_window_theme(
-  theme : WindowThemePreference,
-) -> @manifest.WindowThemePreference {
-  match theme {
-    WindowThemePreference::System => @manifest.WindowThemePreference::System
-    WindowThemePreference::Light => @manifest.WindowThemePreference::Light
-    WindowThemePreference::Dark => @manifest.WindowThemePreference::Dark
-  }
-}
-
-///|
 /// Adds one package registrar for typed application commands.
 ///
 /// Registration runs before any window is created and is sealed before the

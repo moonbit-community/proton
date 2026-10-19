@@ -72,8 +72,8 @@ fn WindowConfig::to_manifest(self : WindowConfig) -> @manifest.WindowManifest {
     self.width,
     self.height,
     size_hint=manifest_window_size_hint(self.size_hint),
-    titlebar_style=manifest_titlebar_style(self.titlebar_style),
-    theme=manifest_window_theme(self.theme),
+    titlebar_style=self.titlebar_style,
+    theme=self.theme,
     traffic_light_position?=self.traffic_light_position.map(p => (p.x, p.y)),
   )
 }

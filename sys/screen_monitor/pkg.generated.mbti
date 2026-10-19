@@ -22,7 +22,7 @@ pub impl Show for ScreenMonitorError
 
 // Types and methods
 pub struct DisplayInfo {
-  id : Int
+  id : Int32
   bounds : Rect
   work_area : Rect
   scale_factor : Double
@@ -39,8 +39,8 @@ type DisplaysWire derive(@json.FromJson)
 pub fn DisplaysWire::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
 
 pub struct Point {
-  x : Int
-  y : Int
+  x : Int32
+  y : Int32
 } derive(Eq, @debug.Debug)
 pub fn Point::equal(Self, Self) -> Bool
 pub fn Point::not_equal(Self, Self) -> Bool
@@ -50,10 +50,10 @@ type PointWire derive(@json.FromJson)
 pub fn PointWire::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
 
 pub struct Rect {
-  x : Int
-  y : Int
-  width : Int
-  height : Int
+  x : Int32
+  y : Int32
+  width : Int32
+  height : Int32
 } derive(Eq, @debug.Debug)
 pub fn Rect::equal(Self, Self) -> Bool
 pub fn Rect::not_equal(Self, Self) -> Bool
@@ -65,14 +65,14 @@ pub struct ScreenMonitor {
 pub fn ScreenMonitor::ScreenMonitor() -> Self raise ScreenMonitorError
 pub fn ScreenMonitor::cursor_point(Self) -> Point raise ScreenMonitorError
 pub fn ScreenMonitor::destroy(Self) -> Unit
-pub fn ScreenMonitor::display_nearest_point(Self, Int, Int) -> DisplayInfo raise ScreenMonitorError
-pub fn ScreenMonitor::display_thumbnail(Self, Int, Int, Int) -> Bytes
+pub fn ScreenMonitor::display_nearest_point(Self, Int32, Int32) -> DisplayInfo raise ScreenMonitorError
+pub fn ScreenMonitor::display_thumbnail(Self, Int32, Int32, Int32) -> Bytes
 pub fn ScreenMonitor::displays(Self) -> Array[DisplayInfo] raise ScreenMonitorError
 pub fn ScreenMonitor::drain_events(Self) -> Array[ScreenMonitorEvent]
 pub fn ScreenMonitor::primary_display(Self) -> DisplayInfo raise ScreenMonitorError
 pub fn ScreenMonitor::start_watching(Self) -> Unit raise ScreenMonitorError
 pub fn ScreenMonitor::stop_watching(Self) -> Unit raise ScreenMonitorError
-pub fn ScreenMonitor::window_sources_json(Self, Int, Int) -> Bytes
+pub fn ScreenMonitor::window_sources_json(Self, Int32, Int32) -> Bytes
 
 pub enum ScreenMonitorEvent {
   DisplayAdded(DisplayInfo)

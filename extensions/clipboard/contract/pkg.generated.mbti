@@ -40,7 +40,7 @@ pub fn ClearRequest::to_repr(Self) -> @debug.Repr
 
 pub(all) struct ClipboardActivity {
   operation : String
-  text_length : Int?
+  text_length : Int32?
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 pub fn ClipboardActivity::equal(Self, Self) -> Bool
 pub fn ClipboardActivity::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError

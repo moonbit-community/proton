@@ -16,15 +16,15 @@ pub fn chrome_launch_args(CdpLaunchOptions) -> Array[String]
 
 pub async fn[X] connect_cdp_browser_target(@async.TaskGroup[X], CdpTarget) -> CdpClient
 
-pub async fn[X] connect_cdp_browser_target_with_timeout(@async.TaskGroup[X], CdpTarget, timeout_ms? : Int) -> CdpClient
+pub async fn[X] connect_cdp_browser_target_with_timeout(@async.TaskGroup[X], CdpTarget, timeout_ms? : Int32) -> CdpClient
 
 pub async fn[X] connect_cdp_page_target(@async.TaskGroup[X], CdpTarget, target_id? : String, url? : String, title? : String) -> CdpClient
 
-pub async fn[X] connect_cdp_page_target_with_timeout(@async.TaskGroup[X], CdpTarget, target_id? : String, url? : String, title? : String, timeout_ms? : Int) -> CdpClient
+pub async fn[X] connect_cdp_page_target_with_timeout(@async.TaskGroup[X], CdpTarget, target_id? : String, url? : String, title? : String, timeout_ms? : Int32) -> CdpClient
 
 pub async fn[X] connect_cdp_target(@async.TaskGroup[X], CdpTarget) -> CdpClient
 
-pub async fn[X] connect_cdp_target_with_timeout(@async.TaskGroup[X], CdpTarget, timeout_ms? : Int) -> CdpClient
+pub async fn[X] connect_cdp_target_with_timeout(@async.TaskGroup[X], CdpTarget, timeout_ms? : Int32) -> CdpClient
 
 pub fn default_launch_options() -> CdpLaunchOptions
 
@@ -52,13 +52,13 @@ pub fn select_discovered_page_target(Array[CdpDiscoveredTarget], target_id? : St
 
 pub fn select_discovered_target(Array[CdpDiscoveredTarget], target_id? : String, target_type? : String, url? : String, title? : String) -> CdpDiscoveredTarget raise DiscoveryError
 
-pub async fn wait_for_browser_endpoint(String, timeout_ms~ : Int) -> String
+pub async fn wait_for_browser_endpoint(String, timeout_ms~ : Int32) -> String
 
 pub fn web_socket_url_from_version_json(Json) -> String raise DiscoveryError
 
 // Errors
 pub(all) suberror BrowserError {
-  CommandFailed(Int, String)
+  CommandFailed(Int32, String)
   MissingField(String)
   InvalidField(String)
   WaitTimeout(String)
@@ -74,7 +74,7 @@ pub fn BrowserError::to_string(Self) -> String
 
 pub(all) suberror BrowserLaunchError {
   BrowserNotFound
-  BrowserNotReady(Int)
+  BrowserNotReady(Int32)
 } derive(Eq, ToJson, @debug.Debug)
 pub fn BrowserLaunchError::equal(Self, Self) -> Bool
 pub fn BrowserLaunchError::not_equal(Self, Self) -> Bool
@@ -82,7 +82,7 @@ pub fn BrowserLaunchError::to_json(Self) -> Json
 pub fn BrowserLaunchError::to_repr(Self) -> @debug.Repr
 
 pub(all) suberror CdpConnectionError {
-  ConnectionTimeout(String, Int)
+  ConnectionTimeout(String, Int32)
   WebSocketHandshakeFailed(String, String)
 } derive(Eq, ToJson, @debug.Debug)
 pub fn CdpConnectionError::diagnostic(Self) -> CdpConnectionErrorDiagnostic
@@ -92,14 +92,14 @@ pub fn CdpConnectionError::message(Self) -> String
 pub fn CdpConnectionError::not_equal(Self, Self) -> Bool
 pub fn CdpConnectionError::path(Self) -> String
 pub fn CdpConnectionError::reason(Self) -> String?
-pub fn CdpConnectionError::timeout_ms(Self) -> Int?
+pub fn CdpConnectionError::timeout_ms(Self) -> Int32?
 pub fn CdpConnectionError::to_json(Self) -> Json
 pub fn CdpConnectionError::to_repr(Self) -> @debug.Repr
 pub fn CdpConnectionError::web_socket_url(Self) -> String
 
 pub(all) suberror DiscoveryError {
   InvalidTarget(String)
-  HttpStatus(Int, String)
+  HttpStatus(Int32, String)
   MissingWebSocketDebuggerUrl
   MissingTargetWebSocketDebuggerUrl(String)
   NoMatchingTarget(String)
@@ -107,7 +107,7 @@ pub(all) suberror DiscoveryError {
 } derive(Eq, ToJson, @debug.Debug)
 pub fn DiscoveryError::diagnostic(Self) -> DiscoveryErrorDiagnostic
 pub fn DiscoveryError::equal(Self, Self) -> Bool
-pub fn DiscoveryError::http_status(Self) -> Int?
+pub fn DiscoveryError::http_status(Self) -> Int32?
 pub fn DiscoveryError::kind(Self) -> String
 pub fn DiscoveryError::message(Self) -> String
 pub fn DiscoveryError::not_equal(Self, Self) -> Bool
@@ -143,34 +143,34 @@ pub fn CdpClient::attached_target(Self, String) -> CdpAttachedTarget?
 pub fn CdpClient::attached_targets(Self) -> Array[CdpAttachedTarget]
 pub async fn CdpClient::close(Self) -> Unit
 pub async fn[X] CdpClient::connect(@async.TaskGroup[X], String) -> Self
-pub async fn[X] CdpClient::connect_with_timeout(@async.TaskGroup[X], String, timeout_ms? : Int) -> Self
+pub async fn[X] CdpClient::connect_with_timeout(@async.TaskGroup[X], String, timeout_ms? : Int32) -> Self
 pub async fn CdpClient::create_target(Self, url? : String, browser_context_id? : String, new_window? : Bool) -> String
 pub async fn CdpClient::get_targets(Self) -> Array[CdpTargetInfo]
 pub fn CdpClient::last_cdp_event(Self) -> @protocol.CdpEventMessage?
 pub fn CdpClient::last_cdp_request(Self) -> @protocol.CdpCommandMessage?
 pub fn CdpClient::last_cdp_response(Self) -> @protocol.CdpResponseMessage?
 pub fn CdpClient::last_command_failure(Self) -> CdpCommandFailure?
-pub fn CdpClient::on_cdp_event(Self, method_name? : String, session_id? : String, (@protocol.CdpEventMessage) -> Unit) -> Int
-pub fn CdpClient::on_close(Self, () -> Unit) -> Int
+pub fn CdpClient::on_cdp_event(Self, method_name? : String, session_id? : String, (@protocol.CdpEventMessage) -> Unit) -> Int32
+pub fn CdpClient::on_close(Self, () -> Unit) -> Int32
 pub async fn CdpClient::recv_cdp_event(Self, method_name? : String, session_id? : String) -> @protocol.CdpEventMessage
-pub async fn CdpClient::recv_cdp_response(Self, Int, timeout_ms? : Int) -> @protocol.CdpResponseMessage
-pub fn CdpClient::remove_cdp_event_handler(Self, Int) -> Bool
-pub fn CdpClient::remove_close_handler(Self, Int) -> Bool
-pub async fn CdpClient::send_cdp_command(Self, String, params? : Json, session_id? : String) -> Int
-pub async fn CdpClient::send_cdp_message(Self, @protocol.CdpCommandMessage, timeout_ms? : Int) -> @protocol.CdpResponseMessage
+pub async fn CdpClient::recv_cdp_response(Self, Int32, timeout_ms? : Int32) -> @protocol.CdpResponseMessage
+pub fn CdpClient::remove_cdp_event_handler(Self, Int32) -> Bool
+pub fn CdpClient::remove_close_handler(Self, Int32) -> Bool
+pub async fn CdpClient::send_cdp_command(Self, String, params? : Json, session_id? : String) -> Int32
+pub async fn CdpClient::send_cdp_message(Self, @protocol.CdpCommandMessage, timeout_ms? : Int32) -> @protocol.CdpResponseMessage
 pub async fn CdpClient::send_command(Self, String, params? : Json, session_id? : String) -> @protocol.CdpResponseMessage
-pub async fn CdpClient::send_remote_schema_command(Self, Json, String, params? : Json, session_id? : String, timeout_ms? : Int) -> @protocol.CdpResponseMessage
-pub async fn CdpClient::send_schema_command(Self, String, params? : Json, session_id? : String, timeout_ms? : Int) -> @protocol.CdpResponseMessage
+pub async fn CdpClient::send_remote_schema_command(Self, Json, String, params? : Json, session_id? : String, timeout_ms? : Int32) -> @protocol.CdpResponseMessage
+pub async fn CdpClient::send_schema_command(Self, String, params? : Json, session_id? : String, timeout_ms? : Int32) -> @protocol.CdpResponseMessage
 
 type CdpCloseHandler
 
 type CdpCommandContext
 
 pub(all) struct CdpCommandFailure {
-  id : Int
+  id : Int32
   method_name : String
   session_id : String?
-  code : Int
+  code : Int32
   message : String
   data : Json?
 } derive(Eq, ToJson, @debug.Debug)
@@ -182,7 +182,7 @@ pub fn CdpCommandFailure::to_repr(Self) -> @debug.Repr
 pub(all) struct CdpConnectionErrorDiagnostic {
   kind : String
   web_socket_url : String
-  timeout_ms : Int?
+  timeout_ms : Int32?
   reason : String?
   path : String
   message : String
@@ -210,8 +210,8 @@ pub fn CdpDiscoveredTarget::to_repr(Self) -> @debug.Repr
 type CdpEventHandler
 
 pub(all) struct CdpLaunchInfo {
-  pid : Int
-  port : Int
+  pid : Int32
+  port : Int32
   endpoint : String
   web_socket_url : String
   user_data_dir : String
@@ -223,11 +223,11 @@ pub fn CdpLaunchInfo::to_repr(Self) -> @debug.Repr
 
 pub(all) struct CdpLaunchOptions {
   browser_path : String?
-  port : Int
+  port : Int32
   user_data_dir : String
   headless : Bool
   url : String?
-  timeout_ms : Int
+  timeout_ms : Int32
   extra_args : Array[String]
   extensions : Array[String]
   proxy_server : String?
@@ -280,7 +280,7 @@ pub fn CdpVersionInfo::to_repr(Self) -> @debug.Repr
 pub(all) struct DiscoveryErrorDiagnostic {
   kind : String
   target : String?
-  http_status : Int?
+  http_status : Int32?
   reason : String?
   target_id : String?
   selector : String?

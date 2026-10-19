@@ -1,49 +1,4 @@
 ///|
-/// Media capture kinds, matching Electron's `getMediaAccessStatus` argument.
-pub(all) enum MediaAccessKind {
-  Microphone
-  Camera
-  Screen
-} derive(Eq, Debug)
-
-///|
-pub extend MediaAccessKind with Eq::{not_equal, equal}
-
-///|
-pub extend MediaAccessKind with Debug::{to_repr}
-
-///|
-/// User consent for a media capture kind, matching Electron's
-/// `getMediaAccessStatus` result.
-pub(all) enum MediaAccessStatus {
-  Unknown
-  NotDetermined
-  Granted
-  Denied
-  Restricted
-} derive(Eq, Debug)
-
-///|
-pub extend MediaAccessStatus with Eq::{not_equal, equal}
-
-///|
-pub extend MediaAccessStatus with Debug::{to_repr}
-
-///|
-/// System animation guidance, matching Electron's `getAnimationSettings`.
-pub(all) struct AnimationSettings {
-  should_render_rich_animation : Bool
-  scroll_animations_enabled_by_system : Bool
-  prefers_reduced_motion : Bool
-} derive(Eq, Debug)
-
-///|
-pub extend AnimationSettings with Eq::{not_equal, equal}
-
-///|
-pub extend AnimationSettings with Debug::{to_repr}
-
-///|
 /// Raised when a system preference query cannot be answered. The query name
 /// identifies the failing read; unsupported platforms and platforms whose
 /// preference source is unavailable both report here instead of a default.
@@ -78,46 +33,11 @@ impl Show for SystemPreferencesError with fn output(self, logger) {
 pub extend SystemPreferencesError with Show::{to_string, output}
 
 ///|
-fn MediaAccessKind::native_kind(
-  self : MediaAccessKind,
-) -> @native.SystemMediaKind {
-  match self {
-    Microphone => @native.SystemMediaKind::Microphone
-    Camera => @native.SystemMediaKind::Camera
-    Screen => @native.SystemMediaKind::Screen
-  }
-}
-
-///|
 fn MediaAccessKind::label(self : MediaAccessKind) -> String {
   match self {
     Microphone => "microphone"
     Camera => "camera"
     Screen => "screen"
-  }
-}
-
-///|
-fn MediaAccessStatus::from_native(
-  status : @native.SystemMediaAccessStatus,
-) -> MediaAccessStatus {
-  match status {
-    Unknown => Unknown
-    NotDetermined => NotDetermined
-    Granted => Granted
-    Denied => Denied
-    Restricted => Restricted
-  }
-}
-
-///|
-fn AnimationSettings::from_native(
-  settings : @native.SystemAnimationSettings,
-) -> AnimationSettings {
-  {
-    should_render_rich_animation: settings.rich_animation,
-    scroll_animations_enabled_by_system: settings.scroll_animations,
-    prefers_reduced_motion: settings.reduced_motion,
   }
 }
 
@@ -143,7 +63,7 @@ pub fn system_accent_color() -> String raise SystemPreferencesError {
 /// rendered, whether the system enables scroll animations, and whether the
 /// user asked for reduced motion. The query needs no running session.
 pub fn system_animation_settings() -> AnimationSettings raise SystemPreferencesError {
-  let settings = @native.system_animation_settings() catch {
+  @native.system_animation_settings() catch {
     error =>
       raise SystemPreferencesUnavailable(
         query="system animation settings",
@@ -151,7 +71,6 @@ pub fn system_animation_settings() -> AnimationSettings raise SystemPreferencesE
         detail=error.message(),
       )
   }
-  AnimationSettings::from_native(settings)
 }
 
 ///|
@@ -161,7 +80,7 @@ pub fn system_animation_settings() -> AnimationSettings raise SystemPreferencesE
 pub fn system_media_access_status(
   kind : MediaAccessKind,
 ) -> MediaAccessStatus raise SystemPreferencesError {
-  let status = @native.system_media_access_status(kind.native_kind()) catch {
+  @native.system_media_access_status(kind) catch {
     error =>
       raise SystemPreferencesUnavailable(
         query="system " + kind.label() + " access status",
@@ -169,7 +88,6 @@ pub fn system_media_access_status(
         detail=error.message(),
       )
   }
-  MediaAccessStatus::from_native(status)
 }
 
 ///|

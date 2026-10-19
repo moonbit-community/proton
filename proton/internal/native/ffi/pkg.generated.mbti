@@ -8,487 +8,487 @@ import {
 }
 
 // Values
-pub fn bridge_config_add_extension(BridgeConfigHandle, Int, Bytes, FixedArray[Bytes]) -> Int
+pub fn bridge_config_add_extension(BridgeConfigHandle, Int32, Bytes, FixedArray[Bytes]) -> Int32
 
-pub fn bridge_config_add_grant(BridgeConfigHandle, Bytes, FixedArray[Bytes], @ref.Ref[Int]) -> Int
+pub fn bridge_config_add_grant(BridgeConfigHandle, Bytes, FixedArray[Bytes], @ref.Ref[Int32]) -> Int32
 
-pub fn bridge_config_add_initialization_unit(BridgeConfigHandle, Int, Bytes, Bytes, Bytes) -> Int
+pub fn bridge_config_add_initialization_unit(BridgeConfigHandle, Int32, Bytes, Bytes, Bytes) -> Int32
 
-pub fn bridge_config_create(@ref.Ref[Int]) -> BridgeConfigHandle
+pub fn bridge_config_create(@ref.Ref[Int32]) -> BridgeConfigHandle
 
 pub fn bridge_config_empty() -> BridgeConfigHandle
 
-pub fn contents_print_to_pdf(WindowHandle, ViewHandle, Bytes, Int, Int, Double, Double, Double, Int, Int, Double, Double, Double, Double, Bytes, Int, Bytes, Bytes, Int, Int, @ref.Ref[Int]) -> Int
+pub fn contents_print_to_pdf(WindowHandle, ViewHandle, Bytes, Int32, Int32, Double, Double, Double, Int32, Int32, Double, Double, Double, Double, Bytes, Int32, Bytes, Bytes, Int32, Int32, @ref.Ref[Int32]) -> Int32
 
 pub fn ensure_cef_loader_linked() -> Unit
 
-pub fn event_cookie_count(EventHandle, @ref.Ref[Int]) -> Int
+pub fn event_cookie_count(EventHandle, @ref.Ref[Int32]) -> Int32
 
-pub fn event_cookie_int64_field(EventHandle, Int, Int, @ref.Ref[Int64], @ref.Ref[Int]) -> Int
+pub fn event_cookie_int64_field(EventHandle, Int32, Int32, @ref.Ref[Int64], @ref.Ref[Int32]) -> Int32
 
-pub fn event_cookie_int_field(EventHandle, Int, Int, @ref.Ref[Int]) -> Int
+pub fn event_cookie_int_field(EventHandle, Int32, Int32, @ref.Ref[Int32]) -> Int32
 
-pub fn event_cookie_string_field(EventHandle, Int, Int, FixedArray[Byte], Int, @ref.Ref[Int]) -> Int
+pub fn event_cookie_string_field(EventHandle, Int32, Int32, FixedArray[Byte], Int32, @ref.Ref[Int32]) -> Int32
 
 pub fn event_create() -> EventHandle
 
-pub fn event_int(EventHandle, EventIntField) -> Int
+pub fn event_int(EventHandle, EventIntField) -> Int32
 
 pub fn event_int64(EventHandle, EventInt64Field) -> Int64
 
-pub fn event_item(EventHandle, Int, FixedArray[Byte], Int, @ref.Ref[Int]) -> Int
+pub fn event_item(EventHandle, Int32, FixedArray[Byte], Int32, @ref.Ref[Int32]) -> Int32
 
-pub fn event_item_count(EventHandle) -> Int
+pub fn event_item_count(EventHandle) -> Int32
 
 pub fn event_kind(EventHandle) -> EventKind
 
-pub fn event_text(EventHandle, EventTextField, FixedArray[Byte], Int, @ref.Ref[Int]) -> Int
+pub fn event_text(EventHandle, EventTextField, FixedArray[Byte], Int32, @ref.Ref[Int32]) -> Int32
 
-pub fn event_window_state_field(EventHandle, Int) -> Int
+pub fn event_window_state_field(EventHandle, Int32) -> Int32
 
-pub fn execute_process(Int, Bytes, Bytes, Bytes, Bytes, Bytes, Bytes, Bytes, Bytes, Bytes, Int, Int, Int, @ref.Ref[Int]) -> Int
+pub fn execute_process(Int32, Bytes, Bytes, Bytes, Bytes, Bytes, Bytes, Bytes, Bytes, Bytes, Int32, Int32, Int32, @ref.Ref[Int32]) -> Int32
 
 pub fn image_null() -> ImageHandle
 
-pub fn jump_list_builder_add_category(JumpListBuilderHandle, Int, Bytes) -> Int
+pub fn jump_list_builder_add_category(JumpListBuilderHandle, Int32, Bytes) -> Int32
 
-pub fn jump_list_builder_add_item(JumpListBuilderHandle, Int, Int, Bytes, Bytes, Bytes, Bytes, Bytes, Int, Bytes) -> Int
+pub fn jump_list_builder_add_item(JumpListBuilderHandle, Int32, Int32, Bytes, Bytes, Bytes, Bytes, Bytes, Int32, Bytes) -> Int32
 
 pub fn jump_list_builder_create() -> JumpListBuilderHandle
 
 pub fn link_runtime() -> Unit
 
-pub fn menu_config_add_item(MenuConfigHandle, MenuNode, Int, Bytes, Bytes, Bytes, Bytes, Int, Int, Int, Int, @ref.Ref[MenuNode]) -> Int
+pub fn menu_config_add_item(MenuConfigHandle, MenuNode, Int32, Bytes, Bytes, Bytes, Bytes, Int32, Int32, Int32, Int32, @ref.Ref[MenuNode]) -> Int32
 
-pub fn menu_config_add_menu(MenuConfigHandle, Bytes, Int, @ref.Ref[MenuNode]) -> Int
+pub fn menu_config_add_menu(MenuConfigHandle, Bytes, Int32, @ref.Ref[MenuNode]) -> Int32
 
 pub fn menu_config_create() -> MenuConfigHandle
 
 pub fn menu_node_null() -> MenuNode
 
-pub fn menu_popup(WindowHandle, Int, Int, MenuConfigHandle) -> Int
+pub fn menu_popup(WindowHandle, Int32, Int32, MenuConfigHandle) -> Int32
 
-pub fn proton_app_dock_bounce_ffi(Int, @ref.Ref[Int]) -> Int
+pub fn proton_app_dock_bounce_ffi(Int32, @ref.Ref[Int32]) -> Int32
 
-pub fn proton_app_dock_cancel_bounce_ffi(Int) -> Int
+pub fn proton_app_dock_cancel_bounce_ffi(Int32) -> Int32
 
-pub fn proton_app_dock_get_badge_ffi(FixedArray[Byte], Int, @ref.Ref[Int]) -> Int
+pub fn proton_app_dock_get_badge_ffi(FixedArray[Byte], Int32, @ref.Ref[Int32]) -> Int32
 
-pub fn proton_app_dock_set_badge_ffi(Bytes) -> Int
+pub fn proton_app_dock_set_badge_ffi(Bytes) -> Int32
 
-pub fn proton_app_focus_ffi(Int) -> Int
+pub fn proton_app_focus_ffi(Int32) -> Int32
 
-pub fn proton_app_get_badge_count_ffi(@ref.Ref[Int]) -> Int
+pub fn proton_app_get_badge_count_ffi(@ref.Ref[Int32]) -> Int32
 
-pub fn proton_app_hide_ffi() -> Int
+pub fn proton_app_hide_ffi() -> Int32
 
-pub fn proton_app_instance_acquire_ffi(Bytes, Bytes, @ref.Ref[Int64], @ref.Ref[Int]) -> Int
+pub fn proton_app_instance_acquire_ffi(Bytes, Bytes, @ref.Ref[Int64], @ref.Ref[Int32]) -> Int32
 
-pub fn proton_app_instance_attach_runtime_ffi(Int64, RuntimeHandle) -> Int
+pub fn proton_app_instance_attach_runtime_ffi(Int64, RuntimeHandle) -> Int32
 
-pub fn proton_app_instance_destroy_ffi(Int64) -> Int
+pub fn proton_app_instance_destroy_ffi(Int64) -> Int32
 
-pub fn proton_app_instance_prepare_update_ffi(Int64) -> Int
+pub fn proton_app_instance_prepare_update_ffi(Int64) -> Int32
 
-pub fn proton_app_instance_release_ffi(Int64) -> Int
+pub fn proton_app_instance_release_ffi(Int64) -> Int32
 
-pub fn proton_app_is_active_ffi(@ref.Ref[Int]) -> Int
+pub fn proton_app_is_active_ffi(@ref.Ref[Int32]) -> Int32
 
-pub fn proton_app_is_hidden_ffi(@ref.Ref[Int]) -> Int
+pub fn proton_app_is_hidden_ffi(@ref.Ref[Int32]) -> Int32
 
-pub fn proton_app_set_badge_count_ffi(Int, @ref.Ref[Int]) -> Int
+pub fn proton_app_set_badge_count_ffi(Int32, @ref.Ref[Int32]) -> Int32
 
-pub fn proton_app_show_ffi() -> Int
+pub fn proton_app_show_ffi() -> Int32
 
-pub fn proton_host_loop_begin_ffi() -> Int
+pub fn proton_host_loop_begin_ffi() -> Int32
 
 pub fn proton_host_loop_end_ffi() -> Unit
 
-pub fn proton_host_loop_poll_ffi(Int, @ref.Ref[Int]) -> Int
+pub fn proton_host_loop_poll_ffi(Int32, @ref.Ref[Int32]) -> Int32
 
-pub fn proton_image_add_bitmap_ffi(ImageHandle, Bytes, Int, Int, Int, Double) -> Int
+pub fn proton_image_add_bitmap_ffi(ImageHandle, Bytes, Int32, Int32, Int32, Double) -> Int32
 
-pub fn proton_image_add_jpeg_ffi(ImageHandle, Bytes, Int, Double) -> Int
+pub fn proton_image_add_jpeg_ffi(ImageHandle, Bytes, Int32, Double) -> Int32
 
-pub fn proton_image_add_png_ffi(ImageHandle, Bytes, Int, Double) -> Int
+pub fn proton_image_add_png_ffi(ImageHandle, Bytes, Int32, Double) -> Int32
 
-pub fn proton_image_create_empty_ffi(@ref.Ref[ImageHandle]) -> Int
+pub fn proton_image_create_empty_ffi(@ref.Ref[ImageHandle]) -> Int32
 
-pub fn proton_image_destroy_ffi(ImageHandle) -> Int
+pub fn proton_image_destroy_ffi(ImageHandle) -> Int32
 
-pub fn proton_image_get_size_ffi(ImageHandle, @ref.Ref[Int], @ref.Ref[Int]) -> Int
+pub fn proton_image_get_size_ffi(ImageHandle, @ref.Ref[Int32], @ref.Ref[Int32]) -> Int32
 
-pub fn proton_image_is_empty_ffi(ImageHandle) -> Int
+pub fn proton_image_is_empty_ffi(ImageHandle) -> Int32
 
-pub fn proton_image_to_bitmap_ffi(ImageHandle, Double, FixedArray[Byte], Int, @ref.Ref[Int], @ref.Ref[Int], @ref.Ref[Int]) -> Int
+pub fn proton_image_to_bitmap_ffi(ImageHandle, Double, FixedArray[Byte], Int32, @ref.Ref[Int32], @ref.Ref[Int32], @ref.Ref[Int32]) -> Int32
 
-pub fn proton_image_to_jpeg_ffi(ImageHandle, Double, Int, FixedArray[Byte], Int, @ref.Ref[Int], @ref.Ref[Int], @ref.Ref[Int]) -> Int
+pub fn proton_image_to_jpeg_ffi(ImageHandle, Double, Int32, FixedArray[Byte], Int32, @ref.Ref[Int32], @ref.Ref[Int32], @ref.Ref[Int32]) -> Int32
 
-pub fn proton_image_to_png_ffi(ImageHandle, Double, Int, FixedArray[Byte], Int, @ref.Ref[Int], @ref.Ref[Int], @ref.Ref[Int]) -> Int
+pub fn proton_image_to_png_ffi(ImageHandle, Double, Int32, FixedArray[Byte], Int32, @ref.Ref[Int32], @ref.Ref[Int32], @ref.Ref[Int32]) -> Int32
 
-pub fn proton_jump_list_apply_ffi(JumpListBuilderHandle, @ref.Ref[Int]) -> Int
+pub fn proton_jump_list_apply_ffi(JumpListBuilderHandle, @ref.Ref[Int32]) -> Int32
 
-pub fn proton_jump_list_clear_ffi(@ref.Ref[Int]) -> Int
+pub fn proton_jump_list_clear_ffi(@ref.Ref[Int32]) -> Int32
 
-pub fn proton_last_error_message_ffi(FixedArray[Byte], Int) -> Int
+pub fn proton_last_error_message_ffi(FixedArray[Byte], Int32) -> Int32
 
-pub fn proton_native_theme_query_ffi(@ref.Ref[Int], @ref.Ref[Int]) -> Int
+pub fn proton_native_theme_query_ffi(@ref.Ref[Int32], @ref.Ref[Int32]) -> Int32
 
-pub fn proton_notification_cleanup_ffi() -> Int
+pub fn proton_notification_cleanup_ffi() -> Int32
 
-pub fn proton_notification_is_supported_ffi(@ref.Ref[Int]) -> Int
+pub fn proton_notification_is_supported_ffi(@ref.Ref[Int32]) -> Int32
 
-pub fn proton_notification_set_badge_count_ffi(Int) -> Int
+pub fn proton_notification_set_badge_count_ffi(Int32) -> Int32
 
-pub fn proton_notification_show_ffi(Bytes, Bytes, Bytes, Int) -> Int
+pub fn proton_notification_show_ffi(Bytes, Bytes, Bytes, Int32) -> Int32
 
-pub fn proton_process_exit_ffi(Int) -> Unit
+pub fn proton_process_exit_ffi(Int32) -> Unit
 
-pub fn proton_process_run_relaunches_ffi() -> Int
+pub fn proton_process_run_relaunches_ffi() -> Int32
 
-pub fn proton_process_schedule_relaunch_ffi(Bytes, Bytes, Int) -> Int
+pub fn proton_process_schedule_relaunch_ffi(Bytes, Bytes, Int32) -> Int32
 
-pub fn proton_protocol_client_is_default_ffi(Bytes, Bytes, Bytes, Bytes, Int, @ref.Ref[Int]) -> Int
+pub fn proton_protocol_client_is_default_ffi(Bytes, Bytes, Bytes, Bytes, Int32, @ref.Ref[Int32]) -> Int32
 
-pub fn proton_protocol_client_remove_ffi(Bytes, Bytes, Bytes, Bytes, Int, @ref.Ref[Int]) -> Int
+pub fn proton_protocol_client_remove_ffi(Bytes, Bytes, Bytes, Bytes, Int32, @ref.Ref[Int32]) -> Int32
 
-pub fn proton_protocol_client_set_ffi(Bytes, Bytes, Bytes, Bytes, Int, @ref.Ref[Int]) -> Int
+pub fn proton_protocol_client_set_ffi(Bytes, Bytes, Bytes, Bytes, Int32, @ref.Ref[Int32]) -> Int32
 
-pub fn proton_runtime_begin_destroy_ffi(RuntimeHandle) -> Int
+pub fn proton_runtime_begin_destroy_ffi(RuntimeHandle) -> Int32
 
-pub fn proton_runtime_begin_message_dialog_ffi(RuntimeHandle, Bytes, Int, Bytes, Int, Int, @ref.Ref[Int64]) -> Int
+pub fn proton_runtime_begin_message_dialog_ffi(RuntimeHandle, Bytes, Int32, Bytes, Int32, Int32, @ref.Ref[Int64]) -> Int32
 
-pub fn proton_runtime_destroy_ready_ffi(RuntimeHandle, @ref.Ref[Int]) -> Int
+pub fn proton_runtime_destroy_ready_ffi(RuntimeHandle, @ref.Ref[Int32]) -> Int32
 
 pub fn proton_runtime_event_wakeup_callback_ffi() -> @proton_ffi.EventWakeup
 
-pub fn proton_runtime_finish_destroy_ffi(RuntimeHandle) -> Int
+pub fn proton_runtime_finish_destroy_ffi(RuntimeHandle) -> Int32
 
-pub fn proton_runtime_platform_id_ffi(FixedArray[Byte], Int, @ref.Ref[Int]) -> Int
+pub fn proton_runtime_platform_id_ffi(FixedArray[Byte], Int32, @ref.Ref[Int32]) -> Int32
 
-pub fn proton_runtime_respond_app_activation_ffi(RuntimeHandle, Int64, Int) -> Int
+pub fn proton_runtime_respond_app_activation_ffi(RuntimeHandle, Int64, Int32) -> Int32
 
-pub fn proton_runtime_respond_bridge_request_ffi(RuntimeHandle, Int64, Int, Bytes) -> Int
+pub fn proton_runtime_respond_bridge_request_ffi(RuntimeHandle, Int64, Int32, Bytes) -> Int32
 
 pub fn proton_runtime_signal_wakeup_ffi() -> Unit
 
-pub fn proton_runtime_stop_app_activations_ffi(RuntimeHandle) -> Int
+pub fn proton_runtime_stop_app_activations_ffi(RuntimeHandle) -> Int32
 
-pub fn proton_screen_enumerate_ffi(FixedArray[Int], Int, @ref.Ref[Int]) -> Int
+pub fn proton_screen_enumerate_ffi(FixedArray[Int32], Int32, @ref.Ref[Int32]) -> Int32
 
-pub fn proton_session_clear_auth_cache_ffi(RuntimeHandle) -> Int
+pub fn proton_session_clear_auth_cache_ffi(RuntimeHandle) -> Int32
 
-pub fn proton_session_clear_cache_ffi(RuntimeHandle) -> Int
+pub fn proton_session_clear_cache_ffi(RuntimeHandle) -> Int32
 
-pub fn proton_session_clear_certificate_exceptions_ffi(RuntimeHandle) -> Int
+pub fn proton_session_clear_certificate_exceptions_ffi(RuntimeHandle) -> Int32
 
-pub fn proton_session_close_all_connections_ffi(RuntimeHandle) -> Int
+pub fn proton_session_close_all_connections_ffi(RuntimeHandle) -> Int32
 
-pub fn proton_session_cookie_begin_get_ffi(RuntimeHandle, Bytes, Int, @ref.Ref[Int64]) -> Int
+pub fn proton_session_cookie_begin_get_ffi(RuntimeHandle, Bytes, Int32, @ref.Ref[Int64]) -> Int32
 
-pub fn proton_session_cookie_delete_ffi(RuntimeHandle, Bytes, Bytes) -> Int
+pub fn proton_session_cookie_delete_ffi(RuntimeHandle, Bytes, Bytes) -> Int32
 
-pub fn proton_session_cookie_flush_ffi(RuntimeHandle) -> Int
+pub fn proton_session_cookie_flush_ffi(RuntimeHandle) -> Int32
 
-pub fn proton_session_cookie_set_ffi(RuntimeHandle, Bytes, Bytes, Bytes, Bytes, Bytes, Int, Int, Int) -> Int
+pub fn proton_session_cookie_set_ffi(RuntimeHandle, Bytes, Bytes, Bytes, Bytes, Bytes, Int32, Int32, Int32) -> Int32
 
-pub fn proton_system_accent_color_ffi(FixedArray[Byte], Int, @ref.Ref[Int]) -> Int
+pub fn proton_system_accent_color_ffi(FixedArray[Byte], Int32, @ref.Ref[Int32]) -> Int32
 
-pub fn proton_system_accessibility_client_trusted_ffi(Int, @ref.Ref[Int]) -> Int
+pub fn proton_system_accessibility_client_trusted_ffi(Int32, @ref.Ref[Int32]) -> Int32
 
-pub fn proton_system_animation_settings_ffi(@ref.Ref[Int], @ref.Ref[Int], @ref.Ref[Int]) -> Int
+pub fn proton_system_animation_settings_ffi(@ref.Ref[Int32], @ref.Ref[Int32], @ref.Ref[Int32]) -> Int32
 
-pub fn proton_system_media_access_status_ffi(Int, @ref.Ref[Int]) -> Int
+pub fn proton_system_media_access_status_ffi(Int32, @ref.Ref[Int32]) -> Int32
 
-pub fn proton_system_path_ffi(Int, FixedArray[Byte], Int, @ref.Ref[Int]) -> Int
+pub fn proton_system_path_ffi(Int32, FixedArray[Byte], Int32, @ref.Ref[Int32]) -> Int32
 
-pub fn proton_system_preferred_language_at_ffi(Int, FixedArray[Byte], Int, @ref.Ref[Int]) -> Int
+pub fn proton_system_preferred_language_at_ffi(Int32, FixedArray[Byte], Int32, @ref.Ref[Int32]) -> Int32
 
-pub fn proton_system_preferred_language_count_ffi(@ref.Ref[Int]) -> Int
+pub fn proton_system_preferred_language_count_ffi(@ref.Ref[Int32]) -> Int32
 
-pub fn proton_task_metric_at_ffi(Int, @ref.Ref[Int64], @ref.Ref[Int], @ref.Ref[Double], @ref.Ref[Int64], Bytes, Int, @ref.Ref[Int]) -> Int
+pub fn proton_task_metric_at_ffi(Int32, @ref.Ref[Int64], @ref.Ref[Int32], @ref.Ref[Double], @ref.Ref[Int64], Bytes, Int32, @ref.Ref[Int32]) -> Int32
 
-pub fn proton_task_metrics_count_ffi(@ref.Ref[Int]) -> Int
+pub fn proton_task_metrics_count_ffi(@ref.Ref[Int32]) -> Int32
 
-pub fn proton_update_cleanup_previous_ffi(FixedArray[Byte], Int) -> Int
+pub fn proton_update_cleanup_previous_ffi(FixedArray[Byte], Int32) -> Int32
 
-pub fn proton_update_current_version_ffi(FixedArray[Byte], Int, FixedArray[Byte], Int) -> Int
+pub fn proton_update_current_version_ffi(FixedArray[Byte], Int32, FixedArray[Byte], Int32) -> Int32
 
-pub fn proton_update_install_ffi(Bytes, Int, Bytes, Bytes, FixedArray[Byte], Int) -> Int
+pub fn proton_update_install_ffi(Bytes, Int32, Bytes, Bytes, FixedArray[Byte], Int32) -> Int32
 
-pub fn proton_update_relaunch_ffi(FixedArray[Byte], Int) -> Int
+pub fn proton_update_relaunch_ffi(FixedArray[Byte], Int32) -> Int32
 
-pub fn proton_update_stage_abort_ffi(Int64, FixedArray[Byte], Int) -> Int
+pub fn proton_update_stage_abort_ffi(Int64, FixedArray[Byte], Int32) -> Int32
 
-pub fn proton_update_stage_begin_ffi(Bytes, Int64, Bytes, @ref.Ref[Int64], FixedArray[Byte], Int) -> Int
+pub fn proton_update_stage_begin_ffi(Bytes, Int64, Bytes, @ref.Ref[Int64], FixedArray[Byte], Int32) -> Int32
 
-pub fn proton_update_stage_install_ffi(Int64, @ref.Ref[Int], FixedArray[Byte], Int) -> Int
+pub fn proton_update_stage_install_ffi(Int64, @ref.Ref[Int32], FixedArray[Byte], Int32) -> Int32
 
-pub fn proton_update_stage_write_ffi(Int64, Bytes, Int, FixedArray[Byte], Int) -> Int
+pub fn proton_update_stage_write_ffi(Int64, Bytes, Int32, FixedArray[Byte], Int32) -> Int32
 
-pub fn proton_update_validate_running_image_ffi(FixedArray[Byte], Int) -> Int
+pub fn proton_update_validate_running_image_ffi(FixedArray[Byte], Int32) -> Int32
 
-pub fn proton_view_cancel_download_ffi(ViewHandle, Int, Int) -> Int
+pub fn proton_view_cancel_download_ffi(ViewHandle, Int32, Int32) -> Int32
 
-pub fn proton_view_destroy_ffi(ViewHandle) -> Int
+pub fn proton_view_destroy_ffi(ViewHandle) -> Int32
 
-pub fn proton_view_download_url_ffi(ViewHandle, Int, Bytes) -> Int
+pub fn proton_view_download_url_ffi(ViewHandle, Int32, Bytes) -> Int32
 
-pub fn proton_view_eval_ffi(ViewHandle, Bytes) -> Int
+pub fn proton_view_eval_ffi(ViewHandle, Bytes) -> Int32
 
-pub fn proton_view_find_in_page_ffi(ViewHandle, Bytes, Int, Int, Int, @ref.Ref[Int]) -> Int
+pub fn proton_view_find_in_page_ffi(ViewHandle, Bytes, Int32, Int32, Int32, @ref.Ref[Int32]) -> Int32
 
-pub fn proton_view_get_browser_focus_state_ffi(ViewHandle, @ref.Ref[Int]) -> Int
+pub fn proton_view_get_browser_focus_state_ffi(ViewHandle, @ref.Ref[Int32]) -> Int32
 
-pub fn proton_view_get_browser_loading_ffi(ViewHandle, Int, @ref.Ref[Int]) -> Int
+pub fn proton_view_get_browser_loading_ffi(ViewHandle, Int32, @ref.Ref[Int32]) -> Int32
 
-pub fn proton_view_get_browser_title_ffi(ViewHandle, Int, FixedArray[Byte], Int, @ref.Ref[Int]) -> Int
+pub fn proton_view_get_browser_title_ffi(ViewHandle, Int32, FixedArray[Byte], Int32, @ref.Ref[Int32]) -> Int32
 
-pub fn proton_view_get_browser_url_ffi(ViewHandle, Int, FixedArray[Byte], Int, @ref.Ref[Int]) -> Int
+pub fn proton_view_get_browser_url_ffi(ViewHandle, Int32, FixedArray[Byte], Int32, @ref.Ref[Int32]) -> Int32
 
-pub fn proton_view_get_devtools_state_ffi(ViewHandle, @ref.Ref[Int]) -> Int
+pub fn proton_view_get_devtools_state_ffi(ViewHandle, @ref.Ref[Int32]) -> Int32
 
-pub fn proton_view_get_navigation_state_ffi(ViewHandle, @ref.Ref[Int], @ref.Ref[Int]) -> Int
+pub fn proton_view_get_navigation_state_ffi(ViewHandle, @ref.Ref[Int32], @ref.Ref[Int32]) -> Int32
 
-pub fn proton_view_get_state_ffi(ViewHandle, FixedArray[Int], Int) -> Int
+pub fn proton_view_get_state_ffi(ViewHandle, FixedArray[Int32], Int32) -> Int32
 
-pub fn proton_view_get_zoom_percent_ffi(ViewHandle, @ref.Ref[Int]) -> Int
+pub fn proton_view_get_zoom_percent_ffi(ViewHandle, @ref.Ref[Int32]) -> Int32
 
-pub fn proton_view_insert_page_css_ffi(ViewHandle, Bytes, @ref.Ref[Int64]) -> Int
+pub fn proton_view_insert_page_css_ffi(ViewHandle, Bytes, @ref.Ref[Int64]) -> Int32
 
-pub fn proton_view_is_audio_muted_ffi(ViewHandle, @ref.Ref[Int]) -> Int
+pub fn proton_view_is_audio_muted_ffi(ViewHandle, @ref.Ref[Int32]) -> Int32
 
-pub fn proton_view_load_url_ffi(ViewHandle, Bytes) -> Int
+pub fn proton_view_load_url_ffi(ViewHandle, Bytes) -> Int32
 
-pub fn proton_view_navigation_history_json_ffi(ViewHandle, FixedArray[Byte], Int, @ref.Ref[Int]) -> Int
+pub fn proton_view_navigation_history_json_ffi(ViewHandle, FixedArray[Byte], Int32, @ref.Ref[Int32]) -> Int32
 
-pub fn proton_view_perform_browser_operation_ffi(ViewHandle, Int, BrowserOperation) -> Int
+pub fn proton_view_perform_browser_operation_ffi(ViewHandle, Int32, BrowserOperation) -> Int32
 
-pub fn proton_view_print_ffi(ViewHandle, Int) -> Int
+pub fn proton_view_print_ffi(ViewHandle, Int32) -> Int32
 
-pub fn proton_view_remove_page_css_ffi(ViewHandle, Int64) -> Int
+pub fn proton_view_remove_page_css_ffi(ViewHandle, Int64) -> Int32
 
-pub fn proton_view_respond_browser_request_ffi(ViewHandle, Int, Int64, Bytes, Bytes) -> Int
+pub fn proton_view_respond_browser_request_ffi(ViewHandle, Int32, Int64, Bytes, Bytes) -> Int32
 
-pub fn proton_view_set_audio_muted_ffi(ViewHandle, Int) -> Int
+pub fn proton_view_set_audio_muted_ffi(ViewHandle, Int32) -> Int32
 
-pub fn proton_view_set_bounds_ffi(ViewHandle, Int, Int, Int, Int) -> Int
+pub fn proton_view_set_bounds_ffi(ViewHandle, Int32, Int32, Int32, Int32) -> Int32
 
-pub fn proton_view_set_visible_ffi(ViewHandle, Int) -> Int
+pub fn proton_view_set_visible_ffi(ViewHandle, Int32) -> Int32
 
-pub fn proton_view_set_z_order_ffi(ViewHandle, Int) -> Int
+pub fn proton_view_set_z_order_ffi(ViewHandle, Int32) -> Int32
 
-pub fn proton_view_set_zoom_percent_ffi(ViewHandle, Int) -> Int
+pub fn proton_view_set_zoom_percent_ffi(ViewHandle, Int32) -> Int32
 
-pub fn proton_view_stop_find_in_page_ffi(ViewHandle, Int) -> Int
+pub fn proton_view_stop_find_in_page_ffi(ViewHandle, Int32) -> Int32
 
-pub fn proton_window_begin_choose_directory_dialog_ffi(WindowHandle, Bytes, Int, Bytes, Int, @ref.Ref[Int64]) -> Int
+pub fn proton_window_begin_choose_directory_dialog_ffi(WindowHandle, Bytes, Int32, Bytes, Int32, @ref.Ref[Int64]) -> Int32
 
-pub fn proton_window_begin_confirm_dialog_ffi(WindowHandle, Bytes, Int, Bytes, Int, Int, @ref.Ref[Int64]) -> Int
+pub fn proton_window_begin_confirm_dialog_ffi(WindowHandle, Bytes, Int32, Bytes, Int32, Int32, @ref.Ref[Int64]) -> Int32
 
-pub fn proton_window_begin_message_dialog_ffi(WindowHandle, Bytes, Int, Bytes, Int, Int, @ref.Ref[Int64]) -> Int
+pub fn proton_window_begin_message_dialog_ffi(WindowHandle, Bytes, Int32, Bytes, Int32, Int32, @ref.Ref[Int64]) -> Int32
 
-pub fn proton_window_begin_open_file_dialog_ffi(WindowHandle, Bytes, Int, Bytes, Int, @ref.Ref[Int64]) -> Int
+pub fn proton_window_begin_open_file_dialog_ffi(WindowHandle, Bytes, Int32, Bytes, Int32, @ref.Ref[Int64]) -> Int32
 
-pub fn proton_window_begin_save_file_dialog_ffi(WindowHandle, Bytes, Int, Bytes, Int, @ref.Ref[Int64]) -> Int
+pub fn proton_window_begin_save_file_dialog_ffi(WindowHandle, Bytes, Int32, Bytes, Int32, @ref.Ref[Int64]) -> Int32
 
-pub fn proton_window_bridge_failure_field_ffi(WindowHandle, Int, FixedArray[Byte], Int, @ref.Ref[Int]) -> Int
+pub fn proton_window_bridge_failure_field_ffi(WindowHandle, Int32, FixedArray[Byte], Int32, @ref.Ref[Int32]) -> Int32
 
-pub fn proton_window_bridge_failure_int_field_ffi(WindowHandle, Int, @ref.Ref[Int], @ref.Ref[Int]) -> Int
+pub fn proton_window_bridge_failure_int_field_ffi(WindowHandle, Int32, @ref.Ref[Int32], @ref.Ref[Int32]) -> Int32
 
-pub fn proton_window_bridge_failure_present_ffi(WindowHandle, @ref.Ref[Int]) -> Int
+pub fn proton_window_bridge_failure_present_ffi(WindowHandle, @ref.Ref[Int32]) -> Int32
 
-pub fn proton_window_bridge_revision_ffi(WindowHandle, @ref.Ref[Int64], @ref.Ref[Int]) -> Int
+pub fn proton_window_bridge_revision_ffi(WindowHandle, @ref.Ref[Int64], @ref.Ref[Int32]) -> Int32
 
-pub fn proton_window_bridge_state_field_ffi(WindowHandle, Int, FixedArray[Byte], Int, @ref.Ref[Int]) -> Int
+pub fn proton_window_bridge_state_field_ffi(WindowHandle, Int32, FixedArray[Byte], Int32, @ref.Ref[Int32]) -> Int32
 
-pub fn proton_window_cancel_dialog_ffi(WindowHandle, Int64) -> Int
+pub fn proton_window_cancel_dialog_ffi(WindowHandle, Int64) -> Int32
 
-pub fn proton_window_cancel_download_ffi(WindowHandle, Int, Int) -> Int
+pub fn proton_window_cancel_download_ffi(WindowHandle, Int32, Int32) -> Int32
 
-pub fn proton_window_clear_bridge_failure_ffi(WindowHandle) -> Int
+pub fn proton_window_clear_bridge_failure_ffi(WindowHandle) -> Int32
 
-pub fn proton_window_close_ffi(WindowHandle) -> Int
+pub fn proton_window_close_ffi(WindowHandle) -> Int32
 
-pub fn proton_window_destroy_ffi(WindowHandle) -> Int
+pub fn proton_window_destroy_ffi(WindowHandle) -> Int32
 
-pub fn proton_window_download_url_ffi(WindowHandle, Int, Bytes) -> Int
+pub fn proton_window_download_url_ffi(WindowHandle, Int32, Bytes) -> Int32
 
-pub fn proton_window_emit_bridge_event_json_ffi(WindowHandle, Bytes) -> Int
+pub fn proton_window_emit_bridge_event_json_ffi(WindowHandle, Bytes) -> Int32
 
-pub fn proton_window_eval_ffi(WindowHandle, Bytes) -> Int
+pub fn proton_window_eval_ffi(WindowHandle, Bytes) -> Int32
 
-pub fn proton_window_find_in_page_ffi(WindowHandle, Bytes, Int, Int, Int, @ref.Ref[Int]) -> Int
+pub fn proton_window_find_in_page_ffi(WindowHandle, Bytes, Int32, Int32, Int32, @ref.Ref[Int32]) -> Int32
 
-pub fn proton_window_flash_frame_ffi(WindowHandle, Int) -> Int
+pub fn proton_window_flash_frame_ffi(WindowHandle, Int32) -> Int32
 
-pub fn proton_window_focus_ffi(WindowHandle) -> Int
+pub fn proton_window_focus_ffi(WindowHandle) -> Int32
 
-pub fn proton_window_get_browser_focus_state_ffi(WindowHandle, @ref.Ref[Int]) -> Int
+pub fn proton_window_get_browser_focus_state_ffi(WindowHandle, @ref.Ref[Int32]) -> Int32
 
-pub fn proton_window_get_browser_loading_ffi(WindowHandle, Int, @ref.Ref[Int]) -> Int
+pub fn proton_window_get_browser_loading_ffi(WindowHandle, Int32, @ref.Ref[Int32]) -> Int32
 
-pub fn proton_window_get_browser_title_ffi(WindowHandle, Int, FixedArray[Byte], Int, @ref.Ref[Int]) -> Int
+pub fn proton_window_get_browser_title_ffi(WindowHandle, Int32, FixedArray[Byte], Int32, @ref.Ref[Int32]) -> Int32
 
-pub fn proton_window_get_browser_url_ffi(WindowHandle, Int, FixedArray[Byte], Int, @ref.Ref[Int]) -> Int
+pub fn proton_window_get_browser_url_ffi(WindowHandle, Int32, FixedArray[Byte], Int32, @ref.Ref[Int32]) -> Int32
 
-pub fn proton_window_get_content_size_ffi(WindowHandle, @ref.Ref[Int], @ref.Ref[Int]) -> Int
+pub fn proton_window_get_content_size_ffi(WindowHandle, @ref.Ref[Int32], @ref.Ref[Int32]) -> Int32
 
-pub fn proton_window_get_devtools_state_ffi(WindowHandle, @ref.Ref[Int]) -> Int
+pub fn proton_window_get_devtools_state_ffi(WindowHandle, @ref.Ref[Int32]) -> Int32
 
-pub fn proton_window_get_navigation_state_ffi(WindowHandle, @ref.Ref[Int], @ref.Ref[Int]) -> Int
+pub fn proton_window_get_navigation_state_ffi(WindowHandle, @ref.Ref[Int32], @ref.Ref[Int32]) -> Int32
 
-pub fn proton_window_get_state_ffi(WindowHandle, FixedArray[Int], Int) -> Int
+pub fn proton_window_get_state_ffi(WindowHandle, FixedArray[Int32], Int32) -> Int32
 
-pub fn proton_window_get_titlebar_area_ffi(WindowHandle, @ref.Ref[Int], @ref.Ref[Int], @ref.Ref[Int], @ref.Ref[Int], @ref.Ref[Int]) -> Int
+pub fn proton_window_get_titlebar_area_ffi(WindowHandle, @ref.Ref[Int32], @ref.Ref[Int32], @ref.Ref[Int32], @ref.Ref[Int32], @ref.Ref[Int32]) -> Int32
 
-pub fn proton_window_hide_ffi(WindowHandle) -> Int
+pub fn proton_window_hide_ffi(WindowHandle) -> Int32
 
-pub fn proton_window_insert_page_css_ffi(WindowHandle, Bytes, @ref.Ref[Int64]) -> Int
+pub fn proton_window_insert_page_css_ffi(WindowHandle, Bytes, @ref.Ref[Int64]) -> Int32
 
-pub fn proton_window_is_audio_muted_ffi(WindowHandle, @ref.Ref[Int]) -> Int
+pub fn proton_window_is_audio_muted_ffi(WindowHandle, @ref.Ref[Int32]) -> Int32
 
-pub fn proton_window_load_url_ffi(WindowHandle, Bytes) -> Int
+pub fn proton_window_load_url_ffi(WindowHandle, Bytes) -> Int32
 
-pub fn proton_window_maximize_ffi(WindowHandle) -> Int
+pub fn proton_window_maximize_ffi(WindowHandle) -> Int32
 
-pub fn proton_window_minimize_ffi(WindowHandle) -> Int
+pub fn proton_window_minimize_ffi(WindowHandle) -> Int32
 
-pub fn proton_window_navigation_history_json_ffi(WindowHandle, FixedArray[Byte], Int, @ref.Ref[Int]) -> Int
+pub fn proton_window_navigation_history_json_ffi(WindowHandle, FixedArray[Byte], Int32, @ref.Ref[Int32]) -> Int32
 
-pub fn proton_window_perform_browser_operation_ffi(WindowHandle, Int, BrowserOperation) -> Int
+pub fn proton_window_perform_browser_operation_ffi(WindowHandle, Int32, BrowserOperation) -> Int32
 
-pub fn proton_window_print_ffi(WindowHandle, Int) -> Int
+pub fn proton_window_print_ffi(WindowHandle, Int32) -> Int32
 
-pub fn proton_window_remove_page_css_ffi(WindowHandle, Int64) -> Int
+pub fn proton_window_remove_page_css_ffi(WindowHandle, Int64) -> Int32
 
-pub fn proton_window_respond_browser_request_ffi(WindowHandle, Int, Int64, Bytes, Bytes) -> Int
+pub fn proton_window_respond_browser_request_ffi(WindowHandle, Int32, Int64, Bytes, Bytes) -> Int32
 
-pub fn proton_window_respond_close_request_ffi(WindowHandle, Int64, Int) -> Int
+pub fn proton_window_respond_close_request_ffi(WindowHandle, Int64, Int32) -> Int32
 
-pub fn proton_window_restore_ffi(WindowHandle) -> Int
+pub fn proton_window_restore_ffi(WindowHandle) -> Int32
 
-pub fn proton_window_set_always_on_top_ffi(WindowHandle, Int) -> Int
+pub fn proton_window_set_always_on_top_ffi(WindowHandle, Int32) -> Int32
 
-pub fn proton_window_set_aspect_ratio_ffi(WindowHandle, Double) -> Int
+pub fn proton_window_set_aspect_ratio_ffi(WindowHandle, Double) -> Int32
 
-pub fn proton_window_set_audio_muted_ffi(WindowHandle, Int) -> Int
+pub fn proton_window_set_audio_muted_ffi(WindowHandle, Int32) -> Int32
 
-pub fn proton_window_set_background_color_ffi(WindowHandle, UInt) -> Int
+pub fn proton_window_set_background_color_ffi(WindowHandle, UInt32) -> Int32
 
-pub fn proton_window_set_button_visibility_ffi(WindowHandle, Int) -> Int
+pub fn proton_window_set_button_visibility_ffi(WindowHandle, Int32) -> Int32
 
-pub fn proton_window_set_closable_ffi(WindowHandle, Int) -> Int
+pub fn proton_window_set_closable_ffi(WindowHandle, Int32) -> Int32
 
-pub fn proton_window_set_close_interception_ffi(WindowHandle, Int) -> Int
+pub fn proton_window_set_close_interception_ffi(WindowHandle, Int32) -> Int32
 
-pub fn proton_window_set_content_protection_ffi(WindowHandle, Int) -> Int
+pub fn proton_window_set_content_protection_ffi(WindowHandle, Int32) -> Int32
 
-pub fn proton_window_set_content_size_ffi(WindowHandle, Int, Int) -> Int
+pub fn proton_window_set_content_size_ffi(WindowHandle, Int32, Int32) -> Int32
 
-pub fn proton_window_set_enabled_ffi(WindowHandle, Int) -> Int
+pub fn proton_window_set_enabled_ffi(WindowHandle, Int32) -> Int32
 
-pub fn proton_window_set_focusable_ffi(WindowHandle, Int) -> Int
+pub fn proton_window_set_focusable_ffi(WindowHandle, Int32) -> Int32
 
-pub fn proton_window_set_fullscreen_ffi(WindowHandle, Int) -> Int
+pub fn proton_window_set_fullscreen_ffi(WindowHandle, Int32) -> Int32
 
-pub fn proton_window_set_fullscreenable_ffi(WindowHandle, Int) -> Int
+pub fn proton_window_set_fullscreenable_ffi(WindowHandle, Int32) -> Int32
 
-pub fn proton_window_set_has_shadow_ffi(WindowHandle, Int) -> Int
+pub fn proton_window_set_has_shadow_ffi(WindowHandle, Int32) -> Int32
 
-pub fn proton_window_set_icon_ffi(WindowHandle, Bytes) -> Int
+pub fn proton_window_set_icon_ffi(WindowHandle, Bytes) -> Int32
 
-pub fn proton_window_set_ignore_mouse_events_ffi(WindowHandle, Int, Int) -> Int
+pub fn proton_window_set_ignore_mouse_events_ffi(WindowHandle, Int32, Int32) -> Int32
 
-pub fn proton_window_set_kiosk_ffi(WindowHandle, Int) -> Int
+pub fn proton_window_set_kiosk_ffi(WindowHandle, Int32) -> Int32
 
-pub fn proton_window_set_maximizable_ffi(WindowHandle, Int) -> Int
+pub fn proton_window_set_maximizable_ffi(WindowHandle, Int32) -> Int32
 
-pub fn proton_window_set_maximum_size_ffi(WindowHandle, Int, Int) -> Int
+pub fn proton_window_set_maximum_size_ffi(WindowHandle, Int32, Int32) -> Int32
 
-pub fn proton_window_set_minimizable_ffi(WindowHandle, Int) -> Int
+pub fn proton_window_set_minimizable_ffi(WindowHandle, Int32) -> Int32
 
-pub fn proton_window_set_minimum_size_ffi(WindowHandle, Int, Int) -> Int
+pub fn proton_window_set_minimum_size_ffi(WindowHandle, Int32, Int32) -> Int32
 
-pub fn proton_window_set_movable_ffi(WindowHandle, Int) -> Int
+pub fn proton_window_set_movable_ffi(WindowHandle, Int32) -> Int32
 
-pub fn proton_window_set_opacity_ffi(WindowHandle, Double) -> Int
+pub fn proton_window_set_opacity_ffi(WindowHandle, Double) -> Int32
 
-pub fn proton_window_set_overlay_icon_ffi(WindowHandle, ImageHandle, Bytes) -> Int
+pub fn proton_window_set_overlay_icon_ffi(WindowHandle, ImageHandle, Bytes) -> Int32
 
-pub fn proton_window_set_parent_ffi(WindowHandle, WindowHandle, Int) -> Int
+pub fn proton_window_set_parent_ffi(WindowHandle, WindowHandle, Int32) -> Int32
 
-pub fn proton_window_set_position_ffi(WindowHandle, Int, Int) -> Int
+pub fn proton_window_set_position_ffi(WindowHandle, Int32, Int32) -> Int32
 
-pub fn proton_window_set_progress_bar_ffi(WindowHandle, Double, Int) -> Int
+pub fn proton_window_set_progress_bar_ffi(WindowHandle, Double, Int32) -> Int32
 
-pub fn proton_window_set_resizable_ffi(WindowHandle, Int) -> Int
+pub fn proton_window_set_resizable_ffi(WindowHandle, Int32) -> Int32
 
-pub fn proton_window_set_size_ffi(WindowHandle, Int, Int) -> Int
+pub fn proton_window_set_size_ffi(WindowHandle, Int32, Int32) -> Int32
 
-pub fn proton_window_set_skip_taskbar_ffi(WindowHandle, Int) -> Int
+pub fn proton_window_set_skip_taskbar_ffi(WindowHandle, Int32) -> Int32
 
-pub fn proton_window_set_theme_ffi(WindowHandle, Int) -> Int
+pub fn proton_window_set_theme_ffi(WindowHandle, Int32) -> Int32
 
-pub fn proton_window_set_thumbar_buttons_ffi(WindowHandle, ThumbarBuilderHandle, @ref.Ref[Int]) -> Int
+pub fn proton_window_set_thumbar_buttons_ffi(WindowHandle, ThumbarBuilderHandle, @ref.Ref[Int32]) -> Int32
 
-pub fn proton_window_set_thumbnail_tooltip_ffi(WindowHandle, Bytes) -> Int
+pub fn proton_window_set_thumbnail_tooltip_ffi(WindowHandle, Bytes) -> Int32
 
-pub fn proton_window_set_title_ffi(WindowHandle, Bytes) -> Int
+pub fn proton_window_set_title_ffi(WindowHandle, Bytes) -> Int32
 
-pub fn proton_window_set_visible_on_all_workspaces_ffi(WindowHandle, Int) -> Int
+pub fn proton_window_set_visible_on_all_workspaces_ffi(WindowHandle, Int32) -> Int32
 
-pub fn proton_window_set_zoom_percent_ffi(WindowHandle, Int) -> Int
+pub fn proton_window_set_zoom_percent_ffi(WindowHandle, Int32) -> Int32
 
-pub fn proton_window_show_ffi(WindowHandle) -> Int
+pub fn proton_window_show_ffi(WindowHandle) -> Int32
 
-pub fn proton_window_show_inactive_ffi(WindowHandle) -> Int
+pub fn proton_window_show_inactive_ffi(WindowHandle) -> Int32
 
-pub fn proton_window_stop_find_in_page_ffi(WindowHandle, Int) -> Int
+pub fn proton_window_stop_find_in_page_ffi(WindowHandle, Int32) -> Int32
 
-pub fn runtime_bridge_request_pending(RuntimeHandle, Int64, @ref.Ref[Int]) -> Int
+pub fn runtime_bridge_request_pending(RuntimeHandle, Int64, @ref.Ref[Int32]) -> Int32
 
-pub fn runtime_complete_resource_request(RuntimeHandle, Int64, Int, Bytes, Bytes, Int) -> Int
+pub fn runtime_complete_resource_request(RuntimeHandle, Int64, Int32, Bytes, Bytes, Int32) -> Int32
 
-pub fn runtime_create(Int, Bytes, Bytes, Bytes, Bytes, Bytes, Bytes, Bytes, Bytes, Bytes, Bytes, Bytes, Int, Int, Int, Int, @ref.Ref[RuntimeHandle]) -> Int
+pub fn runtime_create(Int32, Bytes, Bytes, Bytes, Bytes, Bytes, Bytes, Bytes, Bytes, Bytes, Bytes, Bytes, Int32, Int32, Int32, Int32, @ref.Ref[RuntimeHandle]) -> Int32
 
 pub fn runtime_null() -> RuntimeHandle
 
-pub fn runtime_poll_event(RuntimeHandle, EventHandle) -> Int
+pub fn runtime_poll_event(RuntimeHandle, EventHandle) -> Int32
 
-pub fn runtime_set_menu(RuntimeHandle, MenuConfigHandle) -> Int
+pub fn runtime_set_menu(RuntimeHandle, MenuConfigHandle) -> Int32
 
-pub fn runtime_set_navigation_handler(RuntimeHandle, FuncRef[((Int64, Int64, Bytes, Bytes, Int, Int) -> Int, Int64, Int64, Bytes, Bytes, Int, Int) -> Int], (Int64, Int64, Bytes, Bytes, Int, Int) -> Int) -> Int
+pub fn runtime_set_navigation_handler(RuntimeHandle, FuncRef[((Int64, Int64, Bytes, Bytes, Int32, Int32) -> Int32, Int64, Int64, Bytes, Bytes, Int32, Int32) -> Int32], (Int64, Int64, Bytes, Bytes, Int32, Int32) -> Int32) -> Int32
 
-pub fn thumbar_builder_add(ThumbarBuilderHandle, Bytes, ImageHandle, Bytes, Int) -> Int
+pub fn thumbar_builder_add(ThumbarBuilderHandle, Bytes, ImageHandle, Bytes, Int32) -> Int32
 
 pub fn thumbar_builder_create() -> ThumbarBuilderHandle
 
-pub fn view_create(WindowHandle, Int, Int, Int, Int, Int, Int, Bytes, Int, UInt, Int, Int, @ref.Ref[ViewHandle]) -> Int
+pub fn view_create(WindowHandle, Int32, Int32, Int32, Int32, Int32, Int32, Bytes, Int32, UInt32, Int32, Int32, @ref.Ref[ViewHandle]) -> Int32
 
 pub fn view_logical_id(ViewHandle) -> Int64
 
 pub fn view_null() -> ViewHandle
 
-pub fn web_request_config_add_cancel_prefix(WebRequestConfigHandle, Bytes) -> Int
+pub fn web_request_config_add_cancel_prefix(WebRequestConfigHandle, Bytes) -> Int32
 
-pub fn web_request_config_add_header_prefix(WebRequestConfigHandle, Bytes, Bytes, Bytes) -> Int
+pub fn web_request_config_add_header_prefix(WebRequestConfigHandle, Bytes, Bytes, Bytes) -> Int32
 
-pub fn web_request_config_add_redirect_prefix(WebRequestConfigHandle, Bytes, Bytes) -> Int
+pub fn web_request_config_add_redirect_prefix(WebRequestConfigHandle, Bytes, Bytes) -> Int32
 
-pub fn web_request_config_create(@ref.Ref[Int]) -> WebRequestConfigHandle
+pub fn web_request_config_create(@ref.Ref[Int32]) -> WebRequestConfigHandle
 
 pub fn web_request_config_empty() -> WebRequestConfigHandle
 
-pub fn window_create(RuntimeHandle, Bytes, Int, Int, Bytes, Int, Int, Int, Int, Int, Int, Int, Bytes, Bytes, Bytes, Bytes, Int, Int, Int, Int, Int, BridgeConfigHandle, WebRequestConfigHandle, @ref.Ref[WindowHandle]) -> Int
+pub fn window_create(RuntimeHandle, Bytes, Int32, Int32, Bytes, Int32, Int32, Int32, Int32, Int32, Int32, Int32, Bytes, Bytes, Bytes, Bytes, Int32, Int32, Int32, Int32, Int32, BridgeConfigHandle, WebRequestConfigHandle, @ref.Ref[WindowHandle]) -> Int32
 
-pub fn window_get_button_position(WindowHandle, @ref.Ref[Int], @ref.Ref[Int], @ref.Ref[Int]) -> Int
+pub fn window_get_button_position(WindowHandle, @ref.Ref[Int32], @ref.Ref[Int32], @ref.Ref[Int32]) -> Int32
 
 pub fn window_logical_id(WindowHandle) -> Int64
 
 pub fn window_null() -> WindowHandle
 
-pub fn window_set_button_position(WindowHandle, Int, Int, Int) -> Int
+pub fn window_set_button_position(WindowHandle, Int32, Int32, Int32) -> Int32
 
 // Errors
 

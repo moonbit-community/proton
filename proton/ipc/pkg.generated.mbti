@@ -11,13 +11,13 @@ pub fn parse_ipc_op_request(String) -> IpcOpRequest raise IpcError
 
 pub fn parse_ipc_op_response(String) -> IpcOpResponse raise IpcError
 
-pub fn protocol_version() -> Int
+pub fn protocol_version() -> Int32
 
 // Errors
 pub(all) suberror IpcError {
   MalformedJson(detail~ : String)
   InvalidPayload(kind~ : String, detail~ : String)
-  UnsupportedVersion(scope~ : String, actual~ : Int, supported~ : Int)
+  UnsupportedVersion(scope~ : String, actual~ : Int32, supported~ : Int32)
   EmptyField(path~ : String)
   InvalidErrorResponseBody
 } derive(Eq, @debug.Debug)
@@ -61,7 +61,7 @@ pub fn IpcExtensionDescriptor::to_json(Self) -> Json
 pub fn IpcExtensionDescriptor::to_repr(Self) -> @debug.Repr
 
 pub(all) struct IpcExtensionEvent {
-  version : Int
+  version : Int32
   extension_namespace : String
   event_name : String
   payload : Json
@@ -75,7 +75,7 @@ pub fn IpcExtensionEvent::to_repr(Self) -> @debug.Repr
 pub fn IpcExtensionEvent::validate(Self) -> Self raise IpcError
 
 pub(all) struct IpcOpRequest {
-  version : Int
+  version : Int32
   id : String
   name : String
   payload : Json
@@ -90,9 +90,9 @@ pub fn IpcOpRequest::to_repr(Self) -> @debug.Repr
 pub fn IpcOpRequest::validate(Self) -> Self raise IpcError
 
 pub(all) struct IpcOpResponse {
-  version : Int
+  version : Int32
   id : String
-  status : Int
+  status : Int32
   body : Json
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 pub fn IpcOpResponse::equal(Self, Self) -> Bool

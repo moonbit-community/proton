@@ -22,7 +22,7 @@ pub struct InstalledRuntime {
   platform : String
   cef_archive : String
   cef_sha256 : String
-  layout_version : Int
+  layout_version : Int32
 }
 pub fn InstalledRuntime::cef_archive(Self) -> String
 pub fn InstalledRuntime::platform(Self) -> String

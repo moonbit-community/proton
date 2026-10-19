@@ -49,7 +49,7 @@ pub fn ExistsReply::to_repr(Self) -> @debug.Repr
 pub(all) struct FsActivity {
   operation : String
   path : String?
-  bytes : Int?
+  bytes : Int32?
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 pub fn FsActivity::equal(Self, Self) -> Bool
 pub fn FsActivity::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
@@ -89,7 +89,7 @@ pub fn MkdirReply::to_repr(Self) -> @debug.Repr
 
 pub(all) struct MkdirRequest {
   path : String
-  permission : Int?
+  permission : Int32?
   recursive : Bool?
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 pub fn MkdirRequest::equal(Self, Self) -> Bool
@@ -110,7 +110,7 @@ pub fn PathRequest::to_repr(Self) -> @debug.Repr
 pub(all) struct ReadFileReply {
   path : String
   content : String
-  bytes_read : Int
+  bytes_read : Int32
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 pub fn ReadFileReply::equal(Self, Self) -> Bool
 pub fn ReadFileReply::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
@@ -222,7 +222,7 @@ pub fn SizeReply::to_repr(Self) -> @debug.Repr
 
 pub(all) struct WriteFileReply {
   path : String
-  bytes_written : Int
+  bytes_written : Int32
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 pub fn WriteFileReply::equal(Self, Self) -> Bool
 pub fn WriteFileReply::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
@@ -235,7 +235,7 @@ pub(all) struct WriteFileRequest {
   content : String
   append : Bool?
   create_mode : String?
-  permission : Int?
+  permission : Int32?
   sync : String?
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 pub fn WriteFileRequest::equal(Self, Self) -> Bool

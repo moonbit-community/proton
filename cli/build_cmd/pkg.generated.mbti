@@ -42,7 +42,7 @@ pub fn BuildPathError::to_string(Self) -> String
 
 pub(all) suberror BuildProcessError {
   Start(command~ : String, detail~ : String)
-  Exit(command~ : String, code~ : Int)
+  Exit(command~ : String, code~ : Int32)
   InvalidOutput(command~ : String, detail~ : String)
 } derive(Eq, @debug.Debug)
 pub fn BuildProcessError::equal(Self, Self) -> Bool

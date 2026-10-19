@@ -85,3 +85,35 @@ test "public typed configuration exposes all sections through the root facade" {
   assert_eq(app.version(), "1.0.0")
   assert_eq(@proton.AppConfig::decode(config.to_json()), config)
 }
+
+///|
+test "public value types retain facade construction and pattern matching" {
+  let loading = @proton.BrowserState::{
+    url: "https://example.test/",
+    title: "",
+    is_loading: true,
+    can_go_back: false,
+    can_go_forward: false,
+  }
+  let loaded : @proton.BrowserState = {
+    ..loading,
+    title: "Example",
+    is_loading: false,
+  }
+  assert_true(loading.is_loading)
+  assert_false(loaded.is_loading)
+  assert_eq(loaded.url, loading.url)
+  assert_eq(loaded.title, "Example")
+  assert_false(@proton.BrowserState::equal(loading, loaded))
+  let metric = @proton.AppTaskMetric::{
+    task_id: 42L,
+    task_type: @proton.AppTaskType::Worker,
+    process_cpu_percent: 1.0,
+    process_memory_bytes: 1024L,
+    name: "worker",
+  }
+  match metric.task_type {
+    @proton.AppTaskType::Worker => assert_eq(metric.task_id, 42L)
+    _ => fail("expected worker task")
+  }
+}

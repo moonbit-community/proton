@@ -26,8 +26,8 @@ pub fn GetSourcesReply::to_repr(Self) -> @debug.Repr
 
 pub(all) struct GetSourcesRequest {
   types : Array[String]
-  thumbnail_width : Int?
-  thumbnail_height : Int?
+  thumbnail_width : Int32?
+  thumbnail_height : Int32?
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 pub fn GetSourcesRequest::equal(Self, Self) -> Bool
 pub fn GetSourcesRequest::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
@@ -39,10 +39,10 @@ pub(all) struct Source {
   id : String
   name : String
   display_id : String
-  x : Int
-  y : Int
-  width : Int
-  height : Int
+  x : Int32
+  y : Int32
+  width : Int32
+  height : Int32
   thumbnail : String?
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 pub fn Source::equal(Self, Self) -> Bool

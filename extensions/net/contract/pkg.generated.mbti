@@ -28,7 +28,7 @@ pub fn Request::to_json(Self) -> Json
 pub fn Request::to_repr(Self) -> @debug.Repr
 
 pub(all) struct Response {
-  status : Int
+  status : Int32
   status_text : String
   headers : Map[String, String]
   body : String

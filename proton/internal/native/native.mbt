@@ -109,7 +109,7 @@ pub fn screens() -> Array[ScreenInfo] raise NativeError {
   check_status(
     @native_ffi.proton_screen_enumerate_ffi(fields, fields.length(), count),
   )
-  let screens = []
+  let screens : Array[ScreenInfo] = []
   for index in 0..<count.val {
     let offset = index * proton_screen_field_count
     screens.push({
@@ -2252,7 +2252,7 @@ pub fn Window::is_audio_muted(self : Window) -> Bool raise NativeError {
 pub fn Window::set_progress_bar(
   self : Window,
   progress : Double,
-  mode : ProgressMode,
+  mode : ProgressBarMode,
 ) -> Unit raise NativeError {
   if progress.is_nan() {
     raise invalid_argument("progress must not be NaN")
