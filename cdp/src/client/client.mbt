@@ -1,15 +1,4 @@
 ///|
-async fn[T, E : Error] try_result_client_client(
-  f : async () -> T raise E,
-) -> Result[T, E] {
-  try f() catch {
-    e => Err(e)
-  } noraise {
-    value => Ok(value)
-  }
-}
-
-///|
 /// WebSocket client for Chrome DevTools Protocol.
 ///
 /// `CdpClient` tracks in-flight command ids, dispatches responses and events
@@ -311,17 +300,18 @@ pub async fn[X] CdpClient::connect_with_timeout(
   timeout_ms~ : Int32 = 25000,
 ) -> CdpClient {
   let timeout_ms = checked_duration(timeout_ms, "timeout")
-  let result : Result[@websocket.Conn?, Error] = try_result_client_client(() => {
-    @async.with_timeout_opt(timeout_ms, () => @websocket.connect(web_socket_url))
-  })
-  match result {
-    Ok(Some(ws)) => CdpClient::from_websocket(tasks, ws)
-    Ok(None) =>
-      raise CdpConnectionError::ConnectionTimeout(web_socket_url, timeout_ms)
-    Err(_) =>
+  let connected : @websocket.Conn? = @async.with_timeout_opt(timeout_ms, () => {
+    @websocket.connect(web_socket_url)
+  }) catch {
+    _ =>
       raise CdpConnectionError::WebSocketHandshakeFailed(
         web_socket_url, "websocket connect failed",
       )
+  }
+  match connected {
+    Some(ws) => CdpClient::from_websocket(tasks, ws)
+    None =>
+      raise CdpConnectionError::ConnectionTimeout(web_socket_url, timeout_ms)
   }
 }
 

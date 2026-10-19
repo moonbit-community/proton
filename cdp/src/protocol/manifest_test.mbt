@@ -1,15 +1,4 @@
 ///|
-fn[T, E : Error] try_result_protocol_manifest_test(
-  f : () -> T raise E,
-) -> Result[T, E] {
-  try f() catch {
-    e => Err(e)
-  } noraise {
-    value => Ok(value)
-  }
-}
-
-///|
 test "bundled protocol manifest covers browser and js protocol files" {
   let manifest = @protocol.protocol_manifest()
   inspect(manifest.domain_count(), content="54")
@@ -195,15 +184,16 @@ test "remote schema command builder reports unsupported local-only commands" {
     params={ "expression": "1+1" },
   )
   inspect(command.method_name, content="Runtime.evaluate")
-  let unsupported : Result[@protocol.CdpCommandMessage, Error] = try_result_protocol_manifest_test(() => {
-      @protocol.cdp_remote_schema_command(
-        id=8,
-        method_name="Page.navigate",
-        remote_schema=remote,
-        params={ "url": "https://example.com/" },
-      )
-    },
-  )
+  let unsupported : Result[@protocol.CdpCommandMessage, Error] = Ok(
+    @protocol.cdp_remote_schema_command(
+      id=8,
+      method_name="Page.navigate",
+      remote_schema=remote,
+      params={ "url": "https://example.com/" },
+    ),
+  ) catch {
+    error => Err(error)
+  }
   guard unsupported
     is Err(
       @protocol.ProtocolSchemaError::UnsupportedRemoteCommand("Page.navigate")
@@ -278,55 +268,60 @@ test "schema-aware response validator checks command returns" {
 
 ///|
 test "schema-aware command builder rejects invalid params" {
-  let missing : Result[@protocol.CdpCommandMessage, Error] = try_result_protocol_manifest_test(() => {
-      @protocol.cdp_schema_command(id=1, method_name="Page.navigate")
-    },
-  )
+  let missing : Result[@protocol.CdpCommandMessage, Error] = Ok(
+    @protocol.cdp_schema_command(id=1, method_name="Page.navigate"),
+  ) catch {
+    error => Err(error)
+  }
   guard missing
     is Err(
       @protocol.ProtocolSchemaError::MissingParameter("Page.navigate", "url")
     ) else {
     fail("expected missing url")
   }
-  let unknown : Result[@protocol.CdpCommandMessage, Error] = try_result_protocol_manifest_test(() => {
-      @protocol.cdp_schema_command(id=2, method_name="Page.navigate", params={
-        "url": "https://example.com/",
-        "bad": true,
-      })
-    },
-  )
+  let unknown : Result[@protocol.CdpCommandMessage, Error] = Ok(
+    @protocol.cdp_schema_command(id=2, method_name="Page.navigate", params={
+      "url": "https://example.com/",
+      "bad": true,
+    }),
+  ) catch {
+    error => Err(error)
+  }
   guard unknown
     is Err(
       @protocol.ProtocolSchemaError::UnknownParameter("Page.navigate", "bad")
     ) else {
     fail("expected unknown param")
   }
-  let bad_shape : Result[@protocol.CdpCommandMessage, Error] = try_result_protocol_manifest_test(() => {
-      @protocol.cdp_schema_command(id=3, method_name="Runtime.enable", params=[
-        "bad",
-      ])
-    },
-  )
+  let bad_shape : Result[@protocol.CdpCommandMessage, Error] = Ok(
+    @protocol.cdp_schema_command(id=3, method_name="Runtime.enable", params=[
+      "bad",
+    ]),
+  ) catch {
+    error => Err(error)
+  }
   guard bad_shape
     is Err(
       @protocol.ProtocolSchemaError::ExpectedParamsObject("Runtime.enable")
     ) else {
     fail("expected params object")
   }
-  let bad_command : Result[@protocol.CdpCommandMessage, Error] = try_result_protocol_manifest_test(() => {
-      @protocol.cdp_schema_command(id=4, method_name="Missing.nope")
-    },
-  )
+  let bad_command : Result[@protocol.CdpCommandMessage, Error] = Ok(
+    @protocol.cdp_schema_command(id=4, method_name="Missing.nope"),
+  ) catch {
+    error => Err(error)
+  }
   guard bad_command
     is Err(@protocol.ProtocolSchemaError::UnknownCommand("Missing.nope")) else {
     fail("expected unknown command")
   }
-  let bad_type : Result[@protocol.CdpCommandMessage, Error] = try_result_protocol_manifest_test(() => {
-      @protocol.cdp_schema_command(id=5, method_name="Runtime.evaluate", params={
-        "expression": true,
-      })
-    },
-  )
+  let bad_type : Result[@protocol.CdpCommandMessage, Error] = Ok(
+    @protocol.cdp_schema_command(id=5, method_name="Runtime.evaluate", params={
+      "expression": true,
+    }),
+  ) catch {
+    error => Err(error)
+  }
   guard bad_type
     is Err(
       @protocol.ProtocolSchemaError::InvalidParameterType(
@@ -337,10 +332,11 @@ test "schema-aware command builder rejects invalid params" {
     ) else {
     fail("expected invalid expression type")
   }
-  let empty_params : Result[@protocol.CdpCommandMessage, Error] = try_result_protocol_manifest_test(() => {
-      @protocol.cdp_schema_command(id=6, method_name="Page.navigate", params={})
-    },
-  )
+  let empty_params : Result[@protocol.CdpCommandMessage, Error] = Ok(
+    @protocol.cdp_schema_command(id=6, method_name="Page.navigate", params={}),
+  ) catch {
+    error => Err(error)
+  }
   guard empty_params
     is Err(
       @protocol.ProtocolSchemaError::MissingParameter("Page.navigate", "url")
@@ -357,13 +353,11 @@ test "schema-aware response validator rejects invalid returns" {
   guard missing is Response(missing_response) else {
     fail("expected missing response")
   }
-  let missing_result : Result[@protocol.CdpResponseMessage, Error] = try_result_protocol_manifest_test(() => {
-      @protocol.cdp_schema_response(
-        method_name="Page.navigate",
-        missing_response,
-      )
-    },
-  )
+  let missing_result : Result[@protocol.CdpResponseMessage, Error] = Ok(
+    @protocol.cdp_schema_response(method_name="Page.navigate", missing_response),
+  ) catch {
+    error => Err(error)
+  }
   guard missing_result
     is Err(
       @protocol.ProtocolSchemaError::MissingReturn("Page.navigate", "frameId")
@@ -377,13 +371,11 @@ test "schema-aware response validator rejects invalid returns" {
   guard unknown is Response(unknown_response) else {
     fail("expected unknown response")
   }
-  let unknown_result : Result[@protocol.CdpResponseMessage, Error] = try_result_protocol_manifest_test(() => {
-      @protocol.cdp_schema_response(
-        method_name="Page.navigate",
-        unknown_response,
-      )
-    },
-  )
+  let unknown_result : Result[@protocol.CdpResponseMessage, Error] = Ok(
+    @protocol.cdp_schema_response(method_name="Page.navigate", unknown_response),
+  ) catch {
+    error => Err(error)
+  }
   guard unknown_result
     is Err(@protocol.ProtocolSchemaError::UnknownReturn("Page.navigate", "bad")) else {
     fail("expected unknown return")
@@ -395,13 +387,14 @@ test "schema-aware response validator rejects invalid returns" {
   guard bad_type is Response(bad_type_response) else {
     fail("expected bad type response")
   }
-  let bad_type_result : Result[@protocol.CdpResponseMessage, Error] = try_result_protocol_manifest_test(() => {
-      @protocol.cdp_schema_response(
-        method_name="Page.navigate",
-        bad_type_response,
-      )
-    },
-  )
+  let bad_type_result : Result[@protocol.CdpResponseMessage, Error] = Ok(
+    @protocol.cdp_schema_response(
+      method_name="Page.navigate",
+      bad_type_response,
+    ),
+  ) catch {
+    error => Err(error)
+  }
   guard bad_type_result
     is Err(
       @protocol.ProtocolSchemaError::InvalidReturnType(
@@ -419,13 +412,14 @@ test "schema-aware response validator rejects invalid returns" {
   guard bad_shape is Response(bad_shape_response) else {
     fail("expected bad shape response")
   }
-  let bad_shape_result : Result[@protocol.CdpResponseMessage, Error] = try_result_protocol_manifest_test(() => {
-      @protocol.cdp_schema_response(
-        method_name="Runtime.enable",
-        bad_shape_response,
-      )
-    },
-  )
+  let bad_shape_result : Result[@protocol.CdpResponseMessage, Error] = Ok(
+    @protocol.cdp_schema_response(
+      method_name="Runtime.enable",
+      bad_shape_response,
+    ),
+  ) catch {
+    error => Err(error)
+  }
   guard bad_shape_result
     is Err(
       @protocol.ProtocolSchemaError::ExpectedResultObject("Runtime.enable")
@@ -439,13 +433,14 @@ test "schema-aware response validator rejects invalid returns" {
   guard bad_command is Response(bad_command_response) else {
     fail("expected bad command response")
   }
-  let bad_command_result : Result[@protocol.CdpResponseMessage, Error] = try_result_protocol_manifest_test(() => {
-      @protocol.cdp_schema_response(
-        method_name="Missing.nope",
-        bad_command_response,
-      )
-    },
-  )
+  let bad_command_result : Result[@protocol.CdpResponseMessage, Error] = Ok(
+    @protocol.cdp_schema_response(
+      method_name="Missing.nope",
+      bad_command_response,
+    ),
+  ) catch {
+    error => Err(error)
+  }
   guard bad_command_result
     is Err(@protocol.ProtocolSchemaError::UnknownCommand("Missing.nope")) else {
     fail("expected unknown command")
@@ -456,13 +451,14 @@ test "schema-aware response validator rejects invalid returns" {
   guard no_result_required is Response(no_result_required_response) else {
     fail("expected no result response")
   }
-  let no_required_result : Result[@protocol.CdpResponseMessage, Error] = try_result_protocol_manifest_test(() => {
-      @protocol.cdp_schema_response(
-        method_name="Page.navigate",
-        no_result_required_response,
-      )
-    },
-  )
+  let no_required_result : Result[@protocol.CdpResponseMessage, Error] = Ok(
+    @protocol.cdp_schema_response(
+      method_name="Page.navigate",
+      no_result_required_response,
+    ),
+  ) catch {
+    error => Err(error)
+  }
   guard no_required_result
     is Err(
       @protocol.ProtocolSchemaError::MissingReturn("Page.navigate", "frameId")
@@ -485,10 +481,11 @@ test "schema-aware response validator rejects invalid returns" {
 
 ///|
 test "schema-aware event builder rejects invalid params" {
-  let missing : Result[@protocol.CdpEventMessage, Error] = try_result_protocol_manifest_test(() => {
-      @protocol.cdp_schema_event(method_name="Page.loadEventFired")
-    },
-  )
+  let missing : Result[@protocol.CdpEventMessage, Error] = Ok(
+    @protocol.cdp_schema_event(method_name="Page.loadEventFired"),
+  ) catch {
+    error => Err(error)
+  }
   guard missing
     is Err(
       @protocol.ProtocolSchemaError::MissingParameter(
@@ -498,12 +495,13 @@ test "schema-aware event builder rejects invalid params" {
     ) else {
     fail("expected missing timestamp")
   }
-  let bad_type : Result[@protocol.CdpEventMessage, Error] = try_result_protocol_manifest_test(() => {
-      @protocol.cdp_schema_event(method_name="Page.loadEventFired", params={
-        "timestamp": "bad",
-      })
-    },
-  )
+  let bad_type : Result[@protocol.CdpEventMessage, Error] = Ok(
+    @protocol.cdp_schema_event(method_name="Page.loadEventFired", params={
+      "timestamp": "bad",
+    }),
+  ) catch {
+    error => Err(error)
+  }
   guard bad_type
     is Err(
       @protocol.ProtocolSchemaError::InvalidParameterType(
@@ -514,10 +512,11 @@ test "schema-aware event builder rejects invalid params" {
     ) else {
     fail("expected invalid event timestamp")
   }
-  let bad_event : Result[@protocol.CdpEventMessage, Error] = try_result_protocol_manifest_test(() => {
-      @protocol.cdp_schema_event(method_name="Missing.nope")
-    },
-  )
+  let bad_event : Result[@protocol.CdpEventMessage, Error] = Ok(
+    @protocol.cdp_schema_event(method_name="Missing.nope"),
+  ) catch {
+    error => Err(error)
+  }
   guard bad_event
     is Err(@protocol.ProtocolSchemaError::UnknownEvent("Missing.nope")) else {
     fail("expected unknown event")

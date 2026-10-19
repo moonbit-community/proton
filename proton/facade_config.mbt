@@ -29,10 +29,8 @@ pub fn load_config() -> AppConfig raise AppConfigError {
 pub fn App::config(self : App, config : AppConfig) -> Unit {
   try {
     config.validate()
-    let identifier = match
-      resolve_explicit_application_identifier(config.identifier) {
-      Ok(identifier) => identifier
-      Err(error) =>
+    let identifier = resolve_explicit_application_identifier(config.identifier) catch {
+      error =>
         raise @proton_config.InvalidField(
           path="identifier",
           expectation=error.message(),

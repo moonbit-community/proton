@@ -1,45 +1,39 @@
 ///|
 /// Sets the canonical identifier for an application without project metadata.
 pub fn App::identifier(self : App, identifier : String) -> Unit {
-  match resolve_explicit_application_identifier(identifier) {
-    Ok(identifier) => self.set_application_identity(Explicit(identifier))
-    Err(error) => self.validation_errors.push(error)
+  let identifier = resolve_explicit_application_identifier(identifier) catch {
+    error => return self.validation_errors.push(error)
   }
+  self.set_application_identity(Explicit(identifier))
 }
 
 ///|
 fn resolve_explicit_application_identifier(
   identifier : String,
-) -> Result[String, AppConfigurationError] {
-  let identifier = match validate_application_identifier(identifier) {
-    Ok(identifier) => identifier
-    Err(error) => return Err(error)
-  }
+) -> String raise AppConfigurationError {
+  let identifier = validate_application_identifier(identifier)
   guard packaged_application_manifest_path() is Some(path) else {
-    return Ok(identifier)
+    return identifier
   }
-  match load_packaged_application_identifier(path) {
-    Err(error) => Err(error)
-    Ok(packaged_identifier) =>
-      verify_packaged_application_identifier(identifier, packaged_identifier)
-  }
+  verify_packaged_application_identifier(
+    identifier,
+    load_packaged_application_identifier(path),
+  )
 }
 
 ///|
 fn verify_packaged_application_identifier(
   identifier : String,
   packaged_identifier : String,
-) -> Result[String, AppConfigurationError] {
+) -> String raise AppConfigurationError {
   if identifier == packaged_identifier {
-    Ok(identifier)
+    identifier
   } else {
-    Err(
-      InvalidSetting(
-        name="identifier",
-        message="does not match packaged application metadata (expected " +
-          packaged_identifier +
-          ")",
-      ),
+    raise InvalidSetting(
+      name="identifier",
+      message="does not match packaged application metadata (expected " +
+        packaged_identifier +
+        ")",
     )
   }
 }
@@ -73,13 +67,13 @@ fn App::application_identifier(self : App) -> String raise AppPathError {
 ///|
 fn validate_application_identifier(
   identifier : String,
-) -> Result[String, AppConfigurationError] {
+) -> String raise AppConfigurationError {
   try @proton_config.validate_application_identifier(identifier) catch {
     @proton_config.InvalidField(expectation~, ..) =>
-      Err(InvalidSetting(name="identifier", message=expectation))
-    error => Err(InvalidSetting(name="identifier", message=error.message()))
+      raise InvalidSetting(name="identifier", message=expectation)
+    error => raise InvalidSetting(name="identifier", message=error.message())
   } noraise {
-    identifier => Ok(identifier)
+    identifier => identifier
   }
 }
 
@@ -101,10 +95,10 @@ fn project_config_path() -> String {
 ///|
 fn load_packaged_application_identifier(
   path : String,
-) -> Result[String, AppConfigurationError] {
+) -> String raise AppConfigurationError {
   try @proton_config.AppConfig::load(path) catch {
-    error => Err(InvalidSetting(name="config", message=error.message()))
+    error => raise InvalidSetting(name="config", message=error.message())
   } noraise {
-    config => Ok(config.identifier)
+    config => config.identifier
   }
 }

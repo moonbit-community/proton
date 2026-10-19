@@ -1,15 +1,4 @@
 ///|
-fn[T, E : Error] try_result_protocol_typed_typed_decode_wbtest(
-  f : () -> T raise E,
-) -> Result[T, E] {
-  try f() catch {
-    e => Err(e)
-  } noraise {
-    value => Ok(value)
-  }
-}
-
-///|
 test "typed parameter helpers decode required and optional scalars" {
   let fields : Map[String, Json] = {
     "string": "value",
@@ -78,10 +67,11 @@ test "typed parameter helpers decode required and optional scalars" {
 
 ///|
 test "typed parameter helpers reject bad shapes and numeric types" {
-  let not_object : Result[Map[String, Json], Error] = try_result_protocol_typed_typed_decode_wbtest(() => {
-      typed_json_fields("Runtime.evaluate", [])
-    },
-  )
+  let not_object : Result[Map[String, Json], Error] = Ok(
+    typed_json_fields("Runtime.evaluate", []),
+  ) catch {
+    error => Err(error)
+  }
   guard not_object
     is Err(
       @protocol.ProtocolSchemaError::ExpectedParamsObject("Runtime.evaluate")
@@ -94,10 +84,11 @@ test "typed parameter helpers reject bad shapes and numeric types" {
     "string": "value",
     "array": [1, "two"],
   }
-  let missing : Result[Json, Error] = try_result_protocol_typed_typed_decode_wbtest(() => {
-      typed_required_json("Runtime.evaluate", fields, "missing")
-    },
-  )
+  let missing : Result[Json, Error] = Ok(
+    typed_required_json("Runtime.evaluate", fields, "missing"),
+  ) catch {
+    error => Err(error)
+  }
   guard missing
     is Err(
       @protocol.ProtocolSchemaError::MissingParameter(
@@ -107,10 +98,11 @@ test "typed parameter helpers reject bad shapes and numeric types" {
     ) else {
     fail("expected missing parameter")
   }
-  let bad_int : Result[Int32, Error] = try_result_protocol_typed_typed_decode_wbtest(() => {
-      typed_required_int("Runtime.evaluate", fields, "fraction", "integer")
-    },
-  )
+  let bad_int : Result[Int32, Error] = Ok(
+    typed_required_int("Runtime.evaluate", fields, "fraction", "integer"),
+  ) catch {
+    error => Err(error)
+  }
   guard bad_int
     is Err(
       @protocol.ProtocolSchemaError::InvalidParameterType(
@@ -121,10 +113,11 @@ test "typed parameter helpers reject bad shapes and numeric types" {
     ) else {
     fail("expected invalid integer")
   }
-  let bad_int_shape : Result[Int32, Error] = try_result_protocol_typed_typed_decode_wbtest(() => {
-      typed_required_int("Runtime.evaluate", fields, "string", "integer")
-    },
-  )
+  let bad_int_shape : Result[Int32, Error] = Ok(
+    typed_required_int("Runtime.evaluate", fields, "string", "integer"),
+  ) catch {
+    error => Err(error)
+  }
   guard bad_int_shape
     is Err(
       @protocol.ProtocolSchemaError::InvalidParameterType(
@@ -135,10 +128,11 @@ test "typed parameter helpers reject bad shapes and numeric types" {
     ) else {
     fail("expected invalid integer shape")
   }
-  let bad_optional_int : Result[Int32?, Error] = try_result_protocol_typed_typed_decode_wbtest(() => {
-      typed_optional_int("Runtime.evaluate", fields, "fraction", "integer")
-    },
-  )
+  let bad_optional_int : Result[Int32?, Error] = Ok(
+    typed_optional_int("Runtime.evaluate", fields, "fraction", "integer"),
+  ) catch {
+    error => Err(error)
+  }
   guard bad_optional_int
     is Err(
       @protocol.ProtocolSchemaError::InvalidParameterType(
@@ -149,10 +143,11 @@ test "typed parameter helpers reject bad shapes and numeric types" {
     ) else {
     fail("expected invalid optional integer")
   }
-  let bad_optional_int_shape : Result[Int32?, Error] = try_result_protocol_typed_typed_decode_wbtest(() => {
-      typed_optional_int("Runtime.evaluate", fields, "string", "integer")
-    },
-  )
+  let bad_optional_int_shape : Result[Int32?, Error] = Ok(
+    typed_optional_int("Runtime.evaluate", fields, "string", "integer"),
+  ) catch {
+    error => Err(error)
+  }
   guard bad_optional_int_shape
     is Err(
       @protocol.ProtocolSchemaError::InvalidParameterType(
@@ -182,10 +177,11 @@ test "typed parameter helpers reject bad shapes and numeric types" {
     typed_array_double("Runtime.evaluate", "items", "number", array[0]),
     content="1",
   )
-  let bad_array_item : Result[String, Error] = try_result_protocol_typed_typed_decode_wbtest(() => {
-      typed_array_string("Runtime.evaluate", "items", "string", array[0])
-    },
-  )
+  let bad_array_item : Result[String, Error] = Ok(
+    typed_array_string("Runtime.evaluate", "items", "string", array[0]),
+  ) catch {
+    error => Err(error)
+  }
   guard bad_array_item
     is Err(
       @protocol.ProtocolSchemaError::InvalidParameterType(
@@ -196,10 +192,11 @@ test "typed parameter helpers reject bad shapes and numeric types" {
     ) else {
     fail("expected invalid array string")
   }
-  let bad_required_string : Result[String, Error] = try_result_protocol_typed_typed_decode_wbtest(() => {
-      typed_required_string("Runtime.evaluate", fields, "fraction", "string")
-    },
-  )
+  let bad_required_string : Result[String, Error] = Ok(
+    typed_required_string("Runtime.evaluate", fields, "fraction", "string"),
+  ) catch {
+    error => Err(error)
+  }
   guard bad_required_string
     is Err(
       @protocol.ProtocolSchemaError::InvalidParameterType(
@@ -210,10 +207,11 @@ test "typed parameter helpers reject bad shapes and numeric types" {
     ) else {
     fail("expected invalid required string")
   }
-  let bad_optional_string : Result[String?, Error] = try_result_protocol_typed_typed_decode_wbtest(() => {
-      typed_optional_string("Runtime.evaluate", fields, "fraction", "string")
-    },
-  )
+  let bad_optional_string : Result[String?, Error] = Ok(
+    typed_optional_string("Runtime.evaluate", fields, "fraction", "string"),
+  ) catch {
+    error => Err(error)
+  }
   guard bad_optional_string
     is Err(
       @protocol.ProtocolSchemaError::InvalidParameterType(
@@ -224,10 +222,11 @@ test "typed parameter helpers reject bad shapes and numeric types" {
     ) else {
     fail("expected invalid optional string")
   }
-  let bad_required_double : Result[Double, Error] = try_result_protocol_typed_typed_decode_wbtest(() => {
-      typed_required_double("Runtime.evaluate", fields, "string", "number")
-    },
-  )
+  let bad_required_double : Result[Double, Error] = Ok(
+    typed_required_double("Runtime.evaluate", fields, "string", "number"),
+  ) catch {
+    error => Err(error)
+  }
   guard bad_required_double
     is Err(
       @protocol.ProtocolSchemaError::InvalidParameterType(
@@ -238,10 +237,11 @@ test "typed parameter helpers reject bad shapes and numeric types" {
     ) else {
     fail("expected invalid required double")
   }
-  let bad_optional_double : Result[Double?, Error] = try_result_protocol_typed_typed_decode_wbtest(() => {
-      typed_optional_double("Runtime.evaluate", fields, "string", "number")
-    },
-  )
+  let bad_optional_double : Result[Double?, Error] = Ok(
+    typed_optional_double("Runtime.evaluate", fields, "string", "number"),
+  ) catch {
+    error => Err(error)
+  }
   guard bad_optional_double
     is Err(
       @protocol.ProtocolSchemaError::InvalidParameterType(
@@ -252,10 +252,11 @@ test "typed parameter helpers reject bad shapes and numeric types" {
     ) else {
     fail("expected invalid optional double")
   }
-  let bad_required_bool : Result[Bool, Error] = try_result_protocol_typed_typed_decode_wbtest(() => {
-      typed_required_bool("Runtime.evaluate", fields, "string", "boolean")
-    },
-  )
+  let bad_required_bool : Result[Bool, Error] = Ok(
+    typed_required_bool("Runtime.evaluate", fields, "string", "boolean"),
+  ) catch {
+    error => Err(error)
+  }
   guard bad_required_bool
     is Err(
       @protocol.ProtocolSchemaError::InvalidParameterType(
@@ -266,10 +267,11 @@ test "typed parameter helpers reject bad shapes and numeric types" {
     ) else {
     fail("expected invalid required bool")
   }
-  let bad_optional_bool : Result[Bool?, Error] = try_result_protocol_typed_typed_decode_wbtest(() => {
-      typed_optional_bool("Runtime.evaluate", fields, "string", "boolean")
-    },
-  )
+  let bad_optional_bool : Result[Bool?, Error] = Ok(
+    typed_optional_bool("Runtime.evaluate", fields, "string", "boolean"),
+  ) catch {
+    error => Err(error)
+  }
   guard bad_optional_bool
     is Err(
       @protocol.ProtocolSchemaError::InvalidParameterType(
@@ -280,10 +282,11 @@ test "typed parameter helpers reject bad shapes and numeric types" {
     ) else {
     fail("expected invalid optional bool")
   }
-  let bad_param_array : Result[Array[Json], Error] = try_result_protocol_typed_typed_decode_wbtest(() => {
-      typed_param_array("Runtime.evaluate", fields["string"], "items", "array")
-    },
-  )
+  let bad_param_array : Result[Array[Json], Error] = Ok(
+    typed_param_array("Runtime.evaluate", fields["string"], "items", "array"),
+  ) catch {
+    error => Err(error)
+  }
   guard bad_param_array
     is Err(
       @protocol.ProtocolSchemaError::InvalidParameterType(
@@ -294,15 +297,11 @@ test "typed parameter helpers reject bad shapes and numeric types" {
     ) else {
     fail("expected invalid param array")
   }
-  let bad_array_int : Result[Int32, Error] = try_result_protocol_typed_typed_decode_wbtest(() => {
-      typed_array_int(
-        "Runtime.evaluate",
-        "items",
-        "integer",
-        fields["fraction"],
-      )
-    },
-  )
+  let bad_array_int : Result[Int32, Error] = Ok(
+    typed_array_int("Runtime.evaluate", "items", "integer", fields["fraction"]),
+  ) catch {
+    error => Err(error)
+  }
   guard bad_array_int
     is Err(
       @protocol.ProtocolSchemaError::InvalidParameterType(
@@ -313,10 +312,11 @@ test "typed parameter helpers reject bad shapes and numeric types" {
     ) else {
     fail("expected invalid array int")
   }
-  let bad_array_int_shape : Result[Int32, Error] = try_result_protocol_typed_typed_decode_wbtest(() => {
-      typed_array_int("Runtime.evaluate", "items", "integer", fields["string"])
-    },
-  )
+  let bad_array_int_shape : Result[Int32, Error] = Ok(
+    typed_array_int("Runtime.evaluate", "items", "integer", fields["string"]),
+  ) catch {
+    error => Err(error)
+  }
   guard bad_array_int_shape
     is Err(
       @protocol.ProtocolSchemaError::InvalidParameterType(
@@ -327,15 +327,11 @@ test "typed parameter helpers reject bad shapes and numeric types" {
     ) else {
     fail("expected invalid array int shape")
   }
-  let bad_array_double : Result[Double, Error] = try_result_protocol_typed_typed_decode_wbtest(() => {
-      typed_array_double(
-        "Runtime.evaluate",
-        "items",
-        "number",
-        fields["string"],
-      )
-    },
-  )
+  let bad_array_double : Result[Double, Error] = Ok(
+    typed_array_double("Runtime.evaluate", "items", "number", fields["string"]),
+  ) catch {
+    error => Err(error)
+  }
   guard bad_array_double
     is Err(
       @protocol.ProtocolSchemaError::InvalidParameterType(
@@ -446,10 +442,11 @@ test "typed result helpers decode required and optional values" {
 
 ///|
 test "typed result helpers reject bad shapes and return types" {
-  let bad_shape : Result[Map[String, Json], Error] = try_result_protocol_typed_typed_decode_wbtest(() => {
-      typed_result_fields("Page.navigate", [])
-    },
-  )
+  let bad_shape : Result[Map[String, Json], Error] = Ok(
+    typed_result_fields("Page.navigate", []),
+  ) catch {
+    error => Err(error)
+  }
   guard bad_shape
     is Err(@protocol.ProtocolSchemaError::ExpectedResultObject("Page.navigate")) else {
     fail("expected result object")
@@ -459,20 +456,22 @@ test "typed result helpers reject bad shapes and return types" {
     "string": "value",
     "bad_array": "items",
   }
-  let missing : Result[Json, Error] = try_result_protocol_typed_typed_decode_wbtest(() => {
-      typed_required_result_json("Page.navigate", fields, "missing")
-    },
-  )
+  let missing : Result[Json, Error] = Ok(
+    typed_required_result_json("Page.navigate", fields, "missing"),
+  ) catch {
+    error => Err(error)
+  }
   guard missing
     is Err(
       @protocol.ProtocolSchemaError::MissingReturn("Page.navigate", "missing")
     ) else {
     fail("expected missing return")
   }
-  let bad_int : Result[Int32, Error] = try_result_protocol_typed_typed_decode_wbtest(() => {
-      typed_required_result_int("Page.navigate", fields, "fraction", "integer")
-    },
-  )
+  let bad_int : Result[Int32, Error] = Ok(
+    typed_required_result_int("Page.navigate", fields, "fraction", "integer"),
+  ) catch {
+    error => Err(error)
+  }
   guard bad_int
     is Err(
       @protocol.ProtocolSchemaError::InvalidReturnType(
@@ -483,10 +482,11 @@ test "typed result helpers reject bad shapes and return types" {
     ) else {
     fail("expected invalid return integer")
   }
-  let bad_int_shape : Result[Int32, Error] = try_result_protocol_typed_typed_decode_wbtest(() => {
-      typed_required_result_int("Page.navigate", fields, "string", "integer")
-    },
-  )
+  let bad_int_shape : Result[Int32, Error] = Ok(
+    typed_required_result_int("Page.navigate", fields, "string", "integer"),
+  ) catch {
+    error => Err(error)
+  }
   guard bad_int_shape
     is Err(
       @protocol.ProtocolSchemaError::InvalidReturnType(
@@ -497,10 +497,11 @@ test "typed result helpers reject bad shapes and return types" {
     ) else {
     fail("expected invalid return integer shape")
   }
-  let bad_optional_int : Result[Int32?, Error] = try_result_protocol_typed_typed_decode_wbtest(() => {
-      typed_optional_result_int("Page.navigate", fields, "fraction", "integer")
-    },
-  )
+  let bad_optional_int : Result[Int32?, Error] = Ok(
+    typed_optional_result_int("Page.navigate", fields, "fraction", "integer"),
+  ) catch {
+    error => Err(error)
+  }
   guard bad_optional_int
     is Err(
       @protocol.ProtocolSchemaError::InvalidReturnType(
@@ -511,10 +512,11 @@ test "typed result helpers reject bad shapes and return types" {
     ) else {
     fail("expected invalid optional return integer")
   }
-  let bad_optional_int_shape : Result[Int32?, Error] = try_result_protocol_typed_typed_decode_wbtest(() => {
-      typed_optional_result_int("Page.navigate", fields, "string", "integer")
-    },
-  )
+  let bad_optional_int_shape : Result[Int32?, Error] = Ok(
+    typed_optional_result_int("Page.navigate", fields, "string", "integer"),
+  ) catch {
+    error => Err(error)
+  }
   guard bad_optional_int_shape
     is Err(
       @protocol.ProtocolSchemaError::InvalidReturnType(
@@ -525,12 +527,11 @@ test "typed result helpers reject bad shapes and return types" {
     ) else {
     fail("expected invalid optional return integer shape")
   }
-  let bad_optional_string : Result[String?, Error] = try_result_protocol_typed_typed_decode_wbtest(() => {
-      typed_optional_result_string(
-        "Page.navigate", fields, "fraction", "string",
-      )
-    },
-  )
+  let bad_optional_string : Result[String?, Error] = Ok(
+    typed_optional_result_string("Page.navigate", fields, "fraction", "string"),
+  ) catch {
+    error => Err(error)
+  }
   guard bad_optional_string
     is Err(
       @protocol.ProtocolSchemaError::InvalidReturnType(
@@ -541,10 +542,11 @@ test "typed result helpers reject bad shapes and return types" {
     ) else {
     fail("expected invalid optional return string")
   }
-  let bad_array : Result[Array[Json], Error] = try_result_protocol_typed_typed_decode_wbtest(() => {
-      typed_result_array("Page.navigate", fields["bad_array"], "items", "array")
-    },
-  )
+  let bad_array : Result[Array[Json], Error] = Ok(
+    typed_result_array("Page.navigate", fields["bad_array"], "items", "array"),
+  ) catch {
+    error => Err(error)
+  }
   guard bad_array
     is Err(
       @protocol.ProtocolSchemaError::InvalidReturnType(
@@ -555,15 +557,16 @@ test "typed result helpers reject bad shapes and return types" {
     ) else {
     fail("expected invalid result array")
   }
-  let bad_array_int : Result[Int32, Error] = try_result_protocol_typed_typed_decode_wbtest(() => {
-      typed_result_array_int(
-        "Page.navigate",
-        "items",
-        "integer",
-        fields["fraction"],
-      )
-    },
-  )
+  let bad_array_int : Result[Int32, Error] = Ok(
+    typed_result_array_int(
+      "Page.navigate",
+      "items",
+      "integer",
+      fields["fraction"],
+    ),
+  ) catch {
+    error => Err(error)
+  }
   guard bad_array_int
     is Err(
       @protocol.ProtocolSchemaError::InvalidReturnType(
@@ -574,15 +577,16 @@ test "typed result helpers reject bad shapes and return types" {
     ) else {
     fail("expected invalid result array integer")
   }
-  let bad_array_int_shape : Result[Int32, Error] = try_result_protocol_typed_typed_decode_wbtest(() => {
-      typed_result_array_int(
-        "Page.navigate",
-        "items",
-        "integer",
-        fields["string"],
-      )
-    },
-  )
+  let bad_array_int_shape : Result[Int32, Error] = Ok(
+    typed_result_array_int(
+      "Page.navigate",
+      "items",
+      "integer",
+      fields["string"],
+    ),
+  ) catch {
+    error => Err(error)
+  }
   guard bad_array_int_shape
     is Err(
       @protocol.ProtocolSchemaError::InvalidReturnType(
@@ -593,12 +597,11 @@ test "typed result helpers reject bad shapes and return types" {
     ) else {
     fail("expected invalid result array integer shape")
   }
-  let bad_required_string : Result[String, Error] = try_result_protocol_typed_typed_decode_wbtest(() => {
-      typed_required_result_string(
-        "Page.navigate", fields, "fraction", "string",
-      )
-    },
-  )
+  let bad_required_string : Result[String, Error] = Ok(
+    typed_required_result_string("Page.navigate", fields, "fraction", "string"),
+  ) catch {
+    error => Err(error)
+  }
   guard bad_required_string
     is Err(
       @protocol.ProtocolSchemaError::InvalidReturnType(
@@ -609,10 +612,11 @@ test "typed result helpers reject bad shapes and return types" {
     ) else {
     fail("expected invalid required return string")
   }
-  let bad_required_double : Result[Double, Error] = try_result_protocol_typed_typed_decode_wbtest(() => {
-      typed_required_result_double("Page.navigate", fields, "string", "number")
-    },
-  )
+  let bad_required_double : Result[Double, Error] = Ok(
+    typed_required_result_double("Page.navigate", fields, "string", "number"),
+  ) catch {
+    error => Err(error)
+  }
   guard bad_required_double
     is Err(
       @protocol.ProtocolSchemaError::InvalidReturnType(
@@ -623,10 +627,11 @@ test "typed result helpers reject bad shapes and return types" {
     ) else {
     fail("expected invalid required return double")
   }
-  let bad_required_bool : Result[Bool, Error] = try_result_protocol_typed_typed_decode_wbtest(() => {
-      typed_required_result_bool("Page.navigate", fields, "string", "boolean")
-    },
-  )
+  let bad_required_bool : Result[Bool, Error] = Ok(
+    typed_required_result_bool("Page.navigate", fields, "string", "boolean"),
+  ) catch {
+    error => Err(error)
+  }
   guard bad_required_bool
     is Err(
       @protocol.ProtocolSchemaError::InvalidReturnType(
@@ -637,10 +642,11 @@ test "typed result helpers reject bad shapes and return types" {
     ) else {
     fail("expected invalid required return bool")
   }
-  let bad_optional_bool : Result[Bool?, Error] = try_result_protocol_typed_typed_decode_wbtest(() => {
-      typed_optional_result_bool("Page.navigate", fields, "string", "boolean")
-    },
-  )
+  let bad_optional_bool : Result[Bool?, Error] = Ok(
+    typed_optional_result_bool("Page.navigate", fields, "string", "boolean"),
+  ) catch {
+    error => Err(error)
+  }
   guard bad_optional_bool
     is Err(
       @protocol.ProtocolSchemaError::InvalidReturnType(
@@ -651,15 +657,16 @@ test "typed result helpers reject bad shapes and return types" {
     ) else {
     fail("expected invalid optional return bool")
   }
-  let bad_array_string : Result[String, Error] = try_result_protocol_typed_typed_decode_wbtest(() => {
-      typed_result_array_string(
-        "Page.navigate",
-        "items",
-        "string",
-        fields["fraction"],
-      )
-    },
-  )
+  let bad_array_string : Result[String, Error] = Ok(
+    typed_result_array_string(
+      "Page.navigate",
+      "items",
+      "string",
+      fields["fraction"],
+    ),
+  ) catch {
+    error => Err(error)
+  }
   guard bad_array_string
     is Err(
       @protocol.ProtocolSchemaError::InvalidReturnType(
