@@ -56,6 +56,26 @@ test "rejects a schema version it does not implement" {
 }
 
 ///|
+test "schema versions require an original Int32 integer token" {
+  for
+    token in [
+      "3.0", "3e0", "3.0000000000000001", "3.0000000000000001e0", "2147483648", "-2147483649",
+    ] {
+    let text = manifest_json(platform_json("")).replace(
+      old="\"schema_version\":3",
+      new="\"schema_version\":\{token}",
+    )
+    assert_eq(
+      parse_failure(text),
+      InvalidField(
+        path="manifest.schema_version",
+        expectation="must be a signed 32-bit integer",
+      ),
+    )
+  }
+}
+
+///|
 test "rejects unknown fields rather than ignoring them" {
   let top = manifest_json(platform_json("")).replace(
     old="\"schema_version\":3",
@@ -194,7 +214,10 @@ test "artifact sizes preserve Int64 values without a floating-point round trip" 
       new="\"size\":\{size}",
     )
   }
-  for size in [2147483648L, 9007199254740993L, 9223372036854775807L] {
+  for
+    size in [
+      1L, 2147483648L, 9007199254740991L, 9007199254740992L, 9007199254740993L, 9223372036854775807L,
+    ] {
     let update = Manifest::parse(with_size(size.to_string()))
       .platform("darwin-arm64")
       .unwrap()
@@ -202,8 +225,9 @@ test "artifact sizes preserve Int64 values without a floating-point round trip" 
   }
   for
     size in [
-      "9223372036854775808", "18446744073709551616", "1.5", "1e100", "9007199254740993.0",
-      "9007199254740993e0",
+      "1.0000000000000001", "1024.0000000000000001", "9007199254740990.5", "1.0000000000000001e0",
+      "1.0", "1e0", "9223372036854775808", "18446744073709551616", "1.5", "1e100",
+      "9007199254740993.0", "9007199254740993e0",
     ] {
     assert_true(parse_failure(with_size(size)) is InvalidField(_))
   }

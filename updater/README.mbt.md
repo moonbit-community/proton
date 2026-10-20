@@ -48,3 +48,9 @@ using a separate schema 3 endpoint.
 
 Artifact URLs must use `https`. Artifact `size` is a positive signed 64-bit
 JSON integer; it is read from the original decimal text without rounding.
+Both `size` and `schema_version` require integer notation: decimal fractions
+and exponent forms such as `1.0` and `1e0` are rejected. Size must be between
+`1` and `9223372036854775807` inclusive.
+
+Decode the original document text with `Manifest::parse`. Pre-parsed `Json`
+values are not accepted because they may already have lost numeric precision.
