@@ -16,3 +16,9 @@ options(
     "extension_wbtest.mbt": [ "native" ],
   },
 )
+
+import {
+  "moonbitlang/core/env",
+  "moonbitlang/async",
+  "moonbitlang/async/fs" @async_fs,
+} for "wbtest"

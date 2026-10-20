@@ -33,11 +33,96 @@ MOONBIT_FFI_EXPORT int32_t mb_shell_is_supported(void) {
 #endif
 }
 
+#ifdef _WIN32
+static wchar_t *mb_shell_utf8_to_wide(const moonbit_bytes_t path);
+#else
+/* Pass arguments directly to the tool, without shell interpretation. */
+static int32_t mb_shell_run_tool(char *const argv[]) {
+  pid_t pid = fork();
+  if (pid < 0) return 0;
+  if (pid == 0) {
+    execvp(argv[0], argv);
+    _exit(127);
+  }
+  int status;
+  pid_t waited;
+  do {
+    waited = waitpid(pid, &status, 0);
+  } while (waited < 0 && errno == EINTR);
+  return waited == pid && WIFEXITED(status) && WEXITSTATUS(status) == 0;
+}
+#endif
+
+#ifdef __linux__
+/* ShowItems takes an array of file URIs. Escape commas too, since dbus-send
+   uses commas as array separators. Do not resolve symlinks: reveal the entry
+   requested by the caller, not its referent. */
+static int32_t mb_shell_reveal_item_linux(const char *path) {
+  char *cwd = NULL;
+  if (path[0] != '/') {
+    cwd = getcwd(NULL, 0);
+    if (cwd == NULL) return 0;
+  }
+  size_t cwd_len = cwd == NULL ? 0 : strlen(cwd);
+  char *absolute = malloc(cwd_len + strlen(path) + 2);
+  if (absolute == NULL) {
+    free(cwd);
+    return 0;
+  }
+  if (cwd != NULL) {
+    memcpy(absolute, cwd, cwd_len);
+    absolute[cwd_len] = '/';
+    strcpy(absolute + cwd_len + 1, path);
+    free(cwd);
+  } else {
+    strcpy(absolute, path);
+  }
+  const char prefix[] = "array:string:file://";
+  size_t len = strlen(absolute);
+  char *argument = malloc(sizeof(prefix) + len * 3);
+  if (argument == NULL) {
+    free(absolute);
+    return 0;
+  }
+  memcpy(argument, prefix, sizeof(prefix) - 1);
+  char *out = argument + sizeof(prefix) - 1;
+  const char hex[] = "0123456789ABCDEF";
+  for (const unsigned char *p = (const unsigned char *)absolute; *p; p++) {
+    unsigned char c = *p;
+    if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') ||
+        (c >= '0' && c <= '9') || c == '/' || c == '-' || c == '_' ||
+        c == '.' || c == '~') {
+      *out++ = (char)c;
+    } else {
+      *out++ = '%';
+      *out++ = hex[c >> 4];
+      *out++ = hex[c & 15];
+    }
+  }
+  *out = 0;
+  char *argv[] = {"dbus-send", "--session", "--print-reply=literal",
+    "--dest=org.freedesktop.FileManager1", "/org/freedesktop/FileManager1",
+    "org.freedesktop.FileManager1.ShowItems", argument, "string:", NULL};
+  int32_t ok = mb_shell_run_tool(argv);
+  free(argument);
+  free(absolute);
+  return ok;
+}
+#endif
+
 MOONBIT_FFI_EXPORT int32_t mb_shell_open(moonbit_bytes_t target) {
 #ifdef _WIN32
-  HINSTANCE result = ShellExecuteW(
-      NULL, L"open", (const wchar_t *)target, NULL, NULL, SW_SHOWNORMAL);
+  wchar_t *wide = mb_shell_utf8_to_wide(target);
+  if (wide == NULL) return 0;
+  HINSTANCE result = ShellExecuteW(NULL, L"open", wide, NULL, NULL, SW_SHOWNORMAL);
+  free(wide);
   return (INT_PTR)result > 32;
+#elif defined(__APPLE__)
+  char *argv[] = {"/usr/bin/open", "--", (char *)target, NULL};
+  return mb_shell_run_tool(argv);
+#elif defined(__linux__)
+  char *argv[] = {"gio", "open", "--", (char *)target, NULL};
+  return mb_shell_run_tool(argv);
 #else
   (void)target;
   return 0;
@@ -46,52 +131,34 @@ MOONBIT_FFI_EXPORT int32_t mb_shell_open(moonbit_bytes_t target) {
 
 MOONBIT_FFI_EXPORT int32_t mb_shell_reveal_item(moonbit_bytes_t path) {
 #ifdef _WIN32
-  const wchar_t *target = (const wchar_t *)path;
+  wchar_t *target = mb_shell_utf8_to_wide(path);
+  if (target == NULL) return 0;
   size_t target_len = wcslen(target);
   size_t prefix_len = wcslen(L"/select,\"");
   size_t total_len = prefix_len + target_len + 2;
   wchar_t *parameters = (wchar_t *)malloc((total_len + 1) * sizeof(wchar_t));
-  HINSTANCE result;
-
   if (parameters == NULL) {
+    free(target);
     return 0;
   }
-
   wcscpy(parameters, L"/select,\"");
   wcscat(parameters, target);
   wcscat(parameters, L"\"");
-
-  result = ShellExecuteW(
+  HINSTANCE result = ShellExecuteW(
       NULL, L"open", L"explorer.exe", parameters, NULL, SW_SHOWNORMAL);
   free(parameters);
+  free(target);
   return (INT_PTR)result > 32;
+#elif defined(__APPLE__)
+  char *argv[] = {"/usr/bin/open", "-R", "--", (char *)path, NULL};
+  return mb_shell_run_tool(argv);
+#elif defined(__linux__)
+  return mb_shell_reveal_item_linux((const char *)path);
 #else
   (void)path;
   return 0;
 #endif
 }
-
-#ifndef _WIN32
-/* Runs a platform tool with a single POSIX path argument and reports success
-   only when it exits zero. Used by the Linux trash backend, mirroring the
-   `gio trash` invocation Electron itself relies on. */
-static int32_t mb_shell_run_tool(const char *tool,
-                                 const char *argument,
-                                 const char *posix_path) {
-  pid_t pid = fork();
-  if (pid < 0) {
-    return 0;
-  }
-  if (pid == 0) {
-    execlp(tool, tool, argument, posix_path, (char *)NULL);
-    _exit(127);
-  }
-  int status = 0;
-  while (waitpid(pid, &status, 0) < 0 && errno == EINTR) {
-  }
-  return WIFEXITED(status) && WEXITSTATUS(status) == 0;
-}
-#endif
 
 #ifdef __APPLE__
 /* Moves an item to the macOS Trash through the Cocoa `NSFileManager` API,
@@ -182,7 +249,8 @@ MOONBIT_FFI_EXPORT int32_t mb_shell_trash_item(moonbit_bytes_t path) {
   return mb_shell_trash_item_apple((const char *)path);
 #elif defined(__linux__)
   /* Electron moves Linux items to the trash with `gio trash`. */
-  return mb_shell_run_tool("gio", "trash", (const char *)path);
+  char *argv[] = {"gio", "trash", "--", (char *)path, NULL};
+  return mb_shell_run_tool(argv);
 #else
   (void)path;
   return 0;

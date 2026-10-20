@@ -25,16 +25,18 @@ pub fn ensure_supported() -> Result[Unit, String] {
 }
 
 ///|
-/// Opens `target` through the native shell.
+/// Opens a URL or filesystem path with its default application.
 ///
-/// On Windows this calls `ShellExecuteW` with the `"open"` verb. Returns
+/// Uses ShellExecuteW on Windows, /usr/bin/open on macOS, and gio open on Linux.
+/// Linux requires gio and a desktop session with a default handler. Returns
 /// `Ok(())` on success or `Err(String)` on unsupported platforms or launch
-/// failures.
+/// failures. Success means the platform accepted the request; it does not wait
+/// for the target application to finish starting.
 pub fn open(target : String) -> Result[Unit, String] {
   if !is_supported() {
     return Err(unsupported_error_message())
   }
-  if open_ffi(@ffi.to_wstr(target)) {
+  if open_ffi(@ffi.to_cstr(target)) {
     Ok(())
   } else {
     Err("shell.open failed")
@@ -42,15 +44,17 @@ pub fn open(target : String) -> Result[Unit, String] {
 }
 
 ///|
-/// Reveals `path` in the native file manager.
+/// Opens the native file manager and selects the filesystem entry at `path`.
 ///
-/// On Windows this opens Explorer with `/select,"<path>"`. Returns `Ok(())`
+/// Uses Explorer on Windows, /usr/bin/open -R on macOS, and FileManager1
+/// ShowItems via dbus-send on Linux. Linux requires dbus-send and a file manager
+/// implementing that session-bus interface. Returns `Ok(())`
 /// on success or `Err(String)` on unsupported platforms or launch failures.
 pub fn reveal_item(path : String) -> Result[Unit, String] {
   if !is_supported() {
     return Err(unsupported_error_message())
   }
-  if reveal_item_ffi(@ffi.to_wstr(path)) {
+  if reveal_item_ffi(@ffi.to_cstr(path)) {
     Ok(())
   } else {
     Err("shell.revealItem failed")
