@@ -32,13 +32,13 @@ async test "shell delegates literal targets and reports launcher failures" {
   @async_fs.chmod(dir + "/dbus-send", 0o755)
   @env.set_env_var("PATH", dir)
   let target = "https://example.invalid/中文?q=a b&x=$(false)"
-  assert_true(@sys_shell.open(target) is Ok(_))
+  @sys_shell.open(target)
   assert_eq(
     @async_fs.read_file(dir + "/gio.args").text(),
     "open\n--\n" + target + "\n",
   )
   let path = "/tmp/中文 space,%#'$.txt"
-  assert_true(@sys_shell.reveal_item(path) is Ok(_))
+  @sys_shell.reveal_item(path)
   assert_eq(
     @async_fs.read_file(dir + "/dbus-send.args").text(),
     "--session\n--print-reply=literal\n--dest=org.freedesktop.FileManager1\n" +
@@ -47,18 +47,46 @@ async test "shell delegates literal targets and reports launcher failures" {
   )
   @async_fs.write_file(dir + "/target", "content")
   @async_fs.symlink(dir + "/link", target=dir + "/target")
-  assert_true(@sys_shell.reveal_item(dir + "/link") is Ok(_))
+  @sys_shell.reveal_item(dir + "/link")
   assert_true(
     @async_fs.read_file(dir + "/dbus-send.args").text().contains("/link\n"),
   )
   @async_fs.write_file(dir + "/gio", "#!/bin/sh\nexit 1\n")
   @async_fs.write_file(dir + "/dbus-send", "#!/bin/sh\nexit 1\n")
-  assert_true(@sys_shell.open(target) is Err(_))
-  assert_true(@sys_shell.reveal_item(path) is Err(_))
+  assert_true(
+    try {
+      @sys_shell.open(target)
+      false
+    } catch {
+      _ => true
+    },
+  )
+  assert_true(
+    try {
+      @sys_shell.reveal_item(path)
+      false
+    } catch {
+      _ => true
+    },
+  )
   @async_fs.remove(dir + "/gio")
   @async_fs.remove(dir + "/dbus-send")
-  assert_true(@sys_shell.open(target) is Err(_))
-  assert_true(@sys_shell.reveal_item(path) is Err(_))
+  assert_true(
+    try {
+      @sys_shell.open(target)
+      false
+    } catch {
+      _ => true
+    },
+  )
+  assert_true(
+    try {
+      @sys_shell.reveal_item(path)
+      false
+    } catch {
+      _ => true
+    },
+  )
 }
 
 ///|
@@ -67,6 +95,20 @@ async test "macOS shell propagates missing-path failures" {
   let dir = @async_fs.tmpdir(prefix="proton-shell-")
   defer @async_fs.rmdir(dir, recursive=true)
   // These calls reach /usr/bin/open but cannot launch a browser or Finder.
-  assert_true(@sys_shell.open(dir + "/missing") is Err(_))
-  assert_true(@sys_shell.reveal_item(dir + "/missing") is Err(_))
+  assert_true(
+    try {
+      @sys_shell.open(dir + "/missing")
+      false
+    } catch {
+      _ => true
+    },
+  )
+  assert_true(
+    try {
+      @sys_shell.reveal_item(dir + "/missing")
+      false
+    } catch {
+      _ => true
+    },
+  )
 }
