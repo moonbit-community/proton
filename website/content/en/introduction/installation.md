@@ -10,7 +10,7 @@ Proton 0.5.0 supports the following host build environments. Native builds and p
 | Windows | x64 | Visual Studio C++ Build Tools, MSVC and Windows SDK; developer terminal |
 | Linux | x64 | C/C++ build tools, pkg-config, X11/RandR and GTK development libraries; graphical environment for execution |
 
-On Ubuntu 24.04, the dependency set includes `build-essential`, `pkg-config`, `libx11-dev`, `libxrandr-dev`, `libgtk-3-dev`, `libwebkit2gtk-4.1-dev`, `libnotify-dev`, `libnss3`, `libgbm1` and `libasound2t64`. Package names and runtime compatibility vary by distribution.
+On Ubuntu 24.04, the dependency set includes `build-essential`, `pkg-config`, `libdbus-1-dev`, `libx11-dev`, `libxrandr-dev`, `libgtk-3-dev`, `libwebkit2gtk-4.1-dev`, `libnotify-dev`, `libnss3`, `libgbm1` and `libasound2t64`. Package names and runtime compatibility vary by distribution.
 
 NSIS is required only for NSIS output. Signing identities and notarization credentials are distribution requirements, not prerequisites for local development.
 
