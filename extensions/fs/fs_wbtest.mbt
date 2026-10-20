@@ -221,6 +221,28 @@ async test "rename preserves source and destination symbolic link entry semantic
 }
 
 ///|
+async test "rename moves an outside directory link without moving its target" {
+  with_fs_test_root((context, allowed, outside) => {
+    @async_fs.write_file(outside + "/keep.txt", "keep")
+    let link = allowed + "/link"
+    let moved = allowed + "/moved"
+    // Windows creates an NTFS junction here without requiring file-symlink
+    // privileges. Exercise the same authorized command on every platform.
+    @async_fs.symlink(link, target=outside)
+    ignore(rename(context, { old_path: link, new_path: moved, replace: None, }))
+    assert_eq(
+      @async_fs.kind(outside, follow_symlink=false),
+      @async_fs.Directory,
+    )
+    assert_eq(@async_fs.read_file(outside + "/keep.txt").text(), "keep")
+    assert_eq(@async_fs.kind(moved, follow_symlink=false), @async_fs.SymLink)
+    assert_eq(@async_fs.realpath(moved), @async_fs.realpath(outside))
+    assert_false(@async_fs.exists(link))
+    @async_fs.remove(moved)
+  })
+}
+
+///|
 async test "recursive rmdir rejects a linked directory without touching its target" {
   with_fs_test_root((context, allowed, outside) => {
     let directory = allowed + "/directory"
