@@ -28,4 +28,10 @@ same async command bridge used by the other native Proton extensions.
   renderer requests cannot race a path check with a rename.
 - A path that resolves outside every matching root is denied, including a
   symbolic-link escape.
+- Content operations follow existing links only to authorized targets. A link
+  whose target cannot be resolved is rejected, even when creating a new file.
+- `remove`, `rename`, and `kind(follow_symlink=false)` act on the final entry;
+  links in parent directories are still resolved and checked. Removing or
+  renaming a link does not modify its target. `rmdir` rejects a final symbolic
+  link, including for recursive removal; use `remove` to delete the link itself.
 - Text helpers use UTF-8 payloads.

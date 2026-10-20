@@ -113,9 +113,14 @@ async fn kind(
   context : @proton.CommandContext,
   request : @fs_contract.KindRequest,
 ) -> @fs_contract.KindReply {
-  let kind = with_authorized_path(context, "kind", request.path, resolved => {
-    path_kind(resolved, option_bool(request.follow_symlink, true))
-  })
+  let follow_symlink = option_bool(request.follow_symlink, true)
+  let kind = with_authorized_path(
+    context,
+    "kind",
+    request.path,
+    follow_symlink~,
+    resolved => path_kind(resolved, follow_symlink),
+  )
   emit_activity(context, "kind", path=Some(request.path))
   @fs_contract.KindReply::{ path: request.path, kind, }
 }
@@ -174,9 +179,13 @@ async fn remove(
   context : @proton.CommandContext,
   request : @fs_contract.PathRequest,
 ) -> @fs_contract.RemoveFileReply {
-  let removed = with_authorized_path(context, "remove", request.path, resolved => {
-    remove_file(resolved)
-  })
+  let removed = with_authorized_path(
+    context,
+    "remove",
+    request.path,
+    follow_symlink=false,
+    resolved => remove_file(resolved),
+  )
   emit_activity(context, "remove", path=Some(request.path))
   @fs_contract.RemoveFileReply::{ removed, }
 }
@@ -187,9 +196,13 @@ async fn rmdir(
   context : @proton.CommandContext,
   request : @fs_contract.RemovePathRequest,
 ) -> @fs_contract.RemovePathReply {
-  let removed = with_authorized_path(context, "rmdir", request.path, resolved => {
-    remove_dir({ path: resolved, recursive: request.recursive, })
-  })
+  let removed = with_authorized_path(
+    context,
+    "rmdir",
+    request.path,
+    follow_symlink=false,
+    resolved => remove_dir({ path: resolved, recursive: request.recursive, }),
+  )
   emit_activity(context, "rmdir", path=Some(request.path))
   @fs_contract.RemovePathReply::{ path: request.path, removed, }
 }
@@ -200,10 +213,16 @@ async fn rename(
   context : @proton.CommandContext,
   request : @fs_contract.RenameRequest,
 ) -> @fs_contract.RenameReply {
-  with_authorized_paths(context, "rename", request.old_path, request.new_path, (
-    old_path,
-    new_path,
-  ) => rename_path({ old_path, new_path, replace: request.replace, }))
+  with_authorized_paths(
+    context,
+    "rename",
+    request.old_path,
+    request.new_path,
+    follow_symlink=false,
+    (old_path, new_path) => {
+      rename_path({ old_path, new_path, replace: request.replace, })
+    },
+  )
   emit_activity(context, "rename", path=Some(request.new_path))
   @fs_contract.RenameReply::{
     old_path: request.old_path,
