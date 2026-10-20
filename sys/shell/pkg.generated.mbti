@@ -1,6 +1,10 @@
 // Generated using `moon info`, DON'T EDIT IT
 package "moonbit-community/proton_shell"
 
+import {
+  "moonbitlang/core/debug",
+}
+
 // Values
 pub fn beep() -> Result[Unit, String]
 
@@ -8,13 +12,19 @@ pub fn ensure_supported() -> Result[Unit, String]
 
 pub fn is_supported() -> Bool
 
-pub fn open(String) -> Result[Unit, String]
+pub async fn open(String) -> Unit raise ShellError
 
-pub fn reveal_item(String) -> Result[Unit, String]
+pub async fn reveal_item(String) -> Unit raise ShellError
 
-pub fn trash_item(String) -> Result[Unit, String]
+pub async fn trash_item(String) -> Unit raise ShellError
 
 // Errors
+pub suberror ShellError {
+  ShellError(operation~ : String, target~ : String, reason~ : String)
+} derive(@debug.Debug)
+pub fn ShellError::output(Self, &Logger) -> Unit
+pub fn ShellError::to_repr(Self) -> @debug.Repr
+pub fn ShellError::to_string(Self) -> String
 
 // Types and methods
 

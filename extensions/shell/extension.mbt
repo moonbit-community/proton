@@ -38,10 +38,7 @@ async fn open(
 ) -> @shell_contract.ShellReply {
   ensure_supported()
   let target = validate_target(request.target, "shell.open target")
-  match @sys_shell.open(target) {
-    Ok(_) => ()
-    Err(_) => raise LaunchFailed(operation="open", target~)
-  }
+  @sys_shell.open(target)
   context.emit(@shell_contract.activity, @shell_contract.ShellActivity::{
     operation: "open",
     target: request.target,
@@ -58,10 +55,7 @@ async fn reveal_item(
 ) -> @shell_contract.ShellReply {
   ensure_supported()
   let path = validate_target(request.path, "shell.revealItem path")
-  match @sys_shell.reveal_item(path) {
-    Ok(_) => ()
-    Err(_) => raise LaunchFailed(operation="revealItem", target=request.path)
-  }
+  @sys_shell.reveal_item(path)
   context.emit(@shell_contract.activity, @shell_contract.ShellActivity::{
     operation: "revealItem",
     target: request.path,
@@ -79,10 +73,7 @@ async fn trash_item(
 ) -> @shell_contract.ShellReply {
   ensure_supported()
   let path = validate_target(request.path, "shell.trashItem path")
-  match @sys_shell.trash_item(path) {
-    Ok(_) => ()
-    Err(_) => raise LaunchFailed(operation="trashItem", target=request.path)
-  }
+  @sys_shell.trash_item(path)
   context.emit(@shell_contract.activity, @shell_contract.ShellActivity::{
     operation: "trashItem",
     target: request.path,
