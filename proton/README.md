@@ -511,6 +511,11 @@ messages, but Proton only exposes the external remote debugging port today.
 - `@proton.file(title, path, ...)` — an HTML file on disk.
 - `@proton.asset(title, path, ...)` — an HTML asset shipped with the app.
 
+File and asset entries serve the original HTML at
+`https://proton.localhost/<filename>`, with the entry file's directory as the
+resource root. Relative URLs follow normal browser resolution, including any
+`<base>` declared by the page.
+
 Configure Chromium network policy with `App::web_request_cancel_prefix`,
 `App::web_request_redirect_prefix`, and `App::web_request_header_prefix`.
 Subscribe with `App::on_web_contents_event` to observe `WebContentsEvent::ResourceRequested`

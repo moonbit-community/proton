@@ -25,14 +25,12 @@ async fn prepare_file_entry(
     error =>
       raise ReadFailed(path=resolved_text, detail=@debug.render(Repr(error)))
   }
-  let html = @async_fs.read_file(canonical).text() catch {
+  let content = @async_fs.read_file(canonical).binary() catch {
     error => raise ReadFailed(path=canonical, detail=@debug.render(Repr(error)))
   }
   let document = ResourceDocument::{
     url: asset_document_url(resolved),
-    content: @utf8.encode(
-      inject_html_bootstrap(html, base_tag(asset_base_url())),
-    ),
+    content,
   }
   DocumentEntry(document, Some(@mbpath.Path(canonical).dirname().to_string()))
 }
@@ -74,31 +72,6 @@ fn resolve_asset_path(path : String) -> @mbpath.Path {
   } else {
     @mbpath.Path(runtime_resource_dir()).join(native_path).normalize()
   }
-}
-
-///|
-fn inject_html_bootstrap(html : String, bootstrap : String) -> String {
-  if html.contains("<head>") {
-    html.replace(old="<head>", new="<head>\n" + bootstrap)
-  } else if html.contains("<body>") {
-    html.replace(old="<body>", new=bootstrap + "<body>")
-  } else {
-    bootstrap + html
-  }
-}
-
-///|
-fn base_tag(href : String) -> String {
-  "<base href=\"" + html_attribute_escape(href) + "\">\n"
-}
-
-///|
-fn html_attribute_escape(value : String) -> String {
-  value
-  .replace_all(old="&", new="&amp;")
-  .replace_all(old="\"", new="&quot;")
-  .replace_all(old="<", new="&lt;")
-  .replace_all(old=">", new="&gt;")
 }
 
 ///|

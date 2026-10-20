@@ -347,7 +347,18 @@ pub async fn run_asset_sidecar() -> Unit {
     height=500,
     debug=true,
   )..capability(@proton_extension.capability(asset_sidecar_extension()))
-  app..identifier("dev.proton.e2e-fixtures").run_or_abort()
+  app
+  ..add_window(
+    "authored-base",
+    @proton.WindowConfig(
+      "Authored Base",
+      @proton.AppEntry::File(
+        @path.Path(entry).dirname().join("base.html").to_string(),
+      ),
+    ),
+  )
+  ..identifier("dev.proton.e2e-fixtures")
+  .run_or_abort()
 }
 
 ///|
