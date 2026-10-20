@@ -10,6 +10,7 @@ import {
   "moonbitlang/core/json",
   "moonbitlang/core/string",
   "moonbitlang/x/fs" @mbfs,
+  "moonbitlang/x/path",
   "moonbit-community/proton/core",
   "moonbit-community/proton/extension" @proton_extension,
   "moonbit-community/proton_contract",

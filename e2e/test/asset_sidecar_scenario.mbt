@@ -33,7 +33,13 @@ async fn run_asset_sidecar_scenario_page_probe(
   target : String,
   timeout : Int32,
 ) -> Unit {
-  let page = connect_spawned_page(tasks, app, target, timeout)
+  let page = connect_spawned_page(
+    tasks,
+    app,
+    target,
+    timeout,
+    title="Asset Sidecar Resources",
+  )
   wait_for_ready(
     page,
     scenario_ready_expression("46_asset_sidecar_resources"),
@@ -46,6 +52,52 @@ async fn run_asset_sidecar_scenario_page_probe(
   let value = evaluate_json(page, asset_sidecar_probe_expression(), true)
   let result : AssetSidecarScenarioProbe = decode_probe(value, "asset sidecar")
   assert_asset_sidecar_probe(result, value)
+  let based = connect_spawned_page(
+    tasks,
+    app,
+    target,
+    timeout,
+    title="Authored Base",
+  )
+  wait_for_cdp_expression(
+    based, "document.readyState === 'complete'", "authored base document load", timeout,
+  )
+  let resources = evaluate_json(
+    based,
+    (
+      #|({
+      #|  base_uri: document.baseURI,
+      #|  base_count: document.querySelectorAll('base').length,
+      #|  script_result: document.querySelector('#resource-result')?.textContent,
+      #|  css_loaded: getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() !== '',
+      #|  compat_mode: document.compatMode,
+      #|})
+    ),
+    false,
+  )
+  guard resources
+    is {
+      "base_uri": String("https://proton.localhost/resources/"),
+      "base_count": Number(1.0, ..),
+      "script_result": String("Relative script loaded"),
+      "css_loaded": True,
+      "compat_mode": String("CSS1Compat"),
+      ..
+    } else {
+    fail("authored base resources were not loaded: " + resources.stringify())
+  }
+  let source = @fs.read_file(
+    join_path(
+      repository_root(),
+      "examples/46_asset_sidecar_resources/app/app.html",
+    ),
+  ).text()
+  assert_eq(
+    evaluate_json(
+      page, "fetch(location.href).then(response => response.text())", true,
+    ),
+    Json(source),
+  )
   ignore(
     evaluate_json(
       page, "location.href = new URL('navigated.html', location.href).href", false,
@@ -127,7 +179,7 @@ fn asset_sidecar_probe_expression() -> String {
     #|    css_loaded: getComputedStyle(document.documentElement)
     #|      .getPropertyValue("--accent")
     #|      .trim() !== "",
-    #|    script_element_present: Boolean(document.querySelector('script[src="/app.js"]')),
+    #|    script_element_present: Boolean(document.querySelector('script[src="./app.js"]')),
     #|    worker_reply: workerReply,
     #|    command_reply: commandReply,
     #|    delayed_reply: delayedReply,

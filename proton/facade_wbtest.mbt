@@ -766,32 +766,6 @@ test "extension events use structured bridge transport JSON" {
 }
 
 ///|
-test "file entry only injects a base URL for relative assets" {
-  let html =
-    #|<html><head><link rel="stylesheet" href="app.css"></head><body><script src="app.js"></script></body></html>
-  let injected = inject_html_bootstrap(
-    html,
-    base_tag("proton://app/D:/Code/proton-demo/app/"),
-  )
-  assert_true(
-    injected.contains(
-      "<head>\n<base href=\"proton://app/D:/Code/proton-demo/app/\">",
-    ),
-  )
-  assert_true(injected.contains("href=\"app.css\""))
-  assert_true(injected.contains("src=\"app.js\""))
-  assert_false(injected.contains("__MoonBit__"))
-}
-
-///|
-test "base tags escape HTML attributes" {
-  inspect(
-    base_tag("file:///tmp/a&b\"c/"),
-    content="<base href=\"file:///tmp/a&amp;b&quot;c/\">\n",
-  )
-}
-
-///|
 test "asset urls expose a document root instead of the local file path" {
   let path = "46_asset_sidecar_resources/app/app.html"
   let file_path = resolve_asset_path(path)
@@ -2213,19 +2187,6 @@ test "command host rejects missing extension dependencies" {
     }
     error => fail(error.message())
   }
-}
-
-///|
-test "entry HTML injection does not install the bridge" {
-  let head_html = "<html><head><title>A</title></head><head></head></html>"
-  let injected = inject_html_bootstrap(
-    head_html,
-    base_tag("proton://app/example/"),
-  )
-  assert_true(injected.contains("<head>\n<base href="))
-  assert_false(injected.contains("<script>"))
-  assert_false(injected.contains("__MoonBit__"))
-  inspect(injected.contains("</head><head>\n<base"), content="false")
 }
 
 ///|
