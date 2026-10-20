@@ -79,6 +79,7 @@ async fn with_fs_test_root(
 }
 
 ///|
+#cfg(not(platform="windows"))
 async fn test_write_file(
   context : @proton.CommandContext,
   path : String,
