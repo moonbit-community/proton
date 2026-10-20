@@ -3,6 +3,7 @@ import {
   "moonbitlang/core/encoding/utf8",
   "moonbitlang/async",
   "moonbitlang/async/fs" @async_fs,
+  "moonbitlang/async/os_error",
   "moonbitlang/x/path" @mbpath,
   "moonbit-community/proton",
   "moonbit-community/proton/extension" @proton_extension,

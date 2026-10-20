@@ -201,12 +201,19 @@ async fn mkdir_path(payload : MkdirPayload) -> Bool raise FsError {
 }
 
 ///|
-async fn remove_file(path : String) -> Bool raise FsError {
-  let existed = exists_path(path)
-  if !existed {
-    return false
+async fn path_entry_kind(path : String) -> @async_fs.FileKind? {
+  Some(@async_fs.kind(path, follow_symlink=false)) catch {
+    @os_error.OSError(_) as error if error.is_ENOENT() => None
+    error => raise error
   }
+}
+
+///|
+async fn remove_file(path : String) -> Bool raise FsError {
   try {
+    if path_entry_kind(path) is None {
+      return false
+    }
     @async_fs.remove(path)
     true
   } catch {
@@ -216,17 +223,23 @@ async fn remove_file(path : String) -> Bool raise FsError {
 
 ///|
 async fn remove_dir(payload : RemovePathPayload) -> Bool raise FsError {
-  let existed = exists_path(payload.path)
-  if !existed {
-    return false
-  }
   try {
+    match path_entry_kind(payload.path) {
+      None => return false
+      Some(SymLink) =>
+        raise RemoveDirectoryFailed(
+          path=payload.path,
+          detail="rmdir does not follow symbolic links; use remove for the link itself",
+        )
+      _ => ()
+    }
     @async_fs.rmdir(
       payload.path,
       recursive=option_bool(payload.recursive, false),
     )
     true
   } catch {
+    RemoveDirectoryFailed(..) as error => raise error
     error =>
       raise RemoveDirectoryFailed(
         path=payload.path,

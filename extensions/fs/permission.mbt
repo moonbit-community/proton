@@ -44,7 +44,8 @@ pub fn PermissionRoot::PermissionRoot(
 ///
 /// Relative roots and renderer paths are resolved against the application's
 /// trusted configuration directory. Access is allowed only when the canonical
-/// target remains at or below a root that grants the requested command.
+/// target (or directory entry for non-following operations) remains at or below
+/// a root that grants the requested command.
 pub fn capability(
   roots : Array[PermissionRoot],
 ) -> @proton_extension.RendererCapability raise FsError {
@@ -218,23 +219,33 @@ fn resolve_path_against_base(path : String, base_path : String) -> String {
 }
 
 ///|
-async fn canonical_candidate(path : String) -> String raise FsError {
-  let exists = @async_fs.exists(path) catch {
-    error =>
-      raise PermissionPathResolutionFailed(path~, detail=fs_error_detail(error))
-  }
-  if exists {
-    return @async_fs.realpath(path) catch {
+async fn canonical_candidate(
+  path : String,
+  follow_symlink~ : Bool = true,
+) -> String raise FsError {
+  let normalized = @mbpath.Path(path_for_platform(path)).normalize()
+  let raw_parent = normalized.dirname().to_string()
+  let parent = if raw_parent == "" { "." } else { raw_parent }
+  // A dangling link is an existing entry, not a new file. Its realpath must
+  // succeed before a content operation can be authorized.
+  if follow_symlink || parent == normalized.to_string() {
+    let kind = path_entry_kind(path) catch {
       error =>
         raise PermissionPathResolutionFailed(
           path~,
           detail=fs_error_detail(error),
         )
     }
+    if kind is Some(_) {
+      return @async_fs.realpath(path) catch {
+        error =>
+          raise PermissionPathResolutionFailed(
+            path~,
+            detail=fs_error_detail(error),
+          )
+      }
+    }
   }
-  let normalized = @mbpath.Path(path_for_platform(path)).normalize()
-  let raw_parent = normalized.dirname().to_string()
-  let parent = if raw_parent == "" { "." } else { raw_parent }
   guard parent != normalized.to_string() else {
     raise PermissionPathResolutionFailed(path~, detail="no existing ancestor")
   }
@@ -275,21 +286,17 @@ async fn resolved_permission_roots(
 }
 
 ///|
-/// Resolves one renderer-supplied path to the canonical target the operation
-/// may act on.
-///
-/// The canonical form is what gets authorized and what gets returned. Handing
-/// back the pre-canonical path instead would leave the operation to re-resolve
-/// every symlink component itself, so a component swapped between this check
-/// and the operation would be followed to a target that was never authorized.
+/// Authorizes the resolved target for content operations, or the canonical
+/// parent plus final entry for operations that must not follow the final link.
 async fn authorize_path(
   context : @proton.CommandContext,
   command : String,
   path : String,
+  follow_symlink~ : Bool = true,
 ) -> String raise FsError {
   let scope = resolved_permission_scope(context)
   let resolved_path = resolve_path_against_base(path, scope.base_path)
-  let candidate = canonical_candidate(resolved_path)
+  let candidate = canonical_candidate(resolved_path, follow_symlink~)
   for root in resolved_permission_roots(scope.roots) {
     if root.commands.contains(command) && path_is_within(root.path, candidate) {
       return candidate
@@ -307,11 +314,12 @@ async fn[T] with_authorized_path(
   context : @proton.CommandContext,
   command : String,
   path : String,
+  follow_symlink~ : Bool = true,
   action : async (String) -> T,
 ) -> T {
   fs_operation_lock.acquire()
   defer fs_operation_lock.release()
-  let resolved = authorize_path(context, command, path)
+  let resolved = authorize_path(context, command, path, follow_symlink~)
   action(resolved)
 }
 
@@ -321,11 +329,17 @@ async fn[T] with_authorized_paths(
   command : String,
   first : String,
   second : String,
+  follow_symlink~ : Bool = true,
   action : async (String, String) -> T,
 ) -> T {
   fs_operation_lock.acquire()
   defer fs_operation_lock.release()
-  let resolved_first = authorize_path(context, command, first)
-  let resolved_second = authorize_path(context, command, second)
+  let resolved_first = authorize_path(context, command, first, follow_symlink~)
+  let resolved_second = authorize_path(
+    context,
+    command,
+    second,
+    follow_symlink~,
+  )
   action(resolved_first, resolved_second)
 }

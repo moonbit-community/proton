@@ -320,6 +320,8 @@ Application commands use `app:` routes; extension operations use `ext:<extension
 
 Supported filesystem operation names include `read_file`, `write_file`, `mkdir`, `readdir`, `remove`, `rmdir`, `rename`, `realpath`, `exists`, `kind` and `size`. Canonical path checks and operations are serialized within the extension.
 
+Content operations follow existing symbolic links only to targets inside an authorized root. Unresolved links are rejected, including when creating a file. `remove`, `rename`, and `kind(follow_symlink=false)` operate on the final directory entry while still resolving and authorizing its parent. Removing or renaming a link leaves its target unchanged. `rmdir` rejects a final symbolic link even for recursive removal; use `remove` for the link itself.
+
 **Availability and errors**
 
 A missing capability leaves its route unavailable. An installed extension can still reject a request because of scope, invalid arguments, a platform limitation or an operating-system failure. These failures are reported through the command bridge; installation does not imply that every native operation will succeed.
