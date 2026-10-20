@@ -3,6 +3,7 @@ name = "moonbit-community/proton_power_monitor"
 version = "0.5.0"
 
 import {
+  "moonbitlang/async@0.22.5",
   "moonbit-community/proton_ffi@0.5.0",
 }
 
