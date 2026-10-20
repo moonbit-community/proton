@@ -31,7 +31,11 @@ async fn prepare_file_entry(
   let document = ResourceDocument::{
     url: asset_document_url(resolved),
     content: @utf8.encode(
-      inject_html_bootstrap(html, base_tag(asset_base_url())),
+      if html_declares_base(html) {
+        html
+      } else {
+        inject_html_bootstrap(html, base_tag(asset_base_url()))
+      },
     ),
   }
   DocumentEntry(document, Some(@mbpath.Path(canonical).dirname().to_string()))
@@ -85,6 +89,23 @@ fn inject_html_bootstrap(html : String, bootstrap : String) -> String {
   } else {
     bootstrap + html
   }
+}
+
+///|
+/// Whether the entry document declares its own `<base>` element. Only the
+/// first base element takes effect, so an injected default would override a
+/// resource root the document chose. Like the injection, this is a textual
+/// check over the document source.
+fn html_declares_base(html : String) -> Bool {
+  let mut rest = html.to_lower()[:]
+  while rest.find("<base") is Some(index) {
+    rest = rest[index + "<base".length():]
+    if rest is [next, ..] &&
+      (next == '>' || next == '/' || next.is_ascii_whitespace()) {
+      return true
+    }
+  }
+  false
 }
 
 ///|

@@ -23,7 +23,7 @@ async fn main {
 
 ## Implementation
 
-The asset entry names an HTML document within the resource tree. Its neighboring scripts, styles and worker source remain separate files, so their relative URLs must remain valid after packaging. The extension registration is independent of asset selection.
+The asset entry names an HTML document within the resource tree. Its neighboring scripts, styles and worker source remain separate files, so their relative URLs must remain valid after packaging. Proton serves the entry at the application origin and inserts `<base href="https://proton.localhost/">`, so relative URLs resolve against the entry's directory; a document that declares its own `<base>` element keeps it instead. The extension registration is independent of asset selection.
 
 When adapting this example, keep the resource tree layout and configure packaging to include it. Verify a packaged application with the development server stopped. A working development URL does not demonstrate that sidecar files were packaged.
 

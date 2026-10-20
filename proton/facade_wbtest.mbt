@@ -784,6 +784,52 @@ test "file entry only injects a base URL for relative assets" {
 }
 
 ///|
+test "only a base element counts as a declared document base" {
+  for
+    html in [
+      "<html><head><base href=\"/assets/v1/\"></head></html>", "<HEAD><BASE HREF=\"/assets/\"></HEAD>",
+      "<head>\n<base\nhref=\"/assets/\"></head>", "<head><base/></head>", "<head><base></head>",
+    ] {
+    assert_true(html_declares_base(html))
+  }
+  for
+    html in [
+      "<html><head><link rel=\"stylesheet\" href=\"app.css\"></head></html>", "<head><basefont size=\"3\"></head>",
+      "<head><title>base</title></head>", "<head><base",
+    ] {
+    assert_false(html_declares_base(html))
+  }
+}
+
+///|
+async test "file entries keep the base element their document declares" {
+  let dir = @async_fs.tmpdir(prefix="proton-entry-base-")
+  defer @async_fs.rmdir(dir, recursive=true)
+  let declared = "\{dir}/declared.html"
+  let html = "<html><head><base href=\"/assets/v1/\"><script src=\"app.js\"></script></head></html>"
+  @async_fs.write_file(declared, html, create_mode=CreateOrTruncate)
+  guard prepare_entry(@manifest.AppEntry::File(declared))
+    is DocumentEntry(document, _) else {
+    fail("a file entry is a document entry")
+  }
+  assert_eq(@utf8.decode(document.content), html)
+  let undeclared = "\{dir}/undeclared.html"
+  @async_fs.write_file(
+    undeclared,
+    "<html><head></head></html>",
+    create_mode=CreateOrTruncate,
+  )
+  guard prepare_entry(@manifest.AppEntry::File(undeclared))
+    is DocumentEntry(document, _) else {
+    fail("a file entry is a document entry")
+  }
+  assert_eq(
+    @utf8.decode(document.content),
+    "<html><head>\n<base href=\"https://proton.localhost/\">\n</head></html>",
+  )
+}
+
+///|
 test "base tags escape HTML attributes" {
   inspect(
     base_tag("file:///tmp/a&b\"c/"),
