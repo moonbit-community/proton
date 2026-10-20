@@ -211,10 +211,10 @@ static void *screen_monitor_linux_watch_thread(void *param) {
   if (dpy == NULL) {
     screen_monitor_set_watch_error(state, "XOpenDisplay failed");
     pthread_mutex_lock(&state->event_lock);
+    state->watch_started = 0;
     state->ready = 1;
     pthread_cond_signal(&state->ready_cond);
     pthread_mutex_unlock(&state->event_lock);
-    state->watch_started = 0;
     g_linux_state = NULL;
     return NULL;
   }
@@ -232,10 +232,10 @@ static void *screen_monitor_linux_watch_thread(void *param) {
   screen_monitor_platform_enumerate(state);
 
   pthread_mutex_lock(&state->event_lock);
+  state->watch_started = 1;
   state->ready = 1;
   pthread_cond_signal(&state->ready_cond);
   pthread_mutex_unlock(&state->event_lock);
-  state->watch_started = 1;
 
   XEvent ev;
   while (!state->watch_stop) {
@@ -264,6 +264,8 @@ int32_t screen_monitor_platform_start_watching(screen_monitor_state_t *state) {
   g_linux_state = state;
   pthread_mutex_lock(&state->event_lock);
   state->ready = 0;
+  state->watch_started = 0;
+  state->watch_error[0] = '\0';
   pthread_mutex_unlock(&state->event_lock);
   state->watch_stop = 0;
   state->thread_started = 1;
@@ -279,8 +281,9 @@ int32_t screen_monitor_platform_start_watching(screen_monitor_state_t *state) {
   while (!state->ready) {
     pthread_cond_wait(&state->ready_cond, &state->event_lock);
   }
+  int started = state->watch_started;
   pthread_mutex_unlock(&state->event_lock);
-  if (!state->watch_started) {
+  if (!started) {
     pthread_join(state->watch_thread, NULL);
     state->thread_started = 0;
     return screen_monitor_STATUS_BACKEND_UNAVAILABLE;
