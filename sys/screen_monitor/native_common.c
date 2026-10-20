@@ -48,6 +48,9 @@ void screen_monitor_lock_init(screen_monitor_state_t *state) {
   InitializeCriticalSection(&state->event_lock);
 #else
   pthread_mutex_init(&state->event_lock, NULL);
+#if !defined(__APPLE__)
+  pthread_cond_init(&state->ready_cond, NULL);
+#endif
 #endif
 }
 
@@ -58,6 +61,9 @@ void screen_monitor_lock_destroy(screen_monitor_state_t *state) {
 #if defined(_WIN32)
   DeleteCriticalSection(&state->event_lock);
 #else
+#if !defined(__APPLE__)
+  pthread_cond_destroy(&state->ready_cond);
+#endif
   pthread_mutex_destroy(&state->event_lock);
 #endif
 }
