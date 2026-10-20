@@ -2,6 +2,7 @@
 
 #if !defined(_WIN32) && !defined(__APPLE__)
 
+#include <dbus/dbus.h>
 #include <dirent.h>
 #include <dlfcn.h>
 #include <pthread.h>
@@ -10,7 +11,7 @@
 #include <sys/stat.h>
 
 void power_monitor_platform_init(power_monitor_state_t *state) {
-  (void)state;
+  pthread_cond_init(&state->ready_cond, NULL);
 }
 
 int32_t power_monitor_platform_query_idle(power_monitor_state_t *state) {
@@ -90,120 +91,30 @@ int32_t power_monitor_platform_query_source(power_monitor_state_t *state) {
 
 /* --- Event watch backend (D-Bus) ---------------------------------------- */
 
-/* Minimal, ABI-stable views of the libdbus-1 types the backend touches. The
-   library is loaded lazily through dlopen so the system bus is an optional
-   dependency: a session without dbus falls back to best-effort poll queries. */
-
-typedef int dbus_bool_t;
-
-typedef struct DBusError {
-  const char *name;
-  const char *message;
-  unsigned int dummy1;
-  unsigned int dummy2;
-  unsigned int dummy3;
-} DBusError;
-
-typedef struct DBusMessageIter {
-  void *dummy1;
-  void *dummy2;
-  unsigned int dummy3;
-  int dummy4;
-  int dummy5;
-  int dummy6;
-  int dummy7;
-  int dummy8;
-  int dummy9;
-  int dummy10;
-  int dummy11;
-  int pad1;
-  void *pad2;
-  void *pad3;
-} DBusMessageIter;
-
-typedef enum {
-  power_monitor_DBUS_BUS_SESSION = 0,
-  power_monitor_DBUS_BUS_SYSTEM = 1,
-  power_monitor_DBUS_BUS_STARTER = 2,
-} power_monitor_dbus_bus_type;
-
-typedef enum {
-  power_monitor_DBUS_HANDLER_HANDLED = 0,
-  power_monitor_DBUS_HANDLER_NOT_YET_HANDLED = 1,
-  power_monitor_DBUS_HANDLER_NEED_MEMORY = 2,
-} power_monitor_dbus_handler_result;
-
-typedef struct DBusConnection DBusConnection;
-typedef struct DBusMessage DBusMessage;
-
-typedef power_monitor_dbus_handler_result (
-    *power_monitor_dbus_handle_message_fn)(DBusConnection *, DBusMessage *,
-                                           void *);
-typedef void (*power_monitor_dbus_free_fn)(void *);
-
-typedef DBusConnection *(*power_monitor_dbus_bus_get_fn)(
-    power_monitor_dbus_bus_type, DBusError *);
-typedef dbus_bool_t (*power_monitor_dbus_bus_add_match_fn)(
-    DBusConnection *, const char *, DBusError *);
-typedef dbus_bool_t (*power_monitor_dbus_connection_set_filter_fn)(
-    DBusConnection *, power_monitor_dbus_handle_message_fn, void *,
-    power_monitor_dbus_free_fn);
-typedef dbus_bool_t (*power_monitor_dbus_connection_read_write_dispatch_fn)(
-    DBusConnection *, int);
-typedef void (*power_monitor_dbus_connection_close_fn)(DBusConnection *);
-typedef void (*power_monitor_dbus_connection_unref_fn)(DBusConnection *);
-typedef void (*power_monitor_dbus_connection_set_exit_on_disconnect_fn)(
-    DBusConnection *, dbus_bool_t);
-typedef const char *(*power_monitor_dbus_message_get_member_fn)(
-    DBusMessage *);
-typedef const char *(*power_monitor_dbus_message_get_interface_fn)(
-    DBusMessage *);
-typedef const char *(*power_monitor_dbus_message_get_path_fn)(DBusMessage *);
-typedef dbus_bool_t (*power_monitor_dbus_message_iter_init_fn)(
-    DBusMessage *, DBusMessageIter *);
-typedef int (*power_monitor_dbus_message_iter_get_arg_type_fn)(
-    const DBusMessageIter *);
-typedef void (*power_monitor_dbus_message_iter_get_basic_fn)(
-    DBusMessageIter *, void *);
-typedef dbus_bool_t (*power_monitor_dbus_message_iter_next_fn)(
-    DBusMessageIter *);
-typedef void (*power_monitor_dbus_message_iter_recurse_fn)(
-    DBusMessageIter *, DBusMessageIter *);
-typedef void (*power_monitor_dbus_error_init_fn)(DBusError *);
-typedef dbus_bool_t (*power_monitor_dbus_error_is_set_fn)(const DBusError *);
-typedef void (*power_monitor_dbus_error_free_fn)(DBusError *);
-
-#define POWER_MONITOR_DBUS_TYPE_INVALID 0
-#define POWER_MONITOR_DBUS_TYPE_BOOLEAN 'b'
-#define POWER_MONITOR_DBUS_TYPE_STRING 's'
-#define POWER_MONITOR_DBUS_TYPE_ARRAY 'a'
-#define POWER_MONITOR_DBUS_TYPE_VARIANT 'v'
-#define POWER_MONITOR_DBUS_TYPE_DICT_ENTRY '{'
-
+/* Compile against the official ABI, but load lazily so libdbus remains an
+   optional runtime dependency. The library stays loaded for process lifetime. */
 static struct {
-  power_monitor_dbus_bus_get_fn bus_get;
-  power_monitor_dbus_bus_add_match_fn bus_add_match;
-  power_monitor_dbus_connection_set_filter_fn connection_set_filter;
-  power_monitor_dbus_connection_read_write_dispatch_fn
-      connection_read_write_dispatch;
-  power_monitor_dbus_connection_close_fn connection_close;
-  power_monitor_dbus_connection_unref_fn connection_unref;
-  power_monitor_dbus_connection_set_exit_on_disconnect_fn
-      connection_set_exit_on_disconnect;
-  power_monitor_dbus_message_get_member_fn message_get_member;
-  power_monitor_dbus_message_get_interface_fn message_get_interface;
-  power_monitor_dbus_message_get_path_fn message_get_path;
-  power_monitor_dbus_message_iter_init_fn message_iter_init;
-  power_monitor_dbus_message_iter_get_arg_type_fn message_iter_get_arg_type;
-  power_monitor_dbus_message_iter_get_basic_fn message_iter_get_basic;
-  power_monitor_dbus_message_iter_next_fn message_iter_next;
-  power_monitor_dbus_message_iter_recurse_fn message_iter_recurse;
-  power_monitor_dbus_error_init_fn error_init;
-  power_monitor_dbus_error_is_set_fn error_is_set;
-  power_monitor_dbus_error_free_fn error_free;
-  int32_t loaded;
-  int32_t ready;
+  __typeof__(&dbus_bus_get_private) bus_get_private;
+  __typeof__(&dbus_bus_add_match) bus_add_match;
+  __typeof__(&dbus_connection_add_filter) connection_add_filter;
+  __typeof__(&dbus_connection_read_write_dispatch) connection_read_write_dispatch;
+  __typeof__(&dbus_connection_close) connection_close;
+  __typeof__(&dbus_connection_unref) connection_unref;
+  __typeof__(&dbus_connection_set_exit_on_disconnect) connection_set_exit_on_disconnect;
+  __typeof__(&dbus_message_get_member) message_get_member;
+  __typeof__(&dbus_message_get_interface) message_get_interface;
+  __typeof__(&dbus_message_get_path) message_get_path;
+  __typeof__(&dbus_message_iter_init) message_iter_init;
+  __typeof__(&dbus_message_iter_get_arg_type) message_iter_get_arg_type;
+  __typeof__(&dbus_message_iter_get_basic) message_iter_get_basic;
+  __typeof__(&dbus_message_iter_next) message_iter_next;
+  __typeof__(&dbus_message_iter_recurse) message_iter_recurse;
+  __typeof__(&dbus_error_init) error_init;
+  __typeof__(&dbus_error_is_set) error_is_set;
+  __typeof__(&dbus_error_free) error_free;
+  int ready;
 } g_dbus;
+static pthread_once_t dbus_once = PTHREAD_ONCE_INIT;
 
 static void power_monitor_set_watch_error(power_monitor_state_t *state,
                                           const char *message) {
@@ -213,79 +124,37 @@ static void power_monitor_set_watch_error(power_monitor_state_t *state,
   snprintf(state->watch_error, sizeof(state->watch_error), "%s", message);
 }
 
-static int32_t power_monitor_load_dbus_symbols(void) {
-  if (g_dbus.loaded) {
-    return g_dbus.ready;
-  }
-  g_dbus.loaded = 1;
+static void power_monitor_load_dbus_symbols_once(void) {
   void *lib = dlopen("libdbus-1.so.3", RTLD_LAZY | RTLD_LOCAL);
-  if (lib == NULL) {
-    lib = dlopen("libdbus-1.so", RTLD_LAZY | RTLD_LOCAL);
-  }
-  if (lib == NULL) {
-    return 0;
-  }
-  g_dbus.bus_get = (power_monitor_dbus_bus_get_fn)dlsym(lib, "dbus_bus_get");
-  g_dbus.bus_add_match =
-      (power_monitor_dbus_bus_add_match_fn)dlsym(lib, "dbus_bus_add_match");
-  g_dbus.connection_set_filter =
-      (power_monitor_dbus_connection_set_filter_fn)dlsym(
-          lib, "dbus_connection_set_filter");
-  g_dbus.connection_read_write_dispatch =
-      (power_monitor_dbus_connection_read_write_dispatch_fn)dlsym(
-          lib, "dbus_connection_read_write_dispatch");
-  g_dbus.connection_close =
-      (power_monitor_dbus_connection_close_fn)dlsym(lib,
-                                                    "dbus_connection_close");
-  g_dbus.connection_unref =
-      (power_monitor_dbus_connection_unref_fn)dlsym(lib,
-                                                    "dbus_connection_unref");
-  g_dbus.connection_set_exit_on_disconnect =
-      (power_monitor_dbus_connection_set_exit_on_disconnect_fn)dlsym(
-          lib, "dbus_connection_set_exit_on_disconnect");
-  g_dbus.message_get_member =
-      (power_monitor_dbus_message_get_member_fn)dlsym(lib,
-                                                      "dbus_message_get_member");
-  g_dbus.message_get_interface =
-      (power_monitor_dbus_message_get_interface_fn)dlsym(
-          lib, "dbus_message_get_interface");
-  g_dbus.message_get_path =
-      (power_monitor_dbus_message_get_path_fn)dlsym(lib,
-                                                    "dbus_message_get_path");
-  g_dbus.message_iter_init =
-      (power_monitor_dbus_message_iter_init_fn)dlsym(lib,
-                                                     "dbus_message_iter_init");
-  g_dbus.message_iter_get_arg_type =
-      (power_monitor_dbus_message_iter_get_arg_type_fn)dlsym(
-          lib, "dbus_message_iter_get_arg_type");
-  g_dbus.message_iter_get_basic =
-      (power_monitor_dbus_message_iter_get_basic_fn)dlsym(
-          lib, "dbus_message_iter_get_basic");
-  g_dbus.message_iter_next =
-      (power_monitor_dbus_message_iter_next_fn)dlsym(lib,
-                                                     "dbus_message_iter_next");
-  g_dbus.message_iter_recurse =
-      (power_monitor_dbus_message_iter_recurse_fn)dlsym(
-          lib, "dbus_message_iter_recurse");
-  g_dbus.error_init = (power_monitor_dbus_error_init_fn)dlsym(lib,
-                                                              "dbus_error_init");
-  g_dbus.error_is_set =
-      (power_monitor_dbus_error_is_set_fn)dlsym(lib, "dbus_error_is_set");
-  g_dbus.error_free = (power_monitor_dbus_error_free_fn)dlsym(lib,
-                                                              "dbus_error_free");
-  g_dbus.ready =
-      g_dbus.bus_get != NULL && g_dbus.bus_add_match != NULL &&
-      g_dbus.connection_set_filter != NULL &&
-      g_dbus.connection_read_write_dispatch != NULL &&
-      g_dbus.connection_close != NULL && g_dbus.connection_unref != NULL &&
-      g_dbus.message_get_member != NULL &&
-      g_dbus.message_get_interface != NULL &&
-      g_dbus.message_get_path != NULL && g_dbus.message_iter_init != NULL &&
-      g_dbus.message_iter_get_arg_type != NULL &&
-      g_dbus.message_iter_get_basic != NULL &&
-      g_dbus.message_iter_next != NULL &&
-      g_dbus.message_iter_recurse != NULL && g_dbus.error_init != NULL &&
-      g_dbus.error_is_set != NULL && g_dbus.error_free != NULL;
+  if (lib == NULL) lib = dlopen("libdbus-1.so", RTLD_LAZY | RTLD_LOCAL);
+  if (lib == NULL) return;
+#define LOAD(name) \
+  g_dbus.name = (__typeof__(g_dbus.name))dlsym(lib, "dbus_" #name); \
+  if (g_dbus.name == NULL) { dlclose(lib); return; }
+  LOAD(bus_get_private);
+  LOAD(bus_add_match);
+  LOAD(connection_add_filter);
+  LOAD(connection_read_write_dispatch);
+  LOAD(connection_close);
+  LOAD(connection_unref);
+  LOAD(connection_set_exit_on_disconnect);
+  LOAD(message_get_member);
+  LOAD(message_get_interface);
+  LOAD(message_get_path);
+  LOAD(message_iter_init);
+  LOAD(message_iter_get_arg_type);
+  LOAD(message_iter_get_basic);
+  LOAD(message_iter_next);
+  LOAD(message_iter_recurse);
+  LOAD(error_init);
+  LOAD(error_is_set);
+  LOAD(error_free);
+#undef LOAD
+  g_dbus.ready = 1;
+}
+
+static int power_monitor_load_dbus_symbols(void) {
+  pthread_once(&dbus_once, power_monitor_load_dbus_symbols_once);
   return g_dbus.ready;
 }
 
@@ -299,7 +168,7 @@ static void power_monitor_handle_properties_changed(power_monitor_state_t *state
   }
   DBusMessageIter iter;
   if (!g_dbus.message_iter_init(message, &iter) ||
-      g_dbus.message_iter_get_arg_type(&iter) != POWER_MONITOR_DBUS_TYPE_STRING) {
+      g_dbus.message_iter_get_arg_type(&iter) != DBUS_TYPE_STRING) {
     return;
   }
   const char *iface = NULL;
@@ -308,17 +177,17 @@ static void power_monitor_handle_properties_changed(power_monitor_state_t *state
     return;
   }
   if (!g_dbus.message_iter_next(&iter) ||
-      g_dbus.message_iter_get_arg_type(&iter) != POWER_MONITOR_DBUS_TYPE_ARRAY) {
+      g_dbus.message_iter_get_arg_type(&iter) != DBUS_TYPE_ARRAY) {
     return;
   }
   DBusMessageIter array;
   g_dbus.message_iter_recurse(&iter, &array);
   while (g_dbus.message_iter_get_arg_type(&array) ==
-         POWER_MONITOR_DBUS_TYPE_DICT_ENTRY) {
+         DBUS_TYPE_DICT_ENTRY) {
     DBusMessageIter entry;
     g_dbus.message_iter_recurse(&array, &entry);
     if (g_dbus.message_iter_get_arg_type(&entry) !=
-        POWER_MONITOR_DBUS_TYPE_STRING) {
+        DBUS_TYPE_STRING) {
       if (!g_dbus.message_iter_next(&array)) {
         break;
       }
@@ -329,11 +198,11 @@ static void power_monitor_handle_properties_changed(power_monitor_state_t *state
     if (key != NULL && strcmp(key, "OnBattery") == 0 &&
         g_dbus.message_iter_next(&entry) &&
         g_dbus.message_iter_get_arg_type(&entry) ==
-            POWER_MONITOR_DBUS_TYPE_VARIANT) {
+            DBUS_TYPE_VARIANT) {
       DBusMessageIter variant;
       g_dbus.message_iter_recurse(&entry, &variant);
       if (g_dbus.message_iter_get_arg_type(&variant) ==
-          POWER_MONITOR_DBUS_TYPE_BOOLEAN) {
+          DBUS_TYPE_BOOLEAN) {
         dbus_bool_t on_battery = 0;
         g_dbus.message_iter_get_basic(&variant, &on_battery);
         int32_t new_source = on_battery ? power_monitor_SOURCE_BATTERY
@@ -352,21 +221,21 @@ static void power_monitor_handle_properties_changed(power_monitor_state_t *state
   }
 }
 
-static power_monitor_dbus_handler_result power_monitor_dbus_filter(
+static DBusHandlerResult power_monitor_dbus_filter(
     DBusConnection *connection, DBusMessage *message, void *user_data) {
   (void)connection;
   power_monitor_state_t *state = (power_monitor_state_t *)user_data;
   const char *iface = g_dbus.message_get_interface(message);
   const char *member = g_dbus.message_get_member(message);
   if (iface == NULL || member == NULL) {
-    return power_monitor_DBUS_HANDLER_NOT_YET_HANDLED;
+    return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
   }
   if (strcmp(iface, "org.freedesktop.login1.Manager") == 0 &&
       strcmp(member, "PrepareForSleep") == 0) {
     DBusMessageIter iter;
     if (g_dbus.message_iter_init(message, &iter) &&
         g_dbus.message_iter_get_arg_type(&iter) ==
-            POWER_MONITOR_DBUS_TYPE_BOOLEAN) {
+            DBUS_TYPE_BOOLEAN) {
       dbus_bool_t sleeping = 0;
       g_dbus.message_iter_get_basic(&iter, &sleeping);
       power_monitor_push_event(
@@ -383,39 +252,29 @@ static power_monitor_dbus_handler_result power_monitor_dbus_filter(
              strcmp(member, "PropertiesChanged") == 0) {
     power_monitor_handle_properties_changed(state, message);
   }
-  return power_monitor_DBUS_HANDLER_NOT_YET_HANDLED;
+  return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
 }
 
 static void *power_monitor_linux_watch_thread_main(void *param) {
   power_monitor_state_t *state = (power_monitor_state_t *)param;
 
-  if (!power_monitor_load_dbus_symbols()) {
-    power_monitor_set_watch_error(state, "libdbus unavailable");
-    pthread_mutex_lock(&state->event_lock);
-    state->ready = 1;
-    pthread_cond_signal(&state->ready_cond);
-    pthread_mutex_unlock(&state->event_lock);
-    return NULL;
-  }
-
   DBusError error;
   g_dbus.error_init(&error);
-  DBusConnection *conn = g_dbus.bus_get(power_monitor_DBUS_BUS_SYSTEM, &error);
+  DBusConnection *conn = g_dbus.bus_get_private(DBUS_BUS_SYSTEM, &error);
   if (conn == NULL) {
     power_monitor_set_watch_error(
-        state, error.message != NULL ? error.message : "dbus_bus_get failed");
+        state, error.message != NULL ? error.message : "dbus_bus_get_private failed");
     g_dbus.error_free(&error);
-    pthread_mutex_lock(&state->event_lock);
-    state->ready = 1;
-    pthread_cond_signal(&state->ready_cond);
-    pthread_mutex_unlock(&state->event_lock);
-    return NULL;
+    goto ready;
   }
   g_dbus.error_free(&error);
 
   /* Do not let a dead bus take the whole process down. */
   g_dbus.connection_set_exit_on_disconnect(conn, 0);
-  g_dbus.connection_set_filter(conn, power_monitor_dbus_filter, state, NULL);
+  if (!g_dbus.connection_add_filter(conn, power_monitor_dbus_filter, state, NULL)) {
+    power_monitor_set_watch_error(state, "dbus_connection_add_filter failed");
+    goto close;
+  }
 
   static const char *const k_match_rules[] = {
       "type='signal',interface='org.freedesktop.login1.Manager',member="
@@ -430,10 +289,10 @@ static void *power_monitor_linux_watch_thread_main(void *param) {
     g_dbus.error_init(&error);
     g_dbus.bus_add_match(conn, k_match_rules[i], &error);
     if (g_dbus.error_is_set(&error)) {
-      if (state->watch_error[0] == '\0' && error.message != NULL) {
-        power_monitor_set_watch_error(state, error.message);
-      }
+      power_monitor_set_watch_error(state, error.message != NULL
+          ? error.message : "dbus_bus_add_match failed");
       g_dbus.error_free(&error);
+      goto close;
     }
   }
 
@@ -448,21 +307,39 @@ static void *power_monitor_linux_watch_thread_main(void *param) {
   pthread_cond_signal(&state->ready_cond);
   pthread_mutex_unlock(&state->event_lock);
 
-  /* Dispatch loop: the short timeout keeps stop_watching responsive. */
-  while (!state->watch_stop) {
-    g_dbus.connection_read_write_dispatch(conn, 100);
+  /* Only this worker uses the private connection. Stop is synchronized with
+     the caller; a disconnected bus ends the worker instead of spinning. */
+  for (;;) {
+    pthread_mutex_lock(&state->event_lock);
+    int stop = state->watch_stop;
+    pthread_mutex_unlock(&state->event_lock);
+    if (stop) break;
+    if (!g_dbus.connection_read_write_dispatch(conn, 100)) {
+      power_monitor_set_watch_error(state, "D-Bus connection disconnected");
+      break;
+    }
   }
-
+close:
   g_dbus.connection_close(conn);
   g_dbus.connection_unref(conn);
+ready:
+  pthread_mutex_lock(&state->event_lock);
   state->watch_started = 0;
+  state->ready = 1;
+  pthread_cond_signal(&state->ready_cond);
+  pthread_mutex_unlock(&state->event_lock);
   return NULL;
 }
 
 int32_t power_monitor_platform_start_watching(power_monitor_state_t *state) {
   if (state->thread_started) {
-    return power_monitor_STATUS_OK;
+    pthread_mutex_lock(&state->event_lock);
+    int started = state->watch_started;
+    pthread_mutex_unlock(&state->event_lock);
+    if (started) return power_monitor_STATUS_OK;
+    power_monitor_platform_stop_watching(state);
   }
+  state->watch_error[0] = '\0';
   if (!power_monitor_load_dbus_symbols()) {
     power_monitor_set_watch_error(state, "libdbus unavailable");
     return power_monitor_STATUS_BACKEND_UNAVAILABLE;
@@ -489,13 +366,16 @@ int32_t power_monitor_platform_start_watching(power_monitor_state_t *state) {
      contract (a failed backend reports BACKEND_UNAVAILABLE). */
   int32_t started = state->watch_started;
   pthread_mutex_unlock(&state->event_lock);
-  return started ? power_monitor_STATUS_OK
-                 : power_monitor_STATUS_BACKEND_UNAVAILABLE;
+  if (started) return power_monitor_STATUS_OK;
+  power_monitor_platform_stop_watching(state);
+  return power_monitor_STATUS_BACKEND_UNAVAILABLE;
 }
 
 int32_t power_monitor_platform_stop_watching(power_monitor_state_t *state) {
   if (state->thread_started) {
+    pthread_mutex_lock(&state->event_lock);
     state->watch_stop = 1;
+    pthread_mutex_unlock(&state->event_lock);
     pthread_join(state->watch_thread, NULL);
     state->watch_thread = 0;
     state->thread_started = 0;

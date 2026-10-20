@@ -1,0 +1,14 @@
+import {
+  "moonbit-community/proton_power_monitor" @monitor,
+  "moonbitlang/async",
+  "moonbitlang/async/fs",
+  "moonbitlang/async/process",
+  "moonbitlang/core/env",
+} for "test"
+
+supported_targets = "native"
+
+options(
+  link: { "native": { "stub-cc-flags": "${build.LINUX_STUB_FLAGS}" } },
+  "native-stub": [ "linux_watch_test.c" ],
+)
