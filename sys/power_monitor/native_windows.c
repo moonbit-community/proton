@@ -49,13 +49,11 @@ int32_t power_monitor_platform_query_idle(power_monitor_state_t *state) {
              "GetLastInputInfo failed");
     return power_monitor_STATUS_OPERATION_FAILED;
   }
-  ULONGLONG now = GetTickCount64();
-  ULONGLONG last = lii.dwTime;
-  if (now < last) {
-    state->idle_seconds = 0;
-  } else {
-    state->idle_seconds = (int64_t)((now - last) / 1000);
-  }
+  /* dwTime has only 32 bits. Subtract modulo the same millisecond counter
+     before converting to seconds; the uptime's high bits are not idle time.
+     Intervals spanning a full 2^32 ms cycle cannot be recovered from dwTime. */
+  DWORD elapsed = (DWORD)(GetTickCount64() - lii.dwTime);
+  state->idle_seconds = (int64_t)(elapsed / 1000);
   return power_monitor_STATUS_OK;
 }
 
@@ -115,10 +113,21 @@ static LRESULT CALLBACK power_monitor_wnd_proc(HWND hwnd, UINT message,
             setting->DataLength >= sizeof(DWORD)) {
           DWORD value = 0;
           memcpy(&value, setting->Data, sizeof(value));
-          power_monitor_push_event(g_watch_state,
-                                   value == 1
-                                       ? power_monitor_EVENT_ON_AC
-                                       : power_monitor_EVENT_ON_BATTERY);
+          switch (value) {
+            case PoAc:
+              power_monitor_push_event(g_watch_state, power_monitor_EVENT_ON_AC);
+              break;
+            case PoDc:
+              power_monitor_push_event(g_watch_state,
+                                       power_monitor_EVENT_ON_BATTERY);
+              break;
+            case PoHot:
+              /* UPS power is neither AC nor an onboard battery. The public
+                 event API has no corresponding event. */
+              break;
+            default:
+              break;
+          }
         }
         break;
       }
