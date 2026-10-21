@@ -13,7 +13,9 @@ Downloads support progress and task cancellation. The destination's parent
 directory must exist; an existing file is replaced only with `overwrite=true`,
 after the new content has been fully saved. Normal return confirms success;
 failures raise `DownloadError`. Only HTTP 200 is accepted; redirects and partial
-downloads are not supported.
+downloads are not supported. Downloads temporarily request identity encoding
+by default and reject compressed responses until an upstream HTTP decoding fix
+is available; servers must return unencoded content.
 
 This adds no frontend command or filesystem grant to `net.capability()`.
 Existing browser-managed `WebContentsHandle.download_url()` behavior is unchanged.

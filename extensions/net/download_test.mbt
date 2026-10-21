@@ -29,6 +29,7 @@ async test "download streams authenticated binary content and reports written by
     connection => {
       let request = connection.read_until("\r\n\r\n").unwrap()
       assert_true(request.contains("Authorization: Bearer test-token\r\n"))
+      assert_true(request.contains("Accept-Encoding: identity\r\n"))
       assert_true(request.has_prefix("GET /file?q=1 HTTP/1.1\r\n"))
       connection.write(
         "HTTP/1.1 200 OK\r\nContent-Length: \{content.length()}\r\n\r\n",
@@ -57,11 +58,9 @@ async test "download streams authenticated binary content and reports written by
 }
 
 ///|
-async test "download handles empty chunked unknown-length and gzip responses" {
+async test "download handles empty chunked and unknown-length identity responses" {
   let root = @fs.tmpdir(prefix="proton-net-download-")
   defer @fs.rmdir(root, recursive=true)
-  // gzip representation of 'hello', generated independently of the HTTP client.
-  let gzip = b"\x1f\x8b\x08\x00\x00\x00\x00\x00\x02\x03\xcb\x48\xcd\xc9\xc9\x07\x00\x86\xa6\x10\x36\x05\x00\x00\x00"
   let cases = [
     ("Content-Length: 0\r\n", b"", b"", Some(0L)),
     (
@@ -71,7 +70,12 @@ async test "download handles empty chunked unknown-length and gzip responses" {
       None,
     ),
     ("Connection: close\r\n", b"hello", b"hello", None),
-    ("Content-Encoding: gzip\r\nContent-Length: 25\r\n", gzip, b"hello", None),
+    (
+      "Content-Encoding: identity\r\nContent-Length: 5\r\n",
+      b"hello",
+      b"hello",
+      Some(5L),
+    ),
   ]
   for index, (headers, body, expected, total) in cases {
     let progress : Array[@net.DownloadProgress] = []
@@ -363,4 +367,68 @@ async test "relative destination paths are resolved before file submission" {
   )
   assert_eq(@fs.read_file(root + "/relative.bin").text(), "ok")
   assert_eq(@fs.readdir(root), ["relative.bin"])
+}
+
+///|
+async test "encoded responses are rejected instead of saving gzip bytes" {
+  let root = @fs.tmpdir(prefix="proton-net-download-")
+  defer @fs.rmdir(root, recursive=true)
+  let destination = root + "/file"
+  @fs.write_file(destination, "old")
+  // async#672: even a valid gzip stream can bypass decoding with close framing.
+  let gzip = b"\x1f\x8b\x08\x00\x00\x00\x00\x00\x02\x03\xcb\x48\xcd\xc9\xc9\x07\x00\x86\xa6\x10\x36\x05\x00\x00\x00"
+  for
+    (framing, body) in [
+      ("Connection: close\r\n", gzip),
+      ("Content-Length: 25\r\n", gzip),
+      ("Transfer-Encoding: chunked\r\n", b"19\r\n" + gzip + b"\r\n0\r\n\r\n"),
+    ] {
+    for explicit_encoding in [false, true] {
+      let progress_called = Ref(false)
+      with_download_server(
+        connection => {
+          let request = connection.read_until("\r\n\r\n").unwrap()
+          assert_true(
+            request.contains(
+              if explicit_encoding {
+                "Accept-Encoding: gzip\r\n"
+              } else {
+                "Accept-Encoding: identity\r\n"
+              },
+            ),
+          )
+          connection.write(
+            @utf8.encode(
+              "HTTP/1.1 200 OK\r\nContent-Encoding: gzip\r\n\{framing}\r\n",
+            ) +
+            body,
+          )
+        },
+        url => {
+          try
+            @net.download(
+              url,
+              destination,
+              overwrite=true,
+              headers=if explicit_encoding {
+                { "Accept-Encoding": "gzip" }
+              } else {
+                {}
+              },
+              on_progress=_ => progress_called.val = true,
+            )
+          catch {
+            @net.NetworkFailed(detail~) =>
+              assert_true(detail.contains("identity encoding"))
+            error => raise error
+          } noraise {
+            _ => fail("encoded bytes were accepted as a complete download")
+          }
+        },
+      )
+      assert_false(progress_called.val)
+      assert_eq(@fs.read_file(destination).text(), "old")
+      assert_eq(@fs.readdir(root), ["file"])
+    }
+  }
 }

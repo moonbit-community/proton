@@ -53,6 +53,8 @@ async fn create_download_file(destination : String) -> (String, @fs.File) {
 /// Headers belong only to this request. Only HTTP 200 is accepted; redirects
 /// and partial responses are not followed or saved. Browser cookies, download
 /// handlers and events are not used, and no renderer command is registered.
+/// Temporarily requests identity encoding by default and rejects encoded
+/// responses until async/http fixes close-delimited gzip decoding.
 ///
 /// The parent directory must exist. Bytes are streamed to an exclusive sibling
 /// temporary file, then moved to the destination. Existing files are preserved
@@ -82,6 +84,13 @@ pub async fn download(
   guard !headers.contains("Range") else {
     raise InvalidRequest(detail="partial downloads are not supported")
   }
+  // FIXME: Remove this workaround after upgrading to async with the fix for
+  // https://github.com/moonbitlang/async/issues/672. Close-delimited gzip can
+  // bypass decoding. Request identity and reject encoded responses rather than
+  // silently saving compressed bytes, even if the server ignores negotiation.
+  if !headers.contains("Accept-Encoding") {
+    headers["Accept-Encoding"] = "identity"
+  }
   let (response, client) = @http.get_stream(
     origin + target[1:].to_owned(),
     headers~,
@@ -90,6 +99,12 @@ pub async fn download(
   }
   defer client.close()
   guard response.code == 200 else { raise HttpStatus(status=response.code) }
+  if response.headers.get("Content-Encoding") is Some(encoding) &&
+    encoding.trim().to_owned().to_lower() != "identity" {
+    raise NetworkFailed(
+      detail="encoded download responses are temporarily unsupported; expected identity encoding",
+    )
+  }
   let total_bytes = if response.headers.contains("Transfer-Encoding") {
     None
   } else {
