@@ -2,11 +2,11 @@
 
 本例加载 HTML 入口及独立的 JavaScript、CSS 和 worker 文件，展示页面从应用资源加载时如何组织文件和相对路径。
 
-[46_asset_sidecar_resources](https://github.com/moonbit-community/proton/tree/6c7c6810b492ffdc57b0908fc926d67db6656eef/examples/46_asset_sidecar_resources) · 关键文件：[main.mbt](https://github.com/moonbit-community/proton/tree/6c7c6810b492ffdc57b0908fc926d67db6656eef/examples/46_asset_sidecar_resources/main.mbt), [app/app.html](https://github.com/moonbit-community/proton/tree/6c7c6810b492ffdc57b0908fc926d67db6656eef/examples/46_asset_sidecar_resources/app/app.html), [app/app.js](https://github.com/moonbit-community/proton/tree/6c7c6810b492ffdc57b0908fc926d67db6656eef/examples/46_asset_sidecar_resources/app/app.js), [app/app.css](https://github.com/moonbit-community/proton/tree/6c7c6810b492ffdc57b0908fc926d67db6656eef/examples/46_asset_sidecar_resources/app/app.css), [app/worker.js](https://github.com/moonbit-community/proton/tree/6c7c6810b492ffdc57b0908fc926d67db6656eef/examples/46_asset_sidecar_resources/app/worker.js)
+[46_asset_sidecar_resources](https://github.com/moonbit-community/proton/tree/18915e6b3c852b760dee6550f066f46d95a1248d/examples/46_asset_sidecar_resources) · 关键文件：[main.mbt](https://github.com/moonbit-community/proton/tree/18915e6b3c852b760dee6550f066f46d95a1248d/examples/46_asset_sidecar_resources/main.mbt), [app/app.html](https://github.com/moonbit-community/proton/tree/18915e6b3c852b760dee6550f066f46d95a1248d/examples/46_asset_sidecar_resources/app/app.html), [app/app.js](https://github.com/moonbit-community/proton/tree/18915e6b3c852b760dee6550f066f46d95a1248d/examples/46_asset_sidecar_resources/app/app.js), [app/app.css](https://github.com/moonbit-community/proton/tree/18915e6b3c852b760dee6550f066f46d95a1248d/examples/46_asset_sidecar_resources/app/app.css), [app/worker.js](https://github.com/moonbit-community/proton/tree/18915e6b3c852b760dee6550f066f46d95a1248d/examples/46_asset_sidecar_resources/app/worker.js)
 
 ## 行为
 
-asset() 加载 app.html 及其相邻资源。示例还提供第二个页面以观察导航。
+`asset()` 在 `https://proton.localhost/app.html` 提供原始 `app.html`，以其所在目录为资源根目录。脚本、样式、worker 和页面导航均相对于文档 URL 解析。页面自行声明的 `<base>` 正常改变解析基准，Proton 不会注入该元素。示例还提供另一个页面，以及显式指定 base URL 的页面。
 
 ```moonbit
 async fn main {

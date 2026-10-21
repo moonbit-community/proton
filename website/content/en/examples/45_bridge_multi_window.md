@@ -2,7 +2,7 @@
 
 This example exposes command operations to two windows in one application. It shows how window declarations, renderer grants and caller identity work together without giving every page implicit access.
 
-[45_bridge_multi_window](https://github.com/moonbit-community/proton/tree/6c7c6810b492ffdc57b0908fc926d67db6656eef/examples/45_bridge_multi_window) · Source files: [main.mbt](https://github.com/moonbit-community/proton/tree/6c7c6810b492ffdc57b0908fc926d67db6656eef/examples/45_bridge_multi_window/main.mbt)
+[45_bridge_multi_window](https://github.com/moonbit-community/proton/tree/18915e6b3c852b760dee6550f066f46d95a1248d/examples/45_bridge_multi_window) · Source files: [main.mbt](https://github.com/moonbit-community/proton/tree/18915e6b3c852b760dee6550f066f46d95a1248d/examples/45_bridge_multi_window/main.mbt)
 
 ## Behavior
 

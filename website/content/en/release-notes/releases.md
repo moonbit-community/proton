@@ -1,5 +1,35 @@
 # Release Notes
 
+## 0.5.1
+
+0.5.1 fixes resource loading, filesystem link operations, monitor startup and update-manifest decoding. It adds macOS/Linux shell operations and a shared Rabbita query package. Despite the patch version, direct users of the power-monitor, shell and updater modules need the source migrations below.
+
+**API changes and migration**
+
+| Area | Previous API | 0.5.1 |
+| --- | --- | --- |
+| Power-event watching | `start_watching()` / `stop_watching()` | Run the work that needs events inside async `with_watching(callback)`. Returning, raising or cancelling ends watching and waits for cleanup; call `destroy()` only after the scope ends |
+| Native shell operations | Synchronous `open`, `reveal_item`, `trash_item` returning `Result` | Call in an async context; success returns `Unit`, failure raises `ShellError`. `beep()` is unchanged |
+| Manifest decoding | `Manifest::from_json(Json)` | Pass the original document text to `Manifest::parse(text)` so integer precision is preserved |
+
+The Proton power-monitor extension owns its watching scope automatically. Its `watch_status()` now includes `Starting`; update exhaustive matches. Linux startup can be cancelled during connection, authentication or subscription and has a five-second deadline. A bus disconnection ends the scope rather than leaving it marked as watching. See [capability contracts](../introduction/application-api.md#extensions-and-capabilities).
+
+New isomorphic projects import `moonbit-community/proton_rabbita/query` instead of generating `frontend/internal/query`. Existing projects can replace that local import with the public package, review local customizations, and remove the local implementation. `create`, `state`, `set_input` and `refresh` retain their usage. The package owns component reads, subscriptions and cancellation, without a shared cache or automatic retries. [Isomorphic tutorial](../tutorial/isomorphic.md)
+
+**Behavior changes and fixes**
+
+- **HTML resources:** `file` and `asset` serve the original document at its filename URL under `https://proton.localhost/`. The entry directory is the resource root, so relative resources use browser URL resolution. Proton no longer rewrites HTML or inserts `<base>`; declare a base in the document when needed. The constructors are unchanged. [Entry sources](../introduction/application-api.md#application-lifecycle)
+- **Filesystem links:** content operations authorize resolved targets; removal and rename authorize and operate on the link itself. Recursive `rmdir` rejects a final symlink. Windows rename now preserves the link target with async 0.22.5. [Filesystem grants](../introduction/application-api.md#extensions-and-capabilities)
+- **Desktop shell:** opening and revealing items work on macOS and Linux as well as Windows. External-tool waits yield to the application event loop and participate in cancellation. Linux requires `gio` and, for revealing items, `dbus-send` with a compatible file manager. [Environment requirements](../introduction/installation.md)
+- **Screen monitoring:** Linux reports `Watching` only after registration succeeds; immediate events and startup errors are no longer lost in the startup race.
+- **Update manifests:** `size` is decoded exactly from its original integer text over the positive `Int64` range. `size` and `schema_version` reject fractional and exponent notation, including values that floating-point parsing could round to integers. [Update download contract](../introduction/application-api.md#application-updates)
+
+**Upgrading**
+
+Use the MoonBit `latest` toolchain channel described in [environment requirements](../introduction/installation.md). Update the CLI and application `proton_*` dependencies to 0.5.1, apply the migrations above, then run `proton_cli cef setup` and rebuild packaged applications. Async advances to 0.22.5; Rabbita remains 0.16.4 and Warren remains 0.4.5. CEF is unchanged, but the helper is release-specific. Installing the CLI does not rewrite existing applications.
+
+[Complete changes](https://github.com/moonbit-community/proton/compare/824db7a1acf20fa54d111145c321e464e30dbbae...18915e6b3c852b760dee6550f066f46d95a1248d)
+
 ## 0.5.0
 
 0.5.0 changes application configuration to MoonBit cascade syntax, replaces paired lifecycle hooks with scoped setup and cleanup, and assigns browser decisions to their owning page or session. It also changes the application update protocol. Existing applications need source changes.

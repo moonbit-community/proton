@@ -1,5 +1,35 @@
 # Release Notes
 
+## 0.5.1
+
+0.5.1 修复资源加载、文件系统链接操作、监听启动和更新 manifest 解析，补全 macOS／Linux shell 操作，并提供公共 Rabbita 查询包。虽然版本号只增加 patch，直接使用电源监听、shell 和 updater 模块的应用仍需按下表迁移源码。
+
+**API 变化与迁移**
+
+| 范围 | 原 API | 0.5.1 |
+| --- | --- | --- |
+| 电源事件监听 | `start_watching()` / `stop_watching()` | 在异步 `with_watching(callback)` 中执行需要事件的工作。返回、抛错或取消会结束监听并等待清理；作用域结束后才能调用 `destroy()` |
+| 原生 shell 操作 | 同步 `open`、`reveal_item`、`trash_item`，返回 `Result` | 在异步上下文调用；成功返回 `Unit`，失败抛出 `ShellError`。`beep()` 不变 |
+| Manifest 解析 | `Manifest::from_json(Json)` | 将原始文档文本传给 `Manifest::parse(text)`，保留整数精度 |
+
+Proton 电源监听扩展自动管理监听作用域。其 `watch_status()` 新增 `Starting`，穷尽匹配该状态的代码需要更新。Linux 启动可在连接、认证或订阅期间取消，并有五秒期限。总线断开会结束作用域，不再留下“正在监听”的状态。详见[能力契约](../introduction/application-api.md#扩展与能力)。
+
+新建 isomorphic 项目直接导入 `moonbit-community/proton_rabbita/query`，不再生成 `frontend/internal/query`。已有项目可将本地包的导入替换为公共包，检查本地定制后删除原实现。`create`、`state`、`set_input` 和 `refresh` 的用法不变。该包管理组件读取、订阅和取消，不提供共享缓存或自动重试。[Isomorphic 教程](../tutorial/isomorphic.md)
+
+**行为变化与修复**
+
+- **HTML 资源：** `file` 和 `asset` 在 `https://proton.localhost/` 下按文件名提供原始文档，以入口目录作为资源根目录，相对资源遵循浏览器的 URL 解析规则。Proton 不再改写 HTML 或插入 `<base>`；需要指定 base 时应在文档中声明。构造函数不变。[入口来源](../introduction/application-api.md#应用生命周期)
+- **文件系统链接：** 内容操作授权解析后的目标；移除和重命名授权并操作链接本身。递归 `rmdir` 拒绝末级符号链接。Windows rename 使用 async 0.22.5，保留链接目标。[文件系统授权](../introduction/application-api.md#扩展与能力)
+- **桌面 shell：** macOS 和 Linux 与 Windows 一样支持打开和选中文件。等待外部工具时会让出执行权，并支持取消。Linux 需要 `gio`；选中文件还需要 `dbus-send` 和兼容的文件管理器。[运行环境](../introduction/installation.md)
+- **屏幕监听：** Linux 只在注册成功后报告 `Watching`，启动竞态不再丢失立即到达的事件或启动错误。
+- **更新 manifest：** 从原始整数文本精确解析整个正 `Int64` 范围内的 `size`。`size` 和 `schema_version` 拒绝小数及指数记法，包括可能经浮点解析舍入为整数的值。[更新下载契约](../introduction/application-api.md#应用更新)
+
+**升级要求**
+
+按[运行环境](../introduction/installation.md)使用 MoonBit 的 `latest` 工具链通道。将 CLI 和应用的 `proton_*` 依赖统一更新到 0.5.1，完成上述迁移，再执行 `proton_cli cef setup` 并重新打包应用。Async 更新到 0.22.5，Rabbita 保持 0.16.4，Warren 保持 0.4.5。CEF 版本不变，但 helper 与 Proton 版本对应。安装 CLI 不会改写已有应用。
+
+[完整改动](https://github.com/moonbit-community/proton/compare/824db7a1acf20fa54d111145c321e464e30dbbae...18915e6b3c852b760dee6550f066f46d95a1248d)
+
 ## 0.5.0
 
 0.5.0 将应用配置改为 MoonBit 瀑布语法，以作用域 setup 与 cleanup 替代成对生命周期钩子，并将浏览器决策放到所属页面或会话上。应用更新协议也有变化，现有应用需要迁移源码。
