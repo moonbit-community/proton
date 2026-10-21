@@ -1,10 +1,18 @@
 import {
+  "moonbitlang/async",
+  "moonbitlang/async/process",
   "moonbitlang/core/encoding/utf8",
 }
 
 supported_targets = "native"
 
 options(
+  link: { "native": { "stub-cc-flags": "${build.MACOS_STUB_FLAGS}" } },
   "native-stub": [ "clipboard_native.c" ],
   targets: { "clipboard.mbt": [ "native" ] },
 )
+
+import {
+  "moonbitlang/async/fs" @async_fs,
+  "moonbitlang/core/env",
+} for "wbtest"

@@ -2,6 +2,10 @@ name = "moonbit-community/proton_clipboard"
 
 version = "0.5.1"
 
+import {
+  "moonbitlang/async@0.22.5",
+}
+
 readme = "README.mbt.md"
 
 repository = "https://github.com/moonbit-community/proton/tree/main/sys/clipboard"
@@ -19,3 +23,7 @@ preferred_target = "native"
 supported_targets = "+native"
 
 source = "."
+
+options(
+  "--moonbit-unstable-prebuild": "build.mjs",
+)

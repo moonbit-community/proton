@@ -6,9 +6,9 @@ pub fn ensure_supported() -> Result[Unit, String]
 
 pub fn is_supported() -> Bool
 
-pub fn read_text() -> Result[String?, String]
+pub async fn read_text() -> Result[String?, String] noraise
 
-pub fn write_text(String) -> Result[Unit, String]
+pub async fn write_text(String) -> Result[Unit, String] noraise
 
 // Errors
 

@@ -17,7 +17,7 @@ fn text_length(text : String?) -> Int32? {
 }
 
 ///|
-fn read_clipboard_text() -> @clipboard_contract.ReadTextReply raise ClipboardError {
+async fn read_clipboard_text() -> @clipboard_contract.ReadTextReply raise ClipboardError {
   ensure_supported()
   match @sys_clipboard.read_text() {
     Ok(text) => @clipboard_contract.ReadTextReply::{ text, }
@@ -26,7 +26,7 @@ fn read_clipboard_text() -> @clipboard_contract.ReadTextReply raise ClipboardErr
 }
 
 ///|
-fn write_clipboard_text(
+async fn write_clipboard_text(
   text : String,
 ) -> @clipboard_contract.WriteTextReply raise ClipboardError {
   ensure_supported()
@@ -37,7 +37,7 @@ fn write_clipboard_text(
 }
 
 ///|
-fn clear_clipboard() -> @clipboard_contract.ClearReply raise ClipboardError {
+async fn clear_clipboard() -> @clipboard_contract.ClearReply raise ClipboardError {
   ensure_supported()
   match @sys_clipboard.write_text("") {
     Ok(_) => @clipboard_contract.ClearReply::{ cleared: true, }

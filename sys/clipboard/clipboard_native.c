@@ -1,4 +1,3 @@
-#include <errno.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -11,11 +10,10 @@
 #ifdef _MSC_VER
 #pragma comment(lib, "user32.lib")
 #endif
-#else
-#include <sys/wait.h>
+#elif defined(__APPLE__)
+#import <AppKit/AppKit.h>
+#elif defined(__linux__)
 #include <unistd.h>
-#define MB_POPEN popen
-#define MB_PCLOSE pclose
 #endif
 
 #define MB_STATUS_OK 0
@@ -51,7 +49,7 @@ static moonbit_bytes_t mb_make_bytes_from_buffer(const char *buf, size_t len) {
   return out;
 }
 
-#ifndef _WIN32
+#ifdef __linux__
 static int mb_command_exists(const char *name) {
   const char *path = getenv("PATH");
   if (path == NULL || *path == '\0') {
@@ -95,9 +93,6 @@ static int mb_command_exists(const char *name) {
 }
 
 static int mb_unix_clipboard_backend_available(void) {
-#if defined(__APPLE__)
-  return mb_command_exists("pbcopy") && mb_command_exists("pbpaste");
-#elif defined(__linux__)
   if (mb_command_exists("wl-copy") && mb_command_exists("wl-paste")) {
     return 1;
   }
@@ -108,9 +103,6 @@ static int mb_unix_clipboard_backend_available(void) {
     return 1;
   }
   return 0;
-#else
-  return 0;
-#endif
 }
 #endif
 
@@ -239,152 +231,24 @@ static int mb_win_write_clipboard(const char *utf8_text, size_t utf8_len) {
 }
 #endif
 
-#ifndef _WIN32
-static int mb_exit_code_from_pclose(int pclose_rc) {
-  if (pclose_rc == -1) {
-    return -1;
-  }
-  if (WIFEXITED(pclose_rc)) {
-    return WEXITSTATUS(pclose_rc);
-  }
-  return -1;
-}
-
-static int mb_run_read_command(const char *command, char **out_buf, size_t *out_len) {
-  FILE *pipe = MB_POPEN(command, "r");
-  if (pipe == NULL) {
-    return -1;
-  }
-
-  size_t cap = 1024;
-  size_t len = 0;
-  char *buf = (char *)malloc(cap);
-  if (buf == NULL) {
-    MB_PCLOSE(pipe);
-    return -1;
-  }
-
-  while (1) {
-    if (len == cap) {
-      cap *= 2;
-      char *next = (char *)realloc(buf, cap);
-      if (next == NULL) {
-        free(buf);
-        MB_PCLOSE(pipe);
-        return -1;
-      }
-      buf = next;
-    }
-
-    size_t n = fread(buf + len, 1, cap - len, pipe);
-    len += n;
-    if (n == 0) {
-      if (feof(pipe)) {
-        break;
-      }
-      free(buf);
-      MB_PCLOSE(pipe);
-      return -1;
-    }
-  }
-
-  int exit_code = mb_exit_code_from_pclose(MB_PCLOSE(pipe));
-  if (exit_code != 0) {
-    free(buf);
-    return exit_code;
-  }
-
-  *out_buf = buf;
-  *out_len = len;
-  return 0;
-}
-
-static int mb_run_write_command(const char *command, const char *text, size_t len) {
-  FILE *pipe = MB_POPEN(command, "w");
-  if (pipe == NULL) {
-    return -1;
-  }
-
-  if (len > 0 && fwrite(text, 1, len, pipe) != len) {
-    MB_PCLOSE(pipe);
-    return -1;
-  }
-
-  return mb_exit_code_from_pclose(MB_PCLOSE(pipe));
-}
-
-static int mb_try_read_commands(const char *const *commands, size_t command_count,
-                                char **out_buf, size_t *out_len) {
-  int saw_not_available = 0;
-  int saw_permission_denied = 0;
-
-  for (size_t i = 0; i < command_count; i++) {
-    int rc = mb_run_read_command(commands[i], out_buf, out_len);
-    if (rc == 0) {
-      return MB_STATUS_OK;
-    }
-    if (rc == 127) {
-      saw_not_available = 1;
-      continue;
-    }
-    if (rc == 126) {
-      saw_permission_denied = 1;
-      continue;
-    }
-  }
-
-  if (saw_permission_denied) {
-    return MB_STATUS_PERMISSION_DENIED;
-  }
-  if (saw_not_available) {
-    return MB_STATUS_NOT_AVAILABLE;
-  }
-  return MB_STATUS_BACKEND_FAILURE;
-}
-
-static int mb_try_write_commands(const char *const *commands, size_t command_count,
-                                 const char *text, size_t len) {
-  int saw_not_available = 0;
-  int saw_permission_denied = 0;
-
-  for (size_t i = 0; i < command_count; i++) {
-    int rc = mb_run_write_command(commands[i], text, len);
-    if (rc == 0) {
-      return MB_STATUS_OK;
-    }
-    if (rc == 127) {
-      saw_not_available = 1;
-      continue;
-    }
-    if (rc == 126) {
-      saw_permission_denied = 1;
-      continue;
-    }
-  }
-
-  if (saw_permission_denied) {
-    return MB_STATUS_PERMISSION_DENIED;
-  }
-  if (saw_not_available) {
-    return MB_STATUS_NOT_AVAILABLE;
-  }
-  return MB_STATUS_BACKEND_FAILURE;
-}
-#endif
-
 static int mb_try_read_clipboard(char **out_buf, size_t *out_len) {
 #ifdef _WIN32
   return mb_win_read_clipboard(out_buf, out_len);
-#elif __APPLE__
-  static const char *const commands[] = { "pbpaste" };
-  return mb_try_read_commands(commands, sizeof(commands) / sizeof(commands[0]), out_buf, out_len);
-#elif __linux__
-  static const char *const commands[] = {
-    "wl-paste -n 2>/dev/null",
-    "xclip -selection clipboard -o 2>/dev/null",
-    "xsel --clipboard --output 2>/dev/null",
-  };
-  return mb_try_read_commands(commands, sizeof(commands) / sizeof(commands[0]), out_buf, out_len);
+#elif defined(__APPLE__)
+  @autoreleasepool {
+    // The pasteboard and returned string are borrowed. Copy before draining the pool.
+    NSPasteboard *pasteboard = [NSPasteboard generalPasteboard];
+    if (pasteboard == nil) return MB_STATUS_NOT_AVAILABLE;
+    NSString *text = [pasteboard stringForType:NSPasteboardTypeString];
+    NSData *data = [text dataUsingEncoding:NSUTF8StringEncoding];
+    if (text != nil && data == nil) return MB_STATUS_BACKEND_FAILURE;
+    *out_len = [data length];
+    *out_buf = (char *)malloc(*out_len + 1);
+    if (*out_buf == NULL) return MB_STATUS_BACKEND_FAILURE;
+    if (*out_len > 0) memcpy(*out_buf, [data bytes], *out_len);
+    (*out_buf)[*out_len] = '\0';
+    return MB_STATUS_OK;
+  }
 #else
   (void)out_buf;
   (void)out_len;
@@ -395,16 +259,19 @@ static int mb_try_read_clipboard(char **out_buf, size_t *out_len) {
 static int mb_try_write_clipboard(const char *text, size_t len) {
 #ifdef _WIN32
   return mb_win_write_clipboard(text, len);
-#elif __APPLE__
-  static const char *const commands[] = { "pbcopy" };
-  return mb_try_write_commands(commands, sizeof(commands) / sizeof(commands[0]), text, len);
-#elif __linux__
-  static const char *const commands[] = {
-    "wl-copy 2>/dev/null",
-    "xclip -selection clipboard 2>/dev/null",
-    "xsel --clipboard --input 2>/dev/null",
-  };
-  return mb_try_write_commands(commands, sizeof(commands) / sizeof(commands[0]), text, len);
+#elif defined(__APPLE__)
+  @autoreleasepool {
+    NSPasteboard *pasteboard = [NSPasteboard generalPasteboard];
+    if (pasteboard == nil) return MB_STATUS_NOT_AVAILABLE;
+    NSString *value = [[NSString alloc] initWithBytes:text
+                                            length:len
+                                          encoding:NSUTF8StringEncoding];
+    if (value == nil) return MB_STATUS_BACKEND_FAILURE;
+    [pasteboard clearContents];
+    BOOL written = [pasteboard setString:value forType:NSPasteboardTypeString];
+    [value release];
+    return written ? MB_STATUS_OK : MB_STATUS_BACKEND_FAILURE;
+  }
 #else
   (void)text;
   (void)len;
@@ -413,18 +280,9 @@ static int mb_try_write_clipboard(const char *text, size_t len) {
 }
 
 MOONBIT_FFI_EXPORT int32_t mb_clipboard_platform_supported(void) {
-#if defined(_WIN32)
+#if defined(_WIN32) || defined(__APPLE__)
   mb_set_error(MB_STATUS_OK, "");
   return 1;
-#elif defined(__APPLE__)
-  if (mb_unix_clipboard_backend_available()) {
-    mb_set_error(MB_STATUS_OK, "");
-    return 1;
-  }
-  mb_set_error(MB_STATUS_NOT_AVAILABLE,
-               "macOS clipboard commands pbcopy and pbpaste were not found "
-               "on PATH");
-  return 0;
 #elif defined(__linux__)
   if (mb_unix_clipboard_backend_available()) {
     mb_set_error(MB_STATUS_OK, "");
