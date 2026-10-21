@@ -127,7 +127,7 @@ fn write_text_with(
 /// Returns `true` when the current native target has a clipboard backend that
 /// this package knows how to call.
 ///
-/// On Unix-like systems this also checks whether a supported clipboard backend
+/// On Linux this also checks whether a supported clipboard backend
 /// is available on `PATH`, so the result reflects both platform support and
 /// runtime tool availability.
 ///
@@ -183,11 +183,12 @@ pub fn ensure_supported() -> Result[Unit, String] {
 /// text content, this returns `Ok(None)`. Unsupported platforms and backend
 /// failures are reported as `Err(String)`.
 ///
-/// This function is synchronous and only works on the `native` target.
+/// Linux tool I/O and process waits yield to other tasks and support cancellation.
+/// Only available on the `native` target.
 ///
 /// # Example
 /// ```mbt check
-/// test "read_text returns text, emptiness, or an error" {
+/// async test "read_text returns text, emptiness, or an error" {
 ///   match @proton_clipboard.read_text() {
 ///     Ok(Some(text)) => assert_true(text.length() >= 0)
 ///     Ok(None) => ()
@@ -195,7 +196,10 @@ pub fn ensure_supported() -> Result[Unit, String] {
 ///   }
 /// }
 /// ```
-pub fn read_text() -> Result[String?, String] {
+pub async fn read_text() -> Result[String?, String] noraise {
+  if @async.platform is Linux {
+    return read_linux_text()
+  }
   let supported = is_supported()
   read_text_with(
     supported, read_text_ffi, last_error_code_ffi, last_error_message_ffi,
@@ -213,14 +217,107 @@ pub fn read_text() -> Result[String?, String] {
 ///
 /// # Example
 /// ```mbt check
-/// test "write_text accepts a string and reports success or failure" {
+/// async test "write_text accepts a string and reports success or failure" {
 ///   match @proton_clipboard.write_text("") {
 ///     Ok(_) => ()
 ///     Err(message) => assert_true(!message.is_empty())
 ///   }
 /// }
 /// ```
-pub fn write_text(text : String) -> Result[Unit, String] {
+pub async fn write_text(text : String) -> Result[Unit, String] noraise {
+  if @async.platform is Linux {
+    return write_linux_text(text)
+  }
   let supported = is_supported()
   write_text_with(supported, text, write_text_ffi, last_error_message_ffi)
+}
+
+///|
+async fn read_tool(
+  tool : String,
+  args : Array[String],
+) -> Result[String?, String] noraise {
+  try {
+    let stderr = @process.redirect_to_file("/dev/null")
+    defer stderr.close()
+    let (status, output) = @process.collect_stdout(tool, args, stderr~)
+    if status == 0 {
+      Ok(decode_optional_text(output.binary()))
+    } else {
+      Err("\{tool} exited with status \{status}")
+    }
+  } catch {
+    error => Err("\{tool}: \{error}")
+  }
+}
+
+///|
+async fn write_tool(
+  tool : String,
+  args : Array[String],
+  text : String,
+) -> Result[Unit, String] noraise {
+  try {
+    let output = @process.redirect_to_file("/dev/null")
+    defer output.close()
+    let (stdin, writer) = @process.write_to_process()
+    defer writer.close()
+    let status = @async.with_task_group(group => {
+      let process = @process.spawn(
+        group,
+        tool,
+        args,
+        stdin~,
+        stdout=output,
+        stderr=output,
+      )
+      writer.write(text)
+      // Clipboard tools consume until EOF before publishing the selection.
+      writer.close()
+      process.wait()
+    })
+    // A successful tool may have forked an owner that serves later pastes.
+    // Only wait for the invoked process; do not terminate its descendants.
+    if status == 0 {
+      Ok(())
+    } else {
+      Err("\{tool} exited with status \{status}")
+    }
+  } catch {
+    error => Err("\{tool}: \{error}")
+  }
+}
+
+///|
+async fn read_linux_text() -> Result[String?, String] noraise {
+  let errors : Array[String] = []
+  for
+    (tool, args) in [
+      ("wl-paste", ["-n"]),
+      ("xclip", ["-selection", "clipboard", "-o"]),
+      ("xsel", ["--clipboard", "--output"]),
+    ] {
+    match read_tool(tool, args) {
+      Ok(text) => return Ok(text)
+      Err(error) => errors.push(error)
+    }
+  }
+  Err("Failed to read clipboard: " + errors.join("; "))
+}
+
+///|
+async fn write_linux_text(text : String) -> Result[Unit, String] noraise {
+  let errors : Array[String] = []
+  for
+    (tool, args) in [
+      ("wl-copy", []),
+      ("xclip", ["-selection", "clipboard"]),
+      ("xsel", ["--clipboard", "--input"]),
+    ] {
+    match write_tool(tool, args, text) {
+      Ok(_) => return Ok(())
+      Err(error) => errors.push(error)
+    }
+  }
+  Err("Failed to write clipboard: " + errors.join("; "))
 }

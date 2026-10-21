@@ -337,7 +337,8 @@ These are key boundaries of implemented 0.5.1 capabilities, not a promise of ava
 | Capability | macOS | Windows | Linux |
 | --- | --- | --- | --- |
 | Files, paths, host HTTP, child processes | Supported | Supported | Supported |
-| Native dialogs, text clipboard | Supported | Supported | Depends on desktop session / GTK and related backends |
+| Native dialogs | Supported | Supported | Requires a desktop session and GTK |
+| Text clipboard | Supported | Supported | Requires `wl-clipboard`, `xclip`, or `xsel` |
 | System notification extension | Supported | Not implemented | Not implemented |
 | Tray | Menus and platform events | Click, right-click, double-click and menus | Requires AppIndicator / Ayatana and desktop support |
 | Desktop sources and thumbnails | Displays; thumbnails require screen-recording permission | Visible titled windows and GDI thumbnails | X11/RandR displays; thumbnails are null |
