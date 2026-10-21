@@ -52,7 +52,10 @@ int32_t power_monitor_platform_query_idle(power_monitor_state_t *state) {
   /* dwTime has only 32 bits. Subtract modulo the same millisecond counter
      before converting to seconds; the uptime's high bits are not idle time.
      Intervals spanning a full 2^32 ms cycle cannot be recovered from dwTime. */
-  DWORD elapsed = (DWORD)(GetTickCount64() - lii.dwTime);
+  ULONGLONG now = GetTickCount64();
+  /* Preserve the zero-idle guard for postdated input before the first wrap.
+     Comparing truncated uptime would also reject valid wrap-crossing input. */
+  DWORD elapsed = now < lii.dwTime ? 0 : (DWORD)(now - lii.dwTime);
   state->idle_seconds = (int64_t)(elapsed / 1000);
   return power_monitor_STATUS_OK;
 }

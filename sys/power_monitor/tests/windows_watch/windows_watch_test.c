@@ -138,6 +138,7 @@ int32_t proton_test_idle_tick_wraparound(void) {
     {5000, 4000, 1},
     {4999, 4000, 0},
     {5000, 5000, 0},
+    {5000, 5001, 0},
     {0xfffffff0ULL, 0xfffff820UL, 2},
     {0x100001388ULL, 4000, 1},
     {0x1000003e8ULL, 0xfffffc18UL, 2},
