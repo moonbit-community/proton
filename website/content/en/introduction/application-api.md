@@ -14,7 +14,7 @@ The root `moonbit-community/proton` package is the public application facade. Us
 | Process ownership and activation | single-instance builder, context methods | [Process control](#process-control-and-metrics) |
 | Paths, files and build metadata | project configuration and application paths | [Configuration](../configuration/project.md) |
 
-For the complete set of methods, overloads, typed errors and defaults, use the [versioned API index](https://github.com/moonbit-community/proton/blob/6c7c6810b492ffdc57b0908fc926d67db6656eef/proton/pkg.generated.mbti). This reference describes when to use each entry point, which object owns its state, and how it behaves during startup, cancellation and shutdown.
+For the complete set of methods, overloads, typed errors and defaults, use the [versioned API index](https://github.com/moonbit-community/proton/blob/18915e6b3c852b760dee6550f066f46d95a1248d/proton/pkg.generated.mbti). This reference describes when to use each entry point, which object owns its state, and how it behaves during startup, cancellation and shutdown.
 
 ## Application lifecycle
 
@@ -30,6 +30,8 @@ For the complete set of methods, overloads, typed errors and defaults, use the [
 | `asset(title, path, ...)` | Managed application asset entry |
 
 Each returns an `App` builder. Shared options include width, height, debug mode and resizability. To replace the primary window declaration, pass a new `WindowConfig` to `App.main_window(config)`; the entry belongs to that configuration.
+
+`file` and `asset` serve the original HTML at `https://proton.localhost/<filename>`, with the entry file’s directory as the resource root. Relative scripts, styles, images and navigation use normal browser URL resolution. Proton does not insert a `<base>` element or rewrite the document; a `<base>` declared by the page retains its normal effect. Inline `html` entries do not acquire a filesystem resource root. See the [asset example](../examples/46_asset_sidecar_resources.md).
 
 **Configuring an application**
 
@@ -176,7 +178,7 @@ response type.
 
 Proton does not impose a fixed payload-size limit on commands. Payloads are serialized as JSON and remain subject to memory and underlying transport constraints. Large messages increase serialization, copying and parsing costs.
 
-Request concurrency has no global fixed admission limit in 0.5.0. Applications still need to bound expensive work according to their own resource and ordering requirements; the bridge does not serialize unrelated business operations into a transaction.
+Request concurrency has no global fixed admission limit in 0.5.1. Applications still need to bound expensive work according to their own resource and ordering requirements; the bridge does not serialize unrelated business operations into a transaction.
 
 ## Events
 
@@ -196,7 +198,7 @@ Host payloads require `ToJson`. Window emitters belong to window lifetime; a sav
 
 `proton_client.subscribe(event, listener, failure)` decodes payloads through `FromJson` and returns a `Subscription`. `Subscription.close()` releases the listener. Subscription setup can raise `ClientFailure`; event decoding failures are reported as `EventDecode` through the failure callback.
 
-`proton_rabbita.subscribe` integrates subscription ownership into Rabbita. Its options include a subscription key, retry count, ready command and client override; full signatures are in the [Rabbita API](https://github.com/moonbit-community/proton/blob/6c7c6810b492ffdc57b0908fc926d67db6656eef/rabbita/pkg.generated.mbti).
+`proton_rabbita.subscribe` integrates subscription ownership into Rabbita. Its options include a subscription key, retry count, ready command and client override; full signatures are in the [Rabbita API](https://github.com/moonbit-community/proton/blob/18915e6b3c852b760dee6550f066f46d95a1248d/rabbita/pkg.generated.mbti).
 
 The JavaScript interface is `window.__MoonBit__.app.on(name, callback)`. The callback receives an event envelope containing `payload`; registration returns an unsubscribe function.
 
@@ -293,7 +295,7 @@ A view declaration sets initial geometry; it does not provide automatic layout. 
 
 **Accessibility and headless execution**
 
-Web content uses Chromium's native accessibility tree. Use semantic HTML, ARIA, keyboard navigation and visible focus. Accessibility follows the platform's policy by default; `App.accessibility(AccessibilityMode::AlwaysEnabled)` keeps the tree available throughout the runtime. See [platform accessibility behavior](https://github.com/moonbit-community/proton/blob/6c7c6810b492ffdc57b0908fc926d67db6656eef/proton/README.md#accessibility).
+Web content uses Chromium's native accessibility tree. Use semantic HTML, ARIA, keyboard navigation and visible focus. Accessibility follows the platform's policy by default; `App.accessibility(AccessibilityMode::AlwaysEnabled)` keeps the tree available throughout the runtime. See [platform accessibility behavior](https://github.com/moonbit-community/proton/blob/18915e6b3c852b760dee6550f066f46d95a1248d/proton/README.md#accessibility).
 
 `App.headless()` or `PROTON_HEADLESS=1` selects off-screen rendering without native top-level windows. Native dialogs, menus, titlebars and other window-bound UI are unavailable. Linux still requires an X11 display, such as Xvfb. Browser automation and native-window behavior therefore require different validation environments.
 
@@ -330,7 +332,7 @@ Capability-specific scope types are documented in the extension API; platform co
 
 **Platform differences and selection**
 
-These are key boundaries of implemented 0.5.0 capabilities, not a promise of availability without desktop services:
+These are key boundaries of implemented 0.5.1 capabilities, not a promise of availability without desktop services:
 
 | Capability | macOS | Windows | Linux |
 | --- | --- | --- | --- |
@@ -342,11 +344,25 @@ These are key boundaries of implemented 0.5.0 capabilities, not a promise of ava
 
 Capability grants are separate from operating-system authorization. Declaring a screen or media capability does not grant OS privacy permission. Handle OS denial, unavailable backends and missing application grants separately. Check support where provided, such as the tray capability; menu events are more portable than platform mouse gestures.
 
+**Shell operations**
+
+The shell capability opens URLs and paths, reveals a file in its file manager, and moves files to the trash. macOS uses the system opener and Finder; Windows uses Explorer and the recycle bin. Linux requires `gio` for opening and trashing, and `dbus-send` plus a file manager implementing `org.freedesktop.FileManager1` for revealing an item. Platform support alone does not guarantee that these desktop services are available.
+
+Applications using `proton_shell` directly call async `open`, `reveal_item`, and `trash_item`. Each returns `Unit` or raises `ShellError(operation~, target~, reason~)`. External-tool waits yield to other tasks; cancellation terminates and reaps the tool. Successful opening means the platform accepted the request, not that the target application finished starting. `beep()` retains its synchronous `Result` API.
+
+**Power and screen monitoring**
+
+The extensions expose `watch_status()`: `Stopped` before startup or after cleanup, `Watching` after native registration, and `Unavailable(reason)` on failure. Power monitoring additionally reports `Starting` during asynchronous registration. Query commands remain independent of event watching; a successful query does not clear a watch error or restart the watcher. Screen topology events include the affected display's snapshot, including the previous snapshot when a display is removed.
+
+For direct use of `proton_power_monitor`, `PowerMonitor.with_watching(callback)` owns watching for the callback's duration. The async callback starts after registration succeeds. Returning, raising, or cancelling the scope stops watching and waits for cleanup. End the scope before calling `destroy()`; a second concurrent scope on the same monitor fails immediately.
+
+On Linux, power watching requires GIO and the system bus. Connection, authentication and subscription are cancellable and share a five-second startup deadline. A disconnected bus fails the scope and cancels its callback. A new scope can retry; there is no automatic reconnection. The Proton extension owns this scope in an application task and reports failure as `Unavailable(reason)`.
+
 **Host networking and child processes**
 
 The net extension performs host HTTP requests and returns status, headers and UTF-8 text. It is not browser fetch, does not share the browser cookie jar and does not follow redirects automatically. Its text response is not a lossless binary transfer interface. Processes spawned by the process extension belong to its application lifetime: wait collects handles, kill still needs wait, and application shutdown cancels and reaps remaining children.
 
-See the [extension API](https://github.com/moonbit-community/proton/blob/6c7c6810b492ffdc57b0908fc926d67db6656eef/extensions/pkg.generated.mbti) for the complete inventory and scope types. Check target grants, OS permission and platform backend support independently.
+See the [extension API](https://github.com/moonbit-community/proton/blob/18915e6b3c852b760dee6550f066f46d95a1248d/extensions/pkg.generated.mbti) for the complete inventory and scope types. Check target grants, OS permission and platform backend support independently.
 
 ## Host callback contracts
 
@@ -464,7 +480,7 @@ The `on_session_created` callback exposes the partition and resolved data path b
 
 Operations raise `SessionError` and require a live application runtime, not a live page. Handles remain usable with no windows under `KeepRunning`; application teardown wakes pending cookie readers and invalidates retained session handles. Concurrent cookie reads are independent. A clearing operation does not erase application-owned files or implement an application logout protocol; invalidate backend credentials and UI state separately.
 
-Full attributes and `StorageDataKind` variants are in the [API reference](https://github.com/moonbit-community/proton/blob/6c7c6810b492ffdc57b0908fc926d67db6656eef/proton/pkg.generated.mbti).
+Full attributes and `StorageDataKind` variants are in the [API reference](https://github.com/moonbit-community/proton/blob/18915e6b3c852b760dee6550f066f46d95a1248d/proton/pkg.generated.mbti).
 
 ## Application updates
 
@@ -483,6 +499,8 @@ An offered `PendingUpdate` has passed manifest trust, freshness and version chec
 `PendingUpdate.download()` writes the artifact into a private stage and verifies its size, digest and signature. It does not replace application files or exit on any platform. Repeated downloads of the same prepared version are a no-op.
 
 Metadata, signature and artifact downloads follow at most five redirects, resolving relative locations and requiring HTTPS for every target. Manifest and detached-signature responses are each limited to 1 MiB. Artifact bodies are streamed to staging and are not subject to that metadata limit; the positive `Int64` size in the authenticated manifest is the expected byte count. A conflicting `Content-Length` or an incomplete/oversized body fails the download. Self-update artifacts must be an app ZIP on macOS, an NSIS installer on Windows, or an AppImage on Linux. DMGs remain available for manual installation.
+
+Manifest `size` must use JSON integer notation in the range `1`–`9223372036854775807`. Both `size` and `schema_version` reject fractions and exponent notation, even when their numeric value is integral. Parsing preserves the original number text and never rounds through a floating-point value. Direct users of `proton_updater` must pass the original document to `Manifest::parse(text)`; pre-parsed `Json` is not accepted. Parsing alone does not verify the manifest signature.
 
 After downloading, call `ApplicationContext.quit_and_install()` when the user chooses to apply the update:
 
@@ -531,7 +549,7 @@ Application focus, hide/show, active/hidden queries and readiness describe the a
 
 `ApplicationContext.focus(steal=...)` activates the application on macOS; `steal` controls whether another foreground application may be displaced. On Windows and Linux it focuses the first visible window. The application-level `hide`, `show`, `is_active` and `is_hidden` methods are macOS-only and raise `AppControlError::UnsupportedPlatform` elsewhere. `@proton.is_ready()` reports application readiness.
 
-CEF reports renderer termination through `on_render_process_gone`, but does not expose equivalent non-renderer child-process exit notifications. Electron's `child-process-gone` is therefore unsupported. Browser-operation mappings and other unsupported Electron equivalents are listed in the [page-control reference](https://github.com/moonbit-community/proton/blob/6c7c6810b492ffdc57b0908fc926d67db6656eef/proton/README.md#page-history-and-inserted-css).
+CEF reports renderer termination through `on_render_process_gone`, but does not expose equivalent non-renderer child-process exit notifications. Electron's `child-process-gone` is therefore unsupported. Browser-operation mappings and other unsupported Electron equivalents are listed in the [page-control reference](https://github.com/moonbit-community/proton/blob/18915e6b3c852b760dee6550f066f46d95a1248d/proton/README.md#page-history-and-inserted-css).
 
 **Dock and application badges**
 
@@ -555,8 +573,8 @@ CPU is zero until a sampling interval has passed; 100% represents one fully used
 
 ## API references
 
-- [Application API](https://github.com/moonbit-community/proton/blob/6c7c6810b492ffdc57b0908fc926d67db6656eef/proton/pkg.generated.mbti)
-- [Extension API](https://github.com/moonbit-community/proton/blob/6c7c6810b492ffdc57b0908fc926d67db6656eef/extensions/pkg.generated.mbti)
-- [Typed contracts](https://github.com/moonbit-community/proton/blob/6c7c6810b492ffdc57b0908fc926d67db6656eef/contract/pkg.generated.mbti)
-- [Frontend client](https://github.com/moonbit-community/proton/blob/6c7c6810b492ffdc57b0908fc926d67db6656eef/client/pkg.generated.mbti)
-- [Rabbita integration](https://github.com/moonbit-community/proton/blob/6c7c6810b492ffdc57b0908fc926d67db6656eef/rabbita/pkg.generated.mbti)
+- [Application API](https://github.com/moonbit-community/proton/blob/18915e6b3c852b760dee6550f066f46d95a1248d/proton/pkg.generated.mbti)
+- [Extension API](https://github.com/moonbit-community/proton/blob/18915e6b3c852b760dee6550f066f46d95a1248d/extensions/pkg.generated.mbti)
+- [Typed contracts](https://github.com/moonbit-community/proton/blob/18915e6b3c852b760dee6550f066f46d95a1248d/contract/pkg.generated.mbti)
+- [Frontend client](https://github.com/moonbit-community/proton/blob/18915e6b3c852b760dee6550f066f46d95a1248d/client/pkg.generated.mbti)
+- [Rabbita integration](https://github.com/moonbit-community/proton/blob/18915e6b3c852b760dee6550f066f46d95a1248d/rabbita/pkg.generated.mbti)

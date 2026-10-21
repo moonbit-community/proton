@@ -2,7 +2,7 @@
 
 本例让同一应用中的两个窗口调用命令，展示窗口声明、渲染器授权和调用方身份如何配合。增加一个窗口并不意味着该页面自动获得现有操作的访问权限。
 
-[45_bridge_multi_window](https://github.com/moonbit-community/proton/tree/6c7c6810b492ffdc57b0908fc926d67db6656eef/examples/45_bridge_multi_window) · 关键文件：[main.mbt](https://github.com/moonbit-community/proton/tree/6c7c6810b492ffdc57b0908fc926d67db6656eef/examples/45_bridge_multi_window/main.mbt)
+[45_bridge_multi_window](https://github.com/moonbit-community/proton/tree/18915e6b3c852b760dee6550f066f46d95a1248d/examples/45_bridge_multi_window) · 关键文件：[main.mbt](https://github.com/moonbit-community/proton/tree/18915e6b3c852b760dee6550f066f46d95a1248d/examples/45_bridge_multi_window/main.mbt)
 
 ## 行为
 

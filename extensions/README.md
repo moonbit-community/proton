@@ -117,7 +117,11 @@ identifier. Windows and Linux backends remain unimplemented.
 
 The `power_monitor` and `screen_monitor` packages expose `watch_status()`:
 `Stopped` before startup or after cleanup, `Watching` after native registration,
-and `Unavailable(reason)` when monitor creation or watching fails. Watch failure
+and `Unavailable(reason)` when monitor creation or watching fails. Power monitoring
+also reports `Starting` while asynchronous registration is pending. Its watching
+scope belongs to an application task; teardown cancels it and waits for cleanup.
+A lost Linux system-bus connection changes its status to `Unavailable(reason)`;
+there is no automatic reconnection. Watch failure
 is best-effort and does not disable working query commands. Queries do not
 clear the retained watch error or automatically retry an existing monitor.
 Screen topology events carry the affected display's snapshot; removal carries

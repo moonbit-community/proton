@@ -62,7 +62,7 @@ minimum_system_version 只写 macOS 的 LSMinimumSystemVersion 元数据，不�
 
 `package.prepare` 在前端和原生可执行文件构建完成后、资源组装前，从项目配置文件目录执行一次。它用于生成已声明的打包专用资源或额外二进制。命令以非零状态退出会中止打包。
 
-`proton_cli build` 和 `proton_cli package --dry-run` 不执行此命令。独立的 `proton_package` 工具只打包已有可执行文件与提供的资源，不发现项目、不执行构建或准备命令，也不组装 CEF。参见[独立打包器](https://github.com/moonbit-community/proton/blob/6c7c6810b492ffdc57b0908fc926d67db6656eef/package/README.md)。
+`proton_cli build` 和 `proton_cli package --dry-run` 不执行此命令。独立的 `proton_package` 工具只打包已有可执行文件与提供的资源，不发现项目、不执行构建或准备命令，也不组装 CEF。参见[独立打包器](https://github.com/moonbit-community/proton/blob/18915e6b3c852b760dee6550f066f46d95a1248d/package/README.md)。
 
 ## 更新产物与元数据
 

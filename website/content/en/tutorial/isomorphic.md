@@ -52,7 +52,6 @@ todo-app/
     main/
       moon.pkg
       main.mbt
-    internal/query/
     public/
 ```
 
@@ -62,7 +61,7 @@ The root `moon.work` connects three modules:
 - **backend** builds to native code. `todo/backend.mbt` holds Todo state and operations; `todo/commands.mbt` binds those operations; `app/main.mbt` starts the app.
 - **frontend** builds to JavaScript. `main/main.mbt` defines the Rabbita UI; `public/` contains its HTML and stylesheet.
 
-Proton 0.5.0 generates `frontend/internal/query` to manage query state and subscriptions. In later releases, this implementation moves to the public `moonbit-community/proton_rabbita/query` package, and the template imports it directly. After upgrading to a release containing that package, replace the local query import with `moonbit-community/proton_rabbita/query`, review any local customizations, and remove the old package. The `@query.create`, `state`, `set_input`, and `refresh` usage stays the same.
+The frontend imports `moonbit-community/proton_rabbita/query` to manage component-owned query state and subscriptions. The application owns drafts, write commands, business errors, and the choice of invalidation events.
 
 Application commands use ordinary bind calls; this template requires no command code-generation rule.
 
@@ -217,9 +216,9 @@ If the backend changes but the display does not, check that you retained `self.n
 
 ## How the UI stays current
 
-The template's `todo_app` creates a query for `list_todos` invalidated by `todos_changed`. Its application-local query helper subscribes before fetching and cancels superseded requests when input changes.
+The template's `todo_app` creates a query for `list_todos` invalidated by `todos_changed`. The query package subscribes before fetching and cancels superseded requests when input changes.
 
-The mutation response refreshes the initiating UI; the event invalidates observers. These can overlap, so the helper tracks request generations and avoids letting an older result overwrite a newer search. In the 0.5.0 template this logic lives in `frontend/internal/query`; later releases provide it in `proton_rabbita/query`. It manages component-owned reads, without a shared cache or automatic retry policy.
+The mutation response refreshes the initiating UI; the event invalidates observers. These can overlap, so `proton_rabbita/query` tracks request generations and prevents an older result from overwriting a newer search. It manages component-owned reads, without a shared cache or automatic retry policy.
 
 ## Build the finished application
 

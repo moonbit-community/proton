@@ -69,8 +69,8 @@ changes. Do not conceal that limitation with side effects in a render function.
 
 ## Migrate an existing isomorphic application
 
-This package is introduced after Proton 0.5.0. Upgrade `proton_rabbita` to a
-release containing it before removing the application's copy.
+This package is available from Proton 0.5.1. Upgrade `proton_rabbita` to
+0.5.1 or newer before removing the application's copy.
 
 1. Review custom changes to `frontend/internal/query`; keep application-specific
    behavior in the application and check it against the contract above.
