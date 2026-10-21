@@ -23,12 +23,11 @@ pub struct PowerMonitor {
   // private fields
 }
 pub fn PowerMonitor::PowerMonitor() -> Self raise PowerMonitorError
-pub async fn PowerMonitor::destroy(Self) -> Unit raise PowerMonitorError
+pub fn PowerMonitor::destroy(Self) -> Unit raise PowerMonitorError
 pub fn PowerMonitor::drain_events(Self) -> Array[PowerMonitorEvent]
 pub fn PowerMonitor::idle_seconds(Self) -> Int32 raise PowerMonitorError
 pub fn PowerMonitor::power_source(Self) -> PowerSourceInfo raise PowerMonitorError
-pub async fn PowerMonitor::start_watching(Self) -> Unit raise PowerMonitorError
-pub async fn PowerMonitor::stop_watching(Self) -> Unit raise PowerMonitorError
+pub async fn[T] PowerMonitor::with_watching(Self, async () -> T) -> T
 
 pub enum PowerMonitorEvent {
   Suspend

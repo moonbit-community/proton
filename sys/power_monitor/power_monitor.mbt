@@ -43,18 +43,13 @@ pub extend PowerMonitorEvent with Debug::{to_repr}
 ///|
 pub struct PowerMonitor {
   priv handle : State
-  priv lifecycle : @async.Mutex
-  priv mut completion : @pipe.PipeRead?
+  priv mut watching : Bool
 }
 
 ///|
 pub fn PowerMonitor::PowerMonitor() -> PowerMonitor raise PowerMonitorError {
   let handle = native_create()
-  let monitor = PowerMonitor::{
-    handle,
-    lifecycle: @async.Mutex(),
-    completion: None,
-  }
+  let monitor = PowerMonitor::{ handle, watching: false, }
   monitor.finish_create()
   monitor
 }
@@ -103,94 +98,112 @@ pub fn PowerMonitor::power_source(
 }
 
 ///|
-/// Starts the event watch backend. The backend is best-effort: a platform that
-/// cannot watch (for example Linux without a system D-Bus) records the failure
-/// on the native side and returns `BackendUnavailable`, leaving polling queries
-/// fully usable. Linux startup waits asynchronously for registration. Cancelling
-/// it waits for native cleanup before propagating cancellation.
-pub async fn PowerMonitor::start_watching(
+/// Runs `body` after native event watching is ready. Returning, raising, or
+/// cancelling always stops the watcher and awaits native cleanup. A second
+/// watching scope on the same monitor is rejected rather than queued.
+/// Linux connection setup and subscriptions are cancellable and have a five
+/// second startup deadline. A disconnected bus fails the scope and cancels body.
+pub async fn[T] PowerMonitor::with_watching(
   self : PowerMonitor,
-) -> Unit raise PowerMonitorError {
-  self.lifecycle.acquire()
-  defer self.lifecycle.release()
+  body : async () -> T,
+) -> T {
+  if self.watching {
+    raise OperationFailed(
+      operation="with_watching",
+      detail="a watching scope is already active",
+    )
+  }
+  self.watching = true
+  // Keep self (and its native handle) alive until finish_watching has observed EOF.
+  defer {
+    self.watching = false
+  }
+  let completion = self.begin_watching()
+  defer self.finish_watching(completion)
+  match completion {
+    None => body()
+    Some(reader) =>
+      @async.any([
+        body,
+        () => {
+          ignore(reader.read_all())
+          raise self.classify_status(
+            native_watch_status(self.handle),
+            "with_watching",
+          )
+        },
+      ])
+  }
+}
+
+///|
+#cfg(platform="windows")
+fn PowerMonitor::begin_watching(
+  self : PowerMonitor,
+) -> @pipe.PipeRead? raise PowerMonitorError {
+  let status = native_start_watching(self.handle, -1)
+  if status != native_status_ok {
+    raise self.classify_status(status, "with_watching")
+  }
+  None
+}
+
+///|
+#cfg(not(platform="windows"))
+async fn PowerMonitor::begin_watching(
+  self : PowerMonitor,
+) -> @pipe.PipeRead? raise PowerMonitorError {
   if !(@async.platform is Linux) {
     let status = native_start_watching(self.handle, -1)
     if status != native_status_ok {
-      raise self.classify_status(status, "start_watching")
+      raise self.classify_status(status, "with_watching")
     }
-    return
-  }
-  if self.completion is Some(_) {
-    let status = native_watch_status(self.handle)
-    if status == native_status_ok {
-      return
-    }
-    self.finish_stop()
+    return None
   }
   let (reader, writer) = @pipe.pipe() catch {
     error =>
-      raise OperationFailed(
-        operation="start_watching",
-        detail=error.to_string(),
-      )
+      raise OperationFailed(operation="with_watching", detail=error.to_string())
   }
   let status = native_start_watching(self.handle, writer.fd())
   writer.close()
   if status != native_status_ok {
     reader.close()
-    raise self.classify_status(status, "start_watching")
+    raise self.classify_status(status, "with_watching")
   }
-  self.completion = Some(reader)
-  let mut started = false
+  let mut ready = false
   defer (async fn() -> Unit raise PowerMonitorError + nocancel {
-    if !started {
-      self.finish_stop()
+    if !ready {
+      self.finish_watching(Some(reader))
     }
   })()
-  let ready = reader.read_some(max_len=1) catch {
+  let notice = reader.read_some(max_len=1) catch {
     error =>
-      raise OperationFailed(
-        operation="start_watching",
-        detail=error.to_string(),
-      )
+      raise OperationFailed(operation="with_watching", detail=error.to_string())
   }
   let status = native_watch_status(self.handle)
-  if ready is None || status != native_status_ok {
-    raise self.classify_status(status, "start_watching")
+  if notice is None || status != native_status_ok {
+    raise self.classify_status(status, "with_watching")
   }
-  started = true
+  ready = true
+  Some(reader)
 }
 
 ///|
-async fn PowerMonitor::finish_stop(
+async fn PowerMonitor::finish_watching(
   self : PowerMonitor,
+  completion : @pipe.PipeRead?,
 ) -> Unit raise PowerMonitorError + nocancel {
   ignore(native_stop_watching(self.handle))
-  if self.completion is Some(reader) {
-    defer {
-      reader.close()
-      self.completion = None
-    }
+  if completion is Some(reader) {
+    defer reader.close()
     ignore(@async.protect_from_cancel(() => reader.read_all())) catch {
       error =>
         raise OperationFailed(
-          operation="stop_watching",
+          operation="with_watching",
           detail=error.to_string(),
         )
     }
   }
-}
-
-///|
-/// Stops watching and asynchronously waits for native cleanup. Idempotent.
-/// A concurrent startup is interrupted before waiting for its cleanup.
-pub async fn PowerMonitor::stop_watching(
-  self : PowerMonitor,
-) -> Unit raise PowerMonitorError {
-  ignore(native_stop_watching(self.handle))
-  self.lifecycle.acquire()
-  defer self.lifecycle.release()
-  self.finish_stop()
 }
 
 ///|
@@ -270,11 +283,16 @@ fn decode_native_detail(bytes : Bytes) -> String {
 }
 
 ///|
-/// Stops watching, waits for cleanup, and releases native resources. Idempotent.
-pub async fn PowerMonitor::destroy(
+/// Destroys an idle monitor. End its watching scope before destroying it.
+pub fn PowerMonitor::destroy(
   self : PowerMonitor,
 ) -> Unit raise PowerMonitorError {
-  self.stop_watching()
+  if self.watching {
+    raise OperationFailed(
+      operation="destroy",
+      detail="end the watching scope before destroying the monitor",
+    )
+  }
   native_destroy(self.handle)
 }
 

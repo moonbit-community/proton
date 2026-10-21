@@ -2,29 +2,38 @@
 
 Native power and idle state queries for MoonBit on Windows, Linux, and macOS.
 
-On Linux, building requires the `dbus-1` development headers and `pkg-config`.
-The runtime loads libdbus optionally; without it or a reachable system bus,
-starting the event watcher raises `BackendUnavailable`. Queries remain usable.
-`start_watching()`, `stop_watching()`, and `destroy()` are asynchronous. On
-Linux, waiting for bus authentication or subscription replies does not block
-other tasks. Cancelling startup stops the pending request and waits for native
-cleanup before propagating cancellation. `stop_watching()` also interrupts a
-concurrent startup and waits for cleanup. A failed start can be retried;
-disconnected watchers must be started again explicitly.
-
-Keep cleanup in a cancellation-protected scope:
+`PowerMonitor::with_watching` owns event watching for the duration of its async
+callback. The callback begins only after registration succeeds. Returning,
+raising, or cancelling the scope stops the watcher and waits for cleanup.
+Cancel its owning task to stop watching; there is no separate start/stop queue.
+A second scope on the same monitor raises `OperationFailed` immediately.
 
 ```moonbit nocheck
 let monitor = @power_monitor.PowerMonitor()
-defer @async.protect_from_cancel(() => monitor.destroy())
-monitor.start_watching()
-// Consume monitor.drain_events() using the application's event loop.
+defer monitor.destroy()
+monitor.with_watching(() => {
+  // Use monitor.drain_events() from the application's event loop.
+  // Keep this scope alive until the owning task is cancelled.
+  @async.pause()
+})
 ```
 
-Idle and power-source queries do not start event watching. The Proton extension
-starts its watcher in an application-owned task and reports `Starting`,
-`Watching`, or `Unavailable(detail)` through `watch_status()`. Application
-teardown stops the watcher and resets the status to `Stopped`.
+`destroy()` is synchronous and accepts only an idle monitor. End its watching
+scope first. Idle and power-source queries do not start event watching.
 
-The Linux watch regression test requires `dbus-daemon` and `dbus-send`. It uses
-an isolated bus and does not send signals to the host system bus.
+On Linux, building requires `pkg-config` and GIO development headers
+(`libglib2.0-dev` on Ubuntu). GIO is loaded dynamically and remains optional at
+runtime. A missing library or unavailable system bus raises `BackendUnavailable`;
+queries remain usable. Connection establishment, authentication and subscription
+are asynchronous and cancellable, with a five-second deadline for the whole
+startup. A disconnected bus fails the scope and cancels its callback. A new
+scope can retry after failure; there is no automatic reconnection.
+
+The Proton extension owns the scope in an application task. `watch_status()`
+reports `Starting`, `Watching`, or `Unavailable(detail)`; application teardown
+resets it to `Stopped`.
+
+The Linux regression tests require `dbus-daemon` and `dbus-send`. They use an
+isolated bus and loopback listener, never the host system bus. They cover paused
+startup, timeout, cancellation during transport establishment, concurrent-scope
+rejection, partial registration rollback, signals, disconnection and restart.

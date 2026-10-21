@@ -33,32 +33,14 @@ static void power_monitor_lock_release(power_monitor_state_t *state) {
 #endif
 }
 
-/* The external handle and the Linux worker each own a native reference. The
-   last owner releases storage; a GC finalizer never waits for the Linux bus. */
-void power_monitor_retain(power_monitor_state_t *state) {
-  power_monitor_lock_acquire(state);
-  state->references++;
-  power_monitor_lock_release(state);
-}
-
-void power_monitor_release(power_monitor_state_t *state) {
-  power_monitor_lock_acquire(state);
-  int last = --state->references == 0;
-  power_monitor_lock_release(state);
-  if (!last) return;
-  power_monitor_release_events(state);
-  power_monitor_lock_destroy(state);
-#if defined(__APPLE__)
-  pthread_cond_destroy(&state->ready_cond);
-#endif
-  free(state);
-}
-
+/* Watching scopes finish before releasing the external object. The finalizer
+   only has the idle state to destroy, and never waits for a Linux connection. */
 static void power_monitor_destroy_state(power_monitor_state_t *state) {
   if (state->destroyed) return;
   power_monitor_set_event_wakeup(state, NULL);
   power_monitor_platform_stop_watching(state);
   state->destroyed = 1;
+  power_monitor_release_events(state);
 }
 
 void power_monitor_lock_init(power_monitor_state_t *state) {
@@ -174,29 +156,24 @@ void power_monitor_release_events(power_monitor_state_t *state) {
   power_monitor_lock_release(state);
 }
 
-static power_monitor_state_t *power_monitor_state(void *handle) {
-  return handle == NULL ? NULL : *(power_monitor_state_t **)handle;
-}
-
 static void power_monitor_finalize(void *payload) {
-  power_monitor_state_t *state = power_monitor_state(payload);
-  if (state == NULL) return;
+  power_monitor_state_t *state = payload;
   power_monitor_destroy_state(state);
-  power_monitor_release(state);
+  power_monitor_lock_destroy(state);
+#if defined(__APPLE__)
+  pthread_cond_destroy(&state->ready_cond);
+#endif
 }
 
 MOONBIT_FFI_EXPORT
 void *moonbit_power_monitor_create(void) {
-  power_monitor_state_t **handle = moonbit_make_external_object(
-      power_monitor_finalize, sizeof(*handle));
-  power_monitor_state_t *state = calloc(1, sizeof(*state));
-  if (state == NULL) abort();
-  *handle = state;
-  state->references = 1;
+  power_monitor_state_t *state = moonbit_make_external_object(
+      power_monitor_finalize, sizeof(*state));
+  memset(state, 0, sizeof(*state));
   state->source = power_monitor_SOURCE_UNKNOWN;
   power_monitor_lock_init(state);
   power_monitor_platform_init(state);
-  return handle;
+  return state;
 }
 
 MOONBIT_FFI_EXPORT
@@ -205,7 +182,7 @@ int32_t moonbit_power_monitor_idle_seconds(void *handle,
   if (handle == NULL || out_seconds == NULL) {
     return power_monitor_STATUS_OPERATION_FAILED;
   }
-  power_monitor_state_t *state = power_monitor_state(handle);
+  power_monitor_state_t *state = handle;
   state->status = power_monitor_STATUS_OK;
   state->last_error[0] = '\0';
   int32_t platform_status = power_monitor_platform_query_idle(state);
@@ -228,7 +205,7 @@ int32_t moonbit_power_monitor_source(void *handle,
   if (handle == NULL || out_source == NULL) {
     return power_monitor_STATUS_OPERATION_FAILED;
   }
-  power_monitor_state_t *state = power_monitor_state(handle);
+  power_monitor_state_t *state = handle;
   state->status = power_monitor_STATUS_OK;
   state->last_error[0] = '\0';
   int32_t platform_status = power_monitor_platform_query_source(state);
@@ -254,7 +231,7 @@ int32_t moonbit_power_monitor_status(void *handle) {
   if (handle == NULL) {
     return power_monitor_STATUS_OPERATION_FAILED;
   }
-  return power_monitor_state(handle)->status;
+  return ((power_monitor_state_t *)handle)->status;
 }
 
 MOONBIT_FFI_EXPORT
@@ -262,7 +239,7 @@ moonbit_bytes_t moonbit_power_monitor_last_error(void *handle) {
   if (handle == NULL) {
     return moonbit_make_bytes(0, 0);
   }
-  power_monitor_state_t *state = power_monitor_state(handle);
+  power_monitor_state_t *state = handle;
   const char *text = state->last_error;
   if (text[0] == '\0') {
     return moonbit_make_bytes(0, 0);
@@ -278,7 +255,7 @@ int32_t moonbit_power_monitor_start_watching(void *handle, int32_t fd) {
   if (handle == NULL) {
     return power_monitor_STATUS_OPERATION_FAILED;
   }
-  power_monitor_state_t *state = power_monitor_state(handle);
+  power_monitor_state_t *state = handle;
   if (state->destroyed) {
     power_monitor_set_error(state, "power monitor has been destroyed");
     return power_monitor_STATUS_OPERATION_FAILED;
@@ -311,7 +288,7 @@ int32_t moonbit_power_monitor_stop_watching(void *handle) {
   if (handle == NULL) {
     return power_monitor_STATUS_OPERATION_FAILED;
   }
-  return power_monitor_platform_stop_watching(power_monitor_state(handle));
+  return power_monitor_platform_stop_watching(handle);
 }
 
 MOONBIT_FFI_EXPORT
@@ -319,13 +296,13 @@ int32_t moonbit_power_monitor_take_event(void *handle, int32_t *out_event) {
   if (handle == NULL || out_event == NULL) {
     return power_monitor_STATUS_OPERATION_FAILED;
   }
-  return power_monitor_take_event(power_monitor_state(handle), out_event);
+  return power_monitor_take_event(handle, out_event);
 }
 
 MOONBIT_FFI_EXPORT void moonbit_power_monitor_set_event_wakeup(
     void *handle,
     power_monitor_event_wakeup_fn wakeup) {
-  power_monitor_set_event_wakeup(power_monitor_state(handle), wakeup);
+  power_monitor_set_event_wakeup(handle, wakeup);
 }
 
 MOONBIT_FFI_EXPORT
@@ -333,17 +310,14 @@ void moonbit_power_monitor_destroy(void *handle) {
   if (handle == NULL) {
     return;
   }
-  power_monitor_destroy_state(power_monitor_state(handle));
+  power_monitor_destroy_state(handle);
 }
 
 MOONBIT_FFI_EXPORT
 int32_t moonbit_power_monitor_watch_status(void *handle) {
-  power_monitor_state_t *state = power_monitor_state(handle);
+  power_monitor_state_t *state = handle;
   power_monitor_lock_acquire(state);
   int started = state->watch_started;
-#if !defined(_WIN32) && !defined(__APPLE__)
-  started = started && !state->watch_stop;
-#endif
   power_monitor_set_error(state, state->watch_error);
   power_monitor_lock_release(state);
   return started ? power_monitor_STATUS_OK : power_monitor_STATUS_BACKEND_UNAVAILABLE;
@@ -351,5 +325,5 @@ int32_t moonbit_power_monitor_watch_status(void *handle) {
 
 MOONBIT_FFI_EXPORT
 void moonbit_power_monitor_clear_event_wakeup(void *handle) {
-  power_monitor_set_event_wakeup(power_monitor_state(handle), NULL);
+  power_monitor_set_event_wakeup(handle, NULL);
 }

@@ -10,7 +10,7 @@ Proton 0.5.0 支持以下宿主构建环境。原生构建与打包面向当前�
 | Windows | x64 | Visual Studio C++ Build Tools、MSVC、Windows SDK；开发者终端 |
 | Linux | x64 | C/C++ 构建工具、pkg-config、X11/RandR 和 GTK 开发库；执行时需要图形环境 |
 
-Ubuntu 24.04 的依赖包括 `build-essential`、`pkg-config`、`libdbus-1-dev`、`libx11-dev`、`libxrandr-dev`、`libgtk-3-dev`、`libwebkit2gtk-4.1-dev`、`libnotify-dev`、`libnss3`、`libgbm1` 和 `libasound2t64`。不同发行版的包名及运行兼容性可能不同。
+Ubuntu 24.04 的依赖包括 `build-essential`、`pkg-config`、`libglib2.0-dev`、`libx11-dev`、`libxrandr-dev`、`libgtk-3-dev`、`libwebkit2gtk-4.1-dev`、`libnotify-dev`、`libnss3`、`libgbm1` 和 `libasound2t64`。不同发行版的包名及运行兼容性可能不同。
 
 NSIS 仅用于 NSIS 格式产物。签名身份和公证凭据属于分发要求，不是本地开发的前置条件。
 

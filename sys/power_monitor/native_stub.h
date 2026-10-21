@@ -46,7 +46,6 @@ typedef void (*power_monitor_event_wakeup_fn)(void);
 #endif
 
 typedef struct power_monitor_state {
-  int references;
   int32_t status;
   int32_t source;
   int32_t battery_percent;
@@ -93,15 +92,13 @@ typedef struct power_monitor_state {
   int32_t unlock_token;
 #else
   pthread_mutex_t event_lock;
-  /* Set by stop_watching and observed by the D-Bus dispatch loop so the watch
-     thread can exit promptly without a second global wake channel. */
-  volatile int32_t watch_stop;
+  /* Owned by the watching scope; stop cancels and wakes the private context. */
+  void *watch_cancel;
+  void *watch_context;
   int completion_fd;
 #endif
 } power_monitor_state_t;
 
-void power_monitor_retain(power_monitor_state_t *state);
-void power_monitor_release(power_monitor_state_t *state);
 void power_monitor_platform_init(power_monitor_state_t *state);
 int32_t power_monitor_platform_query_idle(power_monitor_state_t *state);
 int32_t power_monitor_platform_query_source(power_monitor_state_t *state);
