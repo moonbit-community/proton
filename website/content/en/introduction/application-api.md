@@ -363,6 +363,34 @@ On Linux, power watching requires GIO and the system bus. Connection, authentica
 
 The net extension performs host HTTP requests and returns status, headers and UTF-8 text. It is not browser fetch, does not share the browser cookie jar and does not follow redirects automatically. Its text response is not a lossless binary transfer interface. Processes spawned by the process extension belong to its application lifetime: wait collects handles, kill still needs wait, and application shutdown cancels and reaps remaining children.
 
+For binary files, MoonBit backend code can call `download` from
+`moonbit-community/proton_ext/net` (imported here as `@net`):
+
+```moonbit
+@net.download(
+  url,
+  destination,
+  headers={ "Authorization": "Bearer \{token}" },
+)
+```
+
+This host-only function streams HTTP(S) GET content to a sibling temporary file
+and submits it to the chosen destination only after completion. The parent
+directory must exist; existing entries are preserved unless `overwrite=true`.
+Only HTTP 200 is accepted: redirects and partial downloads are not supported.
+It raises `DownloadError`; cancellation follows the calling async task and
+cleans up the temporary file. Once the final move starts, it finishes without
+cancellation, and an already submitted destination is not deleted.
+
+The optional synchronous `on_progress` callback receives `received_bytes` and
+`total_bytes : Int64?`. An unknown or automatically decompressed response size
+has no total. Reaching the final byte count is not success: await normal return
+for confirmation that the destination was saved. No browser download events
+are emitted. Applications can wrap this function in their own commands, keeping
+tokens and destination authorization in the backend; `net.capability()` does
+not gain filesystem write access. Use the calling task's cancellation and
+`@async.with_timeout` for cancellation and deadlines.
+
 See the [extension API](https://github.com/moonbit-community/proton/blob/18915e6b3c852b760dee6550f066f46d95a1248d/extensions/pkg.generated.mbti) for the complete inventory and scope types. Check target grants, OS permission and platform backend support independently.
 
 ## Host callback contracts
