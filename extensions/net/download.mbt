@@ -79,6 +79,11 @@ pub async fn download(
   guard !destination.is_empty() else {
     raise InvalidRequest(detail="destination must be a file path")
   }
+  // FIXME: https://github.com/moonbitlang/x/issues/351 tracks anchoring paths
+  // without changing filesystem traversal. resolve() lexically collapses
+  // symlink/.. and can select the wrong destination (overwriting another file).
+  // Preserve parent traversal and the final entry's replacement semantics;
+  // account for create_download_file's normalizing join and Windows paths too.
   let destination = @path.Path(destination).resolve().to_string()
   let headers = request_headers(headers)
   guard !headers.contains("Range") else {
