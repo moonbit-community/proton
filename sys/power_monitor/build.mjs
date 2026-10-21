@@ -9,7 +9,7 @@ process.stdout.write(JSON.stringify({
   vars: {
     MACOS_STUB_FLAGS: process.platform === "darwin" ? "-fblocks" : "",
     LINUX_STUB_FLAGS: process.platform === "linux"
-      ? execFileSync("pkg-config", ["--cflags", "dbus-1"], { encoding: "utf8" }).trim()
+      ? execFileSync("pkg-config", ["--cflags", "gio-2.0"], { encoding: "utf8" }).trim()
       : "",
   },
 }));

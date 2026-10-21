@@ -92,13 +92,10 @@ typedef struct power_monitor_state {
   int32_t unlock_token;
 #else
   pthread_mutex_t event_lock;
-  pthread_t watch_thread;
-  pthread_cond_t ready_cond;
-  int ready;
-  volatile int32_t thread_started;
-  /* Set by stop_watching and observed by the D-Bus dispatch loop so the watch
-     thread can exit promptly without a second global wake channel. */
-  volatile int32_t watch_stop;
+  /* Owned by the watching scope; stop cancels and wakes the private context. */
+  void *watch_cancel;
+  void *watch_context;
+  int completion_fd;
 #endif
 } power_monitor_state_t;
 

@@ -52,7 +52,7 @@ int32_t proton_test_power_registration_failure(int32_t stage) {
     session_unregistered = 0;
     power_attempted = 0;
     registered_window = NULL;
-    int32_t status = moonbit_power_monitor_start_watching(&state);
+    int32_t status = moonbit_power_monitor_start_watching(&state, -1);
     const char *operation = stage == 1 ? "WTSRegisterSessionNotification"
                                        : "RegisterPowerSettingNotification";
     const char *code = stage == 1 ? "Win32 error 5" : "Win32 error 50";
