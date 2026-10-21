@@ -19,6 +19,15 @@ developer must perform them.
   surface.
 - Keep generated sources and user-facing examples synchronized with their
   templates and implementation.
+- Every substantive user-facing change (features, public APIs, CLI usage,
+  configuration, platform support, or significant behavior changes) must update
+  both the relevant website documentation and release notes in the same PR,
+  keeping the English and Chinese versions aligned. Describe usage, behavior
+  and migration requirements for application developers, not implementation
+  history or development logs. Small, subtle bug fixes, internal design
+  improvements and code-style changes are exempt when they do not change the
+  documented usage or contract. Record unreleased changes as unreleased; do not
+  imply they are available in an already published version.
 - Never publish from an unverified dependency chain or use repository-local
   overrides for the final release smoke test.
 

@@ -2,10 +2,20 @@ import {
   "moonbitlang/core/debug",
   "moonbitlang/core/encoding/utf8",
   "moonbitlang/async/http",
+  "moonbitlang/async",
+  "moonbitlang/async/fs",
+  "moonbitlang/async/os_error",
+  "moonbitlang/core/random",
+  "moonbitlang/core/string",
+  "moonbitlang/x/path",
   "moonbit-community/proton",
   "moonbit-community/proton/extension" @proton_extension,
   "moonbit-community/proton_ext/net/contract" @net_contract,
 }
+
+import {
+  "moonbitlang/async/socket",
+} for "test"
 
 supported_targets = "native"
 

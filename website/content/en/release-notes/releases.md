@@ -1,5 +1,27 @@
 # Release Notes
 
+## Unreleased
+
+**Authenticated file downloads**
+
+The `moonbit-community/proton_ext/net` package adds the host-side async function
+`download(url, destination, headers?, overwrite?, on_progress?)`. Applications
+can download binary files with an `Authorization` header without buffering the
+whole response or transferring file contents through IPC.
+
+Downloads support progress and task cancellation. The destination's parent
+directory must exist; an existing file is replaced only with `overwrite=true`,
+after the new content has been fully saved. Normal return confirms success;
+failures raise `DownloadError`. Only HTTP 200 is accepted; redirects and partial
+downloads are not supported. Downloads temporarily request identity encoding
+by default and reject compressed responses until an upstream HTTP decoding fix
+is available; servers must return unencoded content.
+
+This adds no frontend command or filesystem grant to `net.capability()`.
+Existing browser-managed `WebContentsHandle.download_url()` behavior is unchanged.
+See [host networking](../introduction/application-api.md#extensions-and-capabilities)
+for usage and cancellation semantics.
+
 ## 0.5.1
 
 0.5.1 fixes resource loading, filesystem link operations, monitor startup and update-manifest decoding. It adds macOS/Linux shell operations and a shared Rabbita query package. Despite the patch version, direct users of the power-monitor, shell and updater modules need the source migrations below.

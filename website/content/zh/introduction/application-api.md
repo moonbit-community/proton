@@ -354,6 +354,30 @@ Linux 电源监听需要 GIO 和系统总线。连接、认证和订阅均可取
 
 net 扩展在宿主执行 HTTP 请求，返回状态、响应头及 UTF-8 文本；它不等于浏览器 fetch，不共享浏览器 cookie jar，也不自动跟随重定向。二进制数据不是该文本响应接口的无损用途。process 扩展创建的进程属于扩展应用生命周期，wait 回收句柄，kill 后仍需 wait，应用退出会取消并回收剩余子进程。
 
+下载二进制文件时，MoonBit 后端可以调用 `moonbit-community/proton_ext/net` 中的
+`download`（这里将包导入为 `@net`）：
+
+```moonbit
+@net.download(
+  url,
+  destination,
+  headers={ "Authorization": "Bearer \{token}" },
+)
+```
+
+这个仅供后端调用的函数将 HTTP(S) GET 响应流写入目标目录中的临时文件，完成后才提交到指定路径。
+父目录必须存在；默认保留已有文件，只有 `overwrite=true` 才允许替换。
+只接受 HTTP 200，不自动跟随重定向，不支持部分下载。
+在上游 HTTP 解码问题修复前，下载默认请求 `Accept-Encoding: identity`，并拒绝压缩响应，
+即使调用者通过自定义请求头要求压缩也一样；服务端必须提供未编码的内容。
+失败抛出 `DownloadError`；取消调用任务会结束下载并清理临时文件。
+最终移动一旦开始，就会在不可取消的区间完成；已提交的目标文件不会被取消清理删除。
+
+可选的同步 `on_progress` 回调接收 `received_bytes` 和 `total_bytes : Int64?`。
+分块响应和以连接关闭定界的响应不提供总大小。字节进度达到总量不代表保存成功，必须等待函数正常返回。
+它不发送浏览器下载事件。应用可以在自己的命令中调用它，将 token 和目标路径授权留在后端；
+`net.capability()` 不会因此获得文件写入权限。取消和超时使用现有异步任务机制及 `@async.with_timeout`。
+
 完整扩展清单及各范围类型见[扩展 API](https://github.com/moonbit-community/proton/blob/18915e6b3c852b760dee6550f066f46d95a1248d/extensions/pkg.generated.mbti)。访问某个 API 前分别确认：目标授权、操作系统授权、平台后端支持。
 
 ## 宿主回调契约

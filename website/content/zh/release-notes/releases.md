@@ -1,5 +1,24 @@
 # Release Notes
 
+## 未发布
+
+**带鉴权的文件下载**
+
+`moonbit-community/proton_ext/net` 包新增后端异步函数
+`download(url, destination, headers?, overwrite?, on_progress?)`。
+应用可以携带 `Authorization` 请求头下载二进制文件，无需将完整响应放入内存，
+也无需通过 IPC 传输文件内容。
+
+下载支持进度通知和任务取消。目标文件的父目录必须存在；只有显式设置
+`overwrite=true`，才会在新内容完整保存后替换已有文件。
+函数正常返回表示保存成功，失败抛出 `DownloadError`。
+只接受 HTTP 200，不支持重定向和部分下载。在上游 HTTP 解码问题修复前，
+下载默认请求 identity 编码，并拒绝压缩响应；服务端必须返回未编码的内容。
+
+该功能不会为 `net.capability()` 增加前端命令或文件写入权限，
+也不改变浏览器下载接口 `WebContentsHandle.download_url()` 的行为。
+用法和取消语义见[宿主网络](../introduction/application-api.md#扩展与能力)。
+
 ## 0.5.1
 
 0.5.1 修复资源加载、文件系统链接操作、监听启动和更新 manifest 解析，补全 macOS／Linux shell 操作，并提供公共 Rabbita 查询包。虽然版本号只增加 patch，直接使用电源监听、shell 和 updater 模块的应用仍需按下表迁移源码。
