@@ -21,6 +21,12 @@ monitor.with_watching(() => {
 `destroy()` is synchronous and accepts only an idle monitor. End its watching
 scope first. Idle and power-source queries do not start event watching.
 
+On Windows, AC and onboard-battery notifications produce `OnAC` and
+`OnBattery` respectively. UPS and unrecognized source notifications do not
+produce either event. Idle time is measured in whole seconds for the calling
+session, modulo the Windows last-input counter's 2^32-millisecond period (about
+49.7 days); it cannot distinguish an idle interval spanning a full period.
+
 On Linux, building requires `pkg-config` and GIO development headers
 (`libglib2.0-dev` on Ubuntu). GIO is loaded dynamically and remains optional at
 runtime. A missing library or unavailable system bus raises `BackendUnavailable`;
