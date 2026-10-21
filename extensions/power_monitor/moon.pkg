@@ -1,4 +1,5 @@
 import {
+  "moonbitlang/async",
   "moonbit-community/proton_power_monitor" @sys_power_monitor,
   "moonbit-community/proton",
   "moonbit-community/proton/extension" @proton_extension,

@@ -51,7 +51,7 @@ async fn expect_event(monitor : @monitor.PowerMonitor, sleeping : Bool) -> Unit 
 }
 
 ///|
-fn start_unavailable(monitor : @monitor.PowerMonitor) -> Bool raise {
+async fn start_unavailable(monitor : @monitor.PowerMonitor) -> Bool {
   try {
     monitor.start_watching()
     false
@@ -78,14 +78,14 @@ async test "public power monitor receives signals, restarts, and recovers from a
     Some(value) => @env.set_env_var("DBUS_SYSTEM_BUS_ADDRESS", value)
     None => @env.unset_env_var("DBUS_SYSTEM_BUS_ADDRESS")
   })
-  // libdbus caches this address. Restart the daemon at the same socket path.
+  // Restart the isolated daemon at the same socket path.
   @env.set_env_var("DBUS_SYSTEM_BUS_ADDRESS", address)
   @async.with_timeout(15000, () => {
     @async.with_task_group(group => {
       let bus = start_bus(group, address)
       defer bus.cancel()
       let monitor = @monitor.PowerMonitor()
-      defer monitor.destroy()
+      defer @async.protect_from_cancel(() => monitor.destroy())
       assert_eq(
         registration_failure_test(0),
         0,
@@ -96,6 +96,38 @@ async test "public power monitor receives signals, restarts, and recovers from a
         0,
         msg="partial subscription failure must roll back and permit retry",
       )
+      // Pause the peer before starting. Both the unrelated timer and task
+      // cancellation must complete without resuming the bus first.
+      assert_eq(@process.run("kill", ["-STOP", bus.pid.to_string()]), 0)
+      @async.protect_from_cancel(() => {
+        defer @process.run("kill", ["-CONT", bus.pid.to_string()]) |> ignore
+        @async.with_timeout(2000, () => {
+          @async.with_task_group(start_tasks => {
+            let started = Ref(false)
+            let start = start_tasks.spawn(() => {
+              monitor.start_watching()
+              started.val = true
+            })
+            @async.sleep(50)
+            assert_false(
+              started.val,
+              msg="paused bus cannot acknowledge startup",
+            )
+            start.cancel()
+          })
+          // Cancellation's cleanup has completed while the bus is still paused.
+          monitor.stop_watching()
+          @async.with_task_group(start_tasks => {
+            let start = start_tasks.spawn(() => start_unavailable(monitor))
+            @async.sleep(50)
+            ignore(monitor.power_source())
+            monitor.stop_watching()
+            assert_true(start.wait(), msg="stop must interrupt pending startup")
+          })
+          assert_true(monitor.drain_events().is_empty())
+        })
+      })
+      // Recovery on the same monitor detects leaked workers and stale state.
       for _ in 0..<2 {
         monitor.start_watching()
         expect_event(monitor, true)

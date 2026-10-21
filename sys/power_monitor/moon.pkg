@@ -1,4 +1,6 @@
 import {
+  "moonbitlang/async",
+  "moonbitlang/async/pipe",
   "moonbit-community/proton_ffi" @ffi,
   "moonbitlang/core/encoding/utf8",
 }

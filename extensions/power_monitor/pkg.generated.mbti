@@ -25,6 +25,7 @@ pub fn PowerMonitorError::to_string(Self) -> String
 // Types and methods
 pub enum WatchStatus {
   Stopped
+  Starting
   Watching
   Unavailable(String)
 } derive(Eq, @debug.Debug)

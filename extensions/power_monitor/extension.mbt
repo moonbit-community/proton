@@ -17,6 +17,7 @@ let event_wakeup : Ref[@proton_extension.EventWakeup?] = Ref(None)
 /// Event watching is independent of query availability.
 pub enum WatchStatus {
   Stopped
+  Starting
   Watching
   Unavailable(String)
 } derive(Debug, Eq)
@@ -42,9 +43,6 @@ fn ensure_monitor(
   create~ : () -> @sys_power_monitor.PowerMonitor raise @sys_power_monitor.PowerMonitorError = () => {
     @sys_power_monitor.PowerMonitor()
   },
-  watch~ : (@sys_power_monitor.PowerMonitor) -> Unit raise @sys_power_monitor.PowerMonitorError = monitor => {
-    monitor.start_watching()
-  },
 ) -> @sys_power_monitor.PowerMonitor raise PowerMonitorError {
   match active_monitor.val {
     Some(monitor) => monitor
@@ -58,13 +56,6 @@ fn ensure_monitor(
       match event_wakeup.val {
         Some(wakeup) => monitor.set_event_wakeup(wakeup)
         None => ()
-      }
-      // Best-effort: enable the event watch backend. A platform that cannot
-      // watch only loses events; polling queries stay fully usable.
-      try watch(monitor) catch {
-        error => current_watch_status.val = Unavailable(error.to_string())
-      } noraise {
-        _ => current_watch_status.val = Watching
       }
       active_monitor.val = Some(monitor)
       monitor
@@ -167,10 +158,34 @@ fn power_monitor_event(
 ///|
 fn start_event_source(wakeup : @proton_extension.EventWakeup) -> Unit {
   event_wakeup.val = Some(wakeup)
-  match active_monitor.val {
-    Some(monitor) => monitor.set_event_wakeup(wakeup)
-    None => ignore(ensure_monitor()) catch { _ => () }
+  if active_monitor.val is Some(monitor) {
+    monitor.set_event_wakeup(wakeup)
   }
+}
+
+///|
+async fn start_watch(
+  watch~ : async (@sys_power_monitor.PowerMonitor) -> Unit = monitor => {
+    monitor.start_watching()
+  },
+) -> Unit {
+  current_watch_status.val = Starting
+  try {
+    let monitor = ensure_monitor()
+    watch(monitor)
+  } catch {
+    error => current_watch_status.val = Unavailable(error.to_string())
+  } noraise {
+    _ => current_watch_status.val = Watching
+  }
+}
+
+///|
+fn stop_event_source() -> Unit {
+  if active_monitor.val is Some(monitor) {
+    monitor.clear_event_wakeup()
+  }
+  event_wakeup.val = None
 }
 
 ///|
@@ -182,7 +197,7 @@ fn drain_events() -> Array[@proton_extension.Event] raise {
 }
 
 ///|
-fn cleanup_power_monitor() -> Unit {
+async fn cleanup_power_monitor() -> Unit {
   match active_monitor.val {
     Some(monitor) => {
       monitor.destroy()
@@ -198,9 +213,15 @@ fn cleanup_power_monitor() -> Unit {
 let extension_definition : @proton_extension.Extension = @proton_extension.typed(
   @power_monitor_contract.extension,
   fn(registrar) raise { register_commands(registrar) },
+  on_start=tasks => {
+    tasks.add_defer(() => {
+      @async.protect_from_cancel(() => cleanup_power_monitor())
+    })
+    tasks.spawn_bg(() => start_watch())
+  },
   event_source=@proton_extension.event_source(
     wakeup => start_event_source(wakeup),
-    () => cleanup_power_monitor(),
+    () => stop_event_source(),
     () => drain_events(),
   ),
 )

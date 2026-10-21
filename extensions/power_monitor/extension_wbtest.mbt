@@ -24,9 +24,11 @@ test "power monitor idle state request preserves threshold" {
 }
 
 ///|
-test "watch failure is observable while the query monitor remains available" {
-  defer cleanup_power_monitor()
-  let monitor = ensure_monitor(watch=_ => {
+async test "watch failure is observable while the query monitor remains available" {
+  defer @async.protect_from_cancel(() => cleanup_power_monitor())
+  let monitor = ensure_monitor()
+  assert_true(watch_status() is Stopped)
+  start_watch(watch=_ => {
     raise @sys_power_monitor.PowerMonitorError::BackendUnavailable(
       detail="watch fixture unavailable",
     )
@@ -44,8 +46,8 @@ test "watch failure is observable while the query monitor remains available" {
 }
 
 ///|
-test "monitor creation failures retain their reason and cleanup clears status" {
-  defer cleanup_power_monitor()
+async test "monitor creation failures retain their reason and cleanup clears status" {
+  defer @async.protect_from_cancel(() => cleanup_power_monitor())
   try
     ignore(
       ensure_monitor(create=() => {

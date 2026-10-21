@@ -9,9 +9,13 @@
 #include <stdio.h>
 #include <string.h>
 #include <sys/stat.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <signal.h>
+#include <errno.h>
 
 void power_monitor_platform_init(power_monitor_state_t *state) {
-  pthread_cond_init(&state->ready_cond, NULL);
+  state->completion_fd = -1;
 }
 
 int32_t power_monitor_platform_query_idle(power_monitor_state_t *state) {
@@ -94,8 +98,19 @@ int32_t power_monitor_platform_query_source(power_monitor_state_t *state) {
 /* Compile against the official ABI, but load lazily so libdbus remains an
    optional runtime dependency. The library stays loaded for process lifetime. */
 static struct {
-  __typeof__(&dbus_bus_get_private) bus_get_private;
-  __typeof__(&dbus_bus_add_match) bus_add_match;
+  __typeof__(&dbus_connection_open_private) connection_open_private;
+  __typeof__(&dbus_connection_send_with_reply) connection_send_with_reply;
+  __typeof__(&dbus_message_new_method_call) message_new_method_call;
+  __typeof__(&dbus_message_append_args) message_append_args;
+  __typeof__(&dbus_message_unref) message_unref;
+  __typeof__(&dbus_message_get_type) message_get_type;
+  __typeof__(&dbus_message_get_error_name) message_get_error_name;
+  __typeof__(&dbus_message_get_args) message_get_args;
+  __typeof__(&dbus_bus_set_unique_name) bus_set_unique_name;
+  __typeof__(&dbus_pending_call_get_completed) pending_call_get_completed;
+  __typeof__(&dbus_pending_call_steal_reply) pending_call_steal_reply;
+  __typeof__(&dbus_pending_call_cancel) pending_call_cancel;
+  __typeof__(&dbus_pending_call_unref) pending_call_unref;
   __typeof__(&dbus_connection_add_filter) connection_add_filter;
   __typeof__(&dbus_connection_read_write_dispatch) connection_read_write_dispatch;
   __typeof__(&dbus_connection_close) connection_close;
@@ -110,7 +125,6 @@ static struct {
   __typeof__(&dbus_message_iter_next) message_iter_next;
   __typeof__(&dbus_message_iter_recurse) message_iter_recurse;
   __typeof__(&dbus_error_init) error_init;
-  __typeof__(&dbus_error_is_set) error_is_set;
   __typeof__(&dbus_error_free) error_free;
   int ready;
 } g_dbus;
@@ -121,7 +135,9 @@ static void power_monitor_set_watch_error(power_monitor_state_t *state,
   if (state == NULL || message == NULL) {
     return;
   }
+  pthread_mutex_lock(&state->event_lock);
   snprintf(state->watch_error, sizeof(state->watch_error), "%s", message);
+  pthread_mutex_unlock(&state->event_lock);
 }
 
 static void power_monitor_load_dbus_symbols_once(void) {
@@ -131,8 +147,19 @@ static void power_monitor_load_dbus_symbols_once(void) {
 #define LOAD(name) \
   g_dbus.name = (__typeof__(g_dbus.name))dlsym(lib, "dbus_" #name); \
   if (g_dbus.name == NULL) { dlclose(lib); return; }
-  LOAD(bus_get_private);
-  LOAD(bus_add_match);
+  LOAD(connection_open_private);
+  LOAD(connection_send_with_reply);
+  LOAD(message_new_method_call);
+  LOAD(message_append_args);
+  LOAD(message_unref);
+  LOAD(message_get_type);
+  LOAD(message_get_error_name);
+  LOAD(message_get_args);
+  LOAD(bus_set_unique_name);
+  LOAD(pending_call_get_completed);
+  LOAD(pending_call_steal_reply);
+  LOAD(pending_call_cancel);
+  LOAD(pending_call_unref);
   LOAD(connection_add_filter);
   LOAD(connection_read_write_dispatch);
   LOAD(connection_close);
@@ -147,7 +174,6 @@ static void power_monitor_load_dbus_symbols_once(void) {
   LOAD(message_iter_next);
   LOAD(message_iter_recurse);
   LOAD(error_init);
-  LOAD(error_is_set);
   LOAD(error_free);
 #undef LOAD
   g_dbus.ready = 1;
@@ -255,65 +281,113 @@ static DBusHandlerResult power_monitor_dbus_filter(
   return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
 }
 
-static void *power_monitor_linux_watch_thread_main(void *param) {
-  power_monitor_state_t *state = (power_monitor_state_t *)param;
+static int power_monitor_stopping(power_monitor_state_t *state) {
+  pthread_mutex_lock(&state->event_lock);
+  int stop = state->watch_stop;
+  pthread_mutex_unlock(&state->event_lock);
+  return stop;
+}
 
+/* Authentication, Hello and AddMatch are progressed by the worker rather than
+   libdbus's blocking bus convenience functions. Every wait observes stop. */
+static DBusMessage *power_monitor_bus_call(power_monitor_state_t *state,
+                                         DBusConnection *conn,
+                                         const char *method, const char *arg) {
+  DBusMessage *request = g_dbus.message_new_method_call(
+      DBUS_SERVICE_DBUS, DBUS_PATH_DBUS, DBUS_INTERFACE_DBUS, method);
+  if (request == NULL) {
+    power_monitor_set_watch_error(state, "allocating D-Bus request failed");
+    return NULL;
+  }
+  DBusPendingCall *pending = NULL;
+  int sent = (arg == NULL || g_dbus.message_append_args(
+      request, DBUS_TYPE_STRING, &arg, DBUS_TYPE_INVALID)) &&
+      g_dbus.connection_send_with_reply(conn, request, &pending, 5000);
+  g_dbus.message_unref(request);
+  if (!sent || pending == NULL) {
+    power_monitor_set_watch_error(state, "sending D-Bus request failed");
+    return NULL;
+  }
+  while (!g_dbus.pending_call_get_completed(pending)) {
+    if (power_monitor_stopping(state) ||
+        !g_dbus.connection_read_write_dispatch(conn, 100)) {
+      g_dbus.pending_call_cancel(pending);
+      g_dbus.pending_call_unref(pending);
+      power_monitor_set_watch_error(state, "D-Bus startup cancelled or disconnected");
+      return NULL;
+    }
+  }
+  DBusMessage *reply = g_dbus.pending_call_steal_reply(pending);
+  g_dbus.pending_call_unref(pending);
+  if (reply != NULL && g_dbus.message_get_type(reply) != DBUS_MESSAGE_TYPE_ERROR)
+    return reply;
+  power_monitor_set_watch_error(state, reply == NULL ? "missing D-Bus reply" :
+                                g_dbus.message_get_error_name(reply));
+  if (reply != NULL) g_dbus.message_unref(reply);
+  return NULL;
+}
+
+static void *power_monitor_linux_watch_thread_main(void *param) {
+  power_monitor_state_t *state = param;
+  /* The owner may be garbage-collected without an explicit stop. A closed
+     notification reader must never turn its final readiness write into SIGPIPE. */
+  sigset_t signals;
+  sigemptyset(&signals);
+  sigaddset(&signals, SIGPIPE);
+  pthread_sigmask(SIG_BLOCK, &signals, NULL);
   DBusError error;
   g_dbus.error_init(&error);
-  DBusConnection *conn = g_dbus.bus_get_private(DBUS_BUS_SYSTEM, &error);
+  const char *address = getenv("DBUS_SYSTEM_BUS_ADDRESS");
+  if (address == NULL) address = "unix:path=/var/run/dbus/system_bus_socket";
+  DBusConnection *conn = g_dbus.connection_open_private(address, &error);
   if (conn == NULL) {
-    power_monitor_set_watch_error(
-        state, error.message != NULL ? error.message : "dbus_bus_get_private failed");
+    power_monitor_set_watch_error(state, error.message != NULL ? error.message :
+                                  "opening D-Bus connection failed");
     g_dbus.error_free(&error);
-    goto ready;
+    goto done;
   }
   g_dbus.error_free(&error);
-
-  /* Do not let a dead bus take the whole process down. */
   g_dbus.connection_set_exit_on_disconnect(conn, 0);
+  DBusMessage *reply = power_monitor_bus_call(state, conn, "Hello", NULL);
+  if (reply == NULL) goto close;
+  const char *name = NULL;
+  int registered = g_dbus.message_get_args(reply, NULL, DBUS_TYPE_STRING,
+                                           &name, DBUS_TYPE_INVALID) &&
+                   g_dbus.bus_set_unique_name(conn, name);
+  g_dbus.message_unref(reply);
+  if (!registered) {
+    power_monitor_set_watch_error(state, "invalid D-Bus Hello reply");
+    goto close;
+  }
   if (!g_dbus.connection_add_filter(conn, power_monitor_dbus_filter, state, NULL)) {
     power_monitor_set_watch_error(state, "dbus_connection_add_filter failed");
     goto close;
   }
-
-  static const char *const k_match_rules[] = {
-      "type='signal',interface='org.freedesktop.login1.Manager',member="
-      "'PrepareForSleep'",
+  static const char *const rules[] = {
+      "type='signal',interface='org.freedesktop.login1.Manager',member='PrepareForSleep'",
       "type='signal',interface='org.freedesktop.login1.Session',member='Lock'",
-      "type='signal',interface='org.freedesktop.login1.Session',member="
-      "'Unlock'",
-      "type='signal',path='/org/freedesktop/UPower',interface="
-      "'org.freedesktop.DBus.Properties',member='PropertiesChanged'",
+      "type='signal',interface='org.freedesktop.login1.Session',member='Unlock'",
+      "type='signal',path='/org/freedesktop/UPower',interface='org.freedesktop.DBus.Properties',member='PropertiesChanged'",
   };
-  for (size_t i = 0; i < sizeof(k_match_rules) / sizeof(k_match_rules[0]); i++) {
-    g_dbus.error_init(&error);
-    g_dbus.bus_add_match(conn, k_match_rules[i], &error);
-    if (g_dbus.error_is_set(&error)) {
-      power_monitor_set_watch_error(state, error.message != NULL
-          ? error.message : "dbus_bus_add_match failed");
-      g_dbus.error_free(&error);
-      goto close;
-    }
+  for (size_t i = 0; i < sizeof(rules) / sizeof(rules[0]); i++) {
+    reply = power_monitor_bus_call(state, conn, "AddMatch", rules[i]);
+    if (reply == NULL) goto close;
+    g_dbus.message_unref(reply);
   }
-
-  /* Seed the power source so only real changes are reported afterwards. */
-  if (power_monitor_platform_query_source(state) == power_monitor_STATUS_OK) {
-    state->last_source = state->source;
-  }
-
   pthread_mutex_lock(&state->event_lock);
-  state->watch_started = 1;
-  state->ready = 1;
-  pthread_cond_signal(&state->ready_cond);
+  if (!state->watch_stop) state->watch_started = 1;
   pthread_mutex_unlock(&state->event_lock);
-
-  /* Only this worker uses the private connection. Stop is synchronized with
-     the caller; a disconnected bus ends the worker instead of spinning. */
-  for (;;) {
-    pthread_mutex_lock(&state->event_lock);
-    int stop = state->watch_stop;
-    pthread_mutex_unlock(&state->event_lock);
-    if (stop) break;
+  if (power_monitor_stopping(state)) goto close;
+  char ready = 1;
+  ssize_t written;
+  do {
+    written = write(state->completion_fd, &ready, 1);
+  } while (written < 0 && errno == EINTR);
+  if (written != 1) {
+    power_monitor_set_watch_error(state, "notifying watcher readiness failed");
+    goto close;
+  }
+  while (!power_monitor_stopping(state)) {
     if (!g_dbus.connection_read_write_dispatch(conn, 100)) {
       power_monitor_set_watch_error(state, "D-Bus connection disconnected");
       break;
@@ -322,65 +396,47 @@ static void *power_monitor_linux_watch_thread_main(void *param) {
 close:
   g_dbus.connection_close(conn);
   g_dbus.connection_unref(conn);
-ready:
+done:
   pthread_mutex_lock(&state->event_lock);
   state->watch_started = 0;
-  state->ready = 1;
-  pthread_cond_signal(&state->ready_cond);
+  int fd = state->completion_fd;
+  state->completion_fd = -1;
   pthread_mutex_unlock(&state->event_lock);
+  power_monitor_release(state);
+  /* EOF is sent after the worker's final access to state. */
+  close(fd);
   return NULL;
 }
 
 int32_t power_monitor_platform_start_watching(power_monitor_state_t *state) {
-  if (state->thread_started) {
-    pthread_mutex_lock(&state->event_lock);
-    int started = state->watch_started;
-    pthread_mutex_unlock(&state->event_lock);
-    if (started) return power_monitor_STATUS_OK;
-    power_monitor_platform_stop_watching(state);
-  }
   state->watch_error[0] = '\0';
   if (!power_monitor_load_dbus_symbols()) {
     power_monitor_set_watch_error(state, "libdbus unavailable");
     return power_monitor_STATUS_BACKEND_UNAVAILABLE;
   }
+  power_monitor_platform_query_source(state);
+  state->last_source = state->source;
   state->watch_stop = 0;
-  pthread_mutex_lock(&state->event_lock);
-  state->ready = 0;
-  pthread_mutex_unlock(&state->event_lock);
-
-  state->thread_started = 1;
-  if (pthread_create(&state->watch_thread, NULL,
-                     power_monitor_linux_watch_thread_main, state) != 0) {
-    state->thread_started = 0;
+  power_monitor_retain(state);
+  pthread_attr_t attr;
+  pthread_attr_init(&attr);
+  pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
+  pthread_t thread;
+  int result = pthread_create(&thread, &attr,
+                              power_monitor_linux_watch_thread_main, state);
+  pthread_attr_destroy(&attr);
+  if (result != 0) {
+    power_monitor_release(state);
     power_monitor_set_watch_error(state, "pthread_create failed");
     return power_monitor_STATUS_OPERATION_FAILED;
   }
-
-  pthread_mutex_lock(&state->event_lock);
-  while (!state->ready) {
-    pthread_cond_wait(&state->ready_cond, &state->event_lock);
-  }
-  /* The thread signals ready in both the success and the failure path; only a
-     started backend counts as OK, matching the documented best-effort
-     contract (a failed backend reports BACKEND_UNAVAILABLE). */
-  int32_t started = state->watch_started;
-  pthread_mutex_unlock(&state->event_lock);
-  if (started) return power_monitor_STATUS_OK;
-  power_monitor_platform_stop_watching(state);
-  return power_monitor_STATUS_BACKEND_UNAVAILABLE;
+  return power_monitor_STATUS_OK;
 }
 
 int32_t power_monitor_platform_stop_watching(power_monitor_state_t *state) {
-  if (state->thread_started) {
-    pthread_mutex_lock(&state->event_lock);
-    state->watch_stop = 1;
-    pthread_mutex_unlock(&state->event_lock);
-    pthread_join(state->watch_thread, NULL);
-    state->watch_thread = 0;
-    state->thread_started = 0;
-  }
-  state->watch_started = 0;
+  pthread_mutex_lock(&state->event_lock);
+  state->watch_stop = 1;
+  pthread_mutex_unlock(&state->event_lock);
   return power_monitor_STATUS_OK;
 }
 

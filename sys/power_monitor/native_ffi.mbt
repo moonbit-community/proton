@@ -30,7 +30,7 @@ extern "C" fn native_last_error(handle : State) -> Bytes = "moonbit_power_monito
 
 ///|
 #borrow(handle)
-extern "C" fn native_start_watching(handle : State) -> Int32 = "moonbit_power_monitor_start_watching"
+extern "C" fn native_start_watching(handle : State, fd : Int32) -> Int32 = "moonbit_power_monitor_start_watching"
 
 ///|
 #borrow(handle)
@@ -89,3 +89,11 @@ let native_event_lock_screen : Int32 = 4
 
 ///|
 let native_event_unlock_screen : Int32 = 5
+
+///|
+#borrow(handle)
+extern "C" fn native_watch_status(handle : State) -> Int32 = "moonbit_power_monitor_watch_status"
+
+///|
+#borrow(handle)
+extern "C" fn native_clear_event_wakeup(handle : State) -> Unit = "moonbit_power_monitor_clear_event_wakeup"

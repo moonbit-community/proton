@@ -27,12 +27,16 @@ test "power_monitor_event_from_native_code maps native codes" {
 }
 
 ///|
-test "destroyed power monitor cannot restart watching or take events" {
+async test "destroyed power monitor cannot restart watching or take events" {
   // Exercise lifecycle validation even when the power backend is unavailable.
-  let monitor = PowerMonitor::{ handle: native_create(), }
+  let monitor = PowerMonitor::{
+    handle: native_create(),
+    lifecycle: @async.Mutex(),
+    completion: None,
+  }
   monitor.destroy()
   try monitor.start_watching() catch {
-    OperationFailed(operation~, detail~) => {
+    PowerMonitorError::OperationFailed(operation~, detail~) => {
       assert_eq(operation, "start_watching")
       assert_eq(detail, "power monitor has been destroyed")
     }
