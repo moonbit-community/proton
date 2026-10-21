@@ -14,6 +14,7 @@ pub extend DownloadProgress with Eq::{equal, not_equal}
 
 ///|
 /// Failures of a host-side download. Cancellation retains its async semantics.
+/// DestinationExists preserves the caller's original destination path.
 /// A cleanup failure preserves the primary error, if any, and the temporary
 /// path so that a file which could not be removed can be located.
 pub(all) suberror DownloadError {
@@ -84,7 +85,7 @@ pub async fn download(
   // symlink/.. and can select the wrong destination (overwriting another file).
   // Preserve parent traversal and the final entry's replacement semantics;
   // account for create_download_file's normalizing join and Windows paths too.
-  let destination = @path.Path(destination).resolve().to_string()
+  let resolved_destination = @path.Path(destination).resolve().to_string()
   let headers = request_headers(headers)
   guard !headers.contains("Range") else {
     raise InvalidRequest(detail="partial downloads are not supported")
@@ -125,7 +126,7 @@ pub async fn download(
   }
   // Protect acquisition until ownership is recorded, not the network transfer.
   let (temporary, file) = @async.protect_from_cancel(() => {
-    create_download_file(destination)
+    create_download_file(resolved_destination)
   }) catch {
     error => raise FileFailed(detail=@debug.render(Repr(error)))
   }
@@ -177,7 +178,7 @@ pub async fn download(
     // Observe pending cancellation before entering the short commit section.
     @async.pause()
     @async.protect_from_cancel(() => {
-      @fs.rename(temporary, destination, replace=overwrite)
+      @fs.rename(temporary, resolved_destination, replace=overwrite)
       committed = true
     }) catch {
       @os_error.OSError(_) as error if error.is_EEXIST() =>

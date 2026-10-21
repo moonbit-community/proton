@@ -153,7 +153,8 @@ async test "truncated downloads clean up without replacing the old file" {
 async test "overwrite is explicit and failed file submission cleans up" {
   let root = @fs.tmpdir(prefix="proton-net-download-")
   defer @fs.rmdir(root, recursive=true)
-  let destination = root + "/file"
+  // Error paths preserve the caller's spelling, including redundant components.
+  let destination = root + "/./file"
   @fs.write_file(destination, "old")
   for overwrite in [false, true] {
     with_download_server(
