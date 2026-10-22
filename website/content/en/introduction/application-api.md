@@ -387,6 +387,8 @@ independent display-blanking policy.
 
 The extensions expose `watch_status()`: `Stopped` before startup or after cleanup, `Watching` after native registration, and `Unavailable(reason)` on failure. Power monitoring additionally reports `Starting` during asynchronous registration. Query commands remain independent of event watching; a successful query does not clear a watch error or restart the watcher. Screen topology events include the affected display's snapshot, including the previous snapshot when a display is removed.
 
+Windows screen watching receives display-resolution changes without requiring a visible application window.
+
 For direct use of `proton_power_monitor`, `PowerMonitor.with_watching(callback)` owns watching for the callback's duration. The async callback starts after registration succeeds. Returning, raising, or cancelling the scope stops watching and waits for cleanup. End the scope before calling `destroy()`; a second concurrent scope on the same monitor fails immediately.
 
 On Linux, power watching requires GIO and the system bus. Connection, authentication and subscription are cancellable and share a five-second startup deadline. A disconnected bus fails the scope and cancels its callback. A new scope can retry; there is no automatic reconnection. The Proton extension owns this scope in an application task and reports failure as `Unavailable(reason)`.

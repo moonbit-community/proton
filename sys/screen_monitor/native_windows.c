@@ -15,7 +15,7 @@
 
 /* Interface class GUID for display adapters
    (GUID_DEVINTERFACE_DISPLAY_ADAPTER = {1CA05180-A699-450A-9A0C-DE4FBE3DDD89}).
-   Carried as a local constant so device notifications route to the message-only
+   Carried as a local constant so device notifications route to the watch
    window without dragging in setupapi/devguid link dependencies. */
 static const GUID screen_monitor_display_interface_guid = { 0x1CA05180, 0xA699,
                                                             0x450A, { 0x9A, 0x0C,
@@ -238,9 +238,11 @@ static DWORD WINAPI screen_monitor_watch_thread_main(LPVOID param) {
     return 1;
   }
 
-  HWND hwnd = CreateWindowExW(0, wc.lpszClassName, L"ProtonScreenMonitor", 0, 0,
-                              0, 0, 0, (HWND)HWND_MESSAGE, NULL, wc.hInstance,
-                              NULL);
+  /* Message-only windows cannot receive WM_DISPLAYCHANGE broadcasts.
+     Keep this top-level window hidden and unable to activate. */
+  HWND hwnd = CreateWindowExW(WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE,
+                              wc.lpszClassName, L"ProtonScreenMonitor", WS_POPUP,
+                              0, 0, 0, 0, NULL, NULL, wc.hInstance, NULL);
   if (hwnd == NULL) {
     screen_monitor_set_watch_error(state, "CreateWindowExW failed");
     state->watch_started = 0;
@@ -271,8 +273,16 @@ static DWORD WINAPI screen_monitor_watch_thread_main(LPVOID param) {
     TranslateMessage(&msg);
     DispatchMessageW(&msg);
   }
-  state->watch_started = 0;
+  /* Release window-owned resources on the thread that created them. */
+  if (state->device_handle != NULL) {
+    UnregisterDeviceNotification(state->device_handle);
+    state->device_handle = NULL;
+  }
+  state->registered = 0;
+  DestroyWindow(hwnd);
   state->message_window = NULL;
+  state->watch_started = 0;
+  g_watch_state = NULL;
   return 0;
 }
 
@@ -322,10 +332,6 @@ int32_t screen_monitor_platform_stop_watching(screen_monitor_state_t *state) {
   if (state->ready_event != NULL) {
     CloseHandle(state->ready_event);
     state->ready_event = NULL;
-  }
-  if (state->device_handle != NULL) {
-    UnregisterDeviceNotification(state->device_handle);
-    state->device_handle = NULL;
   }
   state->watch_started = 0;
   return screen_monitor_STATUS_OK;

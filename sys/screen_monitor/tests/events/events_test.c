@@ -158,3 +158,105 @@ int32_t proton_test_screen_watch_startup(void) {
   return result;
 }
 #endif
+
+#if defined(_WIN32)
+static screen_monitor_state_t *broadcast_state;
+static HANDLE broadcast_event;
+static volatile LONG broadcast_seen;
+
+/* Run on the real watcher thread immediately before its production WndProc.
+   Make the old snapshot differ without changing the machine's display mode.
+   Neither the WndProc nor the event queue is invoked by the test directly. */
+static LRESULT CALLBACK screen_broadcast_hook(int code, WPARAM wparam,
+                                             LPARAM lparam) {
+  if (code == HC_ACTION) {
+    const CWPSTRUCT *message = (const CWPSTRUCT *)lparam;
+    if (message->hwnd == broadcast_state->message_window &&
+        message->message == WM_DISPLAYCHANGE &&
+        InterlockedCompareExchange(&broadcast_seen, 1, 0) == 0 &&
+        broadcast_state->display_count > 0) {
+      broadcast_state->displays[0].width--;
+    }
+  }
+  return CallNextHookEx(NULL, code, wparam, lparam);
+}
+
+static void screen_broadcast_wakeup(void) {
+  if (InterlockedCompareExchange(&broadcast_seen, 0, 0)) {
+    SetEvent(broadcast_event);
+  }
+}
+
+int32_t proton_test_screen_watch_broadcast(void) {
+  screen_monitor_state_t state = {0};
+  int32_t result = 0;
+  screen_monitor_lock_init(&state);
+  screen_monitor_platform_init(&state);
+  broadcast_state = &state;
+  broadcast_event = CreateEventW(NULL, TRUE, FALSE, NULL);
+  if (broadcast_event == NULL) {
+    screen_monitor_lock_destroy(&state);
+    broadcast_state = NULL;
+    return __LINE__;
+  }
+  screen_monitor_set_event_wakeup(&state, screen_broadcast_wakeup);
+  for (int attempt = 0; attempt < 2; attempt++) {
+    HHOOK hook = NULL;
+    HWND hwnd = NULL;
+    InterlockedExchange(&broadcast_seen, 0);
+    ResetEvent(broadcast_event);
+    if (screen_monitor_platform_start_watching(&state) != screen_monitor_STATUS_OK) {
+      result = __LINE__;
+      goto stop;
+    }
+    hwnd = state.message_window;
+    if (hwnd == NULL || IsWindowVisible(hwnd)) {
+      result = __LINE__;
+      goto stop;
+    }
+    hook = SetWindowsHookExW(WH_CALLWNDPROC, screen_broadcast_hook, NULL,
+                            state.watch_thread_id);
+    if (hook == NULL) {
+      result = __LINE__;
+      goto stop;
+    }
+    /* Broadcast through Windows, including invisible top-level windows.
+       Keep the actual display dimensions; no resolution change is performed. */
+    if (!SendNotifyMessageW(HWND_BROADCAST, WM_DISPLAYCHANGE, 32,
+                            MAKELPARAM(GetSystemMetrics(SM_CXSCREEN),
+                                       GetSystemMetrics(SM_CYSCREEN))) ||
+        WaitForSingleObject(broadcast_event, 5000) != WAIT_OBJECT_0) {
+      result = __LINE__;
+      goto stop;
+    }
+    {
+      int32_t kind;
+      screen_monitor_display_t display;
+      int found = 0;
+      while (screen_monitor_take_event(&state, &kind, &display) == screen_monitor_STATUS_OK) {
+        if (kind == screen_monitor_EVENT_METRICS_CHANGED && display.width > 0) {
+          found = 1;
+        }
+      }
+      if (!InterlockedCompareExchange(&broadcast_seen, 0, 0) || !found) {
+        result = __LINE__;
+      }
+    }
+  stop:
+    if (hook != NULL) UnhookWindowsHookEx(hook);
+    screen_monitor_platform_stop_watching(&state);
+    if (hwnd != NULL && IsWindow(hwnd)) result = __LINE__;
+    if (state.message_window != NULL || state.device_handle != NULL ||
+        state.watch_thread != NULL || state.ready_event != NULL || state.watch_started) {
+      result = __LINE__;
+    }
+    screen_monitor_release_events(&state);
+    if (result) break;
+  }
+  broadcast_state = NULL;
+  CloseHandle(broadcast_event);
+  broadcast_event = NULL;
+  screen_monitor_lock_destroy(&state);
+  return result;
+}
+#endif

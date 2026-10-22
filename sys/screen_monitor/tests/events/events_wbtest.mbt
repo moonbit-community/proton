@@ -21,3 +21,15 @@ test "Linux screen watch publishes its startup result before notifying and can r
   defer monitor.destroy()
   assert_eq(test_screen_watch_startup(), 0)
 }
+
+///|
+#cfg(platform="windows")
+extern "C" fn test_screen_watch_broadcast() -> Int32 = "proton_test_screen_watch_broadcast"
+
+///|
+#cfg(platform="windows")
+test "Windows screen watch receives broadcasts and releases its window on restart" {
+  let monitor = @proton_screen_monitor.ScreenMonitor()
+  defer monitor.destroy()
+  assert_eq(test_screen_watch_broadcast(), 0)
+}
