@@ -237,6 +237,8 @@ IDs are trimmed, must be nonempty and must be unique among active windows, inclu
 
 Commands and extensions are registered once on `App`. Grant exact IDs with `RendererTarget::entry(window="editor-1")` or a family with `RendererTarget::entry_prefix("editor-")`; `bundled` and `bundled_prefix` grant bundled pages. Prefixes must be nonempty. Matching a window ID does not bypass the source/origin check. Exact targets may refer to windows created later. Dynamic windows have no implicit copy of `main`'s permissions.
 
+Overlapping targets are not merged. Within one command capability, two targets resolving to the same origin for a window cause `InvalidRendererCapability`; the same applies when grants repeat an extension and origin. For example, combining `entry(window="editor-1")` and `entry_prefix("editor-")` in one target list rejects creation of `editor-1`. Use only the prefix when it already covers the intended windows.
+
 Cancellation before activation commits discards the queued creation or closes the instance created by that operation. Once activation commits, the application owns the window; canceling its caller later does not close it. `close()` requests teardown and can be denied; `hide()` preserves the instance and its work. Release per-window resources through lifecycle cleanup.
 
 An ID can be reused after the previous instance has closed. Use the handle returned by `create` or `find` for that instance: old window and child-view handles remain stale. Handles are runtime-created values; do not construct or copy their representation.

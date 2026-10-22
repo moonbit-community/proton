@@ -2637,12 +2637,32 @@ pub async fn run_dynamic_windows_regression() -> Unit {
   let race_entered = @async.Semaphore(1, initial_value=0)
   let race_release = @async.Semaphore(1, initial_value=0)
   let cleaned : Array[String] = []
+  let popup : Ref[@proton.WindowHandle?] = Ref(None)
+  let popup_errors : Array[String] = []
   let config = @proton.WindowConfig(
     "Dynamic chat",
     @proton.AppEntry::Html("<title>Dynamic chat</title>"),
     views=[("child", @proton.view("about:blank", width=50, height=50))],
   )
-  @proton.html("Dynamic windows", "<title>Dynamic windows</title>")
+  @proton.App(
+    @proton.WindowConfig(
+      "Dynamic windows",
+      @proton.AppEntry::Html("<title>Dynamic windows</title>"),
+      web_contents_policy=@proton.WebContentsPolicy(new_window_handler=(_, _) => {
+        try {
+          popup.val = Some(
+            application.val.unwrap().windows().create("chat-popup", config),
+          )
+          @proton.NewWindowDecision::OpenInWindow("chat-popup")
+        } catch {
+          error => {
+            popup_errors.push(error.to_string())
+            @proton.NewWindowDecision::Deny
+          }
+        }
+      }),
+    ),
+  )
   ..identifier("dev.proton.dynamic-windows")
   ..single_instance()
   ..capability(@proton_extension.capability(multi_window_extension()), targets=[
@@ -2662,6 +2682,27 @@ pub async fn run_dynamic_windows_regression() -> Unit {
     .spawn_bg(no_wait=true, () => {
       lifecycle_probe_gate()
       let windows = context.windows()
+      // Keep the opener alive until the driver's trusted window.open has replied.
+      let popup_gate = @env.get_env_var("PROTON_E2E_LIFECYCLE_GATE").unwrap() +
+        ".popup-evaluated"
+      while !@mbfs.path_exists(popup_gate) ||
+            (popup.val is None && popup_errors.is_empty()) {
+        @async.sleep(5)
+      }
+      assert_eq(popup_errors, [])
+      let opened = popup.val.unwrap()
+      assert_eq(opened.id(), "chat-popup")
+      while opened.web_contents().state().title != "Popup landed" {
+        @async.sleep(5)
+      }
+      assert_eq(
+        opened.web_contents().state().url,
+        "data:text/html,<title>Popup landed</title>",
+      )
+      assert_eq(
+        windows.find("main").unwrap().web_contents().state().title,
+        "Dynamic windows",
+      )
       let first = windows.create("chat-1", config)
       let second = windows.create("chat-2", config)
       assert_eq(first.id(), "chat-1")
@@ -2732,7 +2773,7 @@ pub async fn run_dynamic_windows_regression() -> Unit {
   })
   .run()
   assert_eq(cleaned.filter(id => id == "chat-1").length(), 2)
-  for id in ["main", "chat-2", "untrusted", "chat-race"] {
+  for id in ["main", "chat-2", "untrusted", "chat-race", "chat-popup"] {
     assert_eq(cleaned.filter(item => item == id).length(), 1)
   }
   println("LIFECYCLE_PASSED dynamic-windows")

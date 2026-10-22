@@ -186,10 +186,20 @@ async fn run_lifecycle_regressions(root : String, timeout : Int32) -> Unit {
         }
         let snapshot = snapshot_scenario_process_tree(app)
         @mbfs.write_string_to_file(gate, "go")
-        if name == "window-config" {
+        if name == "window-config" || name == "dynamic-windows" {
+          let titles = if name == "window-config" {
+            ["Window Config", "Dynamic policy ready"]
+          } else {
+            ["Dynamic windows"]
+          }
+          let popup_url = if name == "window-config" {
+            "about:blank"
+          } else {
+            "data:text/html,<title>Popup landed</title>"
+          }
           // A trusted gesture lets these requests reach Proton rather than
           // being suppressed by Chromium's popup blocker before interception.
-          for title in ["Window Config", "Dynamic policy ready"] {
+          for title in titles {
             let ready = @async.with_timeout_opt(timeout, () => {
               while !discover_targets_for_poll(cdp_target_from(target)).any(item => {
                       item.target_type == "page" && item.title == title
@@ -208,7 +218,7 @@ async fn run_lifecycle_regressions(root : String, timeout : Int32) -> Unit {
               timeout_ms=timeout,
             )
             let response = client.send_schema_command("Runtime.evaluate", params={
-              "expression": "window.open('about:blank'); void 0",
+              "expression": "window.open('" + popup_url + "'); void 0",
               "userGesture": true,
               "returnByValue": true,
             }) catch {
@@ -228,7 +238,7 @@ async fn run_lifecycle_regressions(root : String, timeout : Int32) -> Unit {
             client.close()
           }
           // Receiving the popup is earlier than receiving the CDP reply. Keep
-          // its page alive until both evaluations have completed successfully.
+          // its page alive until the evaluations have completed successfully.
           @mbfs.write_string_to_file(gate + ".popup-evaluated", "evaluated")
         }
         if name == "navigation-cleanup" {
