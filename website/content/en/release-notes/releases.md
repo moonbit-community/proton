@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+**Windows screen monitoring**
+
+Fixed missing display-resolution change notifications while screen watching is active. Watching works without a visible application window.
+
 **Authenticated file downloads**
 
 The `moonbit-community/proton_ext/net` package adds the host-side async function

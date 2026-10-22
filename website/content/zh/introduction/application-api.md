@@ -376,6 +376,8 @@ Linux 的显示休眠 scope 对应 logind 的 idle 抑制，不能保证阻止�
 
 扩展通过 `watch_status()` 报告状态：启动前或清理后为 `Stopped`，原生注册完成后为 `Watching`，失败时为 `Unavailable(reason)`。电源监听在异步注册期间还会报告 `Starting`。查询命令独立于事件监听；查询成功不会清除监听错误，也不会重新启动监听。屏幕拓扑事件携带受影响显示器的快照，移除显示器时携带移除前的快照。
 
+Windows 屏幕监听无需可见的应用窗口即可接收显示器分辨率变化通知。
+
 直接使用 `proton_power_monitor` 时，`PowerMonitor.with_watching(callback)` 在回调作用域内拥有监听。异步回调只在注册成功后开始；回调返回、抛错或作用域被取消时，停止监听并等待清理。调用 `destroy()` 前必须结束监听作用域；同一个 monitor 的第二个并发作用域会立即失败。
 
 Linux 电源监听需要 GIO 和系统总线。连接、认证和订阅均可取消，共享五秒的启动期限。总线断开会使作用域失败并取消回调。可以用新的作用域重试，但不会自动重连。Proton 扩展在应用任务中拥有该作用域，并通过 `Unavailable(reason)` 报告失败。

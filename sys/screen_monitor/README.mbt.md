@@ -26,3 +26,7 @@ Each topology event carries its own `DisplayInfo`. A removal retains the
 removed display's previous geometry; draining events never substitutes the
 current primary display. Query snapshots are separate from the watcher's
 previous topology so querying does not consume changes before notification.
+
+On Windows, display-resolution changes are monitored even without a visible
+application window. Stopping watching releases the notification window before
+returning.
