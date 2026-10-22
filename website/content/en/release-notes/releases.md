@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+**Runtime window creation (breaking API change)**
+
+`WindowManager.create(id, config)` creates independent windows at runtime from a reusable `WindowConfig`, including in single-instance applications. Window IDs no longer require startup declarations. Each instance has its own views, command identity and cleanup; stale handles remain invalid after an ID is reused.
+
+Replace `windows.open(id)` with `windows.create(id, config)`. Remove delayed `add_window(..., open_on_start=false)` declarations and keep the configuration at the creation site instead. `App.add_window(id, config)` remains a startup convenience; `open_on_start` and `UnknownWindow` are removed. Use `RendererTarget::entry_prefix` or `bundled_prefix` for explicitly authorized ID families, or retain exact-ID grants.
+
+`NewWindowDecision::OpenInWindow(id)` now targets an existing instance. A new-window handler that needs a new instance must await `create` first. See [window management](../introduction/application-api.md#windows-and-browser-views) and the [multi-window example](../examples/45_bridge_multi_window.md).
+
 **Windows screen monitoring**
 
 Fixed missing display-resolution change notifications while screen watching is active. Watching works without a visible application window.

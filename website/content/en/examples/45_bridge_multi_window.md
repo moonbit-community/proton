@@ -1,8 +1,8 @@
 # Multi-window commands
 
-This example exposes command operations to two windows in one application. It shows how window declarations, renderer grants and caller identity work together without giving every page implicit access.
+This example creates windows on demand within one application and grants command access to an explicit family of window IDs. It uses the unreleased runtime creation API.
 
-[45_bridge_multi_window](https://github.com/moonbit-community/proton/tree/18915e6b3c852b760dee6550f066f46d95a1248d/examples/45_bridge_multi_window) · Source files: [main.mbt](https://github.com/moonbit-community/proton/tree/18915e6b3c852b760dee6550f066f46d95a1248d/examples/45_bridge_multi_window/main.mbt)
+[45_bridge_multi_window](https://github.com/moonbit-community/proton/tree/main/examples/45_bridge_multi_window) · Source files: [main.mbt](https://github.com/moonbit-community/proton/tree/main/examples/45_bridge_multi_window/main.mbt)
 
 ## Behavior
 
@@ -13,8 +13,21 @@ The identify command returns both the supplied label and CommandContext.window_i
 Excerpt from the entry point; use the source link above for the complete context.
 
 ```moonbit
-///|
 async fn main {
+  let config = @proton.WindowConfig(
+    "Bridge Multi B",
+    @proton.AppEntry::Html(page_html("B")),
+    width=520,
+    height=420,
+  )
+  let windows : Ref[@proton.WindowManager?] = Ref(None)
+  let next_id = Ref(0)
+  let extension = multi_window_extension(() => {
+    next_id.val += 1
+    let id = "chat-" + next_id.val.to_string()
+    ignore(windows.val.unwrap().create(id, config))
+    id
+  })
   @proton.html(
     "Bridge Multi A",
     page_html("A"),
@@ -22,29 +35,24 @@ async fn main {
     height=420,
     debug=true,
   )
-  ..add_window(
-    "secondary",
-    @proton.WindowConfig(
-      "Bridge Multi B",
-      @proton.AppEntry::Html(page_html("B")),
-      width=520,
-      height=420,
-    ),
-    open_on_start=false,
-  )
-  ..capability(@proton_extension.capability(multi_window_extension()), targets=[
+  ..identifier("dev.proton.45-bridge-multi-window")
+  ..single_instance()
+  ..capability(@proton_extension.capability(extension), targets=[
     @proton.RendererTarget::entry(),
     @proton.RendererTarget::entry(window="secondary"),
+    @proton.RendererTarget::entry_prefix("chat-"),
   ])
-  ..setup(context => ignore(context.windows().open("secondary")))
-  ..identifier("dev.proton.45-bridge-multi-window")
+  ..setup(context => {
+    windows.val = Some(context.windows())
+    ignore(context.windows().create("secondary", config))
+  })
   .run_or_abort()
 }
 ```
 
-One extension implementation serves two independently authorized renderer targets. The secondary declaration has open_on_start=false and is opened explicitly in the application start hook. The handler returns context.window_id(), proving that caller identity comes from the host context rather than the page's label.
+The application creates `secondary` during setup using `WindowManager.create`, then creates another `chat-N` window whenever the user clicks **New window**. All secondary instances reuse `config`, with independent browser state and command identity. No window pool or predeclared IDs are needed.
 
-Reuse shared business handlers, but list each intended target explicitly. Keep per-window UI state on the frontend and shared state in the host. Delayed calls can overlap; do not infer response ownership from whichever window currently has focus.
+The extension is registered once. Exact grants authorize `main` and `secondary`; `entry_prefix("chat-")` authorizes the entry pages of new chat windows. The handler returns `context.window_id()`, so routing uses the caller's host identity rather than a label supplied by JavaScript. `single_instance()` keeps one application process while allowing multiple windows.
 
 ## Run
 

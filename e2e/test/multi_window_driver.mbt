@@ -51,7 +51,6 @@ fn multi_window_driver_expression(delay_ms : Int32) -> String {
     #|;(async () => {
     #|  const invoke = window.__MoonBit__?.core?.invokeOp;
     #|  const label = window.__bridgeMultiLabel;
-    #|  if (location.href !== "proton://app/" + label) return false;
     #|  if (document.title !== "Bridge Multi " + label) return false;
     #|  if (typeof invoke !== "function") return false;
     #|  const response = await invoke("ext:multi/identify", {
@@ -59,10 +58,7 @@ fn multi_window_driver_expression(delay_ms : Int32) -> String {
     #|    delay_ms: DELAY,
     #|  });
     #|  return response?.label === label &&
-    #|    typeof response?.request_id === "string" &&
-    #|    response.request_id.length > 0 &&
-    #|    typeof response?.window === "string" &&
-    #|    response.window.length > 0;
+    #|    response?.window === (label === "A" ? "main" : "secondary");
     #|})()
   expression.replace_all(old="DELAY", new=delay_ms.to_string())
 }

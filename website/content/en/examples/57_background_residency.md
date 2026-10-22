@@ -1,8 +1,10 @@
 # Background residency
 
+The runtime window creation API below is unreleased; Proton 0.5.1 still uses declared windows and `open(id)`.
+
 This example combines background residency with single-instance activation. Closing the last window keeps the application alive, so a later launch can reach the existing instance instead of starting another runtime.
 
-[57_background_residency](https://github.com/moonbit-community/proton/tree/18915e6b3c852b760dee6550f066f46d95a1248d/examples/57_background_residency) · Source files: [main.mbt](https://github.com/moonbit-community/proton/tree/18915e6b3c852b760dee6550f066f46d95a1248d/examples/57_background_residency/main.mbt)
+[57_background_residency](https://github.com/moonbit-community/proton/tree/main/examples/57_background_residency) · Source files: [main.mbt](https://github.com/moonbit-community/proton/tree/main/examples/57_background_residency/main.mbt)
 
 ## Behavior
 
@@ -14,13 +16,19 @@ Excerpt from the entry point; use the source link above for the complete context
 
 ```moonbit
 async fn main {
-  @proton.html("Background Residency", page, width=760, height=480)
+  let main_config = @proton.WindowConfig(
+    "Background Residency",
+    @proton.AppEntry::Html(page),
+    width=760,
+    height=480,
+  )
+  @proton.App(main_config)
   ..identifier("com.example.proton.background-residency")
   ..single_instance()
   ..last_window_closed_policy(@proton.LastWindowClosedPolicy::KeepRunning)
   ..on_launch_input(async fn(context, input) noraise {
     if input is Reopen && context.windows().find("main") is None {
-      ignore(context.windows().open("main")) catch {
+      ignore(context.windows().create("main", main_config)) catch {
         error => println("failed to reopen main window: " + error.to_string())
       }
     }

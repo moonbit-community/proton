@@ -53,6 +53,8 @@ async fn run_scenario_app_child() -> Unit {
     Some("lifecycle:navigation-cleanup") =>
       @e2e_fixtures.run_navigation_cleanup_regression()
     Some("lifecycle:navigation") => @e2e_fixtures.run_navigation_regression()
+    Some("lifecycle:dynamic-windows") =>
+      @e2e_fixtures.run_dynamic_windows_regression()
     Some("lifecycle:window-config") =>
       @e2e_fixtures.run_window_config_regression()
     Some("lifecycle:task-metrics") =>

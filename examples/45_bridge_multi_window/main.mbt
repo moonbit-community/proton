@@ -43,8 +43,14 @@ async fn identify(
 }
 
 ///|
-fn multi_window_extension() -> @proton_extension.Extension {
+fn multi_window_extension(
+  create_window : async () -> String,
+) -> @proton_extension.Extension {
   @proton_extension.typed(multi_contract, fn(registrar) raise {
+    let create : @proton_contract.Command[Unit, String] = multi_contract.command(
+      "create_window",
+    )
+    registrar.bind(create, (_, _) => create_window())
     registrar.bind(identify_command, (context, payload) => {
       identify(context, payload)
     })
@@ -62,10 +68,19 @@ fn page_html(label : String) -> String {
     #|  </head>
     #|  <body>
     #|    <h1>Bridge Multi LABEL</h1>
+    #|    <button id="create">New window</button>
     #|    <button id="identify">Identify this window</button>
     #|    <pre id="result">Waiting.</pre>
     #|    <script>
     #|      window.__bridgeMultiLabel = "LABEL";
+    #|      document.querySelector("#create").addEventListener("click", async () => {
+    #|        try {
+    #|          const id = await window.__MoonBit__.multi.create_window(null);
+    #|          document.querySelector("#result").textContent = `Created ${id}`;
+    #|        } catch (error) {
+    #|          document.querySelector("#result").textContent = String(error);
+    #|        }
+    #|      });
     #|      document.querySelector("#identify").addEventListener("click", async () => {
     #|        const result = await window.__MoonBit__.multi.identify({
     #|          label: window.__bridgeMultiLabel,
@@ -81,6 +96,20 @@ fn page_html(label : String) -> String {
 
 ///|
 async fn main {
+  let config = @proton.WindowConfig(
+    "Bridge Multi B",
+    @proton.AppEntry::Html(page_html("B")),
+    width=520,
+    height=420,
+  )
+  let windows : Ref[@proton.WindowManager?] = Ref(None)
+  let next_id = Ref(0)
+  let extension = multi_window_extension(() => {
+    next_id.val += 1
+    let id = "chat-" + next_id.val.to_string()
+    ignore(windows.val.unwrap().create(id, config))
+    id
+  })
   @proton.html(
     "Bridge Multi A",
     page_html("A"),
@@ -88,21 +117,16 @@ async fn main {
     height=420,
     debug=true,
   )
-  ..add_window(
-    "secondary",
-    @proton.WindowConfig(
-      "Bridge Multi B",
-      @proton.AppEntry::Html(page_html("B")),
-      width=520,
-      height=420,
-    ),
-    open_on_start=false,
-  )
-  ..capability(@proton_extension.capability(multi_window_extension()), targets=[
+  ..identifier("dev.proton.45-bridge-multi-window")
+  ..single_instance()
+  ..capability(@proton_extension.capability(extension), targets=[
     @proton.RendererTarget::entry(),
     @proton.RendererTarget::entry(window="secondary"),
+    @proton.RendererTarget::entry_prefix("chat-"),
   ])
-  ..setup(context => ignore(context.windows().open("secondary")))
-  ..identifier("dev.proton.45-bridge-multi-window")
+  ..setup(context => {
+    windows.val = Some(context.windows())
+    ignore(context.windows().create("secondary", config))
+  })
   .run_or_abort()
 }

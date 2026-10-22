@@ -452,7 +452,7 @@ pub fn App::on_window_event(
 /// Observes every window Proton creates, Electron's `browser-window-created`.
 ///
 /// Runs synchronously in registration order after the instance is registered,
-/// including windows opened later through `WindowManager::open`. It observes
+/// including windows created later through `WindowManager::create`. It observes
 /// creation, not page readiness; configure policy before creating the window.
 pub fn App::on_window_created(
   self : App,
@@ -600,13 +600,8 @@ pub fn App::on_quit(
 }
 
 ///|
-/// Adds a secondary window owned by the standard application lifecycle.
-pub fn App::add_window(
-  self : App,
-  id : String,
-  config : WindowConfig,
-  open_on_start~ : Bool = true,
-) -> Unit {
+/// Adds a window to create automatically during application startup.
+pub fn App::add_window(self : App, id : String, config : WindowConfig) -> Unit {
   let normalized_id = id.trim().to_owned()
   if normalized_id == "" || normalized_id == "main" {
     self.validation_errors.push(
@@ -627,7 +622,7 @@ pub fn App::add_window(
       ),
     )
   } else {
-    self.windows.push((normalized_id, config.snapshot(), open_on_start))
+    self.windows.push((normalized_id, config.snapshot()))
   }
 }
 
@@ -723,14 +718,14 @@ pub fn App::capability(
 ///|
 /// Selects a window's configured entry as a renderer capability target.
 pub fn RendererTarget::entry(window~ : String = "main") -> RendererTarget {
-  RendererTarget::{ window, bundled: false, }
+  RendererTarget::{ window, bundled: false, prefix: false, }
 }
 
 ///|
 /// Selects Proton's bundled application origin in one window as a renderer
 /// capability target.
 pub fn RendererTarget::bundled(window~ : String = "main") -> RendererTarget {
-  RendererTarget::{ window, bundled: true, }
+  RendererTarget::{ window, bundled: true, prefix: false, }
 }
 
 ///|
@@ -741,4 +736,18 @@ fn renderer_capability_targets(
     Some(targets) => targets.copy()
     None => [RendererTarget::entry()]
   }
+}
+
+///|
+/// Selects the configured entry of each window whose id starts with `prefix`.
+/// Applies to startup and dynamically created windows. The prefix must be nonempty.
+pub fn RendererTarget::entry_prefix(prefix : String) -> RendererTarget {
+  { window: prefix, bundled: false, prefix: true, }
+}
+
+///|
+/// Selects the bundled application origin in windows whose ids start with `prefix`.
+/// The prefix must be nonempty. This does not authorize remote page origins.
+pub fn RendererTarget::bundled_prefix(prefix : String) -> RendererTarget {
+  { window: prefix, bundled: true, prefix: true, }
 }

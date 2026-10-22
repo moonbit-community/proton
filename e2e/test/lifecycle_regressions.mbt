@@ -93,9 +93,9 @@ async fn run_lifecycle_regressions(root : String, timeout : Int32) -> Unit {
         "app-control", "process-events", "process-events-no-bridge", "task-metrics",
         "page-control", "startup-update-channel", "startup-update-failure", "proxy-config",
         "proxy-env", "renderer-recovery", "bridge-recovery", "bridge-startup-failure",
-        "closed-record-churn", "bridge-admission", "window-config", "navigation",
-        "navigation-cleanup", "web-contents", "session-lifetime", "pdf", "window-cleanup-cancel",
-        "window-cleanup-startup",
+        "closed-record-churn", "bridge-admission", "dynamic-windows", "window-config",
+        "navigation", "navigation-cleanup", "web-contents", "session-lifetime", "pdf",
+        "window-cleanup-cancel", "window-cleanup-startup",
       ]
   }
   let failures : Array[String] = []

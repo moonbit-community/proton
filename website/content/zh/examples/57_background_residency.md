@@ -1,8 +1,10 @@
 # 后台驻留
 
+以下运行时创建窗口 API 尚未发布；Proton 0.5.1 仍使用预先声明窗口与 `open(id)`。
+
 本例将后台驻留与单实例激活结合起来。最后一个窗口关闭后应用继续运行，后续启动可以联系已有实例，而不是再创建一个运行时。
 
-[57_background_residency](https://github.com/moonbit-community/proton/tree/18915e6b3c852b760dee6550f066f46d95a1248d/examples/57_background_residency) · 关键文件：[main.mbt](https://github.com/moonbit-community/proton/tree/18915e6b3c852b760dee6550f066f46d95a1248d/examples/57_background_residency/main.mbt)
+[57_background_residency](https://github.com/moonbit-community/proton/tree/main/examples/57_background_residency) · 关键文件：[main.mbt](https://github.com/moonbit-community/proton/tree/main/examples/57_background_residency/main.mbt)
 
 ## 行为
 
@@ -14,13 +16,19 @@ KeepRunning 保留进程。再次启动发送 Reopen，处理器仅在 main 不�
 
 ```moonbit
 async fn main {
-  @proton.html("Background Residency", page, width=760, height=480)
+  let main_config = @proton.WindowConfig(
+    "Background Residency",
+    @proton.AppEntry::Html(page),
+    width=760,
+    height=480,
+  )
+  @proton.App(main_config)
   ..identifier("com.example.proton.background-residency")
   ..single_instance()
   ..last_window_closed_policy(@proton.LastWindowClosedPolicy::KeepRunning)
   ..on_launch_input(async fn(context, input) noraise {
     if input is Reopen && context.windows().find("main") is None {
-      ignore(context.windows().open("main")) catch {
+      ignore(context.windows().create("main", main_config)) catch {
         error => println("failed to reopen main window: " + error.to_string())
       }
     }

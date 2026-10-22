@@ -130,16 +130,12 @@ pub async fn run_parent_view_close_regression() -> Unit {
   let closed : Array[String] = []
   let rejected = Ref(true)
   let cleaned = Ref(false)
+  let secondary_config = @proton.WindowConfig(
+    "Secondary",
+    @proton.AppEntry::Html("<h1>Secondary</h1>"),
+  )
   @proton.html("Parent view close", "<h1>Lifecycle</h1>")
   ..identifier("dev.proton.e2e-lifecycle")
-  ..add_window(
-    "secondary",
-    @proton.WindowConfig(
-      "Secondary",
-      @proton.AppEntry::Html("<h1>Secondary</h1>"),
-    ),
-    open_on_start=false,
-  )
   ..on_web_contents_event((view, event) => {
     record_child_view_event(view, event, loaded, closed, rejected)
   })
@@ -152,7 +148,7 @@ pub async fn run_parent_view_close_regression() -> Unit {
         .task_group()
         .spawn(no_wait=true, () => {
           lifecycle_probe_gate()
-          let parent = context.windows().open("secondary")
+          let parent = context.windows().create("secondary", secondary_config)
           let child = parent.add_view(
             "child",
             @proton.view("data:text/html,child", width=100, height=100),
@@ -190,22 +186,18 @@ pub async fn run_parent_view_close_regression() -> Unit {
 /// An initial activation can open and close a secondary window.
 pub async fn run_initial_open_regression() -> Unit {
   let cleaned = Ref(false)
+  let secondary_config = @proton.WindowConfig(
+    "Secondary",
+    @proton.AppEntry::Html("<h1>Secondary</h1>"),
+  )
   @proton.html("Initial open", "<h1>Lifecycle</h1>")
   ..identifier("dev.proton.e2e-lifecycle")
-  ..add_window(
-    "secondary",
-    @proton.WindowConfig(
-      "Secondary",
-      @proton.AppEntry::Html("<h1>Secondary</h1>"),
-    ),
-    open_on_start=false,
-  )
   ..setup_window(context => {
     if context.handle().id() == "secondary" {
       @async.sleep(300)
     } else {
       lifecycle_probe_gate()
-      let secondary = context.windows().open("secondary")
+      let secondary = context.windows().create("secondary", secondary_config)
       secondary.close()
       context.handle().close()
     }
@@ -262,16 +254,12 @@ pub async fn run_cancel_open_regression() -> Unit {
   let stopped = Ref(false)
   let completed = Ref(false)
   let cleaned = Ref(false)
+  let secondary_config = @proton.WindowConfig(
+    "Secondary",
+    @proton.AppEntry::Html("<h1>Secondary</h1>"),
+  )
   @proton.html("Cancel open", "<h1>Lifecycle</h1>")
   ..identifier("dev.proton.e2e-lifecycle")
-  ..add_window(
-    "secondary",
-    @proton.WindowConfig(
-      "Secondary",
-      @proton.AppEntry::Html("<h1>Secondary</h1>"),
-    ),
-    open_on_start=false,
-  )
   ..setup(context => application.val = Some(context))
   ..setup_window(context => {
     if context.handle().id() == "secondary" {
@@ -295,7 +283,7 @@ pub async fn run_cancel_open_regression() -> Unit {
             .unwrap()
             .task_group()
             .spawn(no_wait=true, () => {
-              ignore(context.windows().open("secondary"))
+              ignore(context.windows().create("secondary", secondary_config))
             })
           while !started.val {
             @async.sleep(10)
@@ -306,7 +294,7 @@ pub async fn run_cancel_open_regression() -> Unit {
           assert_true(stopped.val)
           assert_false(completed.val)
           assert_true(context.windows().find("secondary") is None)
-          let fresh = context.windows().open("secondary")
+          let fresh = context.windows().create("secondary", secondary_config)
           if old is Some(old) {
             old.close() catch {
               _ => ()
@@ -507,6 +495,11 @@ pub async fn run_startup_quit_regression(case : StartupQuitCase) -> Unit {
   } else {
     None
   }
+  let secondary_config = @proton.WindowConfig(
+    "Secondary",
+    @proton.AppEntry::Html("<h1>Secondary</h1>"),
+    close_handler?,
+  )
   let app = @proton.App(
       @proton.WindowConfig(
         "Startup quit",
@@ -515,15 +508,6 @@ pub async fn run_startup_quit_regression(case : StartupQuitCase) -> Unit {
       ),
     )
     ..identifier("dev.proton.startup-quit")
-    ..add_window(
-      "secondary",
-      @proton.WindowConfig(
-        "Secondary",
-        @proton.AppEntry::Html("<h1>Secondary</h1>"),
-        close_handler?,
-      ),
-      open_on_start=false,
-    )
     ..setup(context => {
       application.val = Some(context)
       context.add_cleanup(() => completed_hook_cleanup.val += 1)
@@ -534,7 +518,7 @@ pub async fn run_startup_quit_regression(case : StartupQuitCase) -> Unit {
           startup_cancelled.val = true
         }
         if case is WithWindow || confirm_quit {
-          ignore(context.windows().open("secondary"))
+          ignore(context.windows().create("secondary", secondary_config))
         }
         lifecycle_probe_gate()
         context.quit()
@@ -703,23 +687,22 @@ pub async fn run_cancel_during_startup_regression() -> Unit {
   let secondary_ready = Ref(false)
   let main_ready = Ref(false)
 
+  let secondary_config = @proton.WindowConfig(
+    "Secondary",
+    @proton.AppEntry::Html("<h1>Secondary</h1>"),
+  )
   @proton.html("Startup cancellation", "<h1>Main</h1>")
   ..identifier("dev.proton.e2e-startup-cancel")
   ..last_window_closed_policy(@proton.LastWindowClosedPolicy::KeepRunning)
-  ..add_window(
-    "secondary",
-    @proton.WindowConfig(
-      "Secondary",
-      @proton.AppEntry::Html("<h1>Secondary</h1>"),
-    ),
-    open_on_start=false,
-  )
   ..setup(context => {
     application.val = Some(context)
     lifecycle_probe_gate()
     let opening = context
       .task_group()
-      .spawn(() => ignore(context.windows().open("secondary")), no_wait=true)
+      .spawn(
+        () => ignore(context.windows().create("secondary", secondary_config)),
+        no_wait=true,
+      )
     while context.windows().find("secondary") is None {
       @async.sleep(1)
     }
@@ -1671,16 +1654,12 @@ pub async fn run_closed_record_churn_regression() -> Unit {
   let loaded = Ref(0)
   let old_views : Array[@proton.ViewHandle] = []
   let old_windows : Array[@proton.WindowHandle] = []
+  let secondary_config = @proton.WindowConfig(
+    "Temporary",
+    @proton.AppEntry::Html("<title>Temporary</title>"),
+  )
   @proton.html("Churn", "<title>Churn</title>")
   ..identifier("dev.proton.closed-record-churn")
-  ..add_window(
-    "secondary",
-    @proton.WindowConfig(
-      "Temporary",
-      @proton.AppEntry::Html("<title>Temporary</title>"),
-    ),
-    open_on_start=false,
-  )
   ..setup(context => application.val = Some(context))
   ..on_web_contents_event(fn(_view, event) {
     if _view.view_id() is None {
@@ -1722,7 +1701,7 @@ pub async fn run_closed_record_churn_regression() -> Unit {
           while removed.val <= index {
             @async.sleep(5)
           }
-          let window = manager.open("secondary")
+          let window = manager.create("secondary", secondary_config)
           old_windows.push(window)
           window.close()
           while manager.find("secondary") is Some(_) {
@@ -1850,31 +1829,27 @@ pub async fn run_window_config_regression() -> Unit {
       @proton.NewWindowDecision::Deny
     }),
   )
+  let secondary_config = {
+    ..config,
+    web_contents_policy: @proton.WebContentsPolicy(),
+    close_handler: Some(fn(_) {
+      secondary_closes.val += 1
+      @proton.WindowCloseDecision::Allow
+    }),
+    views: [
+      (
+        "child",
+        @proton.ViewConfig(
+          width=100,
+          height=100,
+          initial_url="data:text/html,<title>Policy child</title>",
+          web_contents_policy=child_policy,
+        ),
+      ),
+    ],
+  }
   @proton.App(config)
   ..identifier("dev.proton.window-config")
-  ..add_window(
-    "secondary",
-    {
-      ..config,
-      web_contents_policy: @proton.WebContentsPolicy(),
-      close_handler: Some(fn(_) {
-        secondary_closes.val += 1
-        @proton.WindowCloseDecision::Allow
-      }),
-      views: [
-        (
-          "child",
-          @proton.ViewConfig(
-            width=100,
-            height=100,
-            initial_url="data:text/html,<title>Policy child</title>",
-            web_contents_policy=child_policy,
-          ),
-        ),
-      ],
-    },
-    open_on_start=false,
-  )
   ..on_window_created(window => {
     created.push(window.id())
     if window.id() == "main" {
@@ -2024,7 +1999,7 @@ pub async fn run_window_config_regression() -> Unit {
         }
         window.remove_view("dynamic")
         for iteration in 0..<2 {
-          let secondary = manager.open("secondary")
+          let secondary = manager.create("secondary", secondary_config)
           assert_eq(
             created.filter(id => id == "secondary:second").length(),
             iteration + 1,
@@ -2333,10 +2308,10 @@ pub async fn run_session_lifetime_regression() -> Unit {
     @proton.AppEntry::Html("<title>Session</title>"),
     views=[("child", @proton.view("about:blank", width=100, height=100))],
   )
+  let secondary_config = config
   @proton.App(config)
   ..identifier("dev.proton.session-lifetime")
   ..last_window_closed_policy(@proton.LastWindowClosedPolicy::KeepRunning)
-  ..add_window("secondary", config, open_on_start=false)
   ..setup(context => {
     let session = context.session()
     retained.push(session)
@@ -2349,7 +2324,7 @@ pub async fn run_session_lifetime_regression() -> Unit {
       .spawn(no_wait=true, () => {
         lifecycle_probe_gate()
         let manager = context.windows()
-        let window = manager.open("secondary")
+        let window = manager.create("secondary", secondary_config)
         let page_session = window.web_contents().session()
         let child = window.view("child").unwrap()
         let child_session = child.web_contents().session()
@@ -2395,7 +2370,7 @@ pub async fn run_session_lifetime_regression() -> Unit {
         child_session.delete_cookies(url~, name="lifetime")
         child_session.flush_cookies()
         assert_true(session.get_cookies(url~).is_empty())
-        let replacement = manager.open("secondary")
+        let replacement = manager.create("secondary", secondary_config)
         assert_eq(replacement.id(), window.id())
         try window.set_title("stale window") catch {
           @proton.WindowSessionError::StaleWindow(id="secondary") => ()
@@ -2653,4 +2628,110 @@ pub async fn run_navigation_cleanup_regression() -> Unit {
   assert_true(disposed.val && cleaned.val)
   assert_eq(late_calls.val, 0)
   println("LIFECYCLE_PASSED navigation-cleanup")
+}
+
+///|
+/// Creates independent windows without declarations and checks bridge permissions.
+pub async fn run_dynamic_windows_regression() -> Unit {
+  let application : Ref[@proton.ApplicationContext?] = Ref(None)
+  let race_entered = @async.Semaphore(1, initial_value=0)
+  let race_release = @async.Semaphore(1, initial_value=0)
+  let cleaned : Array[String] = []
+  let config = @proton.WindowConfig(
+    "Dynamic chat",
+    @proton.AppEntry::Html("<title>Dynamic chat</title>"),
+    views=[("child", @proton.view("about:blank", width=50, height=50))],
+  )
+  @proton.html("Dynamic windows", "<title>Dynamic windows</title>")
+  ..identifier("dev.proton.dynamic-windows")
+  ..single_instance()
+  ..capability(@proton_extension.capability(multi_window_extension()), targets=[
+    @proton.RendererTarget::entry_prefix("chat-"),
+  ])
+  ..setup(context => application.val = Some(context))
+  ..setup_window(context => {
+    let id = context.id()
+    context.add_cleanup(() => cleaned.push(id))
+    if id == "chat-race" {
+      race_entered.release()
+      race_release.acquire()
+    }
+    guard id == "main" else { return }
+    context
+    .task_group()
+    .spawn_bg(no_wait=true, () => {
+      lifecycle_probe_gate()
+      let windows = context.windows()
+      let first = windows.create("chat-1", config)
+      let second = windows.create("chat-2", config)
+      assert_eq(first.id(), "chat-1")
+      assert_eq(second.id(), "chat-2")
+      assert_eq(first.view("child").unwrap().window_id(), "chat-1")
+      assert_eq(second.view("child").unwrap().window_id(), "chat-2")
+      for window in [first, second] {
+        window
+        .web_contents()
+        .eval(
+          "window.__MoonBit__.multi.identify({label:'probe'}).then(r => document.title = r.window)",
+        )
+      }
+      while first.web_contents().state().title != "chat-1" ||
+            second.web_contents().state().title != "chat-2" {
+        @async.sleep(5)
+      }
+      let denied = windows.create("untrusted", config)
+      denied
+      .web_contents()
+      .eval(
+        "window.__MoonBit__.core.invokeOp('ext:multi/identify', {label:'probe'}).then(() => document.title = 'unexpected-allow', () => document.title = 'denied')",
+      )
+      while denied.web_contents().state().title == "Dynamic chat" {
+        @async.sleep(5)
+      }
+      assert_eq(denied.web_contents().state().title, "denied")
+      let creating = context
+        .task_group()
+        .spawn(() => windows.create("chat-race", config))
+      race_entered.acquire()
+      try windows.create("chat-race", config) catch {
+        @proton.WindowSessionError::AlreadyOpen(id~) =>
+          assert_eq(id, "chat-race")
+        error => raise error
+      } noraise {
+        _ => fail("concurrent creation accepted a duplicate id")
+      }
+      race_release.release()
+      let raced = creating.wait()
+      assert_eq(raced.id(), "chat-race")
+      let old_child = first.view("child").unwrap()
+      first.close()
+      while windows.find("chat-1") is Some(_) || !cleaned.contains("chat-1") {
+        @async.sleep(5)
+      }
+      assert_false(cleaned.contains("chat-2"))
+      let replacement = windows.create("chat-1", config)
+      assert_eq(replacement.id(), "chat-1")
+      try first.close() catch {
+        @proton.WindowSessionError::StaleWindow(id~) => assert_eq(id, "chat-1")
+        error => raise error
+      } noraise {
+        _ => fail("old handle reached replacement window")
+      }
+      try old_child.close() catch {
+        @proton.WindowSessionError::StaleWindow(..) => ()
+        error => raise error
+      } noraise {
+        _ => fail("old view reached replacement window")
+      }
+      assert_eq(second.web_contents().state().title, "chat-2")
+      ignore(second.view("child").unwrap().state())
+      application.val.unwrap().quit()
+    })
+  })
+  .run()
+  assert_eq(cleaned.filter(id => id == "chat-1").length(), 2)
+  for id in ["main", "chat-2", "untrusted", "chat-race"] {
+    assert_eq(cleaned.filter(item => item == id).length(), 1)
+  }
+  println("LIFECYCLE_PASSED dynamic-windows")
 }

@@ -78,7 +78,6 @@ pub struct AppWindowManifest {
   id : String
   window : WindowManifest
   entry : AppEntry
-  open_on_start : Bool
 } derive(Debug, Eq)
 
 ///|
@@ -98,15 +97,12 @@ pub impl Show for AppWindowManifest with fn output(self, logger) {
   logger.write_object(self.window)
   logger.write_string(", entry: ")
   logger.write_object(self.entry)
-  logger.write_string(", open_on_start: ")
-  logger.write_object(self.open_on_start)
   logger.write_string(" }")
 }
 
 ///|
 /// Builds a manifest window configuration.
-/// This is the declarative window shape consumed by bootstrap and later turned
-/// into runtime `WindowConfig` values.
+/// Used by the facade when preparing native window settings.
 pub fn WindowManifest::WindowManifest(
   title : String,
   width : Int32,
@@ -135,9 +131,8 @@ pub fn AppWindowManifest::AppWindowManifest(
   id : String,
   window : WindowManifest,
   entry : AppEntry,
-  open_on_start~ : Bool = true,
 ) -> AppWindowManifest {
-  AppWindowManifest::{ id, window, entry, open_on_start, }
+  AppWindowManifest::{ id, window, entry, }
 }
 
 ///|

@@ -153,7 +153,6 @@ pub extend AppCleanupError with Show::{to_string, output}
 ///|
 pub fn WindowSessionError::message(self : WindowSessionError) -> String {
   match self {
-    UnknownWindow(id~) => "window is not declared: " + id
     AlreadyOpen(id~) => "window is already open: " + id
     ApplicationQuitting => "the application is quitting"
     StaleWindow(id~) => "window instance is no longer active: " + id

@@ -570,7 +570,7 @@ proxies such as `window.__MoonBit__.ticker.start(...)`.
 
 Primary and secondary windows use the same `WindowConfig`. It owns the page
 entry, size, native theme, titlebar and initial child views. `App` owns runtime
-settings and registers the configurations under window ids:
+settings; startup windows can be registered under window IDs:
 
 ```moonbit
 let main = @proton.WindowConfig("Main", @proton.AppEntry::Html(main_html))
@@ -581,7 +581,7 @@ let settings = @proton.WindowConfig(
   height=320,
   theme=Dark,
 )
-@proton.App(main)..add_window("settings", settings, open_on_start=false)
+@proton.App(main)..add_window("settings", settings)
 ```
 
 `html`, `url`, `file` and `asset` remain single-window shortcuts to
@@ -598,10 +598,33 @@ for dynamically created views.
 
 Migration: move the former `App.title`, `size`, `theme`, `titlebar_style`,
 `traffic_light_position`, `entry_*` and `with_view` settings into `WindowConfig`.
-`add_window` now takes the id and configuration; `open_on_start` remains a
-registration option. Runtime `WindowHandle` operations are unchanged.
+For on-demand windows, keep a reusable configuration and call the manager:
 
-The window id `"main"` is reserved for the primary window. By default, the
+```moonbit
+let first = context.windows().create("editor-1", settings)
+let second = context.windows().create("editor-2", settings)
+```
+
+`create(id, config)` is async and returns an activated handle. It requires no
+startup declaration. Each window has independent child views, command identity
+and cleanup. An active ID, including a starting window, cannot be created again;
+a closed ID can be reused, but the old handle remains stale. Cancellation before
+activation commits cleans up the new instance; cancellation after success does
+not close an application-owned window.
+
+Replace `windows.open(id)` with `windows.create(id, config)` and remove delayed
+`add_window(..., open_on_start=false)` declarations. `add_window(id, config)`
+now only creates startup windows. These changes are unreleased.
+
+Command and extension registration stays on `App`. Exact renderer targets may
+refer to future IDs. `RendererTarget::entry_prefix("editor-")` and
+`bundled_prefix("editor-")` explicitly grant a nonempty ID prefix while retaining
+source checks; new windows do not inherit the primary window's grants.
+`NewWindowDecision::OpenInWindow(id)` targets an existing instance; create it
+in the async new-window handler first when needed.
+
+`"main"` identifies the startup primary window and may be recreated after it
+closes. `single_instance()` limits processes, not windows. By default, the
 process exits when all windows have closed. Use
 `..last_window_closed_policy(@proton.LastWindowClosedPolicy::KeepRunning)` when
 the application should remain available for Dock, protocol, document, or tray

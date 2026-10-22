@@ -1,5 +1,7 @@
 # Managing windows
 
+The runtime window creation API below is unreleased; Proton 0.5.1 still uses declared windows and `open(id)`.
+
 This tutorial adds a secondary window to the [minimal application](first-app.md), then controls its visibility and closing behavior. Start from that project with its existing package imports; replace its entry point with the code below.
 
 ## Create a second window
@@ -33,25 +35,30 @@ Run `proton_cli dev`. Both **Main** and **Help** should open. The terminal print
 
 The primary window's ID is `main`. Secondary IDs must be nonempty, unique, and different from `main`. The ID identifies a window in code; its title is display text.
 
-## Open a window on demand
+## Create windows on demand
 
-`add_window` opens the declared window at startup by default. Set `open_on_start=false` to declare it without opening it. Later, use `context.windows().open("help")` from an application or window context.
-
-For example, add `open_on_start=false` to the Help declaration above, and add this builder call before `.run_or_abort()` to open it from the application startup hook:
+Keep a reusable `WindowConfig` and call `WindowManager.create(id, config)` when the user requests a window. No declaration on `App` is required. For example, replace the `add_window` call above with this setup callback:
 
 ```moonbit
 ..setup(context => {
-  ignore(context.windows().open("help"))
+  let help = @proton.WindowConfig("Help", @proton.AppEntry::Html("<h1>Help</h1>"))
+  let first = context.windows().create("help-1", help)
+  let second = context.windows().create("help-2", help)
+  println(first.id() + ", " + second.id())
 })
 ```
 
-A later user action can call the same window manager operation from a retained application context. Do not create a second Proton runtime for a second window.
+Each call creates an independent window, including its initial child views and cleanup scope. A later command handler can call the same operation through a retained manager. Use a new ID for each live window; trying to create an already active ID raises `AlreadyOpen`. After closing finishes, the ID may be reused, but the old handle remains invalid.
+
+`single_instance()` limits application processes, not windows. It works with any number of windows in the same runtime. Do not create another Proton runtime for a second window.
+
+For command access, grant the intended IDs explicitly with `RendererTarget::entry(window="help-1")`, or a nonempty prefix such as `RendererTarget::entry_prefix("help-")`. A newly created window does not inherit `main`'s grants. See [native capabilities](capabilities.md).
 
 ## Use and release handles
 
 `context.handle()` inside `setup_window` gives the current `WindowHandle`. It supports operations such as `focus()`, `hide()`, `show()`, and `close()`. Browser operations are available through `handle.web_contents()`.
 
-The cleanup closure captures the ID directly. The Todo template uses the same pattern to remove a saved event destination. Register cleanup immediately after acquiring a window-owned resource; it still runs if later setup fails. Reopening a declaration creates a new cleanup scope. Stop using the native handle after close.
+The cleanup closure captures the ID directly. The Todo template uses the same pattern to remove a saved event destination. Register cleanup immediately after acquiring a window-owned resource; it still runs if later setup fails. Creating another instance creates a new cleanup scope. Stop using the native handle after close.
 
 ## Decide when the application exits
 

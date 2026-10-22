@@ -251,27 +251,26 @@ fn page() -> String {
 
 ///|
 async fn main {
-  @proton.App(
-    @proton.WindowConfig(
-      "Quit Event Chain",
-      @proton.AppEntry::Html(page()),
-      width=900,
-      height=700,
-      close_handler=fn(window) {
-        log_chain_step(
-          "close " +
-          window.id() +
-          " blocked=" +
-          block_window_close.val.to_string(),
-        )
-        if block_window_close.val {
-          @proton.WindowCloseDecision::Deny
-        } else {
-          @proton.WindowCloseDecision::Allow
-        }
-      },
-    ),
+  let main_config = @proton.WindowConfig(
+    "Quit Event Chain",
+    @proton.AppEntry::Html(page()),
+    width=900,
+    height=700,
+    close_handler=fn(window) {
+      log_chain_step(
+        "close " +
+        window.id() +
+        " blocked=" +
+        block_window_close.val.to_string(),
+      )
+      if block_window_close.val {
+        @proton.WindowCloseDecision::Deny
+      } else {
+        @proton.WindowCloseDecision::Allow
+      }
+    },
   )
+  @proton.App(main_config)
   ..identifier("com.example.proton.quit-event-chain")
   ..single_instance()
   // A prevented `will-quit` leaves the application running without windows.
@@ -279,7 +278,7 @@ async fn main {
   ..on_launch_input(async fn(context, input) noraise {
     if input is @proton.RuntimeLaunchInput::Reopen &&
       context.windows().find("main") is None {
-      ignore(context.windows().open("main")) catch {
+      ignore(context.windows().create("main", main_config)) catch {
         error => println("[quit-chain] reopen failed: " + error.to_string())
       }
     }

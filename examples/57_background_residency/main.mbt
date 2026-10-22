@@ -36,13 +36,19 @@ let page =
 
 ///|
 async fn main {
-  @proton.html("Background Residency", page, width=760, height=480)
+  let main_config = @proton.WindowConfig(
+    "Background Residency",
+    @proton.AppEntry::Html(page),
+    width=760,
+    height=480,
+  )
+  @proton.App(main_config)
   ..identifier("com.example.proton.background-residency")
   ..single_instance()
   ..last_window_closed_policy(@proton.LastWindowClosedPolicy::KeepRunning)
   ..on_launch_input(async fn(context, input) noraise {
     if input is Reopen && context.windows().find("main") is None {
-      ignore(context.windows().open("main")) catch {
+      ignore(context.windows().create("main", main_config)) catch {
         error => println("failed to reopen main window: " + error.to_string())
       }
     }

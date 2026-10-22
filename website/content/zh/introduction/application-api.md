@@ -80,7 +80,7 @@ app.run()
 
 主实例先同步通知 `on_session_created` 观察者，再等待 `setup` 回调。之后打开尚未由 setup 打开的启动窗口，等待所需 bridge 初始化，并等待每个初始窗口的 `setup_window` 完成。初始窗口激活成功后应用才 ready；声明窗口或收到创建通知不等于 ready。
 
-应用 setup 回调可以等待 `context.windows().open(id)`。已提交的退出会停止启动；被拒绝的退出请求会保留应用运行，提出 quit 请求本身不等于已提交退出。
+应用 setup 回调可以等待 `context.windows().create(id, config)`。已提交的退出会停止启动；被拒绝的退出请求会保留应用运行，提出 quit 请求本身不等于已提交退出。
 
 **任务与清理所有权**
 
@@ -212,25 +212,27 @@ on_window_created、on_render_process_gone 等应用生命周期通知是宿主�
 
 ## 窗口与浏览器视图
 
-窗口声明属于 `App`，运行中的窗口操作属于 `WindowHandle`。浏览器导航和开发者工具属于 `WebContentsHandle`，通过 `WindowHandle.web_contents()` 获取。
+以下运行时创建窗口 API 尚未发布；Proton 0.5.1 仍使用预先声明窗口与 `open(id)`。
 
-**标识与声明**
+启动窗口配置属于 `App`，动态创建属于 `WindowManager`，运行中的窗口操作属于 `WindowHandle`。浏览器导航和开发者工具属于 `WebContentsHandle`，通过 `WindowHandle.web_contents()` 获取。
 
-主窗口 ID 为 `main`。`App.add_window(id, config, open_on_start?)` 声明附加窗口，其 ID 必须非空、唯一，且不能为 `main`。标题是显示文本，不是窗口标识。
+**配置与创建**
 
-附加窗口默认在启动时打开。`open_on_start=false` 将打开推迟到 `WindowManager.open(id)`。`ApplicationContext.windows()` 和 `WindowContext.windows()` 提供窗口管理器。所有窗口属于同一个应用运行时。
+`WindowConfig(title, entry, ...)` 是可复用的配置，包含页面入口、尺寸、主题、标题栏、初始 `views`、关闭处理器和 web-contents 策略。`App(config)` 指定 ID 为 `main` 的主窗口；`App.add_window(id, config)` 在启动时创建附加窗口；`App.main_window(config)` 替换主窗口的启动配置。这些方法都不会修改运行中的窗口。
 
-`WindowConfig(title, entry, ...)` 保存尺寸、尺寸提示、主题、标题栏样式、红绿灯位置、初始 `views`、`close_handler` 和 `web_contents_policy`。使用 `App(config)` 定义主窗口，`App.main_window(config)` 替换其启动配置，`App.add_window(id, config, ...)` 声明附加窗口。注册时会复制 views 数组。简单主窗口仍可使用 `html`、`url`、`file`、`asset` 快捷入口。
+`ApplicationContext.windows()` 和 `WindowContext.windows()` 提供 `WindowManager`。异步方法 `create(id, config)` 直接创建窗口，无需预先注册，返回已激活的 `WindowHandle`。复用配置并传入不同 ID 即可创建多个实例。注册或创建时会复制配置中的 views 数组；各实例拥有独立的原生窗口、子视图和清理作用域。
 
-窗口、子视图和 web-contents 句柄由运行时创建。通过公开方法操作，不自行构造、复制其内部表示或调用已移除的函数值实现字段。按对象类型使用 `id()`、`window_id()` 和可选的 `view_id()` 识别来源。
+ID 会去除首尾空白，必须非空，并且在活动窗口（包括仍在启动的窗口）中唯一。重复创建抛出 `AlreadyOpen`；退出期间创建抛出 `ApplicationQuitting`。启动时注册附加窗口不能使用 `main`，但后台应用可以在主窗口关闭后用保存的配置重新创建 `main`。标题是显示文本，不是身份。`single_instance()` 限制进程数量，不限制窗口数量。
 
-**打开操作与实例身份**
+**权限与实例生命周期**
 
-`WindowManager.open(id)` 是异步操作，返回已激活的 WindowHandle。id 选择窗口声明，不是以后每次原生实例的永久身份。关闭并重新打开后，应通过 open 或 find 获取新句柄，旧句柄不会重新有效。
+命令和扩展在 `App` 上注册一次。用 `RendererTarget::entry(window="editor-1")` 授权指定 ID，或用 `RendererTarget::entry_prefix("editor-")` 授权一组窗口；`bundled` 和 `bundled_prefix` 授权打包页面。前缀必须非空。窗口 ID 匹配不会绕过来源检查；精确 ID 可以指向后续才创建的窗口。动态窗口不会自动复制 `main` 的权限。
 
-激活提交前取消调用，会丢弃排队的打开操作，或关闭该操作已经创建的实例。激活成功提交后，窗口属于应用，随后取消调用方不会把它关闭。未知声明和无效窗口状态产生窗口会话错误；任务取消遵循 async 的取消语义。
+激活提交前取消调用，会丢弃排队的创建操作，或关闭该操作已创建的实例。激活提交后窗口属于应用，随后取消调用方不会将它关闭。`close()` 发起销毁请求且可以被拒绝；`hide()` 保留实例及其任务。窗口资源应通过生命周期清理释放。
 
-hide() 保留窗口实例、浏览器和相关任务。close() 发起销毁流程且可能被拒绝，不能把关闭请求当作清理完成。窗口状态应由生命周期清理释放，而不是刚请求关闭就释放。
+旧实例关闭后可以复用 ID。使用 `create` 返回的句柄或通过 `find` 获取新实例；旧窗口及其子视图句柄仍然失效。句柄由运行时创建，不应自行构造或复制内部表示。
+
+`NewWindowDecision::OpenInWindow(id)` 导航已有窗口。若要为弹出页面创建新窗口，先在异步新窗口处理器中等待 `windows.create(id, config)`，再返回该决策。
 
 **窗口查找与浏览器就绪**
 

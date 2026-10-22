@@ -72,7 +72,7 @@ fn App::validation_error(self : App) -> AppConfigurationError? {
     if self.main_window_config.validation_error() is Some(error) {
       return Some(error)
     }
-    for (_, config, _) in self.windows {
+    for (_, config) in self.windows {
       if config.validation_error() is Some(error) {
         return Some(error)
       }
@@ -122,8 +122,11 @@ fn App::resolved_app_config(self : App) -> ResolvedAppConfig {
     proxy_bypass: self.proxy_bypass_value,
     window_configs: {
       let configs = Map([])
-      configs["main"] = self.main_window_config.snapshot()
-      for (id, config, _) in self.windows {
+      configs["main"] = {
+        ..self.main_window_config.snapshot(),
+        entry: manifest.entry,
+      }
+      for (id, config) in self.windows {
         configs[id] = config.snapshot()
       }
       configs
@@ -166,13 +169,8 @@ fn App::inline_manifest(self : App) -> @manifest.AppManifest {
     entry,
     debug~,
     windows=self.windows.map(window => {
-      let (id, config, open_on_start) = window
-      @manifest.AppWindowManifest(
-        id,
-        config.to_manifest(),
-        config.entry,
-        open_on_start~,
-      )
+      let (id, config) = window
+      @manifest.AppWindowManifest(id, config.to_manifest(), config.entry)
     }),
   )
 }

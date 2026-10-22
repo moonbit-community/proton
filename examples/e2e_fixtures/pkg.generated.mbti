@@ -31,6 +31,8 @@ pub async fn run_closed_record_churn_regression() -> Unit
 
 pub async fn run_devtools() -> Unit
 
+pub async fn run_dynamic_windows_regression() -> Unit
+
 pub async fn run_event_broadcast() -> Unit
 
 pub async fn run_i18n() -> Unit

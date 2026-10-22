@@ -3,25 +3,15 @@ let application_capability_id = "app"
 
 ///|
 fn validate_renderer_capability_targets(
-  manifest : @manifest.AppManifest,
   command_capabilities : Array[AppCommandCapability],
   extension_capabilities : Array[ExtensionCapabilityBinding],
 ) -> Unit raise AppConfigurationError {
-  let windows : Map[String, Unit] = { "main": () }
-  for window in manifest.windows {
-    windows[window.id] = ()
-  }
   for capability in command_capabilities {
-    validate_renderer_targets(
-      capability.targets,
-      windows,
-      "application commands",
-    )
+    validate_renderer_targets(capability.targets, "application commands")
   }
   for capability in extension_capabilities {
     validate_renderer_targets(
       capability.targets,
-      windows,
       "extension " + capability.spec.id(),
     )
   }
@@ -30,7 +20,6 @@ fn validate_renderer_capability_targets(
 ///|
 fn validate_renderer_targets(
   targets : Array[RendererTarget],
-  windows : Map[String, Unit],
   owner : String,
 ) -> Unit raise AppConfigurationError {
   guard !targets.is_empty() else {
@@ -43,13 +32,12 @@ fn validate_renderer_targets(
         detail=owner + " references an empty window id",
       )
     }
-    guard windows.contains(target.window) else {
-      raise InvalidRendererCapability(
-        detail=owner + " references unknown window " + target.window,
-      )
-    }
     let source_key = if target.bundled { "bundled" } else { "entry" }
-    let identity = target.window + "\u{0}" + source_key
+    let identity = target.prefix.to_string() +
+      "\u{0}" +
+      target.window +
+      "\u{0}" +
+      source_key
     guard !seen.contains(identity) else {
       raise InvalidRendererCapability(
         detail=owner + " repeats renderer target " + target.window,
@@ -98,12 +86,13 @@ fn resolve_window_permission_policy(
   policy : BridgePagePolicy,
   app_capabilities : Array[RegisteredAppCommandCapability],
   extension_capabilities : Array[ResolvedExtensionCapability],
+  titlebar_overlay~ : Bool = false,
 ) -> WindowPermissionPolicy raise AppConfigurationError {
   let grants : Array[ResolvedPermissionGrant] = []
   for capability in app_capabilities {
     let origins : Map[String, Unit] = Map([])
     for target in capability.targets {
-      guard target.window == window_id else { continue }
+      guard target.matches(window_id) else { continue }
       let source_origin = renderer_target_origin(target, policy)
       guard !origins.contains(source_origin) else {
         raise InvalidRendererCapability(
@@ -125,7 +114,7 @@ fn resolve_window_permission_policy(
   let extension_origins : Map[String, Unit] = Map([])
   for capability in extension_capabilities {
     for target in capability.targets {
-      guard target.window == window_id else { continue }
+      guard target.matches(window_id) else { continue }
       let source_origin = renderer_target_origin(target, policy)
       let identity = capability.spec.id() + "\u{0}" + source_origin
       guard !extension_origins.contains(identity) else {
@@ -146,6 +135,14 @@ fn resolve_window_permission_policy(
         scope: capability.scope,
       })
     }
+  }
+  if titlebar_overlay {
+    grants.push(ResolvedPermissionGrant::{
+      source_origin: policy.entry_origin.unwrap_or("app"),
+      extension_id: application_capability_id,
+      ops: [titlebar_area_op],
+      scope: Json::empty_object(),
+    })
   }
   WindowPermissionPolicy::{ grants, }
 }
@@ -240,4 +237,13 @@ fn WindowPermissionPolicy::grants_extension(
   extension_id : String,
 ) -> Bool {
   self.grants.any(grant => grant.extension_id == extension_id)
+}
+
+///|
+fn RendererTarget::matches(self : RendererTarget, id : String) -> Bool {
+  if self.prefix {
+    id.has_prefix(self.window)
+  } else {
+    id == self.window
+  }
 }

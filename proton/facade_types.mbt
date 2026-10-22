@@ -79,7 +79,7 @@ pub extend NativeImageError with Show::{to_string, output}
 /// High-level application facade for ordinary Proton apps.
 struct App {
   mut main_window_config : WindowConfig
-  windows : Array[(String, WindowConfig, Bool)]
+  windows : Array[(String, WindowConfig)]
   mut debug_level_value : Int32
   mut headless_value : Bool
   mut accessibility_mode_value : AccessibilityMode
@@ -146,6 +146,7 @@ priv enum ApplicationIdentitySource {
 pub struct RendererTarget {
   window : String
   bundled : Bool
+  prefix : Bool
 }
 
 ///|
@@ -441,24 +442,6 @@ priv struct WindowLifetime {
 }
 
 ///|
-priv struct PlannedWindow {
-  id : String
-  window : @manifest.WindowManifest
-  entry : @manifest.AppEntry
-  open_on_start : Bool
-}
-
-///|
-priv struct PreparedWindow {
-  plan : PlannedWindow
-  entry : PreparedEntry
-  bridge : @native.BridgeConfig?
-  permissions : WindowPermissionPolicy
-  browser_policy : @native.BrowserPolicy
-  config : WindowConfig
-}
-
-///|
 priv struct CommandHostRuntime {
   host : @core.AppCommandHost
   destroy_hooks : Array[CommandExtensionDestroyHook]
@@ -518,7 +501,12 @@ priv struct RuntimeSession {
   updates : ApplicationUpdates
   runtime : @native.Runtime
   event_pump : RuntimeEventPump
-  definitions : Array[PreparedWindow]
+  app_capabilities : Array[RegisteredAppCommandCapability]
+  extension_capabilities : Array[ResolvedExtensionCapability]
+  command_extensions : Map[
+    String,
+    @proton_command.AppCommandExtensionDescriptor,
+  ]
   windows : Array[RunningWindow]
   mut has_created_window : Bool
   command_host : CommandHostRuntime?
@@ -593,7 +581,12 @@ priv struct CookieCompletionStore {
 
 ///|
 priv enum WindowSessionCommand {
-  Open(String, WindowOpenCompletion[WindowHandle])
+  Create(
+    String,
+    WindowConfig,
+    PreparedEntry,
+    WindowOpenCompletion[WindowHandle]
+  )
 }
 
 ///|
@@ -686,7 +679,7 @@ pub struct SessionHandle {
 /// independent web page hosted inside its owning window's content area with
 /// explicit top-left bounds, visibility, and z-order. The instance id
 /// prevents a stale handle from targeting a later view that reuses the same
-/// declarative id.
+/// view id.
 pub struct ViewHandle {
   priv session : RuntimeSession
   id : String
@@ -699,7 +692,7 @@ pub struct ViewHandle {
 /// A non-owning reference to one concrete window instance.
 ///
 /// The instance id prevents a stale handle from targeting a later window that
-/// reuses the same declarative id.
+/// reuses the same window id.
 pub struct WindowHandle {
   priv session : RuntimeSession
   id : String
@@ -707,9 +700,9 @@ pub struct WindowHandle {
 }
 
 ///|
-/// Opens and locates windows declared by the application manifest.
+/// Creates and locates windows owned by the application.
 pub struct WindowManager {
-  open_window : async (String) -> WindowHandle
+  create_window : async (String, WindowConfig) -> WindowHandle
   find_window : (String) -> WindowHandle?
 }
 
@@ -915,6 +908,7 @@ pub extend NewWindowRequest with Debug::{to_repr}
 pub(all) enum NewWindowDecision {
   Deny
   OpenInCurrent
+  /// Navigates an existing window. Create it in the handler first if needed.
   OpenInWindow(String)
 } derive(Debug, Eq)
 
@@ -1004,7 +998,6 @@ pub extend DownloadEvent with Debug::{to_repr}
 ///|
 /// Failures from runtime window lookup, creation, or control.
 pub(all) suberror WindowSessionError {
-  UnknownWindow(id~ : String)
   AlreadyOpen(id~ : String)
   ApplicationQuitting
   StaleWindow(id~ : String)

@@ -2,6 +2,14 @@
 
 ## 未发布
 
+**运行时创建窗口（破坏性 API 变更）**
+
+`WindowManager.create(id, config)` 可以在运行时使用可复用的 `WindowConfig` 创建独立窗口，包括单实例应用内的多个窗口。窗口 ID 不再需要预先声明。各实例拥有独立的子视图、命令来源身份和清理作用域；复用 ID 后旧句柄仍然无效。
+
+将 `windows.open(id)` 替换为 `windows.create(id, config)`。删除延迟打开的 `add_window(..., open_on_start=false)` 声明，将配置保留在创建位置。`App.add_window(id, config)` 仍用于启动时创建窗口；`open_on_start` 和 `UnknownWindow` 已移除。使用 `RendererTarget::entry_prefix` 或 `bundled_prefix` 明确授权一组 ID，也可以继续按精确 ID 授权。
+
+`NewWindowDecision::OpenInWindow(id)` 现在只操作已有实例。需要创建实例的新窗口处理器必须先等待 `create`。参见[窗口管理](../introduction/application-api.md#窗口与浏览器视图)和[多窗口示例](../examples/45_bridge_multi_window.md)。
+
 **Windows 屏幕监听**
 
 修复启动屏幕监听后收不到显示器分辨率变化通知的问题。监听无需可见的应用窗口。

@@ -208,12 +208,9 @@ async fn run_manifest(
     primary_logged: false,
   },
 ) -> ApplicationExit raise AppRunError {
-  let plans = planned_windows(config.manifest) catch {
-    error => raise ConfigurationError(error)
-  }
   if config.headless {
-    for plan in plans {
-      if plan.window.titlebar_style == @manifest.TitlebarStyle::Overlay {
+    for _, window in config.window_configs {
+      if window.titlebar_style == Overlay {
         raise ConfigurationError(
           InvalidSetting(
             name="headless",
@@ -341,7 +338,6 @@ async fn run_manifest(
       }
     }
     validate_renderer_capability_targets(
-      config.manifest,
       config.command_capabilities,
       config.extension_capabilities,
     ) catch {
@@ -352,16 +348,10 @@ async fn run_manifest(
     ) catch {
       error => raise ConfigurationError(error)
     }
-    let titlebar_area_targets : Array[RendererTarget] = []
-    for plan in plans {
-      if plan.window.titlebar_style == @manifest.TitlebarStyle::Overlay {
-        titlebar_area_targets.push(RendererTarget::entry(window=plan.id))
-      }
-    }
     let command_build = build_command_host(
       config.command_capabilities,
       extension_catalog,
-      titlebar_area_targets~,
+      titlebar_area_enabled=!config.headless,
     )
     command_host = command_build.runtime
     let command_extensions = command_build.extensions
@@ -372,26 +362,6 @@ async fn run_manifest(
     ) catch {
       error => raise ConfigurationError(error)
     }
-    let policies : Array[BridgePagePolicy] = []
-    for plan in plans {
-      let policy = bridge_page_policy_for_entry(plan.entry) catch {
-        error => raise ConfigurationError(error)
-      }
-      policies.push(policy)
-    }
-    let permission_policies : Array[WindowPermissionPolicy] = []
-    for index, plan in plans {
-      permission_policies.push(
-        resolve_window_permission_policy(
-          plan.id,
-          policies[index],
-          command_build.app_capabilities,
-          resolved_extension_capabilities,
-        ) catch {
-          error => raise ConfigurationError(error)
-        },
-      )
-    }
     let bridge_enabled = requires_renderer_bridge(
       command_host,
       forward_menu_events,
@@ -400,51 +370,17 @@ async fn run_manifest(
     if bridge_enabled && !@native.bridge_permission_grants_supported() {
       raise UnsupportedNativeFeature(feature="bridge_permission_grants")
     }
-    let definitions : Array[PreparedWindow] = []
-    let browser_policy = @native.BrowserPolicy(
-      download=if config.download_handler is Some(_) {
-        @native.BrowserPolicyMode::Ask
-      } else {
-        @native.BrowserPolicyMode::Deny
-      },
-      certificate=if config.certificate_handler is Some(_) {
-        @native.BrowserPolicyMode::Ask
-      } else {
-        @native.BrowserPolicyMode::Deny
-      },
-      media=if config.media_handler is Some(_) {
-        @native.BrowserPolicyMode::Ask
-      } else {
-        @native.BrowserPolicyMode::Deny
-      },
-      devtools=config.manifest.debug > 0,
-    )
-    for index, plan in plans {
-      let entry = prepare_entry(plan.entry) catch {
+    let startup_ids = ["main"]
+    for window in config.manifest.windows {
+      startup_ids.push(window.id)
+    }
+    let startup_windows : Array[(String, WindowConfig, PreparedEntry)] = []
+    for id in startup_ids {
+      let window_config = config.window_configs[id]
+      let entry = prepare_entry(window_config.entry) catch {
         error => raise EntryLoadError(error)
       }
-      let bridge = if bridge_enabled {
-        let grants = permission_policies[index].native_grants(
-          command_extensions,
-        ) catch {
-          error => raise ConfigurationError(error)
-        }
-        ensure_entry_bridge_grant(grants, policies[index])
-        Some(native_bridge_config(grants))
-      } else {
-        None
-      }
-      let window_config = config.window_configs.get(plan.id).unwrap()
-      definitions.push(PreparedWindow::{
-        plan,
-        entry,
-        bridge,
-        permissions: permission_policies[index],
-        browser_policy: window_config.web_contents_policy.to_native(
-          browser_policy,
-        ),
-        config: window_config,
-      })
+      startup_windows.push((id, window_config, entry))
     }
     @async.with_task_group(application_tasks => {
       if command_host is Some(host) {
@@ -461,9 +397,25 @@ async fn run_manifest(
           }
         })
         let session = RuntimeSession(
-          config, environment, updates, close_coordinator, runtime, event_pump, definitions,
-          windows, command_host, wakeup, forward_menu_events, bridge_enabled, app_instance,
-          application_tasks, window_tasks, lifecycle_failures, destroy_window,
+          config,
+          environment,
+          updates,
+          close_coordinator,
+          runtime,
+          event_pump,
+          command_build.app_capabilities,
+          resolved_extension_capabilities,
+          command_extensions,
+          windows,
+          command_host,
+          wakeup,
+          forward_menu_events,
+          bridge_enabled,
+          app_instance,
+          application_tasks,
+          window_tasks,
+          lifecycle_failures,
+          destroy_window,
         )
         runtime.set_navigation_handler((
           window,
@@ -493,10 +445,9 @@ async fn run_manifest(
         )
         let startup = session.drive_until_complete(application_start)
         if startup is Completed {
-          for definition in definitions {
-            if definition.plan.open_on_start &&
-              session.find_active_window(definition.plan.id) is None {
-              ignore(session.create_window(definition))
+          for (id, window_config, entry) in startup_windows {
+            if session.find_active_window(id) is None {
+              ignore(session.create_window(id, window_config, entry))
             }
           }
           if bridge_enabled {
@@ -680,41 +631,6 @@ fn resolve_runtime_app_path(
         ),
       )
   }
-}
-
-///|
-fn planned_windows(
-  manifest : @manifest.AppManifest,
-) -> Array[PlannedWindow] raise AppConfigurationError {
-  let plans = [
-    PlannedWindow::{
-      id: "main",
-      window: manifest.window,
-      entry: manifest.entry,
-      open_on_start: true,
-    },
-  ]
-  let ids : Map[String, Unit] = { "main": () }
-  for window in manifest.windows {
-    let id = window.id.trim().to_owned()
-    guard id != "" else {
-      raise InvalidSetting(name="windows.id", message="must not be empty")
-    }
-    guard !ids.contains(id) else {
-      raise InvalidSetting(
-        name="windows.id",
-        message="duplicate window id: " + id,
-      )
-    }
-    ids[id] = ()
-    plans.push(PlannedWindow::{
-      id,
-      window: window.window,
-      entry: window.entry,
-      open_on_start: window.open_on_start,
-    })
-  }
-  plans
 }
 
 ///|
