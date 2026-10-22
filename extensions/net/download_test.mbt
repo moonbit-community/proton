@@ -185,20 +185,20 @@ async test "overwrite is explicit and failed file submission cleans up" {
     )
     assert_eq(@fs.readdir(root), ["file"])
   }
-  with_download_server(
-    connection => {
-      ignore(connection.read_until("\r\n\r\n"))
-      connection.write("HTTP/1.1 200 OK\r\nContent-Length: 0\r\n\r\n")
-    },
-    url => {
-      try @net.download(url, root + "/missing/file") catch {
-        @net.FileFailed(..) => ()
-        error => raise error
-      } noraise {
-        _ => fail("missing parent was accepted")
-      }
-    },
-  )
+  let invalid_parents = ["/missing/file", "/file/other"]
+  if @async.platform is (MacOS | Linux) {
+    invalid_parents.push("/missing/../file")
+    invalid_parents.push("/file/../other")
+  }
+  for suffix in invalid_parents {
+    let destination = root + suffix
+    try @net.download("http://127.0.0.1:1/file", destination) catch {
+      @net.FileFailed(detail~) => assert_true(detail.contains(destination))
+      error => raise error
+    } noraise {
+      _ => fail("invalid parent was accepted")
+    }
+  }
 }
 
 ///|
@@ -349,6 +349,27 @@ async test "download rejects invalid requests before creating files" {
       _ => fail("invalid request was accepted")
     }
   }
+  let invalid_destinations = [
+    "",
+    ".",
+    "..",
+    root + "/",
+    root + "/.",
+    root + "/..",
+  ]
+  if @async.platform is Windows {
+    invalid_destinations.push(root + "\\")
+    invalid_destinations.push("C:")
+    invalid_destinations.push("C:\\")
+  }
+  for destination in invalid_destinations {
+    try @net.download("http://127.0.0.1:1/file", destination) catch {
+      @net.InvalidRequest(..) => ()
+      error => raise error
+    } noraise {
+      _ => fail("directory path was accepted as a file name")
+    }
+  }
   assert_eq(@fs.readdir(root), [])
 }
 
@@ -430,6 +451,175 @@ async test "encoded responses are rejected instead of saving gzip bytes" {
       assert_false(progress_called.val)
       assert_eq(@fs.read_file(destination).text(), "old")
       assert_eq(@fs.readdir(root), ["file"])
+    }
+  }
+}
+
+///|
+async test "download preserves symlink parent traversal for existing and new files" {
+  guard @async.platform is (MacOS | Linux) else { return }
+  let root = @fs.tmpdir(prefix="proton-net-download-")
+  defer @fs.rmdir(root, recursive=true)
+  @fs.mkdir(root + "/local")
+  @fs.mkdir(root + "/other/child", recursive=true)
+  @fs.symlink(target="../other/child", root + "/local/link")
+  for relative in [false, true] {
+    let base = if relative {
+      @path.Path(root).relative(base=@path.Path(".").resolve()).to_string()
+    } else {
+      root
+    }
+    for overwrite in [false, true] {
+      let name = "file-\{relative}-\{overwrite}"
+      let destination = base + "/local/link/../" + name
+      let intended = root + "/other/" + name
+      let unrelated = root + "/local/" + name
+      @fs.write_file(unrelated, "unrelated")
+      if overwrite {
+        @fs.write_file(intended, "old")
+      }
+      with_download_server(
+        connection => {
+          ignore(connection.read_until("\r\n\r\n"))
+          connection.write("HTTP/1.1 200 OK\r\nContent-Length: 3\r\n\r\nnew")
+        },
+        url => @net.download(url, destination, overwrite~),
+      )
+      assert_eq(@fs.read_file(intended).text(), "new")
+      assert_eq(@fs.read_file(unrelated).text(), "unrelated")
+    }
+  }
+  assert_false(
+    @fs.readdir(root + "/other").any(name => {
+      name.has_prefix(".proton-download-")
+    }),
+  )
+  assert_false(
+    @fs.readdir(root + "/local").any(name => {
+      name.has_prefix(".proton-download-")
+    }),
+  )
+}
+
+///|
+async test "download replaces a final symlink without changing its target" {
+  guard @async.platform is (MacOS | Linux) else { return }
+  let root = @fs.tmpdir(prefix="proton-net-download-")
+  defer @fs.rmdir(root, recursive=true)
+  @fs.write_file(root + "/target", "original")
+  @fs.symlink(target="target", root + "/link")
+  for overwrite in [false, true] {
+    with_download_server(
+      connection => {
+        ignore(connection.read_until("\r\n\r\n"))
+        connection.write("HTTP/1.1 200 OK\r\nContent-Length: 3\r\n\r\nnew")
+      },
+      url => {
+        try @net.download(url, root + "/link", overwrite~) catch {
+          @net.DestinationExists(path~) => {
+            assert_false(overwrite)
+            assert_eq(path, root + "/link")
+          }
+          error => raise error
+        } noraise {
+          _ => assert_true(overwrite)
+        }
+      },
+    )
+    assert_eq(@fs.read_file(root + "/target").text(), "original")
+  }
+  assert_eq(@fs.read_file(root + "/link").text(), "new")
+  assert_eq(@fs.readdir(root, sort=true), ["link", "target"])
+}
+
+///|
+async test "download resolves directory links including Windows junctions" {
+  let root = @fs.tmpdir(prefix="proton-net-download-")
+  defer @fs.rmdir(root, recursive=true)
+  @fs.mkdir(root + "/parent")
+  @fs.symlink(target=root + "/parent", root + "/alias")
+  with_download_server(
+    connection => {
+      ignore(connection.read_until("\r\n\r\n"))
+      connection.write("HTTP/1.1 200 OK\r\nContent-Length: 2\r\n\r\nok")
+    },
+    url => @net.download(url, root + "/alias/file"),
+  )
+  assert_eq(@fs.read_file(root + "/parent/file").text(), "ok")
+  assert_eq(@fs.readdir(root + "/parent"), ["file"])
+}
+
+///|
+async test "download does not require permission to list the parent directory" {
+  guard @async.platform is (MacOS | Linux) else { return }
+  let root = @fs.tmpdir(prefix="proton-net-download-")
+  defer @fs.rmdir(root, recursive=true)
+  @fs.chmod(root, 0o300)
+  defer @fs.chmod(root, 0o700)
+  with_download_server(
+    connection => {
+      ignore(connection.read_until("\r\n\r\n"))
+      connection.write("HTTP/1.1 200 OK\r\nContent-Length: 2\r\n\r\nok")
+    },
+    url => @net.download(url, root + "/file"),
+  )
+  assert_eq(@fs.read_file(root + "/file").text(), "ok")
+}
+
+///|
+async test "download preserves Windows extended and junction paths to dotted directories" {
+  guard @async.platform is Windows else { return }
+  let root = @fs.tmpdir(prefix="proton-net-download-")
+  defer @fs.rmdir(root, recursive=true)
+  let absolute = @path.Path(root).resolve().to_string()
+  let extended = if absolute.has_prefix("\\\\?\\") {
+    absolute
+  } else if absolute.has_prefix("\\\\") {
+    "\\\\?\\UNC\\" + absolute[2:].to_owned()
+  } else {
+    "\\\\?\\" + absolute
+  }
+  let parent = extended + "\\folder."
+  @fs.mkdir(parent)
+  // Keep backslashes: async's recursive rmdir joins children with '/'.
+  defer {
+    for name in @fs.readdir(parent) {
+      @fs.remove(parent + "\\" + name)
+    }
+    @fs.rmdir(parent)
+  }
+  let junction = absolute + "\\alias"
+  // async creates an NTFS junction for an existing local directory target.
+  @fs.symlink(target=parent, junction)
+  defer @fs.remove(junction)
+  for ordinary_exists in [false, true] {
+    let ordinary = absolute + "\\folder"
+    if ordinary_exists {
+      @fs.mkdir(ordinary)
+    }
+    for (entry, name) in [(parent, "direct"), (junction, "junction")] {
+      if ordinary_exists {
+        @fs.write_file(ordinary + "\\" + name, "unrelated")
+      }
+      with_download_server(
+        connection => {
+          ignore(connection.read_until("\r\n\r\n"))
+          connection.write("HTTP/1.1 200 OK\r\nContent-Length: 3\r\n\r\nnew")
+        },
+        url => {
+          @net.download(url, entry + "\\" + name, overwrite=ordinary_exists)
+        },
+      )
+      assert_eq(@fs.read_file(parent + "\\" + name).text(), "new")
+      if ordinary_exists {
+        assert_eq(@fs.read_file(ordinary + "\\" + name).text(), "unrelated")
+      }
+    }
+    assert_eq(@fs.readdir(parent, sort=true), ["direct", "junction"])
+    if ordinary_exists {
+      assert_eq(@fs.readdir(ordinary, sort=true), ["direct", "junction"])
+    } else {
+      assert_eq(@fs.readdir(root, sort=true), ["alias", "folder."])
     }
   }
 }

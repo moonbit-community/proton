@@ -409,6 +409,11 @@ For binary files, MoonBit backend code can call `download` from
 This host-only function streams HTTP(S) GET content to a sibling temporary file
 and submits it to the chosen destination only after completion. The parent
 directory must exist; existing entries are preserved unless `overwrite=true`.
+The destination must end in a filename. Its original parent is checked before
+the HTTP request. POSIX filesystem resolution preserves `symlink/..` traversal;
+Windows absolute paths preserve directory junctions and explicit extended path
+prefixes. A final symbolic link is replaced only with explicit overwrite;
+its target is left unchanged.
 Only HTTP 200 is accepted: redirects and partial downloads are not supported.
 Downloads temporarily default to `Accept-Encoding: identity` and reject encoded
 responses, even when custom headers request compression, pending an upstream
