@@ -2685,7 +2685,9 @@ pub async fn run_dynamic_windows_regression() -> Unit {
       .eval(
         "window.__MoonBit__.core.invokeOp('ext:multi/identify', {label:'probe'}).then(() => document.title = 'unexpected-allow', () => document.title = 'denied')",
       )
-      while denied.web_contents().state().title == "Dynamic chat" {
+      // Title notifications may lag bridge readiness. Wait for the probe result.
+      while denied.web_contents().state().title != "denied" &&
+            denied.web_contents().state().title != "unexpected-allow" {
         @async.sleep(5)
       }
       assert_eq(denied.web_contents().state().title, "denied")
