@@ -14,7 +14,7 @@ priv enum GuardBackend {
 pub struct Guard {
   priv backend : GuardBackend
   priv requested_scope : Scope
-  priv mut released : Bool
+  priv lifetime : @async.Task[Unit]
 }
 
 ///|
@@ -43,13 +43,7 @@ pub async fn[G] acquire(
       scope.native_code(),
     ),
   )
-  let keep_guard = Guard::{
-    backend: Native(handle),
-    requested_scope: scope,
-    released: false,
-  }
-  group.add_defer(() => keep_guard.release())
-  keep_guard
+  own_guard(group, Native(handle), scope)
 }
 
 ///|
@@ -81,11 +75,7 @@ async fn[G] acquire_linux(
       no_wait=true,
       cancel_handler=@process.hard_cancel(),
     )
-    let keep_guard = Guard::{
-      backend: Linux(child, writer),
-      requested_scope: scope,
-      released: false,
-    }
+    let keep_guard = own_guard(group, Linux(child, writer), scope)
     defer (if !acquired { keep_guard.release() })
     // systemd-inhibit runs our command only after acquiring the lock.
     match reader.read_until("\n") {
@@ -109,7 +99,6 @@ async fn[G] acquire_linux(
         detail="systemd-inhibit exited at readiness (status \{status})",
       )
     }
-    group.add_defer(() => keep_guard.release())
     acquired = true
     keep_guard
   } catch {
@@ -165,9 +154,6 @@ async fn[T] Guard::with_action(self : Guard, action : async () -> T) -> T {
 /// is inactive even if `release` has not been called. This is a point-in-time
 /// observation; `with_keepawake` also monitors helper exit during scoped work.
 pub fn Guard::active(self : Guard) -> Bool {
-  if self.released {
-    return false
-  }
   match self.backend {
     Native(handle) => native_guard_is_active(handle)
     Linux(child, _) => (child.try_wait() catch { _ => Some(-1) }) is None
@@ -189,17 +175,45 @@ pub fn Guard::scope(self : Guard) -> Scope {
 pub async fn Guard::release(
   self : Guard,
 ) -> Unit raise KeepAwakeError + nocancel {
-  match self.backend {
-    Native(handle) =>
-      if !self.released {
-        finish_release(
-          native_guard_release(handle),
-          native_guard_last_error(handle),
-        )
-        self.released = true
+  self.lifetime.cancel()
+  @async.protect_from_cancel(() => self.lifetime.wait()) catch {
+    error =>
+      raise OperationFailed(operation="release", detail=error.to_string())
+  }
+}
+
+///|
+fn[G] own_guard(
+  group : @async.TaskGroup[G],
+  backend : GuardBackend,
+  scope : Scope,
+) -> Guard {
+  // Finished tasks leave the group immediately; group defers would retain
+  // every released guard until application shutdown.
+  let lifetime = group.spawn(no_wait=true, () => {
+    defer backend.release()
+    @async.handle_cancellation(() => {
+      match backend {
+        Native(_) => @async.Semaphore(1, initial_value=0).acquire()
+        Linux(child, _) => ignore(child.wait())
       }
+    })
+    |> ignore
+  })
+  { backend, requested_scope: scope, lifetime, }
+}
+
+///|
+async fn GuardBackend::release(
+  self : GuardBackend,
+) -> Unit raise KeepAwakeError + nocancel {
+  match self {
+    Native(handle) =>
+      finish_release(
+        native_guard_release(handle),
+        native_guard_last_error(handle),
+      )
     Linux(child, writer) => {
-      self.released = true
       writer.close()
       child.cancel()
       @async.protect_from_cancel(() => ignore(child.wait())) catch {

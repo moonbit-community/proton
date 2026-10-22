@@ -355,3 +355,44 @@ async test "Linux logind inhibition is present throughout scoped work" {
     assert_false(output.text().contains(reason))
   })
 }
+
+///|
+async test "released Linux guards finish their owner tasks before the application group ends" {
+  guard @async.platform is (Linux | MacOS) else { return }
+  @async.with_timeout(10000, () => {
+    let root = @fs.tmpdir(prefix="proton-inhibit-")
+    defer @fs.rmdir(root, recursive=true)
+    let tool = fake_inhibitor(root, "shift 6; exec \"$@\"")
+    @fs.write_file(root + "/proceed", "")
+    @async.with_task_group(group => {
+      for _ in 0..<32 {
+        let keep_guard = acquire_linux(group, tool, "test", PreventSystemSleep)
+        assert_true(keep_guard.lifetime.try_wait() is None)
+        keep_guard.release()
+        // Completion also removes the owner task from the still-live group.
+        assert_eq(keep_guard.lifetime.try_wait(), Some(()))
+        assert_false(keep_guard.active())
+        keep_guard.release()
+      }
+    })
+  })
+}
+
+///|
+async test "native guards finish ownership on explicit release and group exit" {
+  guard @async.platform is (MacOS | Windows) else { return }
+  @async.with_timeout(10000, () => {
+    let remaining = @async.with_task_group(group => {
+      for _ in 0..<8 {
+        let keep_guard = acquire(group, reason="Proton keep-awake regression")
+        keep_guard.release()
+        assert_eq(keep_guard.lifetime.try_wait(), Some(()))
+        assert_false(keep_guard.active())
+        keep_guard.release()
+      }
+      acquire(group, reason="Proton keep-awake group cleanup")
+    })
+    assert_eq(remaining.lifetime.try_wait(), Some(()))
+    assert_false(remaining.active())
+  })
+}
