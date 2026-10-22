@@ -35,8 +35,8 @@ fn[T] raise_native_error(
 
 ///|
 /// Resolves a newly-created native guard into either a live handle or an error.
-fn finish_acquire(handle : Guard) -> Guard raise KeepAwakeError {
-  if handle.active() {
+fn finish_acquire(handle : NativeGuard) -> NativeGuard raise KeepAwakeError {
+  if native_guard_is_active(handle) {
     handle
   } else {
     raise_native_error(
@@ -59,10 +59,10 @@ fn finish_release(status : Int32, detail : Bytes) -> Unit raise KeepAwakeError {
 
 ///|
 /// Runs an action and always attempts cleanup before returning or re-raising.
-fn[T] run_with_cleanup(
-  action : () -> T raise,
-  cleanup : () -> Unit raise,
-) -> T raise {
+async fn[T] run_with_cleanup(
+  action : async () -> T,
+  cleanup : async () -> Unit,
+) -> T {
   let value = {
     errdefer (cleanup() catch { _ => () })
     action()

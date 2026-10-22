@@ -1,146 +1,239 @@
 ///|
-/// The fallback reason used when callers pass an empty or whitespace-only
-/// reason.
-///
-/// This value is intentionally readable because some native backends expose the
-/// reason in system diagnostics or activity monitors. Applications can override
-/// it per call when they want more task-specific text, but keeping a default
-/// reason makes the simple API path ergonomic.
+/// The reason used when callers supply an empty or whitespace-only reason.
 pub let default_reason : String = "MoonBit keepawake request"
 
 ///|
-/// Acquires a keep-awake guard for the current operating system.
-///
-/// The returned guard activates the native inhibition immediately and keeps it
-/// alive until `Guard::release` is called or the guard is reclaimed by the
-/// runtime. On Windows the reclaim path may run on a different thread; the
-/// release is accounted for correctly, but the acquiring thread's power-state
-/// flags can persist until that thread exits, so explicit release from the
-/// acquiring thread is recommended. Blank reasons are normalized to
-/// `default_reason` so callers can keep call sites simple without losing
-/// readable backend diagnostics.
-///
-/// `reason` should describe the user-visible work being protected, such as
-/// `"Exporting a large report"` or `"Downloading offline assets"`. `scope`
-/// controls whether the request blocks system sleep, display sleep, or both.
-///
-/// Prefer `acquire` when your code naturally manages a long-lived handle. If
-/// the work is already scoped to a single callback, `with_keepawake` is usually
-/// more convenient because it guarantees structured release.
-///
-/// # Errors
-///
-/// Raises `KeepAwakeError::BackendUnavailable` when the current environment
-/// cannot provide a usable keep-awake backend, and raises
-/// `KeepAwakeError::OperationFailed` when a backend exists but the native
-/// acquire step still fails.
-///
-/// # Example
-/// ```mbt nocheck
-/// let guard = @proton_keepawake.acquire(
-///   reason="Encoding a large video",
-///   scope=@proton_keepawake.Scope::PreventSystemAndDisplaySleep,
-/// )
-///
-/// // ... perform the long-running work ...
-///
-/// guard.release()
-/// ```
-pub fn acquire(
-  reason~ : String = default_reason,
-  scope~ : Scope = Scope::PreventSystemSleep,
-) -> Guard raise KeepAwakeError {
-  let handle = native_guard_create(
-    @ffi.to_cstr(normalize_reason(reason)),
-    scope.native_code(),
-  )
-  finish_acquire(handle)
+priv enum GuardBackend {
+  Native(NativeGuard)
+  Linux(@process.Process, @process.WriteToProcess)
 }
 
 ///|
-/// Runs an action while a keep-awake guard is held.
-///
-/// This is the most ergonomic API for scoped work such as file exports, build
-/// steps, or long-running synchronization tasks. The guard is released after
-/// `action` finishes. If `action` raises, release is still attempted and any
-/// release failure is suppressed in favor of the original error.
-///
-/// This helper is the best default when the keep-awake lifetime should exactly
-/// match one operation. It keeps the call site small, avoids leaking a guard in
-/// early-return branches, and preserves the original application error if both
-/// the action and the release step fail.
-///
-/// `reason` and `scope` behave the same way as in `acquire`. The return value
-/// of `action` is passed through unchanged.
-///
-/// # Errors
-///
-/// Raises the same `KeepAwakeError` values as `acquire`, plus any error raised
-/// by `action`.
-///
-/// # Example
-/// ```mbt nocheck
-/// let summary = @proton_keepawake.with_keepawake(
-///   () => "done",
-///   reason="Syncing local cache",
-///   // ... perform long-running work ...
-///   scope=@proton_keepawake.Scope::PreventSystemSleep,
-/// )
-/// ```
-pub fn[T] with_keepawake(
-  action : () -> T raise?,
+/// A keep-awake request owned by the task group passed to `acquire`.
+/// Explicit release ends it early; leaving the group also releases it.
+pub struct Guard {
+  priv backend : GuardBackend
+  priv requested_scope : Scope
+  priv lifetime : @async.Task[Unit]
+}
+
+///|
+/// Acquires inhibition before returning. The task group owns its lifetime.
+/// Linux waits asynchronously for systemd-inhibit to acquire the lock; missing
+/// or failing backends raise KeepAwakeError. Cancellation stops and reaps the
+/// helper. Callers can impose a startup deadline with `@async.with_timeout`.
+/// macOS and Windows retain their native power assertions. On Windows, acquire
+/// and release must run on the same OS thread.
+pub async fn[G] acquire(
+  group : @async.TaskGroup[G],
   reason~ : String = default_reason,
   scope~ : Scope = Scope::PreventSystemSleep,
-) -> T raise {
-  let handle = acquire(reason~, scope~)
-  run_with_cleanup(fn() -> T raise { action() }, fn() -> Unit raise {
-    handle.release()
+) -> Guard raise KeepAwakeError {
+  if @async.platform is Linux {
+    return acquire_linux(
+      group,
+      "systemd-inhibit",
+      normalize_reason(reason),
+      scope,
+    )
+  }
+  let handle = finish_acquire(
+    native_guard_create(
+      @ffi.to_cstr(normalize_reason(reason)),
+      scope.native_code(),
+    ),
+  )
+  own_guard(group, Native(handle), scope)
+}
+
+///|
+async fn[G] acquire_linux(
+  group : @async.TaskGroup[G],
+  tool : String,
+  reason : String,
+  scope : Scope,
+) -> Guard raise KeepAwakeError {
+  let what = match scope {
+    PreventSystemSleep => "sleep"
+    PreventDisplaySleep => "idle"
+    PreventSystemAndDisplaySleep => "idle:sleep"
+  }
+  try {
+    let (stdin, writer) = @process.write_to_process()
+    let mut acquired = false
+    defer (if !acquired { writer.close() })
+    let (reader, stdout) = @process.read_from_process()
+    defer reader.close()
+    let child = @process.spawn(
+      group,
+      tool,
+      [
+        "--what", what, "--mode", "block", "--why", reason, "/bin/sh", "-c", "printf 'ready\\n'; exec /bin/cat >/dev/null",
+      ],
+      stdin~,
+      stdout~,
+      no_wait=true,
+      cancel_handler=@process.hard_cancel(),
+    )
+    let keep_guard = own_guard(group, Linux(child, writer), scope)
+    defer (if !acquired { keep_guard.release() })
+    // systemd-inhibit runs our command only after acquiring the lock.
+    match reader.read_until("\n") {
+      Some("ready") => ()
+      None => {
+        let status = child.wait()
+        raise OperationFailed(
+          operation="acquire",
+          detail="systemd-inhibit exited before readiness (status \{status})",
+        )
+      }
+      Some(_) =>
+        raise OperationFailed(
+          operation="acquire",
+          detail="invalid systemd-inhibit readiness acknowledgement",
+        )
+    }
+    if child.try_wait() is Some(status) {
+      raise OperationFailed(
+        operation="acquire",
+        detail="systemd-inhibit exited at readiness (status \{status})",
+      )
+    }
+    acquired = true
+    keep_guard
+  } catch {
+    BackendUnavailable(..) as error => raise error
+    OperationFailed(..) as error => raise error
+    @os_error.OSError(_) as error if error.is_ENOENT() =>
+      raise BackendUnavailable(detail=error.to_string())
+    error =>
+      raise OperationFailed(operation="acquire", detail=error.to_string())
+  }
+}
+
+///|
+/// Runs asynchronous work after acquiring inhibition, then releases it on
+/// return, error or cancellation. On Linux, unexpected helper exit fails this
+/// scope and cancels the work. No manual task group or guard is needed.
+pub async fn[T] with_keepawake(
+  action : async () -> T,
+  reason~ : String = default_reason,
+  scope~ : Scope = Scope::PreventSystemSleep,
+) -> T {
+  @async.with_task_group(group => {
+    let keep_guard = acquire(group, reason~, scope~)
+    keep_guard.with_action(action)
   })
 }
 
 ///|
-/// Returns whether the underlying native inhibition is still active.
-///
-/// This becomes `false` after a successful call to `Guard::release`, and it is
-/// also `false` for guards returned by a failed acquire attempt before the
-/// error is raised to the caller.
-///
-/// Use this method for diagnostics, assertions, or defensive checks around
-/// cleanup-heavy workflows. Most callers do not need to poll it during normal
-/// operation because the guard exposes only a single lifecycle boundary:
-/// active versus released.
+async fn[T] Guard::with_action(self : Guard, action : async () -> T) -> T {
+  run_with_cleanup(
+    () => {
+      match self.backend {
+        Native(_) => action()
+        Linux(child, _) =>
+          @async.any([
+            action,
+            () => {
+              let status = child.wait()
+              raise OperationFailed(
+                operation="watch",
+                detail="systemd-inhibit exited while inhibition was required (status \{status})",
+              )
+            },
+          ])
+      }
+    },
+    () => self.release(),
+  )
+}
+
+///|
+/// Reports whether inhibition remains active. A Linux helper that has exited
+/// is inactive even if `release` has not been called. This is a point-in-time
+/// observation; `with_keepawake` also monitors helper exit during scoped work.
 pub fn Guard::active(self : Guard) -> Bool {
-  native_guard_is_active(self)
+  match self.backend {
+    Native(handle) => native_guard_is_active(handle)
+    Linux(child, _) => (child.try_wait() catch { _ => Some(-1) }) is None
+  }
 }
 
 ///|
-/// Returns the scope that was requested when the guard was created.
-///
-/// This is the semantic scope originally passed to `acquire` or
-/// `with_keepawake`, not a platform-specific low-level flag set. It is useful
-/// when code stores guards in higher-level abstractions and later wants to
-/// inspect or report what kind of inhibition is currently in effect.
+/// Returns the requested scope.
 pub fn Guard::scope(self : Guard) -> Scope {
-  scope_from_native_code(native_guard_scope_code(self))
+  match self.backend {
+    Native(handle) => scope_from_native_code(native_guard_scope_code(handle))
+    Linux(_, _) => self.requested_scope
+  }
 }
 
 ///|
-/// Releases the native keep-awake request.
-///
-/// Releasing a guard is idempotent. Calling `release` on an inactive guard is a
-/// no-op. If the backend reports an unexpected release failure, this method
-/// raises `KeepAwakeError::OperationFailed`.
-///
-/// Call this as soon as the protected work finishes when you acquired the guard
-/// manually. Releasing early is preferred over waiting for runtime cleanup,
-/// because explicit release makes the lifetime obvious and avoids depending on
-/// garbage collection timing.
-///
-/// # Errors
-///
-/// Raises `KeepAwakeError::OperationFailed` if the backend reports that the
-/// native release operation did not complete successfully.
-pub fn Guard::release(self : Guard) -> Unit raise KeepAwakeError {
-  let status = native_guard_release(self)
-  finish_release(status, native_guard_last_error(self))
+/// Releases inhibition and awaits Linux helper cleanup without blocking the
+/// event loop. Safe to call repeatedly and during cancellation cleanup.
+/// Failed native release can be retried without cancelling the owning group.
+pub async fn Guard::release(
+  self : Guard,
+) -> Unit raise KeepAwakeError + nocancel {
+  self.release_with(() => self.backend.release())
+}
+
+///|
+async fn Guard::release_with(
+  self : Guard,
+  release : async () -> Unit raise KeepAwakeError + nocancel,
+) -> Unit raise KeepAwakeError + nocancel {
+  // A failed explicit release belongs to the caller. Keep ownership alive so
+  // it can be retried, including during task-group cleanup.
+  release()
+  self.lifetime.cancel()
+  @async.protect_from_cancel(() => self.lifetime.wait()) catch {
+    error =>
+      raise OperationFailed(operation="release", detail=error.to_string())
+  }
+}
+
+///|
+fn[G] own_guard(
+  group : @async.TaskGroup[G],
+  backend : GuardBackend,
+  scope : Scope,
+) -> Guard {
+  // Finished tasks leave the group immediately; group defers would retain
+  // every released guard until application shutdown.
+  let lifetime = group.spawn(no_wait=true, () => {
+    defer backend.release()
+    @async.handle_cancellation(() => {
+      match backend {
+        Native(_) => @async.Semaphore(1, initial_value=0).acquire()
+        Linux(child, _) => ignore(child.wait())
+      }
+    })
+    |> ignore
+  })
+  { backend, requested_scope: scope, lifetime, }
+}
+
+///|
+async fn GuardBackend::release(
+  self : GuardBackend,
+) -> Unit raise KeepAwakeError + nocancel {
+  match self {
+    Native(handle) =>
+      if native_guard_is_active(handle) {
+        finish_release(
+          native_guard_release(handle),
+          native_guard_last_error(handle),
+        )
+      }
+    Linux(child, writer) => {
+      writer.close()
+      child.cancel()
+      @async.protect_from_cancel(() => ignore(child.wait())) catch {
+        error =>
+          raise OperationFailed(operation="release", detail=error.to_string())
+      }
+    }
+  }
 }

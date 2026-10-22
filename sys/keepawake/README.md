@@ -1,80 +1,67 @@
 # moonbit-community/proton_keepawake
 
-[![CI](https://github.com/moonbit-community/proton/actions/workflows/ci.yml/badge.svg)](https://github.com/moonbit-community/proton/actions/workflows/ci.yml)
-[![Docs](https://img.shields.io/badge/docs-mooncakes.io-green)](https://mooncakes.io/docs/moonbit-community/proton_keepawake)
+Native keep-awake guards for long-running work on Windows, macOS and Linux.
 
-`keepawake` is a native-only MoonBit module that exposes a small, readable API
-for keeping a machine awake while long-running work is in progress.
-
-- `acquire` returns a guard that starts the native keep-awake request.
-- `Guard::release` ends the request and is safe to call more than once.
-- `with_keepawake` wraps scoped work and releases automatically.
-- `Scope` keeps the policy choice explicit without exposing backend details.
-
-## Install
-
-Add the module to your project, then import `moonbit-community/proton_keepawake`.
-
-```bash
+```sh
 moon add moonbit-community/proton_keepawake
 ```
 
-Package configuration:
+Import `moonbit-community/proton_keepawake` as `@keepawake`. Call from an async
+context; the scoped API acquires inhibition before starting your work:
 
 ```moonbit
-import {
-  "moonbit-community/proton_keepawake",
-}
-```
-
-## API Overview
-
-```moonbit
-let guard = @proton_keepawake.acquire(
-  reason="Rendering a long animation",
-  scope=@proton_keepawake.Scope::PreventSystemAndDisplaySleep,
-)
-
-// ... perform the long-running work ...
-
-guard.release()
-```
-
-Use the scoped helper when you want automatic cleanup:
-
-```moonbit
-let result = @proton_keepawake.with_keepawake(
-  () => {
-    // ... perform the long-running work ...
-    "done"
-  },
-  reason="Syncing a large local cache",
-  scope=@proton_keepawake.Scope::PreventSystemSleep,
+let result = @keepawake.with_keepawake(
+  () => export_files(),
+  reason="Exporting files",
+  scope=@keepawake.Scope::PreventSystemSleep,
 )
 ```
 
-## Platform Notes
+Returning, raising or cancelling ends the request and awaits cleanup. On Linux,
+unexpected helper exit raises `OperationFailed` and cancels the protected work.
+Use `@async.with_timeout` if acquisition or the whole operation needs a deadline.
 
-### Windows
+For explicit ownership, pass a task group whose lifetime covers the work:
 
-The Windows backend uses `SetThreadExecutionState`, which is the standard API
-for declaring thread-level execution requirements.
+```moonbit
+@async.with_task_group(tasks => {
+  let keep_guard = @keepawake.acquire(tasks, reason="Exporting files")
+  defer keep_guard.release()
+  export_files()
+})
+```
 
-### macOS
+`acquire` and `Guard::release` are async. Release is idempotent and completes
+even during cancellation cleanup. Leaving the owning task group also releases
+the guard; keeping a reference does not extend protection beyond that group.
+`active()` is a point-in-time status query and becomes false when released or
+when the Linux helper exits. `scope()` reports the requested scope.
 
-The macOS backend creates IOKit power assertions.
+`KeepAwakeError::BackendUnavailable` reports a missing backend;
+`OperationFailed(operation~, detail~)` reports a failed acquisition, release or
+loss of protection during scoped work. Blank reasons use `default_reason`.
 
-### Linux
+## Platforms
 
-The Linux backend uses `systemd-inhibit`.
+- Windows uses `SetThreadExecutionState`. Acquire and release on the same OS
+  thread, as with Proton's application event loop.
+- macOS uses IOKit power assertions.
+- Linux requires `systemd-inhibit` and a usable logind service. Acquisition waits
+  asynchronously for the lock, with no fixed readiness delay. `PreventSystemSleep`
+  maps to `sleep`, `PreventDisplaySleep` to logind's `idle` inhibition, and
+  `PreventSystemAndDisplaySleep` to `idle:sleep`. Idle inhibition is not a
+  universal guarantee against every desktop compositor's display blanking.
 
-- `PreventSystemSleep` maps to `sleep`
-- `PreventDisplaySleep` maps to `idle`
-- `PreventSystemAndDisplaySleep` maps to `idle:sleep`
+The Linux helper's stdin lifetime and the async task group control its lifetime.
+The module does not introduce a persistent background service or a fallback
+backend. Acquisition and cleanup do not block the application event loop.
 
-In headless or non-systemd environments the module may raise
-`BackendUnavailable` with a descriptive message instead of pretending the
-request succeeded.
+## Migration
+
+Replace synchronous `acquire(reason=...)` with async `acquire(tasks, reason=...)`.
+Call `release()` from an async context and make `with_keepawake` callbacks async.
+Applications using Proton's keep-awake extension retain the same frontend
+`acquire`, `release` and `status` commands; the extension owns the task group.
 
 ## License
 

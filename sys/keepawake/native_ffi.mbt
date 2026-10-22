@@ -1,45 +1,36 @@
 ///|
-/// Represents a native keep-awake request managed by the current platform.
-///
-/// A `Guard` is created by `acquire` and released explicitly through
-/// `Guard::release` or implicitly when the runtime reclaims it. The type is
-/// intentionally opaque so callers interact only through the safe public API
-/// instead of depending on backend-specific state layout. On Windows the
-/// implicit reclaim may run on a different thread than the one that acquired
-/// the guard: the release is then accounted for correctly, but the acquiring
-/// thread's power-state flags can persist until that thread exits, so
-/// explicit release is the recommended path.
-pub type Guard
+/// Private handle for the synchronous macOS and Windows backends.
+priv type NativeGuard
 
 ///|
 /// Creates a native keep-awake guard.
 #borrow(reason)
-extern "C" fn native_guard_create(reason : Bytes, scope : Int32) -> Guard = "moonbit_keepawake_guard_create"
+extern "C" fn native_guard_create(reason : Bytes, scope : Int32) -> NativeGuard = "moonbit_keepawake_guard_create"
 
 ///|
 /// Returns whether a native guard is still active.
 #borrow(handle)
-extern "C" fn native_guard_is_active(handle : Guard) -> Bool = "moonbit_keepawake_guard_is_active"
+extern "C" fn native_guard_is_active(handle : NativeGuard) -> Bool = "moonbit_keepawake_guard_is_active"
 
 ///|
 /// Returns the latest backend status code recorded on the guard.
 #borrow(handle)
-extern "C" fn native_guard_status(handle : Guard) -> Int32 = "moonbit_keepawake_guard_status"
+extern "C" fn native_guard_status(handle : NativeGuard) -> Int32 = "moonbit_keepawake_guard_status"
 
 ///|
 /// Returns the scope code associated with the guard.
 #borrow(handle)
-extern "C" fn native_guard_scope_code(handle : Guard) -> Int32 = "moonbit_keepawake_guard_scope_code"
+extern "C" fn native_guard_scope_code(handle : NativeGuard) -> Int32 = "moonbit_keepawake_guard_scope_code"
 
 ///|
 /// Returns the latest backend error message.
 #borrow(handle)
-extern "C" fn native_guard_last_error(handle : Guard) -> Bytes = "moonbit_keepawake_guard_last_error"
+extern "C" fn native_guard_last_error(handle : NativeGuard) -> Bytes = "moonbit_keepawake_guard_last_error"
 
 ///|
 /// Releases the native keep-awake request if it is still active.
 #borrow(handle)
-extern "C" fn native_guard_release(handle : Guard) -> Int32 = "moonbit_keepawake_guard_release"
+extern "C" fn native_guard_release(handle : NativeGuard) -> Int32 = "moonbit_keepawake_guard_release"
 
 ///|
 /// Indicates a successful native backend operation.

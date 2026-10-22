@@ -1,7 +1,15 @@
 import {
+  "moonbitlang/async",
+  "moonbitlang/async/process",
+  "moonbitlang/async/os_error",
   "moonbit-community/proton_ffi" @ffi,
   "moonbitlang/core/encoding/utf8",
 }
+
+import {
+  "moonbitlang/async/fs",
+  "moonbitlang/core/env",
+} for "wbtest"
 
 supported_targets = "native"
 

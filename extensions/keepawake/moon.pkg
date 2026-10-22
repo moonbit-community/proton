@@ -1,4 +1,5 @@
 import {
+  "moonbitlang/async",
   "moonbit-community/proton_keepawake" @sys_keepawake,
   "moonbit-community/proton",
   "moonbit-community/proton/extension" @proton_extension,

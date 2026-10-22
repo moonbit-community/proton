@@ -351,6 +351,38 @@ The shell capability opens URLs and paths, reveals a file in its file manager, a
 
 Applications using `proton_shell` directly call async `open`, `reveal_item`, and `trash_item`. Each returns `Unit` or raises `ShellError(operation~, target~, reason~)`. External-tool waits yield to other tasks; cancellation terminates and reaps the tool. Successful opening means the platform accepted the request, not that the target application finished starting. `beep()` retains its synchronous `Result` API.
 
+**Keeping the system awake**
+
+The keep-awake extension's `acquire`, `release` and `status` commands manage an
+application-owned guard. `acquire` succeeds only after inhibition is acquired;
+`release` waits for cleanup. Concurrent acquire/release requests are serialized.
+Linux requires `systemd-inhibit` and logind; a live helper alone does not count
+as successful acquisition, and an exited helper is reported as inactive.
+
+For host-side work, import `moonbit-community/proton_keepawake` as `@keepawake`
+and use its async scope:
+
+```moonbit
+@keepawake.with_keepawake(
+  () => export_files(),
+  reason="Exporting files",
+  scope=@keepawake.Scope::PreventSystemSleep,
+)
+```
+
+The callback starts after acquisition. Returning, raising or cancellation releases
+protection; unexpected Linux helper exit fails the scope and cancels the callback.
+For manual ownership, call async `acquire(tasks, reason=...)` with an existing
+`TaskGroup` and async `keep_guard.release()` to release early. The group also
+releases the guard when it ends. `active()` reports current status; holding a
+guard reference does not extend its owning group's lifetime. Startup and cleanup
+yield to the event loop; use `@async.with_timeout` when a deadline is required.
+
+Windows uses thread-level power requirements, so acquire and release on the
+same OS thread. macOS uses power assertions. Linux display-sleep scope maps to
+logind idle inhibition, which is not a guarantee against every compositor's
+independent display-blanking policy.
+
 **Power and screen monitoring**
 
 The extensions expose `watch_status()`: `Stopped` before startup or after cleanup, `Watching` after native registration, and `Unavailable(reason)` on failure. Power monitoring additionally reports `Starting` during asynchronous registration. Query commands remain independent of event watching; a successful query does not clear a watch error or restart the watcher. Screen topology events include the affected display's snapshot, including the previous snapshot when a display is removed.
