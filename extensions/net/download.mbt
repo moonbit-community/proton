@@ -109,8 +109,10 @@ pub async fn download(
       raise FileFailed(detail="parent of '\{destination}' is not a directory")
     }
     let resolved = @fs.realpath(parent)
-    // async strips the extended prefix from realpath results on Windows.
-    // Restore explicit verbatim semantics before creating or renaming files.
+    // FIXME: Remove this workaround after upgrading to async with a lossless
+    // Windows realpath result: https://github.com/moonbitlang/async/issues/675.
+    // async strips the extended prefix; restore explicit verbatim semantics
+    // before creating or renaming files.
     if @async.platform is Windows &&
       destination.has_prefix("\\\\?\\") &&
       !resolved.has_prefix("\\\\?\\") {
