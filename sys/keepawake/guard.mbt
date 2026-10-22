@@ -172,9 +172,21 @@ pub fn Guard::scope(self : Guard) -> Scope {
 ///|
 /// Releases inhibition and awaits Linux helper cleanup without blocking the
 /// event loop. Safe to call repeatedly and during cancellation cleanup.
+/// Failed native release can be retried without cancelling the owning group.
 pub async fn Guard::release(
   self : Guard,
 ) -> Unit raise KeepAwakeError + nocancel {
+  self.release_with(() => self.backend.release())
+}
+
+///|
+async fn Guard::release_with(
+  self : Guard,
+  release : async () -> Unit raise KeepAwakeError + nocancel,
+) -> Unit raise KeepAwakeError + nocancel {
+  // A failed explicit release belongs to the caller. Keep ownership alive so
+  // it can be retried, including during task-group cleanup.
+  release()
   self.lifetime.cancel()
   @async.protect_from_cancel(() => self.lifetime.wait()) catch {
     error =>
@@ -209,10 +221,12 @@ async fn GuardBackend::release(
 ) -> Unit raise KeepAwakeError + nocancel {
   match self {
     Native(handle) =>
-      finish_release(
-        native_guard_release(handle),
-        native_guard_last_error(handle),
-      )
+      if native_guard_is_active(handle) {
+        finish_release(
+          native_guard_release(handle),
+          native_guard_last_error(handle),
+        )
+      }
     Linux(child, writer) => {
       writer.close()
       child.cancel()

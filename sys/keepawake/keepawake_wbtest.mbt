@@ -396,3 +396,61 @@ async test "native guards finish ownership on explicit release and group exit" {
     assert_false(remaining.active())
   })
 }
+
+///|
+async test "explicit release failure is retryable without cancelling the owner" {
+  guard @async.platform is (MacOS | Windows) else { return }
+  @async.with_timeout(10000, () => {
+    for retry in [true, false] {
+      let attempts = Ref(0)
+      let sibling_stopped = Ref(false)
+      let keep_guard = @async.with_task_group(group => {
+        group.spawn_bg(no_wait=true, () => {
+          defer {
+            sibling_stopped.val = true
+          }
+          @async.Semaphore(1, initial_value=0).acquire()
+        })
+        let keep_guard = acquire(
+          group,
+          reason="Proton release failure regression",
+        )
+        async fn release() -> Unit raise KeepAwakeError + nocancel {
+          attempts.val += 1
+          if attempts.val == 1 {
+            finish_release(
+              native_status_operation_failed,
+              @utf8.encode("injected release failure"),
+            )
+          }
+          keep_guard.backend.release()
+        }
+        try keep_guard.release_with(release) catch {
+          OperationFailed(
+            operation="release",
+            detail="injected release failure"
+          ) => ()
+          error => raise error
+        } noraise {
+          _ => fail("first release did not report the failure")
+        }
+        @async.pause()
+        assert_false(sibling_stopped.val)
+        assert_true(keep_guard.active())
+        assert_true(keep_guard.lifetime.try_wait() is None)
+        if retry {
+          keep_guard.release_with(release)
+          assert_eq(attempts.val, 2)
+          assert_false(keep_guard.active())
+          assert_eq(keep_guard.lifetime.try_wait(), Some(()))
+          keep_guard.release()
+        }
+        keep_guard
+      })
+      // Without an explicit retry, exiting the owner still releases the guard.
+      assert_false(keep_guard.active())
+      assert_eq(keep_guard.lifetime.try_wait(), Some(()))
+      assert_true(sibling_stopped.val)
+    }
+  })
+}
