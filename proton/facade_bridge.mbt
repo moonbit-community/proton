@@ -2,7 +2,7 @@
 fn build_command_host(
   command_capabilities : Array[AppCommandCapability],
   command_extensions : CommandExtensionCatalog,
-  titlebar_area_targets~ : Array[RendererTarget] = [],
+  titlebar_area_enabled~ : Bool = false,
 ) -> CommandHostBuild raise AppRunError {
   let host = @core.AppCommandHost(
     expose_error_details=proton_dev_mode_enabled(),
@@ -19,7 +19,7 @@ fn build_command_host(
   let extensions : Map[String, @proton_command.AppCommandExtensionDescriptor] = Map([],
   )
   let registrar = @proton_command.CommandRegistrar(host)
-  if !titlebar_area_targets.is_empty() {
+  if titlebar_area_enabled {
     host.op_async_with_context(titlebar_area_op, fn(
       context,
       _request : Unit,
@@ -37,10 +37,6 @@ fn build_command_host(
       }
     }
     has_commands = true
-    app_capabilities.push(RegisteredAppCommandCapability::{
-      ops: [titlebar_area_op],
-      targets: titlebar_area_targets.copy(),
-    })
   }
   for capability in command_capabilities {
     let registered_before = host.registered_ops().length()

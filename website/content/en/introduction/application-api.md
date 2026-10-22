@@ -85,7 +85,7 @@ Startup validates configuration, resolves identity and paths, initializes loggin
 
 For the primary instance, synchronous `on_session_created` observers run before awaited `setup` callbacks. Proton then opens declared startup windows that setup did not already open, waits for the required bridge initialization, and awaits `setup_window` for each initial window. Application readiness follows successful initial activation; configuring a window or receiving a creation notification does not establish readiness.
 
-An application setup callback may await `context.windows().open(id)`. A committed exit stops startup. A denied quit request leaves the application running; requesting quit is not itself a committed exit.
+An application setup callback may await `context.windows().create(id, config)`. A committed exit stops startup. A denied quit request leaves the application running; requesting quit is not itself a committed exit.
 
 **Task and cleanup ownership**
 
@@ -221,25 +221,29 @@ The [event tutorial](../tutorial/events.md) demonstrates subscription and cleanu
 
 ## Windows and browser views
 
-Window declarations belong to `App`; operations on a running window belong to `WindowHandle`. Browser navigation and developer tools belong to `WebContentsHandle`, obtained through `WindowHandle.web_contents()`.
+The runtime window creation API below is unreleased; Proton 0.5.1 still uses declared windows and `open(id)`.
 
-**Identity and declaration**
+Startup windows belong to `App`; dynamic creation belongs to `WindowManager`; operations on a running window belong to `WindowHandle`. Browser navigation and developer tools belong to `WebContentsHandle`, obtained through `WindowHandle.web_contents()`.
 
-The primary window ID is `main`. `App.add_window(id, config, open_on_start?)` declares secondary windows; their IDs must be nonempty, unique and different from `main`. Titles are display text and do not identify windows.
+**Configuration and creation**
 
-Secondary windows open at startup by default. `open_on_start=false` defers opening until `WindowManager.open(id)`. `ApplicationContext.windows()` and `WindowContext.windows()` expose the manager. All windows belong to one application runtime.
+`WindowConfig(title, entry, ...)` is reusable configuration: page entry, dimensions, theme, titlebar, initial `views`, close handler and web-contents policy. `App(config)` supplies the primary window, whose ID is `main`. `App.add_window(id, config)` creates additional windows at startup. `App.main_window(config)` replaces the startup configuration; none of these methods mutate running windows.
 
-`WindowConfig(title, entry, ...)` holds dimensions, size hint, theme, titlebar style, traffic-light position, initial `views`, `close_handler`, and `web_contents_policy`. Use `App(config)` for the primary window, `App.main_window(config)` to replace its startup configuration, and `App.add_window(id, config, ...)` for secondary windows. Registrations snapshot the views array. The `html`, `url`, `file`, and `asset` shortcuts remain available for a simple primary window.
+`ApplicationContext.windows()` and `WindowContext.windows()` expose `WindowManager`. Its async `create(id, config)` creates a window directly, without prior registration, and returns an activated `WindowHandle`. Reuse a configuration with different IDs to create multiple instances. Configuration views are snapshotted at registration or creation; each instance gets its own native window, child views and cleanup scope.
 
-Window, view, and web-contents handles are runtime-created values. Use their public methods; do not construct them, copy their representation, or call the former function-valued implementation fields. Identity is available through `id()`, `window_id()` and optional `view_id()` as appropriate.
+IDs are trimmed, must be nonempty and must be unique among active windows, including windows still starting. A duplicate create raises `AlreadyOpen`; creation during shutdown raises `ApplicationQuitting`. Startup registrations cannot use `main` as a secondary ID. After `main` closes, a background application may create it again using its saved configuration. Titles are display text, not identity. `single_instance()` limits processes and does not limit windows.
 
-**Opening and instance identity**
+**Permissions and instance lifetime**
 
-`WindowManager.open(id)` is asynchronous and returns an activated `WindowHandle`. The id selects a declaration; it is not a permanent identity for every future native instance. After closing and reopening a declared window, obtain the new handle through `open` or `find`; an old handle does not become valid again.
+Commands and extensions are registered once on `App`. Grant exact IDs with `RendererTarget::entry(window="editor-1")` or a family with `RendererTarget::entry_prefix("editor-")`; `bundled` and `bundled_prefix` grant bundled pages. Prefixes must be nonempty. Matching a window ID does not bypass the source/origin check. Exact targets may refer to windows created later. Dynamic windows have no implicit copy of `main`'s permissions.
 
-Cancellation before activation commits discards the queued open or closes the instance created by that operation. After activation commits, the application owns the window: canceling the caller later does not close it. Unknown declarations and invalid window state produce window-session failures; task cancellation follows the async task's cancellation semantics.
+Overlapping targets are not merged. Within one command capability, two targets resolving to the same origin for a window cause `InvalidRendererCapability`; the same applies when grants repeat an extension and origin. For example, combining `entry(window="editor-1")` and `entry_prefix("editor-")` in one target list rejects creation of `editor-1`. Use only the prefix when it already covers the intended windows.
 
-`hide()` preserves the instance, browser, and associated work. `close()` initiates teardown and can be denied. Do not equate a close request with completed cleanup. Per-window state should be released by its lifecycle cleanup, not immediately after requesting close.
+Cancellation before activation commits discards the queued creation or closes the instance created by that operation. Once activation commits, the application owns the window; canceling its caller later does not close it. `close()` requests teardown and can be denied; `hide()` preserves the instance and its work. Release per-window resources through lifecycle cleanup.
+
+An ID can be reused after the previous instance has closed. Use the handle returned by `create` or `find` for that instance: old window and child-view handles remain stale. Handles are runtime-created values; do not construct or copy their representation.
+
+`NewWindowDecision::OpenInWindow(id)` navigates an existing window. To create one for a popup, await `windows.create(id, config)` inside the async new-window handler before returning that decision.
 
 **Lookup and browser readiness**
 

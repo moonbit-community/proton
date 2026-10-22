@@ -36,9 +36,8 @@ pub struct AppWindowManifest {
   id : String
   window : WindowManifest
   entry : AppEntry
-  open_on_start : Bool
 } derive(Eq, @debug.Debug)
-pub fn AppWindowManifest::AppWindowManifest(String, WindowManifest, AppEntry, open_on_start? : Bool) -> Self
+pub fn AppWindowManifest::AppWindowManifest(String, WindowManifest, AppEntry) -> Self
 pub fn AppWindowManifest::equal(Self, Self) -> Bool
 pub fn AppWindowManifest::not_equal(Self, Self) -> Bool
 pub fn AppWindowManifest::output(Self, &Logger) -> Unit

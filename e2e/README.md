@@ -120,6 +120,11 @@ shutdown.
 The `cancel-app-startup` and `cancel-app-running` cases cancel `App::run` itself,
 require cancellation to propagate, and verify native teardown after interrupted
 startup or after a window and child view are ready.
+The `dynamic-windows` case creates multiple windows from the same configuration
+without declarations, verifies prefix-scoped bridge permissions and command
+identities, rejects concurrent duplicate IDs, and checks independent cleanup
+and stale handles after recreating an ID. It runs with single-instance enabled.
+
 They are included in `--self-hosted`. Set `PROTON_E2E_LIFECYCLE_CASE` to a case name
 from `test/lifecycle_regressions.mbt` to run one scenario.
 

@@ -225,7 +225,6 @@ pub fn SystemPreferencesError::to_repr(Self) -> @debug.Repr
 pub fn SystemPreferencesError::to_string(Self) -> String
 
 pub(all) suberror WindowSessionError {
-  UnknownWindow(id~ : String)
   AlreadyOpen(id~ : String)
   ApplicationQuitting
   StaleWindow(id~ : String)
@@ -245,7 +244,7 @@ pub fn WindowSessionError::to_string(Self) -> String
 type App
 pub fn App::App(WindowConfig) -> Self
 pub fn App::accessibility(Self, @types.AccessibilityMode) -> Unit
-pub fn App::add_window(Self, String, WindowConfig, open_on_start? : Bool) -> Unit
+pub fn App::add_window(Self, String, WindowConfig) -> Unit
 pub fn App::bridge_startup_timeout_ms(Self, Int32) -> Unit
 pub fn App::capability(Self, @extension.RendererCapability, targets? : Array[RendererTarget]) -> Unit
 pub fn App::commands(Self, (@command.CommandRegistrar) -> Unit raise, targets? : Array[RendererTarget]) -> Unit
@@ -675,9 +674,12 @@ pub fn RenderProcessGoneReason::to_repr(Self) -> @debug.Repr
 pub struct RendererTarget {
   window : String
   bundled : Bool
+  prefix : Bool
 }
 pub fn RendererTarget::bundled(window? : String) -> Self
+pub fn RendererTarget::bundled_prefix(String) -> Self
 pub fn RendererTarget::entry(window? : String) -> Self
+pub fn RendererTarget::entry_prefix(String) -> Self
 
 pub struct SessionHandle {
   read_cookies : async (String?, Bool) -> Array[Cookie]
@@ -976,11 +978,11 @@ pub fn WindowHandle::window_button_position(Self) -> WindowButtonPosition? raise
 pub fn WindowHandle::zoom_percent(Self) -> Int32 raise WindowSessionError
 
 pub struct WindowManager {
-  open_window : async (String) -> WindowHandle
+  create_window : async (String, WindowConfig) -> WindowHandle
   find_window : (String) -> WindowHandle?
 }
+pub async fn WindowManager::create(Self, String, WindowConfig) -> WindowHandle
 pub fn WindowManager::find(Self, String) -> WindowHandle?
-pub async fn WindowManager::open(Self, String) -> WindowHandle
 
 // Type aliases
 pub using @types {type AccessibilityMode}

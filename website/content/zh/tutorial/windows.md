@@ -1,5 +1,7 @@
 # 管理窗口
 
+以下运行时创建窗口 API 尚未发布；Proton 0.5.1 仍使用预先声明窗口与 `open(id)`。
+
 本教程在[最小应用](first-app.md)中增加辅助窗口，并控制窗口的显示和关闭行为。请从该项目开始，保留已有包导入，用下面的代码替换应用入口。
 
 ## 创建第二个窗口
@@ -33,19 +35,24 @@ async fn main {
 
 主窗口 ID 是 `main`，辅助窗口 ID 必须非空、唯一，且不能使用 `main`。ID 在代码中标识窗口，标题则用于显示。
 
-## 按需打开窗口
+## 按需创建窗口
 
-`add_window` 默认在启动时打开声明的窗口。设置 `open_on_start=false` 后，只声明窗口而不立即打开；之后从应用或窗口上下文调用 `context.windows().open("help")`。
-
-例如，在上面的 Help 声明中加入 `open_on_start=false`，然后在 `.run_or_abort()` 之前添加以下构建器调用，即可从应用启动钩子打开它：
+保留可复用的 `WindowConfig`，在用户请求新窗口时调用 `WindowManager.create(id, config)`，不需要预先向 `App` 注册。例如，将上面的 `add_window` 调用替换为以下 setup 回调：
 
 ```moonbit
 ..setup(context => {
-  ignore(context.windows().open("help"))
+  let help = @proton.WindowConfig("Help", @proton.AppEntry::Html("<h1>Help</h1>"))
+  let first = context.windows().create("help-1", help)
+  let second = context.windows().create("help-2", help)
+  println(first.id() + ", " + second.id())
 })
 ```
 
-后续用户操作也可以通过保留的应用上下文调用相同的窗口管理器操作。第二个窗口不需要第二套 Proton 运行时。
+每次调用都会创建独立的窗口、初始子视图和清理作用域。后续的命令处理器也可以通过保留的窗口管理器调用同一操作。每个存活窗口使用不同的 ID；创建已活动的 ID 会抛出 `AlreadyOpen`。关闭完成后可以复用 ID，但旧句柄仍然无效。
+
+`single_instance()` 限制应用进程数量，不限制窗口数量；同一个运行时可以创建多个窗口，不需要为第二个窗口启动新的 Proton 运行时。
+
+需要调用命令时，使用 `RendererTarget::entry(window="help-1")` 按 ID 授权，或使用 `RendererTarget::entry_prefix("help-")` 指定非空前缀。新窗口不会继承 `main` 的权限。参见[原生能力](capabilities.md)。
 
 ## 使用与释放句柄
 

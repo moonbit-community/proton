@@ -39,15 +39,18 @@ priv suberror FacadeLifecycleTestError {
 } derive(Debug)
 
 ///|
-async fn test_open_window(id : String) -> WindowHandle {
+async fn test_create_window(
+  _id : String,
+  _config : WindowConfig,
+) -> WindowHandle {
   @async.pause()
-  raise UnknownWindow(id~)
+  raise ApplicationQuitting
 }
 
 ///|
 fn test_window_manager() -> WindowManager {
   WindowManager::{
-    open_window: test_open_window,
+    create_window: test_create_window,
     find_window: fn(_id) { None },
   }
 }
@@ -263,12 +266,12 @@ fn test_extension_capability(
 fn test_build_command_host(
   command_capabilities : Array[AppCommandCapability],
   extension_capabilities : Array[ExtensionCapabilityBinding],
-  titlebar_area_targets~ : Array[RendererTarget] = [],
+  titlebar_area_enabled~ : Bool = false,
 ) -> CommandHostBuild raise AppRunError {
   let catalog = command_extension_catalog(extension_capabilities) catch {
     error => raise ConfigurationError(error)
   }
-  build_command_host(command_capabilities, catalog, titlebar_area_targets~)
+  build_command_host(command_capabilities, catalog, titlebar_area_enabled~)
 }
 
 ///|
@@ -629,7 +632,13 @@ async test "headless mode rejects titlebar overlay before runtime startup" {
     @manifest.AppEntry::Html("<html></html>"),
   )
   let mut rejected = false
-  let defaults = html("Test", "<html></html>")
+  let defaults = App(
+      WindowConfig(
+        "Test",
+        AppEntry::Html("<html></html>"),
+        titlebar_style=Overlay,
+      ),
+    )
     ..identifier("dev.proton.test")
     .resolved_app_config()
   let outcome = run_manifest(
@@ -1274,10 +1283,7 @@ test "application commands grant the primary entry by default" {
 
 ///|
 test "omitted renderer capabilities are a valid empty policy" {
-  let manifest = test_manifest()
-  unwrap_configuration(() => {
-    validate_renderer_capability_targets(manifest, [], [])
-  })
+  unwrap_configuration(() => validate_renderer_capability_targets([], []))
   let build = unwrap_app_run(() => test_build_command_host([], []))
   assert_true(build.runtime is None)
   let policy = resolve_window_permission_policy(
@@ -1290,11 +1296,9 @@ test "omitted renderer capabilities are a valid empty policy" {
 }
 
 ///|
-test "titlebar area registers only for overlay renderer targets" {
+test "titlebar area is registered once and granted only to overlay windows" {
   let build = unwrap_app_run(() => {
-    test_build_command_host([], [], titlebar_area_targets=[
-      RendererTarget::entry(window="main"),
-    ])
+    test_build_command_host([], [], titlebar_area_enabled=true)
   })
   let registered_ops = match build.runtime {
     Some(runtime) => runtime.host.registered_ops()
@@ -1306,6 +1310,7 @@ test "titlebar area registers only for overlay renderer targets" {
     BridgePagePolicy::{ entry_origin: None, },
     build.app_capabilities,
     [],
+    titlebar_overlay=true,
   )
   assert_eq(policy.grants.length(), 1)
   assert_eq(policy.grants[0].source_origin, "app")
@@ -1368,23 +1373,12 @@ test "application command registrars retain separate renderer targets" {
 }
 
 ///|
-test "renderer capabilities reject unknown windows" {
-  let configured = html("Unknown window", "<html></html>")..commands(
+test "renderer capabilities accept ids that will be created at runtime" {
+  let configured = html("Dynamic window", "<html></html>")..commands(
     fn(_registrar) {  },
-    targets=[RendererTarget::entry(window="missing")],
+    targets=[RendererTarget::entry(window="future")],
   )
-  match
-    expect_configuration_error(() => {
-      validate_renderer_capability_targets(
-        configured.inline_manifest(),
-        configured.command_capabilities,
-        [],
-      )
-    }) {
-    InvalidRendererCapability(detail~) =>
-      assert_true(detail.contains("unknown window missing"))
-    error => fail(error.message())
-  }
+  validate_renderer_capability_targets(configured.command_capabilities, [])
 }
 
 ///|
@@ -2216,7 +2210,6 @@ test "typed facade appends validated secondary windows" {
       size_hint=WindowSizeHint::Fixed,
       theme=WindowThemePreference::Dark,
     ),
-    open_on_start=false,
   )
   let manifest = configured.inline_manifest()
   assert_eq(
@@ -2233,10 +2226,6 @@ test "typed facade appends validated secondary windows" {
     manifest.windows[0].window.theme_preference,
     @manifest.WindowThemePreference::Dark,
   )
-  assert_false(manifest.windows[0].open_on_start)
-  let plans = planned_windows(manifest)
-  assert_eq(plans.map(fn(plan) { plan.id }), ["main", "settings"])
-  assert_eq(plans.map(fn(plan) { plan.open_on_start }), [true, false])
 }
 
 ///|
@@ -3281,14 +3270,13 @@ test "primary and secondary registrations lower the same configuration" {
   )
   let app = App(config)
     ..identifier("dev.proton.config")
-    ..add_window("secondary", config, open_on_start=false)
+    ..add_window("secondary", config)
   // Registration owns its snapshot, even when the caller retains the array.
   config.views.clear()
   views.clear()
   let manifest = app.inline_manifest()
   @debug.assert_eq(manifest.window, manifest.windows[0].window)
   @debug.assert_eq(manifest.entry, manifest.windows[0].entry)
-  assert_false(manifest.windows[0].open_on_start)
   let resolved = app.resolved_app_config()
   assert_eq(resolved.window_configs.get("main").unwrap().views.length(), 1)
   assert_eq(resolved.window_configs.get("secondary").unwrap().views.length(), 1)
@@ -3451,4 +3439,66 @@ async test "notifications append while quit decisions replace" {
       ApplicationQuitDecision::Prevent,
     )
   })
+}
+
+///|
+test "dynamic renderer prefixes retain source restrictions and default isolation" {
+  let command : @proton_contract.Command[Unit, String] = @proton_contract.command(
+    "identify",
+  )
+  let app = html("Main", "<html></html>")..commands(
+    registrar => registrar.bind(command, (_context, _) => "ok"),
+    targets=[RendererTarget::entry_prefix("chat-")],
+  )
+  validate_renderer_capability_targets(app.command_capabilities, [])
+  let build = unwrap_app_run(() => {
+    test_build_command_host(app.command_capabilities, [])
+  })
+  defer ignore(close_command_host(build.runtime))
+  for id in ["chat-1", "chat-2"] {
+    let policy = resolve_window_permission_policy(
+      id,
+      { entry_origin: Some("https://trusted.example"), },
+      build.app_capabilities,
+      [],
+    )
+    assert_true(
+      policy.grant_for_request("https://trusted.example", "app:identify")
+      is Some(_),
+    )
+    assert_true(
+      policy.grant_for_request("https://other.example", "app:identify") is None,
+    )
+    assert_true(policy.grant_for_request("app", "app:identify") is None)
+  }
+  for id in ["main", "other", "chat"] {
+    let policy = resolve_window_permission_policy(
+      id,
+      { entry_origin: Some("https://trusted.example"), },
+      build.app_capabilities,
+      [],
+    )
+    assert_true(policy.grants.is_empty())
+  }
+  assert_true(RendererTarget::entry(window="future").matches("future"))
+  assert_false(RendererTarget::entry(window="future").matches("future-1"))
+  assert_eq(
+    renderer_target_origin(RendererTarget::bundled_prefix("chat-"), {
+      entry_origin: Some("https://trusted.example"),
+    }),
+    "app",
+  )
+}
+
+///|
+test "dynamic renderer prefixes must be nonempty" {
+  let app = html("Main", "<html></html>")..commands(_ => (), targets=[
+    RendererTarget::entry_prefix(""),
+  ])
+  guard expect_configuration_error(() => {
+      validate_renderer_capability_targets(app.command_capabilities, [])
+    })
+    is InvalidRendererCapability(..) else {
+    fail("empty prefix granted every window")
+  }
 }

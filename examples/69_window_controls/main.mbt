@@ -251,7 +251,20 @@ fn register_commands(registrar : @proton.CommandRegistrar) -> Unit raise {
       "parent" | "modal" => {
         let child = match child_slot.val {
           Some(child) => child
-          None => window_manager_slot.val.unwrap().open("review-child")
+          None =>
+            window_manager_slot.val
+            .unwrap()
+            .create(
+              "review-child",
+              @proton.WindowConfig(
+                "Window Controls Child",
+                @proton.AppEntry::Html(
+                  "<html><body style='font:16px system-ui;padding:32px'><h2>Child window</h2><p>Use the parent controls to test owner and modal relationships.</p></body></html>",
+                ),
+                width=420,
+                height=260,
+              ),
+            )
         }
         child_slot.val = Some(child)
         child.set_parent(Some(main), modal=request.action == "modal")
@@ -284,18 +297,6 @@ fn html() -> String {
 async fn main {
   @proton.html("Window Controls", html(), width=820, height=560, debug=true)
   ..identifier("dev.proton.window-controls")
-  ..add_window(
-    "review-child",
-    @proton.WindowConfig(
-      "Window Controls Child",
-      @proton.AppEntry::Html(
-        "<html><body style='font:16px system-ui;padding:32px'><h2>Child window</h2><p>Use the parent controls to test owner and modal relationships.</p></body></html>",
-      ),
-      width=420,
-      height=260,
-    ),
-    open_on_start=false,
-  )
   ..commands(register_commands)
   ..setup_window(context => {
     let window = context.handle()

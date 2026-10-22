@@ -105,7 +105,6 @@ async fn run_multi_window_bridge() -> Result[Unit, String] {
         width=520,
         height=420,
       ),
-      open_on_start=true,
     )
     ..capability(@proton_extension.capability(multi_window_extension()), targets=[
       @proton.RendererTarget::entry(),

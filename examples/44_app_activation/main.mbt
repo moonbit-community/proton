@@ -19,7 +19,13 @@ let page =
 
 ///|
 async fn main {
-  @proton.html("Application Activation", page, width=760, height=480)
+  let main_config = @proton.WindowConfig(
+    "Application Activation",
+    @proton.AppEntry::Html(page),
+    width=760,
+    height=480,
+  )
+  @proton.App(main_config)
   ..identifier("com.example.proton.activation")
   ..single_instance()
   ..url_scheme("proton-example")
@@ -28,7 +34,7 @@ async fn main {
   ..on_launch_input(async fn(context, input) noraise {
     println("activation: " + @debug.render(Repr(input)))
     if input is Reopen && context.windows().find("main") is None {
-      ignore(context.windows().open("main")) catch {
+      ignore(context.windows().create("main", main_config)) catch {
         error => println("failed to reopen main window: " + error.to_string())
       }
     }

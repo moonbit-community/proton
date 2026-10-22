@@ -67,7 +67,7 @@ moon -C examples run 01_run --target native
   event helper over the source-built native bridge.
 - `44_app_activation`: single-instance URL and document activation configured
   through the App builder.
-- `45_bridge_multi_window`: typed facade multi-window bridge E2E example.
+- `45_bridge_multi_window`: create independent windows at runtime in a single-instance app, with prefix-scoped bridge permissions.
 - `46_asset_sidecar_resources`: `@proton.asset` HTML with sibling JS/CSS files.
 - `47_dev_extension_js`: Warren dev-server injection smoke for extension
   JavaScript helpers and events.
@@ -188,7 +188,8 @@ moon -C examples run 01_run --target native
 | Synchronous session/window/contents creation notifications append in registration order | [83 Process events](83_process_events/README.md) |
 | Synchronous initial/cross-origin navigation, POST preservation, redirects and blob denial | `e2e_fixtures/lifecycle_regressions.mbt`, `run_navigation_regression` |
 | Navigation rejection while failed window setup performs async cleanup | `e2e_fixtures/lifecycle_regressions.mbt`, `run_navigation_cleanup_regression` |
-| Initial child navigation denial, declared/reopened windows, dynamic views, and overlapping async notifications | `e2e_fixtures/lifecycle_regressions.mbt`, `run_window_config_regression` |
+| Dynamic windows, duplicate IDs, isolated permissions and stale handles | `e2e_fixtures/lifecycle_regressions.mbt`, `run_dynamic_windows_regression` |
+| Initial child navigation denial, startup/recreated windows, dynamic views, and overlapping async notifications | `e2e_fixtures/lifecycle_regressions.mbt`, `run_window_config_regression` |
 
 The shared fixtures run without opening desktop windows:
 

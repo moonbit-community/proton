@@ -6,7 +6,12 @@ fn RuntimeSession::RuntimeSession(
   close_coordinator : CloseCoordinator,
   runtime : @native.Runtime,
   event_pump : RuntimeEventPump,
-  definitions : Array[PreparedWindow],
+  app_capabilities : Array[RegisteredAppCommandCapability],
+  extension_capabilities : Array[ResolvedExtensionCapability],
+  command_extensions : Map[
+    String,
+    @proton_command.AppCommandExtensionDescriptor,
+  ],
   windows : Array[RunningWindow],
   command_host : CommandHostRuntime?,
   wakeup : RuntimeWakeup,
@@ -25,7 +30,9 @@ fn RuntimeSession::RuntimeSession(
     updates,
     runtime,
     event_pump,
-    definitions,
+    app_capabilities,
+    extension_capabilities,
+    command_extensions,
     windows,
     has_created_window: windows.length() > 0,
     command_host,
@@ -135,7 +142,7 @@ fn CloseCoordinator::cancel_all(self : CloseCoordinator) -> Unit {
 ///|
 fn RuntimeSession::window_manager(self : RuntimeSession) -> WindowManager {
   WindowManager::{
-    open_window: id => self.request_open_window(id),
+    create_window: (id, config) => self.request_create_window(id, config),
     find_window: id => {
       self.find_active_window(id).map(window => self.window_handle(window))
     },
@@ -686,19 +693,6 @@ fn RuntimeSession::set_window_parent(
 }
 
 ///|
-fn RuntimeSession::find_definition(
-  self : RuntimeSession,
-  id : String,
-) -> PreparedWindow? {
-  for definition in self.definitions {
-    if definition.plan.id == id {
-      return Some(definition)
-    }
-  }
-  None
-}
-
-///|
 fn RuntimeSession::find_active_window(
   self : RuntimeSession,
   id : String,
@@ -714,41 +708,83 @@ fn RuntimeSession::find_active_window(
 ///|
 fn RuntimeSession::create_window(
   self : RuntimeSession,
-  definition : PreparedWindow,
+  id : String,
+  config : WindowConfig,
+  entry : PreparedEntry,
 ) -> RunningWindow raise AppRunError {
-  let plan = definition.plan
-  if self.find_active_window(plan.id) is Some(_) {
+  if id.trim().is_empty() {
+    raise ConfigurationError(
+      InvalidSetting(name="window.id", message="must not be empty"),
+    )
+  }
+  if config.validation_error() is Some(error) {
+    raise ConfigurationError(error)
+  }
+  if self.config.headless && config.titlebar_style == Overlay {
     raise ConfigurationError(
       InvalidSetting(
-        name="window.id",
-        message="window is already open: " + plan.id,
+        name="headless",
+        message="titlebar overlay is not supported in headless mode",
       ),
     )
   }
+  let policy = bridge_page_policy_for_entry(config.entry) catch {
+    error => raise ConfigurationError(error)
+  }
+  let permissions = resolve_window_permission_policy(
+    id,
+    policy,
+    self.app_capabilities,
+    self.extension_capabilities,
+    titlebar_overlay=config.titlebar_style == Overlay,
+  ) catch {
+    error => raise ConfigurationError(error)
+  }
+  let bridge = if self.monitor_bridge {
+    let grants = permissions.native_grants(self.command_extensions) catch {
+      error => raise ConfigurationError(error)
+    }
+    ensure_entry_bridge_grant(grants, policy)
+    Some(native_bridge_config(grants))
+  } else {
+    None
+  }
+  let browser_policy = config.web_contents_policy.to_native(
+    @native.BrowserPolicy(
+      download=if self.config.download_handler is Some(_) { Ask } else { Deny },
+      certificate=if self.config.certificate_handler is Some(_) {
+        Ask
+      } else {
+        Deny
+      },
+      media=if self.config.media_handler is Some(_) { Ask } else { Deny },
+      devtools=self.config.manifest.debug > 0,
+    ),
+  )
   let created_window = @native.Window::Window(
     self.runtime,
     config=native_window_config(
-      plan.window,
-      definition.bridge,
-      definition.browser_policy,
+      config.to_manifest(),
+      bridge,
+      browser_policy,
       self.environment.locale_preferences,
       self.config.web_request_cancel_prefixes,
       self.config.web_request_redirect_prefixes,
       self.config.web_request_header_prefixes,
     ),
   ) catch {
-    error => raise native_run_error("create window " + plan.id, error)
+    error => raise native_run_error("create window " + id, error)
   }
-  let (document, asset_root) = match definition.entry {
+  let (document, asset_root) = match entry {
     RemoteEntry(_) => (None, None)
     DocumentEntry(document, asset_root) => (Some(document), asset_root)
   }
   let running = RunningWindow::{
-    id: plan.id,
+    id,
     native_id: created_window.id(),
     window: created_window,
-    config: definition.config,
-    permissions: definition.permissions,
+    config,
+    permissions,
     lifetime: WindowLifetime(),
     views: [],
     document,
@@ -766,16 +802,13 @@ fn RuntimeSession::create_window(
   if running.config.close_handler is Some(_) {
     created_window.set_close_interception(true) catch {
       error =>
-        raise native_run_error(
-          "enable close interception for " + plan.id,
-          error,
-        )
+        raise native_run_error("enable close interception for " + id, error)
     }
   }
-  load_prepared_entry(created_window, definition.entry) catch {
+  load_prepared_entry(created_window, entry) catch {
     error => raise EntryLoadError(error)
   }
-  for view_plan in definition.config.views {
+  for view_plan in config.views {
     let (view_id, view_config) = view_plan
     ignore(
       add_view_to_running_window(running, view_id, view_config) catch {
@@ -853,15 +886,24 @@ async fn RuntimeSession::activate_window(
 }
 
 ///|
-async fn RuntimeSession::request_open_window(
+async fn RuntimeSession::request_create_window(
   self : RuntimeSession,
   id : String,
+  config : WindowConfig,
 ) -> WindowHandle {
   if self.is_quitting() {
     raise ApplicationQuitting
   }
   let completion = WindowOpenCompletion()
-  self.window_commands.push(Open(id, completion))
+  let id = id.trim().to_owned()
+  let config = config.snapshot()
+  let entry = prepare_entry(config.entry) catch {
+    error => raise StartupFailed(id~, error=EntryLoadError(error))
+  }
+  if self.is_quitting() {
+    raise ApplicationQuitting
+  }
+  self.window_commands.push(Create(id, config, entry, completion))
   self.wakeup.signal.notify()
   defer self.wakeup.signal.notify()
   completion.wait()
@@ -918,24 +960,17 @@ fn RuntimeSession::process_window_commands(self : RuntimeSession) -> Bool {
   let commands = self.window_commands.copy()
   self.window_commands.clear()
   for command in commands {
-    let Open(id, completion) = command
+    let Create(id, config, entry, completion) = command
     guard completion.state is WindowOpenPending else { continue }
     if self.is_quitting() {
       completion.fail(ApplicationQuitting)
       continue
     }
-    let definition = match self.find_definition(id) {
-      Some(definition) => definition
-      None => {
-        completion.fail(UnknownWindow(id~))
-        continue
-      }
-    }
     if self.find_active_window(id) is Some(_) {
       completion.fail(AlreadyOpen(id~))
       continue
     }
-    let running = self.create_window(definition) catch {
+    let running = self.create_window(id, config, entry) catch {
       error => {
         completion.fail(StartupFailed(id~, error~))
         continue
@@ -1089,21 +1124,23 @@ fn RuntimeSession::fail_window_open(
 }
 
 ///|
-/// Opens one declared window that is not currently active.
+/// Creates a window from a configuration snapshot. No prior declaration is needed.
+/// The id is trimmed and must be nonempty and unique among active windows.
 /// Business failures raise `WindowSessionError`; task cancellation propagates
 /// unchanged to the owning async task group. Before activation succeeds,
 /// cancellation discards queued work or closes the instance created by this
 /// operation. Once activation success is committed, the application owns the
 /// window; later caller cancellation does not close it.
-pub async fn WindowManager::open(
+pub async fn WindowManager::create(
   self : WindowManager,
   id : String,
+  config : WindowConfig,
 ) -> WindowHandle {
-  (self.open_window)(id)
+  (self.create_window)(id, config)
 }
 
 ///|
-/// Returns the active instance for a declared window id.
+/// Returns the active instance for a window id.
 /// This includes starting windows. Finding a window does not wait for native
 /// browser initialization, page loading, or command bridge readiness.
 /// Browser operations may still fail while the native browser is starting.
@@ -1112,13 +1149,13 @@ pub fn WindowManager::find(self : WindowManager, id : String) -> WindowHandle? {
 }
 
 ///|
-/// Returns the declarative id of this window.
+/// Returns the application-assigned id of this window.
 pub fn WindowHandle::id(self : WindowHandle) -> String {
   self.id
 }
 
 ///|
-/// Returns the declarative id of the window owning this web contents.
+/// Returns the application-assigned id of the window owning this web contents.
 
 ///|
 pub fn WindowHandle::show(self : WindowHandle) -> Unit raise WindowSessionError {
@@ -3119,9 +3156,7 @@ fn RuntimeSession::start_browser_request(
                 _ => ()
               }
             NewWindowDecision::OpenInWindow(id) => {
-              let opened = Some(self.window_manager().open(id)) catch {
-                _ => None
-              }
+              let opened = self.window_manager().find(id)
               match opened {
                 Some(window) =>
                   window.web_contents().load_url(url) catch {

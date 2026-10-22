@@ -19,15 +19,14 @@ async fn window_cleanup_failure(startup_failure~ : Bool) -> Unit {
   let secondary_ready = Ref(false)
   let cancellation_seen = Ref(false)
   let destroy_calls = Ref(0)
+  let secondary_config = WindowConfig(
+    "Secondary",
+    AppEntry::Html("<h1>Secondary</h1>"),
+  )
   let app = html("Window cleanup", "<h1>Main</h1>")
     ..identifier("dev.proton.e2e-window-cleanup")
     ..headless()
     ..last_window_closed_policy(KeepRunning)
-    ..add_window(
-      "secondary",
-      WindowConfig("Secondary", AppEntry::Html("<h1>Secondary</h1>")),
-      open_on_start=false,
-    )
     ..setup(context => {
       let gate = @env.get_env_var("PROTON_E2E_LIFECYCLE_GATE").unwrap()
       @mbfs.write_string_to_file(gate + ".ready", "ready")
@@ -35,11 +34,13 @@ async fn window_cleanup_failure(startup_failure~ : Bool) -> Unit {
         @async.sleep(10)
       }
       if startup_failure {
-        ignore(context.windows().open("secondary"))
+        ignore(context.windows().create("secondary", secondary_config))
       } else {
         let opening = context
           .task_group()
-          .spawn(no_wait=true, () => ignore(context.windows().open("secondary")))
+          .spawn(no_wait=true, () => {
+            ignore(context.windows().create("secondary", secondary_config))
+          })
         while context.windows().find("secondary") is None {
           @async.sleep(1)
         }

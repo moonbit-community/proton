@@ -13,6 +13,10 @@ pub async fn run_pdf_regression() -> Unit {
   let replied = Ref(false)
   let gate_changed = @async.CondVar::Cond()
   let application : Ref[@proton.ApplicationContext?] = Ref(None)
+  let pdf_secondary_config = @proton.WindowConfig(
+    "PDF lifecycle",
+    @proton.AppEntry::Url(url + "/main"),
+  )
   @proton.App(
     @proton.WindowConfig(
       "PDF",
@@ -30,11 +34,6 @@ pub async fn run_pdf_regression() -> Unit {
     ),
   )
   ..identifier("dev.proton.pdf-regression")
-  ..add_window(
-    "pdf-secondary",
-    @proton.WindowConfig("PDF lifecycle", @proton.AppEntry::Url(url + "/main")),
-    open_on_start=false,
-  )
   ..setup(context => {
     application.val = Some(context)
     context
@@ -129,7 +128,9 @@ pub async fn run_pdf_regression() -> Unit {
         printing.val = false
         release_print.val = false
         replied.val = false
-        let window = context.windows().open("pdf-secondary")
+        let window = context
+          .windows()
+          .create("pdf-secondary", pdf_secondary_config)
         let view = if is_view {
           Some(
             window.add_view(

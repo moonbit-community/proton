@@ -1,9 +1,9 @@
 ///|
-/// Startup configuration shared by primary and secondary windows.
+/// Reusable configuration for startup and dynamically created windows.
 ///
-/// Window ids and automatic opening belong to application registration.
+/// The caller supplies a separate id for each window instance.
 /// Use record updates to derive a configuration without changing the original.
-/// Registering a configuration snapshots its views array.
+/// Registering or creating a window snapshots its views array.
 pub(all) struct WindowConfig {
   title : String
   entry : AppEntry
