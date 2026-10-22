@@ -10,7 +10,7 @@ import {
   "moonbit-community/proton_rsa@0.5.1",
   "moonbitlang/async@0.22.5",
   "moonbitlang/x@0.5.5",
-  "moonbitlang/lexer@0.4.2",
+  "moonbitlang/lexer@0.4.4",
   "tonyfettes/xlog@0.4.2",
   "marianoguerra/uri@0.1.2",
 }
