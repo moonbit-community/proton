@@ -8,6 +8,12 @@ let release_command = @keepawake_contract.release
 let status_command = @keepawake_contract.status
 
 ///|
+let owner_tasks : Ref[@async.TaskGroup[Unit]?] = Ref(None)
+
+///|
+let guard_lock : @async.Mutex = @async.Mutex()
+
+///|
 let active_guard_ref : Ref[@sys_keepawake.Guard?] = Ref(None)
 
 ///|
@@ -34,9 +40,9 @@ fn scope_label(scope : @sys_keepawake.Scope) -> String {
 
 ///|
 /// Releases a guard and returns a JavaScript-friendly reply.
-fn release_guard(
+async fn release_guard(
   keep_guard : @sys_keepawake.Guard,
-) -> @keepawake_contract.KeepAwakeReply raise KeepAwakeError {
+) -> @keepawake_contract.KeepAwakeReply raise KeepAwakeError + nocancel {
   let scope_name = scope_label(keep_guard.scope())
   try {
     keep_guard.release()
@@ -51,18 +57,19 @@ fn release_guard(
 
 ///|
 /// Acquires a guard using explicit defaults for optional JavaScript fields.
-fn acquire_guard(
+async fn acquire_guard(
   payload : @keepawake_contract.AcquireRequest,
 ) -> @sys_keepawake.Guard raise KeepAwakeError {
+  let tasks = owner_tasks.val.unwrap()
   let scope = parse_scope(payload.scope)
   let reason = payload.reason.unwrap_or(@sys_keepawake.default_reason)
   match scope {
     Some(scope) =>
-      @sys_keepawake.acquire(reason~, scope~) catch {
+      @sys_keepawake.acquire(tasks, reason~, scope~) catch {
         error => raise AcquireFailed(detail=error.to_string())
       }
     None =>
-      @sys_keepawake.acquire(reason~) catch {
+      @sys_keepawake.acquire(tasks, reason~) catch {
         error => raise AcquireFailed(detail=error.to_string())
       }
   }
@@ -70,7 +77,7 @@ fn acquire_guard(
 
 ///|
 /// Releases the active app-command guard if one exists.
-fn cleanup_keepawake() -> Unit raise KeepAwakeError {
+async fn cleanup_keepawake() -> Unit raise KeepAwakeError + nocancel {
   match active_guard_ref.val {
     Some(active_guard) => {
       release_guard(active_guard) |> ignore
@@ -87,6 +94,8 @@ async fn acquire(
   context : @proton.CommandContext,
   request : @keepawake_contract.AcquireRequest,
 ) -> @keepawake_contract.KeepAwakeReply {
+  guard_lock.acquire()
+  defer guard_lock.release()
   match active_guard_ref.val {
     Some(active_guard) =>
       if active_guard.active() {
@@ -105,11 +114,17 @@ async fn acquire_next_guard(
 ) -> @keepawake_contract.KeepAwakeReply {
   let next_guard = acquire_guard(request)
   let scope_name = scope_label(next_guard.scope())
+  let mut acquired = false
+  defer (if !acquired {
+    next_guard.release()
+    active_guard_ref.val = None
+  })
   active_guard_ref.val = Some(next_guard)
   context.emit(@keepawake_contract.activity, @keepawake_contract.KeepAwakeActivity::{
     operation: "acquire",
     scope: Some(scope_name),
   })
+  acquired = true
   @keepawake_contract.KeepAwakeReply::{ active: true, scope: Some(scope_name), }
 }
 
@@ -120,6 +135,8 @@ async fn release(
   context : @proton.CommandContext,
   _request : @proton_contract.EmptyRequest,
 ) -> @keepawake_contract.KeepAwakeReply {
+  guard_lock.acquire()
+  defer guard_lock.release()
   match active_guard_ref.val {
     Some(active_guard) => {
       let reply = release_guard(active_guard)
@@ -158,7 +175,11 @@ fn status(
 let extension_definition : @proton_extension.Extension = @proton_extension.typed(
   @keepawake_contract.extension,
   fn(registrar) raise { register_commands(registrar) },
-  on_destroy=fn() raise { cleanup_keepawake() },
+  on_start=tasks => {
+    owner_tasks.val = Some(tasks)
+    tasks.add_defer(() => cleanup_keepawake())
+  },
+  on_destroy=() => owner_tasks.val = None,
 )
 
 ///|

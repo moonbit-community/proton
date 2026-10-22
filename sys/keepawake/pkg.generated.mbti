@@ -2,15 +2,16 @@
 package "moonbit-community/proton_keepawake"
 
 import {
+  "moonbitlang/async",
   "moonbitlang/core/debug",
 }
 
 // Values
-pub fn acquire(reason? : String, scope? : Scope) -> Guard raise KeepAwakeError
+pub async fn[G] acquire(@async.TaskGroup[G], reason? : String, scope? : Scope) -> Guard raise KeepAwakeError
 
 pub let default_reason : String
 
-pub fn[T] with_keepawake(() -> T raise?, reason? : String, scope? : Scope) -> T raise
+pub async fn[T] with_keepawake(async () -> T, reason? : String, scope? : Scope) -> T
 
 // Errors
 pub(all) suberror KeepAwakeError {
@@ -24,9 +25,11 @@ pub fn KeepAwakeError::to_string(Self) -> String
 pub impl Show for KeepAwakeError
 
 // Types and methods
-pub type Guard
+pub struct Guard {
+  // private fields
+}
 pub fn Guard::active(Self) -> Bool
-pub fn Guard::release(Self) -> Unit raise KeepAwakeError
+pub async fn Guard::release(Self) -> Unit raise KeepAwakeError + nocancel
 pub fn Guard::scope(Self) -> Scope
 
 pub(all) enum Scope {

@@ -344,6 +344,34 @@ shell 能力用于打开 URL 或路径、在文件管理器中选中文件，以
 
 直接使用 `proton_shell` 的应用调用异步 `open`、`reveal_item` 和 `trash_item`。它们返回 `Unit`，失败时抛出 `ShellError(operation~, target~, reason~)`。等待外部工具时会让出执行权；取消任务会终止并回收工具进程。打开成功表示平台接受了请求，不代表目标应用已经启动完成。`beep()` 保留同步 `Result` 接口。
 
+**防止系统休眠**
+
+keep-awake 扩展的 `acquire`、`release` 和 `status` 命令管理由应用拥有的 guard。
+`acquire` 只在取得休眠抑制后成功，`release` 等待清理完成；并发的获取和释放请求
+按顺序执行。Linux 需要 `systemd-inhibit` 和 logind：辅助进程存活不代表获取成功，
+辅助进程退出后状态会变为 inactive。
+
+在宿主侧执行需要保护的工作时，将 `moonbit-community/proton_keepawake` 导入为
+`@keepawake`，使用异步作用域：
+
+```moonbit
+@keepawake.with_keepawake(
+  () => export_files(),
+  reason="Exporting files",
+  scope=@keepawake.Scope::PreventSystemSleep,
+)
+```
+
+回调只在取得保护后开始。返回、抛错或取消都会释放保护；Linux 辅助进程意外退出时，
+作用域报错并取消回调。需要手动管理时，向异步 `acquire(tasks, reason=...)` 传入
+现有 `TaskGroup`，通过异步 `keep_guard.release()` 提前释放。任务组结束也会释放
+其 guard；保留 guard 引用不会延长保护期限。`active()` 查询当前状态。
+启动和清理等待不会阻塞事件循环；需要期限时使用 `@async.with_timeout`。
+
+Windows 使用线程级电源要求，获取和释放必须位于同一 OS 线程。macOS 使用电源断言。
+Linux 的显示休眠 scope 对应 logind 的 idle 抑制，不能保证阻止所有 compositor
+独立实施的显示器熄屏策略。
+
 **电源与屏幕监听**
 
 扩展通过 `watch_status()` 报告状态：启动前或清理后为 `Stopped`，原生注册完成后为 `Watching`，失败时为 `Unavailable(reason)`。电源监听在异步注册期间还会报告 `Starting`。查询命令独立于事件监听；查询成功不会清除监听错误，也不会重新启动监听。屏幕拓扑事件携带受影响显示器的快照，移除显示器时携带移除前的快照。

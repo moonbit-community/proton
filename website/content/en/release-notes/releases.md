@@ -22,6 +22,18 @@ Existing browser-managed `WebContentsHandle.download_url()` behavior is unchange
 See [host networking](../introduction/application-api.md#extensions-and-capabilities)
 for usage and cancellation semantics.
 
+**Keep-awake lifecycle**
+
+Linux keep-awake acquisition now waits for confirmed inhibition instead of
+assuming a running helper has acquired the lock. Acquisition and cleanup are
+asynchronous; exited helpers no longer report active protection.
+
+Direct users of `proton_keepawake` must call async `acquire(tasks, ...)` with an
+owning task group and async `release()`. `with_keepawake` now accepts an async
+callback, releases protection on scope exit and cancels the callback if the Linux
+helper exits unexpectedly. The frontend extension commands are unchanged and
+own this lifecycle automatically. See [keep-awake usage](../introduction/application-api.md#extensions-and-capabilities).
+
 ## 0.5.1
 
 0.5.1 fixes resource loading, filesystem link operations, monitor startup and update-manifest decoding. It adds macOS/Linux shell operations and a shared Rabbita query package. Despite the patch version, direct users of the power-monitor, shell and updater modules need the source migrations below.

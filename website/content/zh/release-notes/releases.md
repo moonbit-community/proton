@@ -19,6 +19,16 @@
 也不改变浏览器下载接口 `WebContentsHandle.download_url()` 的行为。
 用法和取消语义见[宿主网络](../introduction/application-api.md#扩展与能力)。
 
+**休眠抑制生命周期**
+
+Linux keep-awake 现在等待明确取得休眠抑制后才成功，不再把辅助进程存活视为已取得锁。
+获取和清理采用异步等待；辅助进程退出后不再报告保护仍然 active。
+
+直接使用 `proton_keepawake` 时，需要向异步 `acquire(tasks, ...)` 传入拥有其生命周期
+的任务组，并在异步上下文调用 `release()`。`with_keepawake` 改为接收异步回调，
+作用域结束时释放保护；Linux 辅助进程意外退出时取消回调并报错。前端扩展命令保持
+不变，由扩展自动管理生命周期。参见[休眠抑制用法](../introduction/application-api.md#扩展与能力)。
+
 ## 0.5.1
 
 0.5.1 修复资源加载、文件系统链接操作、监听启动和更新 manifest 解析，补全 macOS／Linux shell 操作，并提供公共 Rabbita 查询包。虽然版本号只增加 patch，直接使用电源监听、shell 和 updater 模块的应用仍需按下表迁移源码。

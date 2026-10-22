@@ -33,8 +33,6 @@ typedef struct keepawake_guard {
   uint32_t display_assertion_id;
   int32_t has_system_assertion;
   int32_t has_display_assertion;
-#else
-  int32_t child_pid;
 #endif
 } keepawake_guard_t;
 
