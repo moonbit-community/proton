@@ -57,8 +57,10 @@ async fn create_download_file(destination : String) -> (String, @fs.File) {
 /// Temporarily requests identity encoding by default and rejects encoded
 /// responses until async/http fixes close-delimited gzip decoding.
 ///
-/// The parent directory must exist. Bytes are streamed to an exclusive sibling
-/// temporary file, then moved to the destination. Existing files are preserved
+/// The existing parent directory is resolved through the filesystem before
+/// the request starts. The final filename is not followed as a symbolic link.
+/// Bytes are streamed to an exclusive sibling temporary file, then moved to
+/// the destination. Existing files are preserved
 /// unless `overwrite=true`; failure before the move preserves the old file.
 /// Cancellation closes the connection and removes the temporary file. Once the
 /// final move starts it completes without cancellation; a committed destination
@@ -77,15 +79,17 @@ pub async fn download(
   let (origin, target) = split_url(url) catch {
     _ => raise InvalidRequest(detail="expected an absolute HTTP(S) URL")
   }
-  guard !destination.is_empty() else {
-    raise InvalidRequest(detail="destination must be a file path")
+  let path = @path.Path(destination)
+  let filename = path.basename()
+  let parent = path.dirname().to_string()
+  guard !filename.is_empty() &&
+    filename != "." &&
+    filename != ".." &&
+    parent != destination &&
+    !destination.has_suffix("/") &&
+    !(@async.platform is Windows && destination.has_suffix("\\")) else {
+    raise InvalidRequest(detail="destination must end in a file name")
   }
-  // FIXME: https://github.com/moonbitlang/x/issues/351 tracks anchoring paths
-  // without changing filesystem traversal. resolve() lexically collapses
-  // symlink/.. and can select the wrong destination (overwriting another file).
-  // Preserve parent traversal and the final entry's replacement semantics;
-  // account for create_download_file's normalizing join and Windows paths too.
-  let resolved_destination = @path.Path(destination).resolve().to_string()
   let headers = request_headers(headers)
   guard !headers.contains("Range") else {
     raise InvalidRequest(detail="partial downloads are not supported")
@@ -97,6 +101,24 @@ pub async fn download(
   if !headers.contains("Accept-Encoding") {
     headers["Accept-Encoding"] = "identity"
   }
+  // Resolve the original parent through the filesystem before any lexical
+  // normalization. Leave the final entry unresolved so rename replaces it.
+  let directory = try {
+    // Some realpath implementations accept file/..; validate the original path.
+    guard @fs.kind(parent) is Directory else {
+      raise FileFailed(detail="parent of '\{destination}' is not a directory")
+    }
+    @fs.realpath(parent)
+  } catch {
+    FileFailed(..) as error => raise error
+    error =>
+      raise FileFailed(
+        detail="cannot resolve parent of '\{destination}': \{@debug.render(Repr(error))}",
+      )
+  }
+  let resolved_destination = @path.Path(directory)
+    .join(@path.Path(filename.to_owned()))
+    .to_string()
   let (response, client) = @http.get_stream(
     origin + target[1:].to_owned(),
     headers~,

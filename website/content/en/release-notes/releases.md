@@ -11,7 +11,10 @@ whole response or transferring file contents through IPC.
 
 Downloads support progress and task cancellation. The destination's parent
 directory must exist; an existing file is replaced only with `overwrite=true`,
-after the new content has been fully saved. Normal return confirms success;
+after the new content has been fully saved. Parent paths are resolved through
+the filesystem, preserving POSIX symlink-plus-`..` traversal; overwriting a final
+symlink replaces the link itself without changing its target.
+Normal return confirms success;
 failures raise `DownloadError`. Only HTTP 200 is accepted; redirects and partial
 downloads are not supported. Downloads temporarily request identity encoding
 by default and reject compressed responses until an upstream HTTP decoding fix
