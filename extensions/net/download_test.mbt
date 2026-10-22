@@ -567,7 +567,7 @@ async test "download does not require permission to list the parent directory" {
 }
 
 ///|
-async test "download preserves Windows extended paths with trailing dots" {
+async test "download preserves Windows extended and junction paths to dotted directories" {
   guard @async.platform is Windows else { return }
   let root = @fs.tmpdir(prefix="proton-net-download-")
   defer @fs.rmdir(root, recursive=true)
@@ -588,27 +588,38 @@ async test "download preserves Windows extended paths with trailing dots" {
     }
     @fs.rmdir(parent)
   }
+  let junction = absolute + "\\alias"
+  // async creates an NTFS junction for an existing local directory target.
+  @fs.symlink(target=parent, junction)
+  defer @fs.remove(junction)
   for ordinary_exists in [false, true] {
     let ordinary = absolute + "\\folder"
     if ordinary_exists {
       @fs.mkdir(ordinary)
-      @fs.write_file(ordinary + "\\report", "unrelated")
     }
-    let destination = parent + "\\report"
-    with_download_server(
-      connection => {
-        ignore(connection.read_until("\r\n\r\n"))
-        connection.write("HTTP/1.1 200 OK\r\nContent-Length: 3\r\n\r\nnew")
-      },
-      url => @net.download(url, destination, overwrite=ordinary_exists),
-    )
-    assert_eq(@fs.read_file(destination).text(), "new")
-    assert_eq(@fs.readdir(parent), ["report"])
+    for (entry, name) in [(parent, "direct"), (junction, "junction")] {
+      if ordinary_exists {
+        @fs.write_file(ordinary + "\\" + name, "unrelated")
+      }
+      with_download_server(
+        connection => {
+          ignore(connection.read_until("\r\n\r\n"))
+          connection.write("HTTP/1.1 200 OK\r\nContent-Length: 3\r\n\r\nnew")
+        },
+        url => {
+          @net.download(url, entry + "\\" + name, overwrite=ordinary_exists)
+        },
+      )
+      assert_eq(@fs.read_file(parent + "\\" + name).text(), "new")
+      if ordinary_exists {
+        assert_eq(@fs.read_file(ordinary + "\\" + name).text(), "unrelated")
+      }
+    }
+    assert_eq(@fs.readdir(parent, sort=true), ["direct", "junction"])
     if ordinary_exists {
-      assert_eq(@fs.read_file(ordinary + "\\report").text(), "unrelated")
-      assert_eq(@fs.readdir(ordinary), ["report"])
+      assert_eq(@fs.readdir(ordinary, sort=true), ["direct", "junction"])
     } else {
-      assert_eq(@fs.readdir(root), ["folder."])
+      assert_eq(@fs.readdir(root, sort=true), ["alias", "folder."])
     }
   }
 }

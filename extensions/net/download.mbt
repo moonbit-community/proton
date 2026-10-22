@@ -57,8 +57,9 @@ async fn create_download_file(destination : String) -> (String, @fs.File) {
 /// Temporarily requests identity encoding by default and rejects encoded
 /// responses until async/http fixes close-delimited gzip decoding.
 ///
-/// The existing parent directory is resolved through the filesystem before
-/// the request starts. The final filename is not followed as a symbolic link.
+/// The existing parent directory is checked before the request starts. POSIX
+/// resolves it through the filesystem; Windows preserves directory junctions
+/// in the absolute path. The final filename is not followed as a symbolic link.
 /// Bytes are streamed to an exclusive sibling temporary file, then moved to
 /// the destination. Existing files are preserved
 /// unless `overwrite=true`; failure before the move preserves the old file.
@@ -101,28 +102,20 @@ pub async fn download(
   if !headers.contains("Accept-Encoding") {
     headers["Accept-Encoding"] = "identity"
   }
-  // Resolve the original parent through the filesystem before any lexical
-  // normalization. Leave the final entry unresolved so rename replaces it.
+  // Validate the original parent before fixing the destination path.
+  // Leave the final entry unresolved so rename replaces it.
   let directory = try {
     // Some realpath implementations accept file/..; validate the original path.
     guard @fs.kind(parent) is Directory else {
       raise FileFailed(detail="parent of '\{destination}' is not a directory")
     }
-    let resolved = @fs.realpath(parent)
-    // FIXME: Remove this workaround after upgrading to async with a lossless
-    // Windows realpath result: https://github.com/moonbitlang/async/issues/675.
-    // async strips the extended prefix; restore explicit verbatim semantics
-    // before creating or renaming files.
-    if @async.platform is Windows &&
-      destination.has_prefix("\\\\?\\") &&
-      !resolved.has_prefix("\\\\?\\") {
-      if resolved.has_prefix("\\\\") {
-        "\\\\?\\UNC\\" + resolved[2:].to_owned()
-      } else {
-        "\\\\?\\" + resolved
-      }
+    if @async.platform is Windows {
+      // FIXME: Use realpath after async preserves Windows path semantics:
+      // https://github.com/moonbitlang/async/issues/675. Until then, keep the
+      // junction path instead of reopening its target without the prefix.
+      @path.Path(parent).resolve().to_string()
     } else {
-      resolved
+      @fs.realpath(parent)
     }
   } catch {
     FileFailed(..) as error => raise error

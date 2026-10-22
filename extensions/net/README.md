@@ -59,9 +59,10 @@ compressed responses raise `NetworkFailed` before any file is created.
 
 `destination` is a complete file path, relative to the process working directory
 or absolute. It must end in a filename, not `.` or `..` or a directory separator.
-The existing parent directory is resolved through the filesystem before the
-HTTP request starts. On POSIX, this preserves the traversal of paths such as
-`link/../file` when `link` is a symbolic link. The function does not
+The existing parent directory is checked before the HTTP request starts.
+On POSIX, filesystem resolution preserves traversal of paths such as
+`link/../file` when `link` is a symbolic link. On Windows, the absolute path
+preserves directory junctions and explicit extended path prefixes. The function does not
 choose filenames from response headers or open a save dialog. Existing entries
 are not replaced unless `overwrite=true`. A symbolic link at the destination
 is an existing entry: explicit overwrite replaces the link itself, not its
