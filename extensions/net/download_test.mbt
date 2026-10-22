@@ -565,3 +565,50 @@ async test "download does not require permission to list the parent directory" {
   )
   assert_eq(@fs.read_file(root + "/file").text(), "ok")
 }
+
+///|
+async test "download preserves Windows extended paths with trailing dots" {
+  guard @async.platform is Windows else { return }
+  let root = @fs.tmpdir(prefix="proton-net-download-")
+  defer @fs.rmdir(root, recursive=true)
+  let absolute = @path.Path(root).resolve().to_string()
+  let extended = if absolute.has_prefix("\\\\?\\") {
+    absolute
+  } else if absolute.has_prefix("\\\\") {
+    "\\\\?\\UNC\\" + absolute[2:].to_owned()
+  } else {
+    "\\\\?\\" + absolute
+  }
+  let parent = extended + "\\folder."
+  @fs.mkdir(parent)
+  // Keep backslashes: async's recursive rmdir joins children with '/'.
+  defer {
+    for name in @fs.readdir(parent) {
+      @fs.remove(parent + "\\" + name)
+    }
+    @fs.rmdir(parent)
+  }
+  for ordinary_exists in [false, true] {
+    let ordinary = absolute + "\\folder"
+    if ordinary_exists {
+      @fs.mkdir(ordinary)
+      @fs.write_file(ordinary + "\\report", "unrelated")
+    }
+    let destination = parent + "\\report"
+    with_download_server(
+      connection => {
+        ignore(connection.read_until("\r\n\r\n"))
+        connection.write("HTTP/1.1 200 OK\r\nContent-Length: 3\r\n\r\nnew")
+      },
+      url => @net.download(url, destination, overwrite=ordinary_exists),
+    )
+    assert_eq(@fs.read_file(destination).text(), "new")
+    assert_eq(@fs.readdir(parent), ["report"])
+    if ordinary_exists {
+      assert_eq(@fs.read_file(ordinary + "\\report").text(), "unrelated")
+      assert_eq(@fs.readdir(ordinary), ["report"])
+    } else {
+      assert_eq(@fs.readdir(root), ["folder."])
+    }
+  }
+}
