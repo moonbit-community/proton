@@ -58,6 +58,20 @@ proton_cli new [path] [options]
 `templates/minimal` 或 `templates/isomorphic`。需要网络连接。模板内容可以独立于已安装的
 CLI 更新；模板引用已发布的依赖。
 
+也可以直接调用 `moon-new`，创建项目时不必安装 Proton CLI。
+默认的 `isomorphic` 模板对应：
+
+```sh
+moonx moonbit-community/moon-new my-app \
+  --template moonbit-community/proton --branch main \
+  --subdir templates/isomorphic
+```
+
+minimal 模板使用 `--subdir templates/minimal`。直接调用时，`--template` 指定仓库，
+`--subdir` 选择 Proton 模板，`--user <name>` 对应 `proton_cli new --author <name>`。
+需要明确传入目标路径；替代 `proton_cli -C <dir> new <name>` 时，传入 `<dir>/<name>`。
+后续的 `dev`、`build` 和 `package` 仍使用 `proton_cli`。
+
 | 参数 / 选项 | 默认值与含义 |
 | --- | --- |
 | `[path]` | `todo`；目标目录，必须不存在或为空 |

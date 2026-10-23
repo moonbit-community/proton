@@ -59,6 +59,22 @@ Creates a project with `moon-new@0.1.0`, using `templates/minimal` or
 is required. Template contents can evolve independently of the installed CLI;
 templates reference published dependencies.
 
+You can invoke `moon-new` directly without installing the Proton CLI.
+For the default `isomorphic` template:
+
+```sh
+moonx moonbit-community/moon-new my-app \
+  --template moonbit-community/proton --branch main \
+  --subdir templates/isomorphic
+```
+
+Use `--subdir templates/minimal` for the minimal template. With direct invocation,
+`--template` specifies the repository, `--subdir` selects the Proton template,
+and `--user <name>` corresponds to `proton_cli new --author <name>`. Pass the
+destination path explicitly; to replace `proton_cli -C <dir> new <name>`, pass
+`<dir>/<name>` as that path. The remaining `dev`, `build` and `package` commands
+still belong to `proton_cli`.
+
 | Argument / option | Default and meaning |
 | --- | --- |
 | `[path]` | `todo`; destination directory, which must be absent or empty |

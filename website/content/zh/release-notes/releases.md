@@ -8,6 +8,11 @@
 保留目标路径、`--template` 和 `--author`；创建时不再提问或执行 `moon check`。
 Git 初始化遵循 moon-new 的行为。
 
+也可以直接使用 `moonx moonbit-community/moon-new` 创建项目，指定
+`--template moonbit-community/proton --branch main`，再用
+`--subdir templates/minimal` 或 `--subdir templates/isomorphic` 选择模板。
+用 `--user` 代替 CLI 的 `--author`。
+
 移除旧的标题、标识、窗口尺寸、检查、Git、预览和确认选项，改为编辑生成的配置与源码，
 并显式运行检查。参见 [new 命令](../command-line-interface/commands.md#new)。
 

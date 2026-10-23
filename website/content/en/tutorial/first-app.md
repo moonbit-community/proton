@@ -8,6 +8,20 @@ Run this command in the directory where you keep projects, not inside another Mo
 
 ```sh
 proton_cli new hello-proton --template minimal
+```
+
+Alternatively, create the same project directly with `moon-new` (choose one
+of these two creation commands):
+
+```sh
+moonx moonbit-community/moon-new hello-proton \
+  --template moonbit-community/proton --branch main \
+  --subdir templates/minimal
+```
+
+Then enter the project and continue with the same setup commands:
+
+```sh
 cd hello-proton
 ```
 

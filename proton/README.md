@@ -998,6 +998,16 @@ framework failure shell.
 - Runnable demos live in the repository's `examples/` directory.
 - The CLI covers the project workflow: `proton_cli new`, `proton_cli cef setup`,
   `proton_cli dev`, `proton_cli build`, and `proton_cli package`.
+- Project creation can also use `moon-new` directly:
+
+```sh
+moonx moonbit-community/moon-new my-app \
+  --template moonbit-community/proton --branch main \
+  --subdir templates/isomorphic
+```
+
+Use `--subdir templates/minimal` for the minimal template and `--user <name>`
+instead of `proton_cli new --author <name>`.
 
 
 Typed commands and events are inert shared descriptors. Ordinary applications

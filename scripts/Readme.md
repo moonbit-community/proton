@@ -29,9 +29,9 @@ Run this before publishing `proton` or `proton_ext`, and after changing any of:
 
 ## `verify_release_metadata.mjs`
 
-Checks that the `proton new` template default version matches `proton/moon.mod`.
-It also checks the published-module dependency chain from `proton_config` into
-`proton` and `proton_cli`, plus the CLI's embedded version string.
+Checks workspace lockstep versions, internal dependency requirements and the
+CLI's embedded version string. Templates independently reference published
+dependencies; their compilation is checked by the scaffold smoke test.
 
 ```sh
 node ./scripts/verify_release_metadata.mjs
@@ -39,8 +39,11 @@ node ./scripts/verify_release_metadata.mjs
 
 ## `e2e_scaffold_source_smoke.mjs`
 
-Generates the default three-module Todo project outside the repository and
-checks the unmodified scaffold's explicit command bindings, local-source
+Generates both templates using `moonx moonbit-community/moon-new` against a
+local Git snapshot of `templates/`, then checks registry compilation and existing
+project protection. `--scaffold-only` stops after these checks on any platform.
+
+The full run also checks the default Todo scaffold's explicit command bindings, local-source
 compilation, Warren frontend, native backend, typed commands, business errors,
 and ad-hoc signed macOS packaging. A resource marker verifies that repackaging
 ships rebuilt frontend assets.
@@ -63,8 +66,11 @@ node ./scripts/e2e_scaffold_source_smoke.mjs
 ## `e2e_scaffold_registry_smoke.mjs`
 
 Runs an installed `proton_cli` in a temporary directory and checks the generated
-project without editing its `moon.work`, module manifests, or build rules. This
-is the release gate for registry dependency resolution:
+project against its declared registry dependencies. It then uses
+`moon add --upgrade` to exercise the newly published Proton release, without workspace
+or source overrides. This is the release gate for registry dependency resolution.
+It intentionally calls `proton_cli new` to test the wrapper; application developers
+can also [invoke moon-new directly](../cli/README.md).
 
 ```sh
 moon install moonbit-community/proton_cli

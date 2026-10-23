@@ -9,6 +9,11 @@ Proton's `main` branch. It retains the destination path, `--template` and
 `--author`. Creation no longer prompts or runs `moon check`. Git initialization
 follows moon-new's behavior.
 
+Projects can also be created directly with `moonx moonbit-community/moon-new`,
+using `--template moonbit-community/proton --branch main` and
+`--subdir templates/minimal` or `--subdir templates/isomorphic`.
+Use `--user` in place of the CLI's `--author`.
+
 Remove the old title, identifier, window size, check, Git, dry-run and confirmation
 options. Customize the generated configuration and source files instead; run
 checks explicitly. See the [new command](../command-line-interface/commands.md#new).

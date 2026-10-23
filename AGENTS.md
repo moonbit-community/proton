@@ -155,6 +155,11 @@ native checks before handing off larger refactors.
   workflow. Do not publish these modules from a contributor workstation.
 
 - `proton_cli new` invokes `moon-new@0.1.0` using `templates/` on `main`.
+  Direct creation is also supported:
+  `moonx moonbit-community/moon-new <path> --template moonbit-community/proton --branch main --subdir templates/isomorphic`.
+  Use `templates/minimal` for the minimal template and `--user` instead of
+  `--author`. Document both creation routes; keep CLI release acceptance using
+  `proton_cli new` so it exercises the published wrapper too.
   Templates reference published dependencies and are not lockstep workspace
   members. Update those requirements only after the dependencies are published.
   Validate template changes with
@@ -171,6 +176,8 @@ native checks before handing off larger refactors.
   moon install moonbit-community/proton_cli
   node ./scripts/e2e_scaffold_registry_smoke.mjs
   tmp_dir="$(mktemp -d)"
+  # Alternatively, replace the next line with:
+  # moonx moonbit-community/moon-new "$tmp_dir/release-smoke" --template moonbit-community/proton --branch main --subdir templates/isomorphic
   proton_cli -C "$tmp_dir" new release-smoke
   proton_cli -C "$tmp_dir/release-smoke" cef setup
   proton_cli -C "$tmp_dir/release-smoke" build

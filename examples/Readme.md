@@ -26,6 +26,19 @@ moon install moonbit-community/proton_cli
 proton_cli new my-counter
 ```
 
+Alternatively, create the same project directly with `moon-new`, without
+installing the CLI for the creation step:
+
+```sh
+moonx moonbit-community/moon-new my-counter \
+  --template moonbit-community/proton --branch main \
+  --subdir templates/isomorphic
+```
+
+Use `--subdir templates/minimal` for a minimal project and `--user <name>`
+to select the module author. The generated project's development and packaging
+commands still use `proton_cli`.
+
 Build the minimal root-facade example:
 
 ```sh

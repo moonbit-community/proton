@@ -8,6 +8,19 @@
 
 ```sh
 proton_cli new hello-proton --template minimal
+```
+
+也可以直接用 `moon-new` 创建相同的项目（两个创建命令任选其一）：
+
+```sh
+moonx moonbit-community/moon-new hello-proton \
+  --template moonbit-community/proton --branch main \
+  --subdir templates/minimal
+```
+
+然后进入项目，继续执行相同的准备步骤：
+
+```sh
 cd hello-proton
 ```
 
