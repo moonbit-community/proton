@@ -39,7 +39,9 @@ fn windows_command(config : AutoLaunchConfig) -> String {
 /// Renders a freedesktop.org desktop-entry file for Linux auto-start.
 fn linux_desktop_contents(config : AutoLaunchConfig) -> String {
   let exec_line = desktop_escape_value(
-    render_command_line(config, desktop_quote_argument),
+    // Desktop consumers check the executable before expanding %% field codes.
+    // Pass the application path as an argument so it is decoded before exec.
+    "/usr/bin/env -- " + render_command_line(config, desktop_quote_argument),
   )
   let name = desktop_escape_value(config.name)
   (

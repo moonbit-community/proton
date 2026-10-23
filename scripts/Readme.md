@@ -2,6 +2,18 @@
 
 Small repository scripts used by generation workflows.
 
+## `test_auto_launch_linux.mjs`
+
+Generates an isolated autostart entry through the public MoonBit API, launches it
+through GLib and a systemd-generated user service, and checks the application's
+actual arguments. Requires Linux, MoonBit, a C compiler, GLib development files,
+Python 3, and a running systemd user manager with a session bus. Temporary entries
+and services are removed afterward.
+
+```sh
+node scripts/test_auto_launch_linux.mjs
+```
+
 ## `embed_asset.mjs`
 
 Embeds a text file into generated MoonBit source.

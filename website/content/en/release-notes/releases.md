@@ -5,8 +5,11 @@
 **Linux auto-launch**
 
 Fixed desktop-entry encoding for names, executable paths and startup arguments.
-Percent signs, backslashes, quotes and line breaks preserve their literal values;
-pass paths and arguments without pre-escaping them. The API is unchanged.
+Linux uses `/usr/bin/env` so paths containing `%` launch through GLib and systemd.
+Executable paths containing `=` now return `UnsupportedExecutablePath`; `=` in
+arguments remains supported. Pass literal values without pre-escaping them and
+call `enable()` again to regenerate existing entries. Older systemd generators
+still have backslash-escape limitations, including `$` and backticks in arguments.
 
 **Project creation**
 

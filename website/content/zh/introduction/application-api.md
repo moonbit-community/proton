@@ -338,6 +338,15 @@ Web 内容使用 Chromium 原生无障碍树。页面应提供语义化 HTML、A
 
 capability 授权与操作系统授权不同。声明屏幕或媒体能力不会自动获得系统隐私权限；系统拒绝、后端不可用与应用未授权应分别处理。托盘等提供 support 查询的能力应先检查支持情况，菜单事件也比各平台鼠标手势更可移植。
 
+**自启动（未发布）**
+
+直接传入可执行文件路径和启动参数的字面值，由 Proton 按平台规则转义。
+Linux 写入 XDG 自启动 desktop entry，并依赖 `/usr/bin/env`，使含 `%` 的可执行路径
+可以通过 GLib 和 systemd 启动。路径必须为绝对路径；Linux 对含 `=` 的路径返回
+`UnsupportedExecutablePath`，参数中的 `=` 不受影响。升级后再次调用 `enable()`，
+重新生成已有条目。旧版 systemd 生成器存在反斜杠转义处理限制，包括参数中的 `$`
+和反引号；任意参数的支持程度取决于消费者。
+
 **剪贴板访问**
 
 剪贴板扩展提供异步文本读写命令。直接使用 `proton_clipboard` 时，同样需要在异步上下文调用 `read_text()` 和 `write_text(text)`。读取返回 `Result[String?, String]`，写入返回 `Result[Unit, String]`。操作失败返回 `Err(String)`；取消继续传播，不会转换成操作错误。

@@ -347,6 +347,17 @@ These are key boundaries of implemented 0.6.0 capabilities, not a promise of ava
 
 Capability grants are separate from operating-system authorization. Declaring a screen or media capability does not grant OS privacy permission. Handle OS denial, unavailable backends and missing application grants separately. Check support where provided, such as the tray capability; menu events are more portable than platform mouse gestures.
 
+**Auto-launch (unreleased)**
+
+Pass executable paths and startup arguments as literal values; Proton applies
+the platform's quoting rules. Linux writes an XDG autostart desktop entry and
+requires `/usr/bin/env`, allowing executable paths containing `%` to launch
+through GLib and systemd. Paths must be absolute; Linux rejects paths containing
+`=` with `UnsupportedExecutablePath`, while `=` in arguments is allowed.
+Call `enable()` again after upgrading to regenerate an existing entry. Older
+systemd generators have known backslash-escape limitations, including `$` and
+backticks in arguments; support for arbitrary arguments depends on the consumer.
+
 **Clipboard access**
 
 The clipboard extension provides async text read/write commands. Direct users of `proton_clipboard` also call `read_text()` and `write_text(text)` from an async context. Reads return `Result[String?, String]`; writes return `Result[Unit, String]`. Operational failures are `Err(String)`; cancellation propagates without conversion to an operation error.
