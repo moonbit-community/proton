@@ -2,7 +2,7 @@
 
 This example places a child browser beside a sidebar in the main window. It demonstrates the distinction between the main page and a separately navigable browser view, including explicit bounds for the child.
 
-[53_view_minimal](https://github.com/moonbit-community/proton/tree/18915e6b3c852b760dee6550f066f46d95a1248d/examples/53_view_minimal) · Source files: [main.mbt](https://github.com/moonbit-community/proton/tree/18915e6b3c852b760dee6550f066f46d95a1248d/examples/53_view_minimal/main.mbt)
+[53_view_minimal](https://github.com/moonbit-community/proton/tree/91ffc6210878af84a639d773efdc71669dc47430/examples/53_view_minimal) · Source files: [main.mbt](https://github.com/moonbit-community/proton/tree/91ffc6210878af84a639d773efdc71669dc47430/examples/53_view_minimal/main.mbt)
 
 ## Behavior
 

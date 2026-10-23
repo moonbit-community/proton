@@ -15,13 +15,15 @@ with the application on each supported platform.
 
 ## Quick start
 
+This README targets Proton 0.6.0 (not yet published). The versioned installation command below becomes available after publication.
+
 Install [MoonBit and the native build prerequisites](website/content/en/introduction/installation.md)
 for your platform. The default template uses Rabbita for its MoonBit frontend
 and Warren to serve and build it; install Node.js/npm as described in the
 prerequisites. Run these commands outside another MoonBit workspace:
 
 ```sh
-moon install moonbit-community/proton_cli@0.5.1
+moon install moonbit-community/proton_cli@0.6.0
 moon install moonbit-community/warren@0.4.5
 proton_cli new my-app --yes
 cd my-app
@@ -48,7 +50,7 @@ tooling, use `--template minimal` and follow the
 ## Application API
 
 An application's native entry point configures an `App` and runs it. For
-example, an inline-HTML app inside a generated 0.5.1 minimal project can use:
+example, an inline-HTML app inside a generated 0.6.0 minimal project can use:
 
 ```moonbit
 async fn main {

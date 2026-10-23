@@ -62,7 +62,7 @@ Packaged frontend files load without the development server. Backend resource pa
 
 `package.prepare` runs once from the project configuration directory after the frontend and native executable have been built, before resources are assembled. Use it to generate declared package-only resources or additional binaries. A nonzero exit stops packaging.
 
-`proton_cli build` and `proton_cli package --dry-run` do not execute this hook. The standalone `proton_package` tool packages already-built executables and supplied payloads; it does not discover projects, run build/preparation commands or assemble CEF. See the [standalone packager](https://github.com/moonbit-community/proton/blob/18915e6b3c852b760dee6550f066f46d95a1248d/package/README.md).
+`proton_cli build` and `proton_cli package --dry-run` do not execute this hook. The standalone `proton_package` tool packages already-built executables and supplied payloads; it does not discover projects, run build/preparation commands or assemble CEF. See the [standalone packager](https://github.com/moonbit-community/proton/blob/91ffc6210878af84a639d773efdc71669dc47430/package/README.md).
 
 ## Update artifacts and metadata
 

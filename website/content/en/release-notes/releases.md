@@ -1,6 +1,8 @@
 # Release Notes
 
-## Unreleased
+## 0.6.0 (unreleased)
+
+0.6.0 adds runtime window creation and authenticated file downloads, changes clipboard and keep-awake APIs to asynchronous operation, and fixes Windows monitoring. Existing applications using the affected APIs need the migrations below.
 
 **Runtime window creation (breaking API change)**
 
@@ -49,6 +51,22 @@ owning task group and async `release()`. `with_keepawake` now accepts an async
 callback, releases protection on scope exit and cancels the callback if the Linux
 helper exits unexpectedly. The frontend extension commands are unchanged and
 own this lifecycle automatically. See [keep-awake usage](../introduction/application-api.md#extensions-and-capabilities).
+
+**Clipboard access (breaking API change)**
+
+Direct users of `proton_clipboard` must call `read_text()` and `write_text(text)` from an async context. Return values remain `Result`; operational failures are `Err(String)`, while cancellation propagates through the async runtime. The frontend extension commands are unchanged.
+
+macOS uses the native pasteboard. Linux continues to use `wl-clipboard`, `xclip`, or `xsel`; pipe I/O and process waits now yield to the event loop. Cancellation stops and reaps the invoked tool. A successful write preserves the clipboard owner needed for later pastes.
+
+**Windows power monitoring**
+
+AC and onboard-battery notifications now produce `OnAC` and `OnBattery` correctly; UPS and unknown sources no longer produce misleading events. Idle-time queries no longer count the high bits of system uptime as idle time after the 32-bit last-input counter wraps. The counter still cannot distinguish idle intervals spanning a full period of about 49.7 days.
+
+**Upgrading**
+
+Once 0.6.0 is published, update the CLI and application `proton_*` dependencies together. Migrate window creation and direct clipboard/keep-awake calls as described above, run `proton_cli cef setup`, and rebuild packaged applications with the matching helper. The MoonBit `latest` toolchain requirement and CEF version are unchanged. Installing the CLI does not rewrite existing application source.
+
+[Complete changes](https://github.com/moonbit-community/proton/compare/c63c9d2963551802481f4b2f13094afcce9222a5...91ffc6210878af84a639d773efdc71669dc47430)
 
 ## 0.5.1
 

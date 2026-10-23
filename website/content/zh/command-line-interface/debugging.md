@@ -27,11 +27,11 @@ DevTools listening on ws://127.0.0.1:<port>/devtools/browser/<id>
 
 应用需要通过 `App.debug()` 启用调试；端口环境变量本身不会开启调试。
 使用 native MoonBit 编写自动化程序时，可以参考独立的
-[`proton_cdp` 库](https://github.com/moonbit-community/proton/blob/18915e6b3c852b760dee6550f066f46d95a1248d/cdp/README.mbt.md)。
+[`proton_cdp` 库](https://github.com/moonbit-community/proton/blob/91ffc6210878af84a639d773efdc71669dc47430/cdp/README.mbt.md)。
 
 ## 原生 CDP 自动化
 
-`moonbit-community/proton_cdp@0.5.1` 是可选的原生自动化依赖。它连接已经运行的 Proton 或 Chromium 应用，连接操作不会启动一个 Chrome 窗口；显式启动浏览器是另一组操作。CDP 库本身不依赖 Proton 应用运行时。
+`moonbit-community/proton_cdp@0.6.0` 是可选的原生自动化依赖。它连接已经运行的 Proton 或 Chromium 应用，连接操作不会启动一个 Chrome 窗口；显式启动浏览器是另一组操作。CDP 库本身不依赖 Proton 应用运行时。
 
 自动化可执行程序导入 `moonbitlang/async`、`moonbit-community/proton_cdp/client` 和 `moonbit-community/proton_cdp/page`。对于已公布的端点和已有页面标题：
 
@@ -50,7 +50,7 @@ async fn read_title(endpoint : String, title : String) -> Json {
 
 `Page.connect` 选择页面；多个目标时可使用 `target_id`、`url` 和 `title` 筛选。连接属于传入的任务组，离开作用域会关闭连接，不会关闭目标应用；`Page.close()` 可显式断开。导航或 reload 会替换执行上下文，应先等待返回的 `Navigation.wait_for_context()`，再执行新文档中的脚本。`Page.evaluate` 只执行一次，不会自动重试可能有副作用的 JavaScript。 新执行上下文不等于 DOM 或 Proton bridge 已就绪；需要这些条件时，通过 `Page.wait_until` 等待应用定义的无副作用条件，并由应用设置超时。
 
-浏览器启动、截图及 schema 兼容性见[版本化 CDP 指南](https://github.com/moonbit-community/proton/blob/18915e6b3c852b760dee6550f066f46d95a1248d/cdp/README.mbt.md)。CDP 用于诊断和外部自动化，不替代应用命令桥接。
+浏览器启动、截图及 schema 兼容性见[版本化 CDP 指南](https://github.com/moonbit-community/proton/blob/91ffc6210878af84a639d773efdc71669dc47430/cdp/README.mbt.md)。CDP 用于诊断和外部自动化，不替代应用命令桥接。
 
 ## 日志
 

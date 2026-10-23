@@ -614,7 +614,7 @@ not close an application-owned window.
 
 Replace `windows.open(id)` with `windows.create(id, config)` and remove delayed
 `add_window(..., open_on_start=false)` declarations. `add_window(id, config)`
-now only creates startup windows. These changes are unreleased.
+now only creates startup windows. These changes require Proton 0.6.0.
 
 Command and extension registration stays on `App`. Exact renderer targets may
 refer to future IDs. `RendererTarget::entry_prefix("editor-")` and

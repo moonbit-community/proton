@@ -13,7 +13,7 @@ The book has six top-level chapters in both languages: Introduction, Tutorial,
 Command Line Interface, Configuration, Examples, and Release Notes. Keep all
 CLI commands and options in `command-line-interface/commands.md`, and all project JSON fields in
 `configuration/project.md`. Examples contains ten curated source references pinned to
-the documented release commit; release notes distinguish publication from
+the documented version's source commit; release notes distinguish publication from
 source changes.
 
 Each language directory follows the book navigation:
@@ -39,7 +39,7 @@ section. They state prerequisites, file edits and expected results. All other
 pages are independently readable technical documentation: define concepts, API
 contracts, configuration types/defaults, lifecycle, failure behavior and platform
 limits. Do not make reference pages depend on completing a tutorial project.
-Examples and API links point to the Proton 0.5.1 release commit. When updating the documented release, update the CLI/dependency versions, source links, and both book titles together.
+Examples and API links are pinned to the Proton 0.6.0 source. When updating the documented release, update the CLI/dependency versions, source links, and both book titles together.
 
 ## Preview
 

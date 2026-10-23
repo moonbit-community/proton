@@ -1,8 +1,8 @@
 # Multi-window commands
 
-This example creates windows on demand within one application and grants command access to an explicit family of window IDs. It uses the unreleased runtime creation API.
+This example creates windows on demand within one application and grants command access to an explicit family of window IDs.
 
-[45_bridge_multi_window](https://github.com/moonbit-community/proton/tree/main/examples/45_bridge_multi_window) · Source files: [main.mbt](https://github.com/moonbit-community/proton/tree/main/examples/45_bridge_multi_window/main.mbt)
+[45_bridge_multi_window](https://github.com/moonbit-community/proton/tree/91ffc6210878af84a639d773efdc71669dc47430/examples/45_bridge_multi_window) · Source files: [main.mbt](https://github.com/moonbit-community/proton/tree/91ffc6210878af84a639d773efdc71669dc47430/examples/45_bridge_multi_window/main.mbt)
 
 ## Behavior
 

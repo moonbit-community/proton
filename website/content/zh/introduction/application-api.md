@@ -14,7 +14,7 @@
 | 进程所有权与激活 | 单实例构建器、上下文方法 | [进程控制](#进程控制与指标) |
 | 路径、文件与构建元数据 | 项目配置、应用路径 | [Configuration](../configuration/project.md) |
 
-完整方法、类型化错误和默认参数见[版本化 API 索引](https://github.com/moonbit-community/proton/blob/18915e6b3c852b760dee6550f066f46d95a1248d/proton/pkg.generated.mbti)。本页说明各入口的适用场景、状态所有权，以及启动、取消和退出期间的行为。
+完整方法、类型化错误和默认参数见[版本化 API 索引](https://github.com/moonbit-community/proton/blob/91ffc6210878af84a639d773efdc71669dc47430/proton/pkg.generated.mbti)。本页说明各入口的适用场景、状态所有权，以及启动、取消和退出期间的行为。
 
 ## 应用生命周期
 
@@ -169,7 +169,7 @@ setup 回调返回 `Unit`，资源由普通闭包捕获。调用 `context.add_cl
 
 Proton 不对命令载荷设置固定的大小上限。载荷通过 JSON 序列化，仍受可用内存与底层传输约束。大消息会增加序列化、复制和解析开销。
 
-0.5.1 没有固定的全局并发请求准入上限。应用仍应根据资源和顺序要求限制昂贵工作；bridge 不会将彼此独立的业务操作自动串行为事务。
+0.6.0 没有固定的全局并发请求准入上限。应用仍应根据资源和顺序要求限制昂贵工作；bridge 不会将彼此独立的业务操作自动串行为事务。
 
 ## 事件
 
@@ -189,7 +189,7 @@ Proton 不对命令载荷设置固定的大小上限。载荷通过 JSON 序列�
 
 `proton_client.subscribe(event, listener, failure)` 通过 `FromJson` 解码载荷，返回 `Subscription`。`Subscription.close()` 释放监听器。订阅建立可能抛出 `ClientFailure`；事件解码失败通过 failure 回调报告 `EventDecode`。
 
-`proton_rabbita.subscribe` 将订阅所有权接入 Rabbita，选项包括订阅 key、重试次数、ready 命令和 client 覆盖。完整签名见 [Rabbita API](https://github.com/moonbit-community/proton/blob/18915e6b3c852b760dee6550f066f46d95a1248d/rabbita/pkg.generated.mbti)。
+`proton_rabbita.subscribe` 将订阅所有权接入 Rabbita，选项包括订阅 key、重试次数、ready 命令和 client 覆盖。完整签名见 [Rabbita API](https://github.com/moonbit-community/proton/blob/91ffc6210878af84a639d773efdc71669dc47430/rabbita/pkg.generated.mbti)。
 
 JavaScript 接口为 `window.__MoonBit__.app.on(name, callback)`。回调接收包含 `payload` 的事件对象；注册返回取消订阅函数。
 
@@ -211,8 +211,6 @@ on_window_created、on_render_process_gone 等应用生命周期通知是宿主�
 [事件教程](../tutorial/events.md)演示订阅与清理；[Todo 教程](../tutorial/isomorphic.md)演示通知失效后重新查询快照。
 
 ## 窗口与浏览器视图
-
-以下运行时创建窗口 API 尚未发布；Proton 0.5.1 仍使用预先声明窗口与 `open(id)`。
 
 启动窗口配置属于 `App`，动态创建属于 `WindowManager`，运行中的窗口操作属于 `WindowHandle`。浏览器导航和开发者工具属于 `WebContentsHandle`，通过 `WindowHandle.web_contents()` 获取。
 
@@ -290,7 +288,7 @@ on_render_process_gone 同时覆盖主页面和子视图，无需额外订阅 on
 
 **无障碍与无窗口执行**
 
-Web 内容使用 Chromium 原生无障碍树。页面应提供语义化 HTML、ARIA、键盘导航和可见焦点。默认遵循平台无障碍策略；`App.accessibility(AccessibilityMode::AlwaysEnabled)` 使无障碍树在整个运行期间保持可用。参见[各平台无障碍行为](https://github.com/moonbit-community/proton/blob/18915e6b3c852b760dee6550f066f46d95a1248d/proton/README.md#accessibility)。
+Web 内容使用 Chromium 原生无障碍树。页面应提供语义化 HTML、ARIA、键盘导航和可见焦点。默认遵循平台无障碍策略；`App.accessibility(AccessibilityMode::AlwaysEnabled)` 使无障碍树在整个运行期间保持可用。参见[各平台无障碍行为](https://github.com/moonbit-community/proton/blob/91ffc6210878af84a639d773efdc71669dc47430/proton/README.md#accessibility)。
 
 `App.headless()` 或 `PROTON_HEADLESS=1` 使用离屏渲染，不创建原生顶层窗口。原生对话框、菜单、标题栏等依赖窗口的 UI 不可用。Linux 仍需要 X11 display，例如 Xvfb。因此，浏览器自动化与原生窗口行为需要不同的验证环境。
 
@@ -327,7 +325,7 @@ Web 内容使用 Chromium 原生无障碍树。页面应提供语义化 HTML、A
 
 **平台差异与选择**
 
-以下是 0.5.1 已实现能力的主要边界，不承诺缺少桌面服务时仍可用：
+以下是 0.6.0 已实现能力的主要边界，不承诺缺少桌面服务时仍可用：
 
 | 能力 | macOS | Windows | Linux |
 | --- | --- | --- | --- |
@@ -340,7 +338,11 @@ Web 内容使用 Chromium 原生无障碍树。页面应提供语义化 HTML、A
 
 capability 授权与操作系统授权不同。声明屏幕或媒体能力不会自动获得系统隐私权限；系统拒绝、后端不可用与应用未授权应分别处理。托盘等提供 support 查询的能力应先检查支持情况，菜单事件也比各平台鼠标手势更可移植。
 
-**宿主网络与子进程**
+**剪贴板访问**
+
+剪贴板扩展提供异步文本读写命令。直接使用 `proton_clipboard` 时，同样需要在异步上下文调用 `read_text()` 和 `write_text(text)`。读取返回 `Result[String?, String]`，写入返回 `Result[Unit, String]`。操作失败返回 `Err(String)`；取消继续传播，不会转换成操作错误。
+
+Windows 使用原生剪贴板，macOS 使用 `NSPasteboard`。Linux 需要 `wl-clipboard`、`xclip` 或 `xsel`，管道读写和进程等待会让出执行权。取消会停止并回收被调用的工具；写入成功后保留供后续粘贴使用的后台剪贴板所有者进程。
 
 **Shell 操作**
 
@@ -380,11 +382,13 @@ Linux 的显示休眠 scope 对应 logind 的 idle 抑制，不能保证阻止�
 
 扩展通过 `watch_status()` 报告状态：启动前或清理后为 `Stopped`，原生注册完成后为 `Watching`，失败时为 `Unavailable(reason)`。电源监听在异步注册期间还会报告 `Starting`。查询命令独立于事件监听；查询成功不会清除监听错误，也不会重新启动监听。屏幕拓扑事件携带受影响显示器的快照，移除显示器时携带移除前的快照。
 
-Windows 屏幕监听无需可见的应用窗口即可接收显示器分辨率变化通知。
+Windows 屏幕监听无需可见的应用窗口即可接收显示器分辨率变化通知。电源来源事件区分交流电与内置电池，UPS 和未知来源均不产生这两类事件。空闲查询返回调用会话的整秒数，按最后输入计数器的 2^32 毫秒周期（约 49.7 天）取模。
 
 直接使用 `proton_power_monitor` 时，`PowerMonitor.with_watching(callback)` 在回调作用域内拥有监听。异步回调只在注册成功后开始；回调返回、抛错或作用域被取消时，停止监听并等待清理。调用 `destroy()` 前必须结束监听作用域；同一个 monitor 的第二个并发作用域会立即失败。
 
 Linux 电源监听需要 GIO 和系统总线。连接、认证和订阅均可取消，共享五秒的启动期限。总线断开会使作用域失败并取消回调。可以用新的作用域重试，但不会自动重连。Proton 扩展在应用任务中拥有该作用域，并通过 `Unavailable(reason)` 报告失败。
+
+**宿主网络与子进程**
 
 net 扩展在宿主执行 HTTP 请求，返回状态、响应头及 UTF-8 文本；它不等于浏览器 fetch，不共享浏览器 cookie jar，也不自动跟随重定向。二进制数据不是该文本响应接口的无损用途。process 扩展创建的进程属于扩展应用生命周期，wait 回收句柄，kill 后仍需 wait，应用退出会取消并回收剩余子进程。
 
@@ -415,7 +419,7 @@ net 扩展在宿主执行 HTTP 请求，返回状态、响应头及 UTF-8 文本
 它不发送浏览器下载事件。应用可以在自己的命令中调用它，将 token 和目标路径授权留在后端；
 `net.capability()` 不会因此获得文件写入权限。取消和超时使用现有异步任务机制及 `@async.with_timeout`。
 
-完整扩展清单及各范围类型见[扩展 API](https://github.com/moonbit-community/proton/blob/18915e6b3c852b760dee6550f066f46d95a1248d/extensions/pkg.generated.mbti)。访问某个 API 前分别确认：目标授权、操作系统授权、平台后端支持。
+完整扩展清单及各范围类型见[扩展 API](https://github.com/moonbit-community/proton/blob/91ffc6210878af84a639d773efdc71669dc47430/extensions/pkg.generated.mbti)。访问某个 API 前分别确认：目标授权、操作系统授权、平台后端支持。
 
 ## 宿主回调契约
 
@@ -523,7 +527,7 @@ on_session_created 在应用启动钩子创建窗口前提供 partition 和解�
 
 操作要求应用运行时存活，不要求页面存活；错误类型为 `SessionError`。`KeepRunning` 无窗口期间仍可使用句柄；应用退出会唤醒待完成的 Cookie 查询并使保留的会话句柄失效。并发 Cookie 查询相互独立。清理浏览器存储不会删除应用自己管理的文件，也不等于完成业务登出；后端凭据和 UI 状态需单独处理。
 
-完整属性及 StorageDataKind 变体见[API 参考](https://github.com/moonbit-community/proton/blob/18915e6b3c852b760dee6550f066f46d95a1248d/proton/pkg.generated.mbti)。
+完整属性及 StorageDataKind 变体见[API 参考](https://github.com/moonbit-community/proton/blob/91ffc6210878af84a639d773efdc71669dc47430/proton/pkg.generated.mbti)。
 
 ## 应用更新
 
@@ -592,7 +596,7 @@ ApplicationContext.has_single_instance_lock() 查询所有权，release_single_i
 
 `ApplicationContext.focus(steal=...)` 在 macOS 激活应用，`steal` 决定是否允许替换另一个前台应用；在 Windows 和 Linux 聚焦第一个可见窗口。应用级 `hide`、`show`、`is_active` 和 `is_hidden` 仅适用于 macOS，其它平台抛出 `AppControlError::UnsupportedPlatform`。`@proton.is_ready()` 报告应用就绪状态。
 
-CEF 通过 `on_render_process_gone` 报告 renderer 终止，但不提供同等的其它子进程退出通知，因此不支持 Electron 的 `child-process-gone`。浏览器操作映射及其它不支持的 Electron 对应项见[页面控制参考](https://github.com/moonbit-community/proton/blob/18915e6b3c852b760dee6550f066f46d95a1248d/proton/README.md#page-history-and-inserted-css)。
+CEF 通过 `on_render_process_gone` 报告 renderer 终止，但不提供同等的其它子进程退出通知，因此不支持 Electron 的 `child-process-gone`。浏览器操作映射及其它不支持的 Electron 对应项见[页面控制参考](https://github.com/moonbit-community/proton/blob/91ffc6210878af84a639d773efdc71669dc47430/proton/README.md#page-history-and-inserted-css)。
 
 **Dock 与应用徽章**
 
@@ -616,8 +620,8 @@ ApplicationContext.task_metrics() 返回 Chromium task 的 AppTaskMetric 列表�
 
 ## API 参考
 
-- [应用 API](https://github.com/moonbit-community/proton/blob/18915e6b3c852b760dee6550f066f46d95a1248d/proton/pkg.generated.mbti)
-- [扩展 API](https://github.com/moonbit-community/proton/blob/18915e6b3c852b760dee6550f066f46d95a1248d/extensions/pkg.generated.mbti)
-- [类型化契约](https://github.com/moonbit-community/proton/blob/18915e6b3c852b760dee6550f066f46d95a1248d/contract/pkg.generated.mbti)
-- [前端客户端](https://github.com/moonbit-community/proton/blob/18915e6b3c852b760dee6550f066f46d95a1248d/client/pkg.generated.mbti)
-- [Rabbita 集成](https://github.com/moonbit-community/proton/blob/18915e6b3c852b760dee6550f066f46d95a1248d/rabbita/pkg.generated.mbti)
+- [应用 API](https://github.com/moonbit-community/proton/blob/91ffc6210878af84a639d773efdc71669dc47430/proton/pkg.generated.mbti)
+- [扩展 API](https://github.com/moonbit-community/proton/blob/91ffc6210878af84a639d773efdc71669dc47430/extensions/pkg.generated.mbti)
+- [类型化契约](https://github.com/moonbit-community/proton/blob/91ffc6210878af84a639d773efdc71669dc47430/contract/pkg.generated.mbti)
+- [前端客户端](https://github.com/moonbit-community/proton/blob/91ffc6210878af84a639d773efdc71669dc47430/client/pkg.generated.mbti)
+- [Rabbita 集成](https://github.com/moonbit-community/proton/blob/91ffc6210878af84a639d773efdc71669dc47430/rabbita/pkg.generated.mbti)

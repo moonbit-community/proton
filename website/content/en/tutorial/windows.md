@@ -1,7 +1,5 @@
 # Managing windows
 
-The runtime window creation API below is unreleased; Proton 0.5.1 still uses declared windows and `open(id)`.
-
 This tutorial adds a secondary window to the [minimal application](first-app.md), then controls its visibility and closing behavior. Start from that project with its existing package imports; replace its entry point with the code below.
 
 ## Create a second window
@@ -74,6 +72,6 @@ Set `WindowConfig.close_handler` for an asynchronous close decision: return `Win
 
 ## Platform-specific window behavior
 
-Native window decorations and available controls differ across platforms. Check the [window API](https://github.com/moonbit-community/proton/blob/18915e6b3c852b760dee6550f066f46d95a1248d/proton/pkg.generated.mbti) before relying on platform-specific methods. Keep frontend titlebar layout and native configuration together when using an overlay titlebar.
+Native window decorations and available controls differ across platforms. Check the [window API](https://github.com/moonbit-community/proton/blob/91ffc6210878af84a639d773efdc71669dc47430/proton/pkg.generated.mbti) before relying on platform-specific methods. Keep frontend titlebar layout and native configuration together when using an overlay titlebar.
 
 A secondary page is also a separate capability target. Grant only the host operations it needs; see [native capabilities](capabilities.md).

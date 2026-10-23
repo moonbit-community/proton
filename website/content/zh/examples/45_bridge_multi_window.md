@@ -1,8 +1,8 @@
 # 多窗口命令
 
-本示例在同一个应用中按需创建窗口，并明确授权一组窗口 ID 调用命令。示例使用尚未发布的运行时创建 API。
+本示例在同一个应用中按需创建窗口，并明确授权一组窗口 ID 调用命令。
 
-[45_bridge_multi_window](https://github.com/moonbit-community/proton/tree/main/examples/45_bridge_multi_window) · 关键文件：[main.mbt](https://github.com/moonbit-community/proton/tree/main/examples/45_bridge_multi_window/main.mbt)
+[45_bridge_multi_window](https://github.com/moonbit-community/proton/tree/91ffc6210878af84a639d773efdc71669dc47430/examples/45_bridge_multi_window) · 关键文件：[main.mbt](https://github.com/moonbit-community/proton/tree/91ffc6210878af84a639d773efdc71669dc47430/examples/45_bridge_multi_window/main.mbt)
 
 ## 行为
 
