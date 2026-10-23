@@ -1,8 +1,8 @@
 # Environment requirements
 
-The installation commands below target Proton 0.5.1. See [Release Notes](../release-notes/releases.md) for API migration details.
+The installation commands below target Proton 0.6.0 (not yet published); they become available after publication. See [Release Notes](../release-notes/releases.md) for API migration details.
 
-Proton 0.5.1 supports the following host build environments. Native builds and packages target the host operating system; cross-compilation is not provided by the Proton CLI.
+Proton 0.6.0 supports the following host build environments. Native builds and packages target the host operating system; cross-compilation is not provided by the Proton CLI.
 
 | Platform | Architecture | Build requirements |
 | --- | --- | --- |
@@ -21,11 +21,11 @@ NSIS is required only for NSIS output. Signing identities and notarization crede
 | Tool | Role | Installation or inspection |
 | --- | --- | --- |
 | MoonBit | Compiler, package manager and runtime tools | [Official installation](https://www.moonbitlang.com/download/); `moon version` |
-| Proton CLI | Project development and packaging | `moon install moonbit-community/proton_cli@0.5.1`; `proton_cli --version` |
+| Proton CLI | Project development and packaging | `moon install moonbit-community/proton_cli@0.6.0`; `proton_cli --version` |
 | Warren | Isomorphic frontend dev server and build | `moon install moonbit-community/warren@0.4.5`; `warren --help` |
 | Node.js / npm | Warren's JavaScript build tooling | [Node.js installation](https://nodejs.org/en/download); `node --version`, `npm --version` |
 
-Use the MoonBit `latest` toolchain channel for Proton 0.5.1. The sources require explicit `Int32` / `UInt32` types, the updated labeled-parameter syntax, and JSON parsing with `preserve_number_repr`. The older 2026-10-12 stable toolchain is insufficient. Select `latest` when installing MoonBit and check the installed version with `moon version`.
+Use the MoonBit `latest` toolchain channel for Proton 0.6.0. The sources require explicit `Int32` / `UInt32` types, the updated labeled-parameter syntax, and JSON parsing with `preserve_number_repr`. The older 2026-10-12 stable toolchain is insufficient. Select `latest` when installing MoonBit and check the installed version with `moon version`.
 
 MoonBit's binary directory must be on PATH. Minimal applications with inline HTML do not require Warren or Node.js. `moonx`'s deprecated native mode is not required by the documented frontend commands.
 
@@ -50,7 +50,7 @@ Examples use the repository workspace. Clone the release commit, install the [re
 ```sh
 git clone https://github.com/moonbit-community/proton.git
 cd proton
-git checkout 18915e6b3c852b760dee6550f066f46d95a1248d
+git checkout 91ffc6210878af84a639d773efdc71669dc47430
 moon update
 proton_cli cef setup
 ```

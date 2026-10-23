@@ -1,7 +1,5 @@
 # 管理窗口
 
-以下运行时创建窗口 API 尚未发布；Proton 0.5.1 仍使用预先声明窗口与 `open(id)`。
-
 本教程在[最小应用](first-app.md)中增加辅助窗口，并控制窗口的显示和关闭行为。请从该项目开始，保留已有包导入，用下面的代码替换应用入口。
 
 ## 创建第二个窗口
@@ -74,6 +72,6 @@ async fn main {
 
 ## 平台相关的窗口行为
 
-原生窗口装饰和可用控制项因平台而异。依赖平台专属方法前，请查询[窗口 API](https://github.com/moonbit-community/proton/blob/18915e6b3c852b760dee6550f066f46d95a1248d/proton/pkg.generated.mbti)。使用叠加标题栏时，需要一起处理前端标题栏布局与原生配置。
+原生窗口装饰和可用控制项因平台而异。依赖平台专属方法前，请查询[窗口 API](https://github.com/moonbit-community/proton/blob/91ffc6210878af84a639d773efdc71669dc47430/proton/pkg.generated.mbti)。使用叠加标题栏时，需要一起处理前端标题栏布局与原生配置。
 
 辅助页面也是独立的 capability 目标，只应授予其所需的宿主操作，见[原生能力](capabilities.md)。

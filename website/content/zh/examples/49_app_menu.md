@@ -2,7 +2,7 @@
 
 本例创建原生应用菜单，并在窗口运行期间更新菜单项状态。菜单操作通过存活的窗口句柄执行，窗口关闭时清除该引用。
 
-[49_app_menu](https://github.com/moonbit-community/proton/tree/18915e6b3c852b760dee6550f066f46d95a1248d/examples/49_app_menu) · 关键文件：[main.mbt](https://github.com/moonbit-community/proton/tree/18915e6b3c852b760dee6550f066f46d95a1248d/examples/49_app_menu/main.mbt)
+[49_app_menu](https://github.com/moonbit-community/proton/tree/91ffc6210878af84a639d773efdc71669dc47430/examples/49_app_menu) · 关键文件：[main.mbt](https://github.com/moonbit-community/proton/tree/91ffc6210878af84a639d773efdc71669dc47430/examples/49_app_menu/main.mbt)
 
 ## 行为
 

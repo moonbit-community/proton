@@ -1,6 +1,8 @@
 # Release Notes
 
-## 未发布
+## 0.6.0（未发布）
+
+0.6.0 新增运行时创建窗口和带鉴权的文件下载，将剪贴板及休眠抑制 API 改为异步操作，并修复 Windows 监听问题。使用相关 API 的已有应用需要按下文迁移。
 
 **运行时创建窗口（破坏性 API 变更）**
 
@@ -42,6 +44,22 @@ Linux keep-awake 现在等待明确取得休眠抑制后才成功，不再把辅
 的任务组，并在异步上下文调用 `release()`。`with_keepawake` 改为接收异步回调，
 作用域结束时释放保护；Linux 辅助进程意外退出时取消回调并报错。前端扩展命令保持
 不变，由扩展自动管理生命周期。参见[休眠抑制用法](../introduction/application-api.md#扩展与能力)。
+
+**剪贴板访问（破坏性 API 变更）**
+
+直接使用 `proton_clipboard` 时，必须在异步上下文调用 `read_text()` 和 `write_text(text)`。返回值仍为 `Result`：操作失败返回 `Err(String)`，取消通过异步运行时传播。前端扩展命令保持不变。
+
+macOS 使用原生剪贴板。Linux 继续使用 `wl-clipboard`、`xclip` 或 `xsel`，管道读写和进程等待现在会让出事件循环。取消会停止并回收被调用的工具；写入成功后保留供后续粘贴使用的剪贴板所有者进程。
+
+**Windows 电源监听**
+
+交流电和内置电池通知现在正确产生 `OnAC` 和 `OnBattery`，UPS 和未知电源不再产生误导事件。32 位最后输入计数器回绕后，空闲时间查询不再将系统运行时间的高位计入空闲时长。计数器仍无法区分跨越完整周期（约 49.7 天）的空闲间隔。
+
+**升级要求**
+
+0.6.0 发布后，将 CLI 和应用的 `proton_*` 依赖一起升级。按上述说明迁移窗口创建及直接调用的剪贴板／休眠抑制接口，执行 `proton_cli cef setup`，再使用匹配的 helper 重新打包应用。MoonBit `latest` 工具链要求和 CEF 版本不变。安装 CLI 不会改写已有应用源码。
+
+[完整改动](https://github.com/moonbit-community/proton/compare/c63c9d2963551802481f4b2f13094afcce9222a5...91ffc6210878af84a639d773efdc71669dc47430)
 
 ## 0.5.1
 

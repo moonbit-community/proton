@@ -2,7 +2,7 @@
 
 This example keeps HTML in a separate source file and embeds it in the executable as a MoonBit string. It demonstrates how to maintain page content separately without requiring a runtime HTML file.
 
-[12_embed](https://github.com/moonbit-community/proton/tree/18915e6b3c852b760dee6550f066f46d95a1248d/examples/12_embed) · Source files: [main.mbt](https://github.com/moonbit-community/proton/tree/18915e6b3c852b760dee6550f066f46d95a1248d/examples/12_embed/main.mbt), [hello.html](https://github.com/moonbit-community/proton/tree/18915e6b3c852b760dee6550f066f46d95a1248d/examples/12_embed/hello.html), [hello.mbt](https://github.com/moonbit-community/proton/tree/18915e6b3c852b760dee6550f066f46d95a1248d/examples/12_embed/hello.mbt), [moon.pkg](https://github.com/moonbit-community/proton/tree/18915e6b3c852b760dee6550f066f46d95a1248d/examples/12_embed/moon.pkg)
+[12_embed](https://github.com/moonbit-community/proton/tree/91ffc6210878af84a639d773efdc71669dc47430/examples/12_embed) · Source files: [main.mbt](https://github.com/moonbit-community/proton/tree/91ffc6210878af84a639d773efdc71669dc47430/examples/12_embed/main.mbt), [hello.html](https://github.com/moonbit-community/proton/tree/91ffc6210878af84a639d773efdc71669dc47430/examples/12_embed/hello.html), [hello.mbt](https://github.com/moonbit-community/proton/tree/91ffc6210878af84a639d773efdc71669dc47430/examples/12_embed/hello.mbt), [moon.pkg](https://github.com/moonbit-community/proton/tree/91ffc6210878af84a639d773efdc71669dc47430/examples/12_embed/moon.pkg)
 
 ## Behavior
 

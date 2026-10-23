@@ -2,7 +2,7 @@
 
 本例直接使用 HTML 字符串启动原生窗口，展示应用入口最基本的三个部分：页面内容、应用标识和运行应用。
 
-[01_run](https://github.com/moonbit-community/proton/tree/18915e6b3c852b760dee6550f066f46d95a1248d/examples/01_run) · 关键文件：[main.mbt](https://github.com/moonbit-community/proton/tree/18915e6b3c852b760dee6550f066f46d95a1248d/examples/01_run/main.mbt)
+[01_run](https://github.com/moonbit-community/proton/tree/91ffc6210878af84a639d773efdc71669dc47430/examples/01_run) · 关键文件：[main.mbt](https://github.com/moonbit-community/proton/tree/91ffc6210878af84a639d773efdc71669dc47430/examples/01_run/main.mbt)
 
 ## 行为
 

@@ -1,8 +1,8 @@
 # 运行环境要求
 
-以下安装命令面向 Proton 0.5.1。API 迁移方法见 [Release Notes](../release-notes/releases.md)。
+以下安装命令面向尚未发布的 Proton 0.6.0，正式发布后可用。API 迁移方法见 [Release Notes](../release-notes/releases.md)。
 
-Proton 0.5.1 支持以下宿主构建环境。原生构建与打包面向当前操作系统，Proton CLI 不提供跨操作系统交叉编译流程。
+Proton 0.6.0 支持以下宿主构建环境。原生构建与打包面向当前操作系统，Proton CLI 不提供跨操作系统交叉编译流程。
 
 | 平台 | 架构 | 构建要求 |
 | --- | --- | --- |
@@ -21,11 +21,11 @@ NSIS 仅用于 NSIS 格式产物。签名身份和公证凭据属于分发要求
 | 工具 | 职责 | 安装或检查 |
 | --- | --- | --- |
 | MoonBit | 编译器、包管理器和运行工具 | [官方安装](https://www.moonbitlang.com/download/)；`moon version` |
-| Proton CLI | 项目开发与打包 | `moon install moonbit-community/proton_cli@0.5.1`；`proton_cli --version` |
+| Proton CLI | 项目开发与打包 | `moon install moonbit-community/proton_cli@0.6.0`；`proton_cli --version` |
 | Warren | isomorphic 前端开发服务器与构建 | `moon install moonbit-community/warren@0.4.5`；`warren --help` |
 | Node.js / npm | Warren 的 JavaScript 构建工具 | [Node.js 安装](https://nodejs.org/en/download)；`node --version`、`npm --version` |
 
-Proton 0.5.1 使用 MoonBit 的 `latest` 工具链通道。源码需要显式 `Int32` / `UInt32` 类型、更新后的标签参数语法，以及支持 `preserve_number_repr` 的 JSON 解析接口。旧的 2026-10-12 stable 工具链不足以构建此版本。安装 MoonBit 时选择 `latest`，并用 `moon version` 检查安装版本。
+Proton 0.6.0 使用 MoonBit 的 `latest` 工具链通道。源码需要显式 `Int32` / `UInt32` 类型、更新后的标签参数语法，以及支持 `preserve_number_repr` 的 JSON 解析接口。旧的 2026-10-12 stable 工具链不足以构建此版本。安装 MoonBit 时选择 `latest`，并用 `moon version` 检查安装版本。
 
 MoonBit 二进制目录必须在 PATH 中。使用内联 HTML 的 minimal 应用不需要 Warren 或 Node.js。本文档的前端命令不依赖已弃用的 native `moonx` 模式。
 
@@ -50,7 +50,7 @@ MoonBit 二进制目录必须在 PATH 中。使用内联 HTML 的 minimal 应用
 ```sh
 git clone https://github.com/moonbit-community/proton.git
 cd proton
-git checkout 18915e6b3c852b760dee6550f066f46d95a1248d
+git checkout 91ffc6210878af84a639d773efdc71669dc47430
 moon update
 proton_cli cef setup
 ```
