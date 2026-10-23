@@ -7,11 +7,24 @@
 在存放项目的目录中执行，不要放在另一个 MoonBit 工作区内部：
 
 ```sh
-proton_cli new hello-proton --template minimal --yes
+proton_cli new hello-proton --template minimal
+```
+
+也可以直接用 `moon-new` 创建相同的项目（两个创建命令任选其一）：
+
+```sh
+moonx moonbit-community/moon-new hello-proton \
+  --template moonbit-community/proton --branch main \
+  --subdir templates/minimal
+```
+
+然后进入项目，继续执行相同的准备步骤：
+
+```sh
 cd hello-proton
 ```
 
-这里需要明确指定 `--template minimal`：非交互模式的默认模板是 `isomorphic`。`--yes` 接受生成器的默认值。准备分发的应用可以在创建时用 `--identifier com.example.hello-proton` 指定标识。
+明确指定 `--template minimal`，因为默认模板是 `isomorphic`。分发应用前，在 `proton.project.json` 中将 `identifier` 改为自己的唯一标识，例如 `com.example.hello-proton`。
 
 ## 模板文件
 

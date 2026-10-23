@@ -154,9 +154,20 @@ native checks before handing off larger refactors.
 - After the release commit reaches `main`, dispatch the `publish-packages`
   workflow. Do not publish these modules from a contributor workstation.
 
-- Never publish `proton_cli` while the version referenced by the `proton new`
-  template is absent from Mooncakes. A template dependency must be published
-  and independently resolvable before the CLI release becomes visible.
+- `proton_cli new` invokes `moon-new@0.1.0` using `templates/` on `main`.
+  Direct creation is also supported:
+  `moonx moonbit-community/moon-new <path> --template moonbit-community/proton --branch main --subdir templates/isomorphic`.
+  Use `templates/minimal` for the minimal template and `--user` instead of
+  `--author`. Document both creation routes; keep CLI release acceptance using
+  `proton_cli new` so it exercises the published wrapper too.
+  Templates reference published dependencies and are not lockstep workspace
+  members. Update those requirements only after the dependencies are published.
+  Validate template changes with
+  `node scripts/e2e_scaffold_source_smoke.mjs --scaffold-only`; the full command
+  also checks the packaged isomorphic application on macOS.
+  The registry acceptance checks the generated scaffold, then upgrades its
+  Proton dependencies through `moon add` to verify the newly published release.
+
 - After all packages are visible, install the registry CLI and run a smoke test
   from a temporary directory outside this repository and outside any parent
   `moon.work`. Do not use symlinks, local module members, or source overrides:
@@ -165,8 +176,9 @@ native checks before handing off larger refactors.
   moon install moonbit-community/proton_cli
   node ./scripts/e2e_scaffold_registry_smoke.mjs
   tmp_dir="$(mktemp -d)"
-  proton_cli -C "$tmp_dir" new release-smoke --title "Release Smoke" \
-    --identifier "com.example.proton-release-smoke" -y --no-git
+  # Alternatively, replace the next line with:
+  # moonx moonbit-community/moon-new "$tmp_dir/release-smoke" --template moonbit-community/proton --branch main --subdir templates/isomorphic
+  proton_cli -C "$tmp_dir" new release-smoke
   proton_cli -C "$tmp_dir/release-smoke" cef setup
   proton_cli -C "$tmp_dir/release-smoke" build
   proton_cli -C "$tmp_dir/release-smoke" package --release --format app --dry-run

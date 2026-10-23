@@ -65,11 +65,14 @@ test "macOS bundle defines the complete CEF helper family" {
 ///|
 test "macOS helper plist matches its bundle identity" {
   let spec = test_staging_plan(".")
-  let helper = macos_helper_specs(spec.product_name, spec.identifier)[4]
+  let helper = macos_helper_specs(
+      "Demo & {{IDENTIFIER}} {{NAME}}",
+      spec.identifier,
+    )[4]
   let plist = helper_info_plist(spec, helper)
   assert_true(
     plist.contains(
-      "<key>CFBundleExecutable</key><string>Demo &amp; App Helper (Renderer)</string>",
+      "<key>CFBundleExecutable</key><string>Demo &amp; {{IDENTIFIER}} {{NAME}} Helper (Renderer)</string>",
     ),
   )
   assert_true(

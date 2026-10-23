@@ -9,7 +9,20 @@
 在另一个 MoonBit 工作区之外执行：
 
 ```sh
-proton_cli new todo-app --template isomorphic --yes
+proton_cli new todo-app --template isomorphic
+```
+
+也可以直接用 `moon-new` 创建相同的项目（两个创建命令任选其一）：
+
+```sh
+moonx moonbit-community/moon-new todo-app \
+  --template moonbit-community/proton --branch main \
+  --subdir templates/isomorphic
+```
+
+然后进入项目，继续执行相同的准备步骤：
+
+```sh
 cd todo-app
 moon update
 moon install moonbit-community/warren@0.4.5

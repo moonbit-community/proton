@@ -55,27 +55,6 @@ function checkEqual(label, actual, expected) {
   }
 }
 
-function templateDefault(text, name) {
-  const match = text.match(
-    new RegExp(`^let ${name}\\s*=\\s*"([^"]+)"`, "m"),
-  );
-  if (!match) {
-    failures.push(`cli/new/templates.mbt: missing ${name}`);
-    return null;
-  }
-  return match[1];
-}
-
-function checkTemplateDefaults(expected) {
-  const text = readText("cli/new/templates.mbt");
-  for (const [name, version] of Object.entries(expected)) {
-    const actual = templateDefault(text, name);
-    if (actual !== null) {
-      checkEqual(`cli/new/templates.mbt ${name}`, actual, version);
-    }
-  }
-}
-
 const workspaceModuleManifests = [
   "cdp/moon.mod",
   "codegen/moon.mod",
@@ -126,21 +105,11 @@ function checkLockstepVersions(expectedVersion) {
 }
 
 const protonVersion = moduleVersion("proton/moon.mod");
-const codegenVersion = moduleVersion("codegen/moon.mod");
 const configVersion = moduleVersion("config/moon.mod");
 const contractVersion = moduleVersion("contract/moon.mod");
 const clientVersion = moduleVersion("client/moon.mod");
-const rabbitaVersion = moduleVersion("rabbita/moon.mod");
 const cliVersion = moduleVersion("cli/moon.mod");
 checkLockstepVersions(protonVersion);
-checkTemplateDefaults({
-  default_proton_version: protonVersion,
-  default_proton_codegen_version: codegenVersion,
-  default_proton_cli_version: cliVersion,
-  default_proton_contract_version: contractVersion,
-  default_proton_client_version: clientVersion,
-  default_proton_rabbita_version: rabbitaVersion,
-});
 checkEqual(
   "proton/moon.mod proton_config dependency",
   moduleImportVersion("proton/moon.mod", "moonbit-community/proton_config"),

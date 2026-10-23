@@ -47,3 +47,6 @@ bisect.coverage
 
 # Local linked worktrees created by Claude Code.
 .claude/worktrees/
+
+# Templates are rendered before checking; do not ship editor-generated interfaces.
+/templates/**/pkg.generated.mbti

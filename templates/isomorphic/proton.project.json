@@ -1,0 +1,19 @@
+{
+  "identifier": "com.example.proton-app",
+  "backend": {
+    "path": ".",
+    "package": "backend/app"
+  },
+  "package": {
+    "product_name": "Proton App",
+    "version": "0.1.0",
+    "output": "dist"
+  },
+  "frontend": {
+    "path": "frontend",
+    "dev_url": "http://127.0.0.1:4300",
+    "before_dev": "warren dev --browser-entry main --direct --port 4300",
+    "before_build": "warren build --browser-entry main",
+    "dist": "dist"
+  }
+}

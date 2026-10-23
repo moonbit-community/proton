@@ -48,27 +48,51 @@ proton_cli version
 
 ## `new`
 
+**未发布：** 以下接口替代 0.6.0 中的项目生成器。
+
 ```text
 proton_cli new [path] [options]
 ```
 
-创建项目源码。未指定 `--yes` 且不在 CI 环境时使用交互提示。以下默认值适用于没有交互输入或显式选项覆盖的情况。
+通过 `moon-new@0.1.0` 创建项目，使用 Proton 仓库 `main` 分支上的
+`templates/minimal` 或 `templates/isomorphic`。需要网络连接。模板内容可以独立于已安装的
+CLI 更新；模板引用已发布的依赖。
 
-| 参数 / 选项 | 默认值及含义 |
+也可以直接调用 `moon-new`，创建项目时不必安装 Proton CLI。
+默认的 `isomorphic` 模板对应：
+
+```sh
+moonx moonbit-community/moon-new my-app \
+  --template moonbit-community/proton --branch main \
+  --subdir templates/isomorphic
+```
+
+minimal 模板使用 `--subdir templates/minimal`。直接调用时，`--template` 指定仓库，
+`--subdir` 选择 Proton 模板，`--user <name>` 对应 `proton_cli new --author <name>`。
+需要明确传入目标路径；替代 `proton_cli -C <dir> new <name>` 时，传入 `<dir>/<name>`。
+后续的 `dev`、`build` 和 `package` 仍使用 `proton_cli`。
+
+| 参数 / 选项 | 默认值与含义 |
 | --- | --- |
-| `[path]` | `todo`；目标目录 |
-| `--template <name>` | `isomorphic`；可选 `minimal`、`isomorphic` |
-| `--title <text>` | 根据项目目录名生成；应用及窗口标题 |
-| `--author <name>` | `username`；MoonBit 模块作者 |
-| `--identifier <id>` | `dev.proton.<规范化项目名>`；反向域名形式的应用标识 |
-| `--width <pixels>` | `960`；正整数 |
-| `--height <pixels>` | `640`；正整数 |
-| `--check`、`--no-check` | 默认开启；创建后执行 `moon check --target js,native` |
-| `--git`、`--no-git` | 显式启用或禁用 Git 初始化；非交互默认不初始化 Git |
-| `-y`、`--yes` | 跳过提示并接受默认值 |
-| `--dry-run` | 打印计划生成的文件，不写入文件 |
+| `[path]` | `todo`；目标目录，必须不存在或为空 |
+| `--template <name>` | `isomorphic`；接受 `minimal` 或 `isomorphic` |
+| `--author <name>` | 传给 moon-new 的 `--user`；省略时由 moon-new 使用 Moon 账户用户名，或回退为 `username` |
 
-`minimal` 创建内嵌 HTML 的原生模块；`isomorphic` 创建 shared、frontend、backend 三个模块。无效标识、非正数尺寸和不支持的模板名会被拒绝。
+`minimal` 创建包含内联 HTML 的原生模块，`isomorphic` 创建 shared、frontend、backend
+三个模块。项目名从目标目录推导。创建过程没有交互提问；除非项目位于已有 Git 仓库内，
+否则 `moon-new` 会初始化 Git。
+
+两种模板初始标题均为 `Proton App`，窗口尺寸为 960 × 640，应用标识为
+`com.example.proton-app`。在 `proton.project.json` 中修改 `identifier` 和
+`package.product_name`，在 `app/main.mbt`（minimal）或 `backend/app/main.mbt`
+（isomorphic）中修改标题与尺寸。如有前端标题，也需相应修改。分发前应设置唯一的应用标识。
+
+创建过程不执行编译检查。minimal 使用 `moon check --target native`，isomorphic 使用
+`moon check --target js,native`。
+
+**从 0.6.0 迁移：** 从 `new` 调用中移除 `--title`、`--identifier`、`--width`、`--height`、
+`--check`/`--no-check`、`--git`/`--no-git`、`--dry-run` 和 `-y`/`--yes`。
+这些选项不再接受；改为编辑生成的项目，并显式执行检查。
 
 
 ## `dev`

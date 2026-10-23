@@ -48,27 +48,57 @@ Prints `proton_cli <version>`. It accepts no command-specific options and does n
 
 ## `new`
 
+**Unreleased:** the interface below replaces the project generator in 0.6.0.
+
 ```text
 proton_cli new [path] [options]
 ```
 
-Creates project source files. Without `--yes`, interactive prompts are used outside CI. The defaults below apply when no prompt or explicit option overrides them.
+Creates a project with `moon-new@0.1.0`, using `templates/minimal` or
+`templates/isomorphic` from the Proton repository's `main` branch. Network access
+is required. Template contents can evolve independently of the installed CLI;
+templates reference published dependencies.
+
+You can invoke `moon-new` directly without installing the Proton CLI.
+For the default `isomorphic` template:
+
+```sh
+moonx moonbit-community/moon-new my-app \
+  --template moonbit-community/proton --branch main \
+  --subdir templates/isomorphic
+```
+
+Use `--subdir templates/minimal` for the minimal template. With direct invocation,
+`--template` specifies the repository, `--subdir` selects the Proton template,
+and `--user <name>` corresponds to `proton_cli new --author <name>`. Pass the
+destination path explicitly; to replace `proton_cli -C <dir> new <name>`, pass
+`<dir>/<name>` as that path. The remaining `dev`, `build` and `package` commands
+still belong to `proton_cli`.
 
 | Argument / option | Default and meaning |
 | --- | --- |
-| `[path]` | `todo`; destination directory |
+| `[path]` | `todo`; destination directory, which must be absent or empty |
 | `--template <name>` | `isomorphic`; accepts `minimal` or `isomorphic` |
-| `--title <text>` | Derived from the project directory name; application/window title |
-| `--author <name>` | `username`; MoonBit module author |
-| `--identifier <id>` | `dev.proton.<normalized-project-name>`; reverse-DNS application identifier |
-| `--width <pixels>` | `960`; positive integer |
-| `--height <pixels>` | `640`; positive integer |
-| `--check`, `--no-check` | Check enabled by default; runs `moon check --target js,native` after creation |
-| `--git`, `--no-git` | Explicitly enable/disable Git initialization; non-interactive default does not initialize Git |
-| `-y`, `--yes` | Skip prompts and accept defaults |
-| `--dry-run` | Print planned files without writing them |
+| `--author <name>` | Passed as moon-new's `--user`; if omitted, moon-new uses the Moon account username or `username` |
 
-`minimal` creates a native module with inline HTML. `isomorphic` creates shared, frontend and backend modules. Invalid identifiers, nonpositive dimensions and unsupported template names are rejected.
+`minimal` creates a native module with inline HTML. `isomorphic` creates shared,
+frontend and backend modules. The project name is inferred from the destination
+directory. Creation is non-interactive. `moon-new` initializes Git unless the
+project is already inside a Git repository.
+
+Both templates start with the title `Proton App`, a 960 × 640 window and the
+identifier `com.example.proton-app`. Change `identifier` and `package.product_name`
+in `proton.project.json`, and the title and dimensions in `app/main.mbt`
+(minimal) or `backend/app/main.mbt` (isomorphic). Change frontend titles separately
+when applicable. Set a unique application identifier before distribution.
+
+Creation does not run compilation. Run `moon check --target native` for minimal,
+or `moon check --target js,native` for isomorphic.
+
+**Migration from 0.6.0:** remove `--title`, `--identifier`, `--width`, `--height`,
+`--check`/`--no-check`, `--git`/`--no-git`, `--dry-run` and `-y`/`--yes` from
+`new` invocations. These options are no longer accepted. Edit the generated
+project and run checks explicitly instead.
 
 
 ## `dev`

@@ -15,7 +15,7 @@ with the application on each supported platform.
 
 ## Quick start
 
-This README targets Proton 0.6.0 (not yet published). The versioned installation command below becomes available after publication.
+This README targets Proton 0.6.0. Changes to project creation are described in the [unreleased notes](website/content/en/release-notes/releases.md#unreleased).
 
 Install [MoonBit and the native build prerequisites](website/content/en/introduction/installation.md)
 for your platform. The default template uses Rabbita for its MoonBit frontend
@@ -25,12 +25,25 @@ prerequisites. Run these commands outside another MoonBit workspace:
 ```sh
 moon install moonbit-community/proton_cli@0.6.0
 moon install moonbit-community/warren@0.4.5
-proton_cli new my-app --yes
+proton_cli new my-app
 cd my-app
 moon update
 proton_cli cef setup
 proton_cli dev
 ```
+
+You can create the same project directly with `moon-new`. Replace the
+`proton_cli new my-app` command above with:
+
+```sh
+moonx moonbit-community/moon-new my-app \
+  --template moonbit-community/proton --branch main \
+  --subdir templates/isomorphic
+```
+
+Use `--subdir templates/minimal` for the minimal template. Direct creation does
+not require installing `proton_cli`; keep the CLI for the subsequent development,
+build and packaging commands.
 
 The default `isomorphic` template creates a working Todo application with three
 modules: a shared command contract, a Rabbita frontend and a native backend.

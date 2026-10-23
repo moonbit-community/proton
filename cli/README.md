@@ -5,8 +5,23 @@ desktop applications. See the repository [README](../README.md) for application
 workflows and configuration.
 
 `proton_cli new` offers a single-module `minimal` template and a full-stack
-`isomorphic` template. Select one interactively or pass
-`--template minimal|isomorphic`; `isomorphic` is the non-interactive default.
+`isomorphic` template. It invokes `moon-new@0.1.0` with the selected template
+from this repository's `main` branch. Pass `--template minimal|isomorphic`;
+`isomorphic` is the default. Only the destination path, `--template` and `--author`
+are accepted. Creation is non-interactive and does not run `moon check`.
+Customize the generated configuration and application source after creation.
+
+Direct creation is also supported, without installing the Proton CLI:
+
+```sh
+moonx moonbit-community/moon-new my-app \
+  --template moonbit-community/proton --branch main \
+  --subdir templates/isomorphic
+```
+
+Use `--subdir templates/minimal` for `--template minimal`, and `--user <name>`
+for the CLI's `--author <name>`. The CLI remains useful for `dev`, `build` and
+`package` after creation.
 
 On Windows, `build` and `package` compile the first `.ico` in `package.icons`
 into the application executable using the Windows SDK resource compiler. This

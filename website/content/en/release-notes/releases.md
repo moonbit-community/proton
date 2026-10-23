@@ -1,6 +1,24 @@
 # Release Notes
 
-## 0.6.0 (unreleased)
+## Unreleased
+
+**Project creation**
+
+`proton_cli new` delegates to `moon-new` and downloads the selected template from
+Proton's `main` branch. It retains the destination path, `--template` and
+`--author`. Creation no longer prompts or runs `moon check`. Git initialization
+follows moon-new's behavior.
+
+Projects can also be created directly with `moonx moonbit-community/moon-new`,
+using `--template moonbit-community/proton --branch main` and
+`--subdir templates/minimal` or `--subdir templates/isomorphic`.
+Use `--user` in place of the CLI's `--author`.
+
+Remove the old title, identifier, window size, check, Git, dry-run and confirmation
+options. Customize the generated configuration and source files instead; run
+checks explicitly. See the [new command](../command-line-interface/commands.md#new).
+
+## 0.6.0
 
 0.6.0 adds runtime window creation and authenticated file downloads, changes clipboard and keep-awake APIs to asynchronous operation, and fixes Windows monitoring. Existing applications using the affected APIs need the migrations below.
 

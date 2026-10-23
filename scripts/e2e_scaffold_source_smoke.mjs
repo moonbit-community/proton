@@ -15,6 +15,7 @@ const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "proton-scaffold-e2e-"));
 const projectDir = path.join(tempRoot, "todo");
 const frontendDir = path.join(projectDir, "frontend");
 const frontendDist = path.join(frontendDir, "dist");
+const scaffoldOnly = process.argv.includes("--scaffold-only");
 const warrenCoordinate = "moonbit-community/warren@0.4.5";
 let appProcess = null;
 let staticServer = null;
@@ -88,6 +89,7 @@ function walkFiles(root, relative = "") {
   for (const entry of fs.readdirSync(path.join(root, relative), {
     withFileTypes: true,
   })) {
+    if (entry.name === ".git") continue;
     const child = path.join(relative, entry.name);
     if (entry.isDirectory()) {
       files.push(...walkFiles(root, child));
@@ -207,7 +209,7 @@ function verifyPackagedApp() {
   const appDir = path.join(
     projectDir,
     "dist",
-    "Todo E2E.app",
+    "Proton App.app",
   );
   assert(fs.existsSync(appDir), `packaged app is missing: ${appDir}`);
   for (const asset of ["index.html", "index.js", "styles.css"]) {
@@ -231,11 +233,11 @@ function verifyPackagedApp() {
     `expected one app executable, found: ${executables.join(", ")}`,
   );
   const helperNames = [
-    "Todo E2E Helper",
-    "Todo E2E Helper (Alerts)",
-    "Todo E2E Helper (GPU)",
-    "Todo E2E Helper (Plugin)",
-    "Todo E2E Helper (Renderer)",
+    "Proton App Helper",
+    "Proton App Helper (Alerts)",
+    "Proton App Helper (GPU)",
+    "Proton App Helper (Plugin)",
+    "Proton App Helper (Renderer)",
   ];
   for (const helperName of helperNames) {
     const helper = path.join(
@@ -400,10 +402,10 @@ async function waitForPage(cdpPort) {
     return targets.find(
       (target) =>
         target.type === "page" &&
-        target.title === "Todo E2E" &&
+        target.title === "Proton App" &&
         target.webSocketDebuggerUrl,
     );
-  }, "the Todo E2E page");
+  }, "the Proton App page");
 }
 
 async function waitForExpression(client, expression, description) {
@@ -420,96 +422,52 @@ async function waitForExpression(client, expression, description) {
 async function probeTodoBridge(client) {
   await waitForExpression(
     client,
-    `Boolean(
-      window.__MoonBit__?.core?.invokeOp &&
-      window.__MoonBit__?.events?.onJson
-    )`,
-    "the typed application bridge",
+    'Boolean(window.__MoonBit__?.core?.invokeOp) && document.body.innerText.includes("No todos yet.")',
+    "the initial Todo query and view",
   );
-  const result = await client.evaluate(
-    `(
-      async () => {
-        const invoke = window.__MoonBit__.core.invokeOp;
-        const events = [];
-        const unsubscribe = window.__MoonBit__.events.onJson(
-          "app:todos_changed",
-          (payload) => events.push(JSON.parse(payload)),
-        );
-        const initial = await invoke("app:list_todos", { query: "" });
-        let remoteFailure;
-        try {
-          await invoke("app:create_todo", null);
-        } catch (error) {
-          remoteFailure = {
-            name: error && error.name,
-            code: error && error.code,
-            message: error && error.message,
-          };
-        }
-        const createReply = await invoke("app:create_todo", {
-          title: "Verify typed bridge",
-        });
-        const created = await invoke("app:list_todos", { query: "" });
-        await new Promise((resolve) => setTimeout(resolve, 100));
-        const createdBody = document.body.innerText;
-        const completeReply = await invoke("app:set_todo_completed", {
-          id: created.todos[0].id,
-          completed: true,
-        });
-        const completed = await invoke("app:list_todos", { query: "" });
-        const deleteReply = await invoke("app:delete_todo", {
-          id: created.todos[0].id,
-        });
-        await new Promise((resolve) => setTimeout(resolve, 100));
-        const deleted = await invoke("app:list_todos", { query: "" });
-        unsubscribe();
-        return {
-          initial,
-          created,
-          completed,
-          deleted,
-          events,
-          createdBody,
-          remoteFailure,
-        };
-      }
-    )()`,
-    true,
+  const invoke = (op, payload) => client.evaluate(
+    `window.__MoonBit__.core.invokeOp(${JSON.stringify(op)}, ${JSON.stringify(payload)})`, true,
   );
-  assert(
-    result.initial.version === 0 && result.initial.todos.length === 0,
-    `unexpected initial snapshot: ${JSON.stringify(result.initial)}`,
-  );
-  assert(
-    result.remoteFailure?.name === "ProtonBridgeError" &&
-      result.remoteFailure?.code === "invalid_payload" &&
-      result.remoteFailure?.message ===
-        "invalid payload for op app:create_todo",
-    `remote failure code was not preserved: ${JSON.stringify(result.remoteFailure)}`,
-  );
-  assert(
-    result.created.version === 1 &&
-      result.created.todos[0]?.title === "Verify typed bridge",
-    `unexpected create snapshot: ${JSON.stringify(result.created)}`,
-  );
-  assert(
-    result.completed.version === 2 &&
-      result.completed.todos[0]?.completed === true,
-    `unexpected complete snapshot: ${JSON.stringify(result.completed)}`,
-  );
-  assert(
-    result.deleted.version === 3 && result.deleted.todos.length === 0,
-    `unexpected delete snapshot: ${JSON.stringify(result.deleted)}`,
-  );
-  assert(
-    result.events.map((event) => event.version).join(",") === "1,2,3",
-    `unexpected live events: ${JSON.stringify(result.events)}`,
-  );
-  assert(
-    result.createdBody.includes("Verify typed bridge") &&
-      result.createdBody.includes("Revision 1"),
-    `Rabbita view did not receive the live snapshot:\n${result.createdBody}`,
-  );
+  await client.evaluate(`(() => {
+    window.__scaffoldEvents = [];
+    window.__scaffoldUnsubscribe = window.__MoonBit__.events.onJson(
+      "app:todos_changed", payload => window.__scaffoldEvents.push(JSON.parse(payload)));
+  })()`);
+  try {
+    const initial = await invoke("app:list_todos", { query: "" });
+    assert(initial.version === 0 && initial.todos.length === 0,
+      `unexpected initial snapshot: ${JSON.stringify(initial)}`);
+    const remoteFailure = await client.evaluate(`(async () => {
+      try { await window.__MoonBit__.core.invokeOp("app:create_todo", null); }
+      catch (error) { return {name:error.name, code:error.code, message:error.message}; }
+    })()`, true);
+    assert(remoteFailure?.name === "ProtonBridgeError" && remoteFailure?.code === "invalid_payload" &&
+      remoteFailure?.message === "invalid payload for op app:create_todo",
+      `remote failure code was not preserved: ${JSON.stringify(remoteFailure)}`);
+
+    await invoke("app:create_todo", { title: "Verify typed bridge" });
+    const created = await invoke("app:list_todos", { query: "" });
+    assert(created.version === 1 && created.todos[0]?.title === "Verify typed bridge",
+      `unexpected create snapshot: ${JSON.stringify(created)}`);
+    await waitForExpression(client,
+      'document.body.innerText.includes("Verify typed bridge") && document.body.innerText.includes("Revision 1")',
+      "the live create snapshot");
+
+    await invoke("app:set_todo_completed", { id: created.todos[0].id, completed: true });
+    const completed = await invoke("app:list_todos", { query: "" });
+    assert(completed.version === 2 && completed.todos[0]?.completed === true,
+      `unexpected complete snapshot: ${JSON.stringify(completed)}`);
+    await invoke("app:delete_todo", { id: created.todos[0].id });
+    const deleted = await invoke("app:list_todos", { query: "" });
+    assert(deleted.version === 3 && deleted.todos.length === 0,
+      `unexpected delete snapshot: ${JSON.stringify(deleted)}`);
+    await waitForExpression(client, 'window.__scaffoldEvents.length === 3', "all mutation events");
+    const events = await client.evaluate("window.__scaffoldEvents");
+    assert(events.map(event => event.version).join(",") === "1,2,3",
+      `unexpected live events: ${JSON.stringify(events)}`);
+  } finally {
+    await client.evaluate('window.__scaffoldUnsubscribe(); delete window.__scaffoldUnsubscribe; delete window.__scaffoldEvents;');
+  }
 }
 
 function contentType(file) {
@@ -831,32 +789,60 @@ async function runPackagedAppSmoke(executable, expectedRevision, fixture = false
 }
 
 async function main() {
-  if (process.platform !== "darwin") {
+  if (!scaffoldOnly && process.platform !== "darwin") {
     fail("the scaffold package and lifecycle smoke currently requires macOS");
   }
   run("moon", ["--version"], { capture: true });
-  run("moon", ["install", warrenCoordinate]);
-  run("warren", ["--help"], {
-    capture: true,
-  });
+  if (!scaffoldOnly) {
+    run("moon", ["install", warrenCoordinate]);
+    run("warren", ["--help"], { capture: true });
+  }
 
-  localCli([
-    "-C",
-    tempRoot,
-    "new",
-    "todo",
-    "--title",
-    "Todo E2E",
-    "--author",
-    "e2e",
-    "--identifier",
-    "dev.proton.scaffold-e2e",
-    "--no-check",
-    "--no-git",
-    "-y",
-  ]);
-  verifyGeneratedTree();
+  // moon-new reads committed Git trees. Snapshot just the current templates so
+  // this test exercises uncommitted/PR template changes without fetching main.
+  const templateRepo = path.join(tempRoot, "template-repository");
+  const templateFiles = run("git", ["ls-files", "--cached", "--others", "--exclude-standard", "--", "templates/"], { capture: true }).trim().split("\n");
+  for (const relative of templateFiles) {
+    const destination = path.join(templateRepo, path.relative("templates", relative));
+    fs.mkdirSync(path.dirname(destination), { recursive: true });
+    fs.copyFileSync(path.join(repoRoot, relative), destination);
+  }
+  run("git", ["init", templateRepo]);
+  run("git", ["add", "."], { cwd: templateRepo });
+  run("git", ["-c", "user.name=Proton Tests", "-c", "user.email=tests@example.invalid",
+    "-c", "commit.gpgsign=false", "commit", "-m", "Template fixture"], { cwd: templateRepo });
+  for (const [template, directory] of [["minimal", "minimal"], ["isomorphic", "todo"]]) {
+    const destination = path.join(tempRoot, directory);
+    const args = ["moonbit-community/moon-new@0.1.0", destination,
+      "--template", templateRepo, "--subdir", template, "--user", "e2e"];
+    run("moonx", args);
+    const config = JSON.parse(fs.readFileSync(path.join(destination, "proton.project.json"), "utf8"));
+    assert(config.backend.package === (template === "minimal" ? "app" : "backend/app"), "backend entry");
+    assert(!("formats" in config.package), "keep host-native packaging defaults");
+    if (template === "isomorphic") {
+      assert(config.frontend.before_dev === "warren dev --browser-entry main --direct --port 4300", "installed Warren dev command");
+      assert(config.frontend.before_build === "warren build --browser-entry main", "installed Warren build command");
+    }
+    if (template === "isomorphic") verifyGeneratedTree();
+    // Retrying creation must not overwrite an existing project.
+    const entry = path.join(destination, config.backend.package, "main.mbt");
+    const original = fs.readFileSync(entry, "utf8");
+    const retry = spawnSync("moonx", args, { encoding: "utf8", timeout: 60000 });
+    assert(!retry.error && retry.status !== 0, "existing project must be rejected");
+    assert(fs.readFileSync(entry, "utf8") === original, "existing application must be preserved");
+    run("moon", ["check", "--target", template === "minimal" ? "native" : "js,native", "--deny-warn"], { cwd: destination });
+    run("moon", ["fmt", "--check"], { cwd: destination });
+  }
   run("moon", ["fmt", "--check"], { cwd: projectDir });
+  if (scaffoldOnly) {
+    succeeded = true;
+    console.log("Both moon-new templates passed generation and compilation.");
+    return;
+  }
+  const configPath = path.join(projectDir, "proton.project.json");
+  const config = JSON.parse(fs.readFileSync(configPath, "utf8"));
+  config.identifier = "dev.proton.scaffold-e2e";
+  fs.writeFileSync(configPath, JSON.stringify(config, null, 2) + "\n");
   connectLocalSourceModules();
   run("moon", ["fmt"], { cwd: projectDir });
   localCli(["-C", projectDir, "cef", "setup"]);

@@ -1,6 +1,6 @@
 import {
   "moonbit-community/proton",
-  "{{shared_module}}" @shared,
+  "{{username}}/{{module}}_shared" @shared,
 }
 
 supported_targets = "native"

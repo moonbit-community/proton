@@ -9,7 +9,21 @@ Complete [prerequisites](../introduction/installation.md), including Node.js for
 From outside another MoonBit workspace:
 
 ```sh
-proton_cli new todo-app --template isomorphic --yes
+proton_cli new todo-app --template isomorphic
+```
+
+Alternatively, create the same project directly with `moon-new` (choose one
+of these two creation commands):
+
+```sh
+moonx moonbit-community/moon-new todo-app \
+  --template moonbit-community/proton --branch main \
+  --subdir templates/isomorphic
+```
+
+Then enter the project and continue with the same setup commands:
+
+```sh
 cd todo-app
 moon update
 moon install moonbit-community/warren@0.4.5
