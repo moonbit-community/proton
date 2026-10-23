@@ -172,13 +172,6 @@ try {
     }
   }
 
-  const newTemplatesOutput = tempOutputPath("templates.generated.mbt");
-  run("node", [
-    path.join(repoRoot, "scripts", "generate_new_templates.mjs"),
-    newTemplatesOutput,
-  ]);
-  compareGeneratedFile("cli/new/templates.generated.mbt", newTemplatesOutput);
-
   const bridgeBootstrapOutput = tempOutputPath("bridge_bootstrap.generated.h");
   run("node", [
     path.join(repoRoot, "scripts", "generate_bridge_bootstrap.mjs"),

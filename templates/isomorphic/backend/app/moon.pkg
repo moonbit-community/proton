@@ -1,7 +1,7 @@
 import {
   "moonbitlang/async",
   "moonbit-community/proton",
-  "{{backend_module}}/todo",
+  "{{username}}/{{module}}_backend/todo",
 }
 
 supported_targets = "native"

@@ -7,11 +7,11 @@ This guide creates a desktop window with the minimal template. You will run it, 
 Run this command in the directory where you keep projects, not inside another MoonBit workspace:
 
 ```sh
-proton_cli new hello-proton --template minimal --yes
+proton_cli new hello-proton --template minimal
 cd hello-proton
 ```
 
-The explicit `--template minimal` matters: the non-interactive default is `isomorphic`. `--yes` accepts generated defaults. For a distributable application, choose your identity at creation with `--identifier com.example.hello-proton`.
+Specify `--template minimal` because the default is `isomorphic`. Before distributing the app, edit `identifier` in `proton.project.json` to your own unique identifier, such as `com.example.hello-proton`.
 
 ## Template files
 

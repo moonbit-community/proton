@@ -75,33 +75,23 @@ fn macos_info_plist(
     Some(_) => "<key>CFBundleIconFile</key><string>AppIcon</string>"
     None => ""
   }
-  let template =
-    #|<?xml version="1.0" encoding="UTF-8"?>
-    #|<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-    #|<plist version="1.0"><dict>
-    #|<key>CFBundleDisplayName</key><string>{{PRODUCT}}</string>
-    #|<key>CFBundleExecutable</key><string>{{EXECUTABLE}}</string>
-    #|<key>CFBundleIdentifier</key><string>{{IDENTIFIER}}</string>
-    #|<key>CFBundleName</key><string>{{PRODUCT}}</string>
-    #|<key>CFBundlePackageType</key><string>APPL</string>
-    #|<key>CFBundleShortVersionString</key><string>{{SHORT_VERSION}}</string>
-    #|<key>CFBundleVersion</key><string>{{BUNDLE_VERSION}}</string>
-    #|{{MINIMUM_OS}}
-    #|<key>NSHighResolutionCapable</key><true/>
-    #|{{ICON}}{{URL_TYPES}}{{DOCUMENT_TYPES}}{{CUSTOM_PROPERTIES}}
-    #|</dict></plist>
-    #|
-  template
-  .replace_all(old="{{MINIMUM_OS}}", new=minimum_system_version)
-  .replace_all(old="{{PRODUCT}}", new=xml_escape(spec.product_name))
-  .replace_all(old="{{EXECUTABLE}}", new=xml_escape(executable))
-  .replace_all(old="{{IDENTIFIER}}", new=xml_escape(spec.identifier))
-  .replace_all(old="{{SHORT_VERSION}}", new=xml_escape(short_version))
-  .replace_all(old="{{BUNDLE_VERSION}}", new=xml_escape(bundle_version))
-  .replace_all(old="{{ICON}}", new=icon)
-  .replace_all(old="{{URL_TYPES}}", new=url_types)
-  .replace_all(old="{{DOCUMENT_TYPES}}", new=document_types)
-  .replace_all(old="{{CUSTOM_PROPERTIES}}", new=custom_properties.to_string())
+  let plist =
+    $|<?xml version="1.0" encoding="UTF-8"?>
+    $|<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+    $|<plist version="1.0"><dict>
+    $|<key>CFBundleDisplayName</key><string>\{xml_escape(spec.product_name)}</string>
+    $|<key>CFBundleExecutable</key><string>\{xml_escape(executable)}</string>
+    $|<key>CFBundleIdentifier</key><string>\{xml_escape(spec.identifier)}</string>
+    $|<key>CFBundleName</key><string>\{xml_escape(spec.product_name)}</string>
+    $|<key>CFBundlePackageType</key><string>APPL</string>
+    $|<key>CFBundleShortVersionString</key><string>\{xml_escape(short_version)}</string>
+    $|<key>CFBundleVersion</key><string>\{xml_escape(bundle_version)}</string>
+    $|\{minimum_system_version}
+    $|<key>NSHighResolutionCapable</key><true/>
+    $|\{icon}\{url_types}\{document_types}\{custom_properties.to_string()}
+    $|</dict></plist>
+    $|
+  plist
 }
 
 ///|

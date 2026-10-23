@@ -160,7 +160,7 @@ fn view(
   }
   div(class="app-shell", [
     div(class="app-header", [
-      div([span(class="eyebrow", "PROTON + RABBITA"), h1({{title_mbt}})]),
+      div([span(class="eyebrow", "PROTON + RABBITA"), h1("Proton App")]),
       span(class="version", "Revision " + snapshot.version.to_string()),
     ]),
     form(on_submit=emit(Create), [

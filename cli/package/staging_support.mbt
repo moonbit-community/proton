@@ -233,24 +233,19 @@ fn helper_info_plist(
   helper : MacosHelperSpec,
 ) -> String raise @packager.PackagePlanError {
   let (macos_version, bundle_version) = @packager.macos_versions(spec.version)
-  let template =
-    #|<?xml version="1.0" encoding="UTF-8"?>
-    #|<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-    #|<plist version="1.0"><dict>
-    #|<key>CFBundleExecutable</key><string>{{EXECUTABLE}}</string>
-    #|<key>CFBundleIdentifier</key><string>{{IDENTIFIER}}</string>
-    #|<key>CFBundleName</key><string>{{NAME}}</string>
-    #|<key>CFBundlePackageType</key><string>APPL</string>
-    #|<key>CFBundleShortVersionString</key><string>{{MACOS_VERSION}}</string>
-    #|<key>CFBundleVersion</key><string>{{BUNDLE_VERSION}}</string>
-    #|</dict></plist>
-    #|
-  template
-  .replace_all(old="{{EXECUTABLE}}", new=xml_escape(helper.executable_name))
-  .replace_all(old="{{IDENTIFIER}}", new=xml_escape(helper.bundle_identifier))
-  .replace_all(old="{{NAME}}", new=xml_escape(helper.bundle_name))
-  .replace_all(old="{{MACOS_VERSION}}", new=xml_escape(macos_version))
-  .replace_all(old="{{BUNDLE_VERSION}}", new=xml_escape(bundle_version))
+  let plist =
+    $|<?xml version="1.0" encoding="UTF-8"?>
+    $|<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+    $|<plist version="1.0"><dict>
+    $|<key>CFBundleExecutable</key><string>\{xml_escape(helper.executable_name)}</string>
+    $|<key>CFBundleIdentifier</key><string>\{xml_escape(helper.bundle_identifier)}</string>
+    $|<key>CFBundleName</key><string>\{xml_escape(helper.bundle_name)}</string>
+    $|<key>CFBundlePackageType</key><string>APPL</string>
+    $|<key>CFBundleShortVersionString</key><string>\{xml_escape(macos_version)}</string>
+    $|<key>CFBundleVersion</key><string>\{xml_escape(bundle_version)}</string>
+    $|</dict></plist>
+    $|
+  plist
 }
 
 ///|

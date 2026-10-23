@@ -1,7 +1,7 @@
 ///|
 async fn main {
   let backend = @todo.Backend()
-  @proton.asset({{title_mbt}}, "frontend/dist/index.html", width={{width}}, height={{height}})
+  @proton.asset("Proton App", "frontend/dist/index.html", width=960, height=640)
   ..config(@proton.load_config())
   ..single_instance()
   ..commands(fn(registrar) raise { backend.register_commands(registrar) })

@@ -105,7 +105,7 @@ test "executable names are stable and filesystem safe" {
 test "macOS plist customization is escaped" {
   let spec = PackageSpec(
     "/tmp/demo",
-    "Demo & App",
+    "Demo & {{EXECUTABLE}} {{CUSTOM_PROPERTIES}}",
     "dev.proton.demo",
     "1.2.3",
     [App],
@@ -122,7 +122,11 @@ test "macOS plist customization is escaped" {
     "1.2.3",
     "42",
   )
-  assert_true(plist.contains("<string>Demo &amp; App</string>"))
+  assert_true(
+    plist.contains(
+      "<string>Demo &amp; {{EXECUTABLE}} {{CUSTOM_PROPERTIES}}</string>",
+    ),
+  )
   assert_true(
     plist.contains("<key>Build&amp;Revision</key><string>42&lt;</string>"),
   )

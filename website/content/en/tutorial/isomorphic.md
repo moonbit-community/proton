@@ -9,7 +9,7 @@ Complete [prerequisites](../introduction/installation.md), including Node.js for
 From outside another MoonBit workspace:
 
 ```sh
-proton_cli new todo-app --template isomorphic --yes
+proton_cli new todo-app --template isomorphic
 cd todo-app
 moon update
 moon install moonbit-community/warren@0.4.5

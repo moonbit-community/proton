@@ -1,0 +1,12 @@
+{
+  "identifier": "com.example.proton-app",
+  "backend": {
+    "path": ".",
+    "package": "app"
+  },
+  "package": {
+    "product_name": "Proton App",
+    "version": "0.1.0",
+    "output": "dist"
+  }
+}

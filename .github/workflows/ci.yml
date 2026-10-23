@@ -188,6 +188,9 @@ jobs:
       - name: Verify generated files
         run: node scripts/verify_generated.mjs
 
+      - name: Check moon-new templates
+        run: node scripts/e2e_scaffold_source_smoke.mjs --scaffold-only
+
       - name: Test single-instance forwarding faults
         run: node --test proton/internal/native/ffi/tests/app_instance.test.mjs
 

@@ -1,5 +1,5 @@
 import {
-  "{{shared_module}}" @shared,
+  "{{username}}/{{module}}_shared" @shared,
   "moonbit-community/proton_client",
   "moonbit-community/proton_rabbita",
   "moonbit-community/rabbita",

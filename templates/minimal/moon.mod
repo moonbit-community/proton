@@ -1,10 +1,10 @@
-name = "{{module_name}}"
+name = "{{username}}/{{module}}"
 
 version = "0.1.0"
 
 import {
-  "moonbitlang/async@{{async_version}}",
-  "moonbit-community/proton@{{proton_version}}",
+  "moonbitlang/async@0.22.5",
+  "moonbit-community/proton@0.6.0",
 }
 
 license = "Apache-2.0"

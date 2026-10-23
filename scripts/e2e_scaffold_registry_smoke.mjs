@@ -60,49 +60,19 @@ function verifyInstalledCliVersion() {
   }
 }
 
-function expectDependency(relativePath, moduleName, version) {
-  const source = fs.readFileSync(path.join(projectDir, relativePath), "utf8");
-  const declaration = `"${moduleName}@${version}"`;
-  if (!source.includes(declaration)) {
-    throw new Error(`${relativePath} is missing ${declaration}`);
-  }
-}
-
-function verifyGeneratedDependencies() {
-  expectDependency(
-    "shared/moon.mod",
-    "moonbit-community/proton_contract",
-    moduleVersion("contract/moon.mod"),
-  );
-  expectDependency(
-    "frontend/moon.mod",
-    "moonbit-community/proton_client",
-    moduleVersion("client/moon.mod"),
-  );
-  expectDependency(
-    "frontend/moon.mod",
-    "moonbit-community/proton_rabbita",
-    moduleVersion("rabbita/moon.mod"),
-  );
-  expectDependency(
-    "backend/moon.mod",
-    "moonbit-community/proton",
-    moduleVersion("proton/moon.mod"),
-  );
-  expectDependency(
-    "backend/moon.mod",
-    "moonbit-community/proton_contract",
-    moduleVersion("contract/moon.mod"),
-  );
-  const backend = fs.readFileSync(
-    path.join(projectDir, "backend/moon.mod"),
-    "utf8",
-  );
-  if (backend.includes("bin-deps")) {
-    throw new Error("backend/moon.mod must not depend on a CLI binary shim");
-  }
-  if (/proton_codegen|dev_build/.test(backend)) {
-    throw new Error("the application scaffold must not require codegen");
+function usePublishedRelease() {
+  // main's templates use already-published versions. After publication, exercise
+  // this release with the normal dependency upgrade command, without overrides.
+  for (const [directory, dependency] of [
+    ["shared", "contract"],
+    ["frontend", "contract"],
+    ["frontend", "client"],
+    ["frontend", "rabbita"],
+    ["backend", "contract"],
+    ["backend", "proton"],
+  ]) {
+    const module = dependency === "proton" ? "proton" : `proton_${dependency}`;
+    run("moon", ["-C", directory, "add", "--upgrade", `moonbit-community/${module}@${moduleVersion(`${dependency}/moon.mod`)}`, "--no-update"], { cwd: projectDir });
   }
 }
 
@@ -174,17 +144,13 @@ try {
     tempRoot,
     "new",
     "todo",
-    "--title",
-    "Registry Todo",
     "--author",
     "registry_smoke",
-    "--identifier",
-    "dev.proton.registry-smoke",
-    "--no-check",
-    "--no-git",
-    "-y",
   ]);
-  verifyGeneratedDependencies();
+  run("moon", ["check", "--target", "js,native", "--diagnostic-limit", "80"], {
+    cwd: projectDir,
+  });
+  usePublishedRelease();
   run(cli, ["-C", projectDir, "cef", "setup"], { timeout: 900000 });
   run("moon", ["check", "--target", "js,native", "--diagnostic-limit", "80"], {
     cwd: projectDir,

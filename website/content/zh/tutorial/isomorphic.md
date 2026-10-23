@@ -9,7 +9,7 @@
 在另一个 MoonBit 工作区之外执行：
 
 ```sh
-proton_cli new todo-app --template isomorphic --yes
+proton_cli new todo-app --template isomorphic
 cd todo-app
 moon update
 moon install moonbit-community/warren@0.4.5

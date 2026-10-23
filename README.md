@@ -25,7 +25,7 @@ prerequisites. Run these commands outside another MoonBit workspace:
 ```sh
 moon install moonbit-community/proton_cli@0.6.0
 moon install moonbit-community/warren@0.4.5
-proton_cli new my-app --yes
+proton_cli new my-app
 cd my-app
 moon update
 proton_cli cef setup
