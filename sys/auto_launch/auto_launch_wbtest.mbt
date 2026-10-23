@@ -180,6 +180,34 @@ test "join paths and render linux desktop entries" {
 }
 
 ///|
+test "linux desktop entry preserves literal metadata and exec arguments" {
+  let contents = linux_desktop_contents(
+    sample_config(
+      name="Moon\\App\nInjected=true\r\t月",
+      app_path="/opt/100%/My App/app",
+      launch_in_background=true,
+      extra_arguments=[
+        "", "two words", "%f", "a\"b\\c$d`e", "line\nbreak\t\rend", "你好",
+      ],
+    ),
+  )
+  assert_eq(
+    contents,
+    (
+      #|[Desktop Entry]
+      #|Type=Application
+      #|Version=1.0
+      #|Name=Moon\\App\nInjected=true\r\t月
+      #|Comment=Launch Moon\\App\nInjected=true\r\t月 automatically at login
+      #|Exec="/opt/100%%/My App/app" "--hidden" "" "two words" "%%f" "a\\"b\\\\c\\$d\\`e" "line\nbreak\t\rend" "你好"
+      #|Terminal=false
+      #|StartupNotify=false
+      #|
+    ),
+  )
+}
+
+///|
 /// Verifies macOS LaunchAgent paths and plist contents render correctly.
 test "render mac launch agents" {
   let config = sample_config(

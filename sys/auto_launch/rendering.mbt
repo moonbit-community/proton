@@ -38,13 +38,16 @@ fn windows_command(config : AutoLaunchConfig) -> String {
 ///|
 /// Renders a freedesktop.org desktop-entry file for Linux auto-start.
 fn linux_desktop_contents(config : AutoLaunchConfig) -> String {
-  let exec_line = render_command_line(config, desktop_quote_argument)
+  let exec_line = desktop_escape_value(
+    render_command_line(config, desktop_quote_argument),
+  )
+  let name = desktop_escape_value(config.name)
   (
     $|[Desktop Entry]
     $|Type=Application
     $|Version=1.0
-    $|Name=\{config.name}
-    $|Comment=Launch \{config.name} automatically at login
+    $|Name=\{name}
+    $|Comment=Launch \{name} automatically at login
     $|Exec=\{exec_line}
     $|Terminal=false
     $|StartupNotify=false

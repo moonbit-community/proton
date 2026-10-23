@@ -12,6 +12,10 @@ This project is inspired by and references [Teamwork/node-auto-launch](https://g
 - Optional hidden/background startup argument support
 - Small synchronous MoonBit API with `Result`-based error handling
 
+Pass executable paths and arguments as literal values, without adding quotes or
+escaping them yourself. On Linux, Proton encodes them for the desktop entry;
+arguments such as `%f` remain literal rather than acting as launcher field codes.
+
 ## Install
 
 ```bash

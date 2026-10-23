@@ -182,14 +182,25 @@ fn windows_quote_argument(argument : String) -> String {
 }
 
 ///|
-/// Quotes one argument for file-based Unix desktop launchers.
+/// Quotes one literal Exec argument before desktop-entry string encoding.
 fn desktop_quote_argument(argument : String) -> String {
   let escaped = argument
     .replace_all(old="\\", new="\\\\")
     .replace_all(old="\"", new="\\\"")
     .replace_all(old="$", new="\\$")
     .replace_all(old="`", new="\\`")
+    .replace_all(old="%", new="%%")
   "\"" + escaped + "\""
+}
+
+///|
+/// Encodes a desktop-entry string value, including an already-quoted Exec line.
+fn desktop_escape_value(value : String) -> String {
+  value
+  .replace_all(old="\\", new="\\\\")
+  .replace_all(old="\n", new="\\n")
+  .replace_all(old="\r", new="\\r")
+  .replace_all(old="\t", new="\\t")
 }
 
 ///|

@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+**Linux auto-launch**
+
+Fixed desktop-entry encoding for names, executable paths and startup arguments.
+Percent signs, backslashes, quotes and line breaks preserve their literal values;
+pass paths and arguments without pre-escaping them. The API is unchanged.
+
 **Project creation**
 
 `proton_cli new` delegates to `moon-new` and downloads the selected template from
