@@ -12,6 +12,18 @@ This project is inspired by and references [Teamwork/node-auto-launch](https://g
 - Optional hidden/background startup argument support
 - Small synchronous MoonBit API with `Result`-based error handling
 
+Pass executable paths and arguments as literal values, without adding quotes or
+escaping them yourself. On Linux, Proton encodes them for the desktop entry;
+arguments such as `%f` remain literal rather than acting as launcher field codes.
+Linux launches through `/usr/bin/env` so executable paths containing `%` also
+work with GLib and systemd desktop-entry consumers. Executable paths must be
+absolute and must not contain `=`; Linux returns `UnsupportedExecutablePath` for
+the latter because `env` interprets it as an environment assignment. Arguments
+may contain `=`. Existing entries must be regenerated with `enable()` after
+upgrading. Older systemd generators have separate backslash-escape limitations,
+including `$` and backticks; arbitrary arguments are not portable
+across all desktop-entry consumers.
+
 ## Install
 
 ```bash

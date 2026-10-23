@@ -165,7 +165,7 @@ test "join paths and render linux desktop entries" {
   assert_true(contents.contains("Name=MoonBit App"))
   assert_true(
     contents.contains(
-      "Exec=\"/usr/bin/moonbit\" \"--hidden\" \"--profile\" \"work\"",
+      "Exec=/usr/bin/env -- \"/usr/bin/moonbit\" \"--hidden\" \"--profile\" \"work\"",
     ),
   )
 
@@ -176,7 +176,37 @@ test "join paths and render linux desktop entries" {
       identifier="simple-app",
     ),
   )
-  assert_true(simple_contents.contains("Exec=\"/usr/bin/simple\""))
+  assert_true(
+    simple_contents.contains("Exec=/usr/bin/env -- \"/usr/bin/simple\""),
+  )
+}
+
+///|
+test "linux desktop entry preserves literal metadata and exec arguments" {
+  let contents = linux_desktop_contents(
+    sample_config(
+      name="Moon\\App\nInjected=true\r\t月",
+      app_path="/opt/100%/My App/app",
+      launch_in_background=true,
+      extra_arguments=[
+        "", "two words", "%f", "a\"b\\c$d`e", "line\nbreak\t\rend", "你好",
+      ],
+    ),
+  )
+  assert_eq(
+    contents,
+    (
+      #|[Desktop Entry]
+      #|Type=Application
+      #|Version=1.0
+      #|Name=Moon\\App\nInjected=true\r\t月
+      #|Comment=Launch Moon\\App\nInjected=true\r\t月 automatically at login
+      #|Exec=/usr/bin/env -- "/opt/100%%/My App/app" "--hidden" "" "two words" "%%f" "a\\"b\\\\c\\$d\\`e" "line\nbreak\t\rend" "你好"
+      #|Terminal=false
+      #|StartupNotify=false
+      #|
+    ),
+  )
 }
 
 ///|
@@ -482,6 +512,38 @@ test "new_with covers unsupported and executable path failures" {
     Err(ExecutablePathUnavailable) => ()
     _ => fail("expected ExecutablePathUnavailable")
   }
+}
+
+///|
+test "Linux rejects equals in executable paths but permits it in arguments" {
+  for platform in [Platform::Linux, Platform::Macos] {
+    let result = new_with(
+      platform,
+      "App",
+      Some("/opt/app=name"),
+      false,
+      "--hidden",
+      [],
+      None,
+      get_current_executable_path=fn() { Ok("/unused") },
+    )
+    match (platform, result) {
+      (Linux, Err(UnsupportedExecutablePath("/opt/app=name"))) => ()
+      (Macos, Ok(_)) => ()
+      _ => fail("unexpected executable path validation result")
+    }
+  }
+  let result = new_with(
+    Platform::Linux,
+    "App",
+    Some("/opt/100% App"),
+    false,
+    "--hidden",
+    ["key=value"],
+    None,
+    get_current_executable_path=fn() { Ok("/unused") },
+  )
+  assert_true(result is Ok(_))
 }
 
 ///|

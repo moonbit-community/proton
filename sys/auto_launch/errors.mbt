@@ -18,6 +18,8 @@ pub enum AutoLaunchError {
   ExecutablePathUnavailable
   HomeDirectoryUnavailable
   RelativeExecutablePath(String)
+  // Linux's env launcher interprets '=' in executable paths as an assignment.
+  UnsupportedExecutablePath(String)
   UnsupportedPlatform(Platform)
   NativeFailure(action~ : String, message~ : String)
 } derive(Debug, Eq)
@@ -42,6 +44,11 @@ pub impl Show for AutoLaunchError with fn output(self : AutoLaunchError, logger)
     HomeDirectoryUnavailable => logger.write_string("HomeDirectoryUnavailable")
     RelativeExecutablePath(path) => {
       logger.write_string("RelativeExecutablePath(")
+      logger.write_object(path)
+      logger.write_string(")")
+    }
+    UnsupportedExecutablePath(path) => {
+      logger.write_string("UnsupportedExecutablePath(")
       logger.write_object(path)
       logger.write_string(")")
     }

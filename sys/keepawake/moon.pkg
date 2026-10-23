@@ -13,6 +13,12 @@ import {
 
 supported_targets = "native"
 
+// These tests create executable helpers. Concurrent process creation can inherit
+// another test's writable script descriptor and cause ETXTBSY on Linux.
+// Keep concurrency inside each lifecycle test, not between test fixtures.
+
+max_concurrent_tests = 1
+
 options(
   "native-stub": [
     "native_common.c",

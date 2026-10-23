@@ -2,6 +2,14 @@
 
 ## 未发布
 
+**Linux 自启动**
+
+修复应用名称、可执行文件路径和启动参数的 desktop entry 编码。
+Linux 通过 `/usr/bin/env` 启动，使含 `%` 的路径可被 GLib 和 systemd 正常启动。
+可执行文件路径含 `=` 时，现在返回 `UnsupportedExecutablePath`；参数中的 `=` 仍受支持。
+请直接传入字面值，无需自行转义；升级后再次调用 `enable()` 以重新生成已有条目。
+旧版 systemd 生成器仍存在反斜杠转义处理限制，包括参数中的 `$` 和反引号。
+
 **项目创建**
 
 `proton_cli new` 改为调用 `moon-new`，从 Proton 的 `main` 分支下载所选模板。

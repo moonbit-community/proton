@@ -77,6 +77,10 @@ fn new_with(
   if !is_absolute_path(platform, resolved_path) {
     return Err(AutoLaunchError::RelativeExecutablePath(resolved_path))
   }
+  // env treats name=value operands as assignments, even after --.
+  if platform == Platform::Linux && resolved_path.contains("=") {
+    return Err(AutoLaunchError::UnsupportedExecutablePath(resolved_path))
+  }
 
   Ok(AutoLaunch::{
     config: {
@@ -95,6 +99,8 @@ fn new_with(
 ///
 /// `name` is the human-readable application name shown in generated desktop
 /// entries. `path` defaults to the current executable path when omitted.
+/// Linux requires `/usr/bin/env` and rejects executable paths containing `=`.
+/// Pass paths and arguments literally; desktop-entry escaping is applied here.
 ///
 /// When `launch_in_background` is `true`, the package appends
 /// `background_arg` before any `extra_arguments`. This mirrors the common

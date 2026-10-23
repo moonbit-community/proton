@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+**Linux auto-launch**
+
+Fixed desktop-entry encoding for names, executable paths and startup arguments.
+Linux uses `/usr/bin/env` so paths containing `%` launch through GLib and systemd.
+Executable paths containing `=` now return `UnsupportedExecutablePath`; `=` in
+arguments remains supported. Pass literal values without pre-escaping them and
+call `enable()` again to regenerate existing entries. Older systemd generators
+still have backslash-escape limitations, including `$` and backticks in arguments.
+
 **Project creation**
 
 `proton_cli new` delegates to `moon-new` and downloads the selected template from
