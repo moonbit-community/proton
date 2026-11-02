@@ -19,7 +19,7 @@
 
 macOS 上的 `sign.binaries` 支持 `dir/**`。Proton 在签名时扫描该打包目录，由内向外签名其中所有
 Mach-O 可执行文件、库和 bundle，因此不再需要手动维护随包工具的列表。确切路径的行为不变。目录树仅限
-macOS，带签名的 Windows 打包会拒绝它。
+macOS，请写在 `platforms.macos.package.sign` 下。
 
 **Linux 自启动**
 

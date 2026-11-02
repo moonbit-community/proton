@@ -22,7 +22,7 @@ settings directly from `config.package_config`. `PackagePlatforms` and
 `sign.binaries` accepts `dir/**` on macOS. Proton scans that packaged directory
 when signing and signs every Mach-O executable, library and bundle inside out,
 so the list no longer has to track bundled tools. Exact paths keep their behavior.
-Trees are macOS-only, and a signed Windows package rejects them.
+Trees are macOS-only; list them under `platforms.macos.package.sign`.
 
 **Linux auto-launch**
 

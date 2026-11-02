@@ -84,7 +84,7 @@ For automatic updates, `package.version` is also the release ordering value. It 
 | --- | --- | --- |
 | `binaries` | string array | `[]`; additional binaries to sign, relative to the configuration directory |
 
-An entry is an exact target that must exist in the package, and an `.app` or `.framework` directory is signed as one target. On macOS, an entry ending in `/**` is a tree: at packaging time Proton signs every Mach-O executable, library and bundle under that packaged directory, inside out, and skips symlinks and object files. Other glob patterns are rejected. A signed Windows package rejects trees, so list them under `platforms.macos.package.sign` when the configuration also signs for Windows.
+An entry is an exact target that must exist in the package, and an `.app` or `.framework` directory is signed as one target. On macOS, an entry ending in `/**` is a tree: at packaging time Proton signs every Mach-O executable, library and bundle under that packaged directory, inside out, and skips symlinks and object files. Other glob patterns are rejected. Trees are macOS-only: Windows signs each listed file with `signtool`, so a signed Windows package fails on a tree. Put trees under `platforms.macos.package.sign` when the configuration also signs for Windows.
 
 Omitting `sign` adds no extra binaries. This object does not enable signing: use `package --sign` or `--notarize`.
 

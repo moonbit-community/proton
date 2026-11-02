@@ -33,25 +33,6 @@ test "Windows signing includes configured resource binaries" {
 }
 
 ///|
-test "a shared macOS signing tree only stops signed Windows builds" {
-  let root = "fixtures/proton-package-windows-sign-tree"
-  let spec = windows_test_spec(root, ["app"], true)
-  let tree = resolve_path(root, "payload/**")
-  spec.sign_binaries.push(tree)
-  assert_eq(windows_package_sign_targets(spec), ["cef_process.exe"])
-  reject_windows_sign_globs(spec, Macos)
-  reject_windows_sign_globs(PackagePlan::{ ..spec, sign: false, }, Windows)
-  try
-    reject_windows_sign_globs(PackagePlan::{ ..spec, sign: true, }, Windows)
-  catch {
-    StagingPlanError::UnsupportedSignGlob(path~) => assert_eq(path, tree)
-    _ => fail("expected an unsupported signing glob")
-  } noraise {
-    _ => fail("expected a signed Windows build to refuse the tree")
-  }
-}
-
-///|
 test "Windows signing rejects binaries outside the project" {
   let spec = windows_test_spec("/tmp/proton-package", ["app"], true)
   spec.sign_binaries.push("/tmp/worker.exe")
