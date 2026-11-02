@@ -91,12 +91,22 @@ async fn macho_file_is_code(path : String) -> Bool {
 }
 
 ///|
-async fn bundle_executable_name(info_plist : String) -> String? {
+/// The executable name a bundle's `Info.plist` declares. Like CFBundle,
+/// `codesign` falls back to the bundle's name without its extension when
+/// `CFBundleExecutable` is absent.
+async fn bundle_executable_name(
+  info_plist : String,
+  bundle~ : String,
+) -> String? {
   guard path_is_file(info_plist) else { return None }
   let (code, output) = @process.collect_output_merged("/usr/bin/plutil", [
     "-extract", "CFBundleExecutable", "raw", "-o", "-", info_plist,
   ])
-  guard code == 0 else { return None }
+  guard code == 0 else {
+    let name = host_path(bundle).basename()
+    let stem = if name.rev_find(".") is Some(dot) { name[:dot] } else { name }
+    return Some(stem.to_owned())
+  }
   let name = (output.text() catch { _ => return None }).trim().to_owned()
   if name == "" || name.contains("/") {
     None
@@ -115,15 +125,23 @@ async fn bundle_executable_name(info_plist : String) -> String? {
 /// `Versions/Current` are not scanned, so only real paths are compared.
 async fn bundle_main_executables(directory : String) -> Array[String]? {
   let contents = path_join(directory, "Contents")
-  if bundle_executable_name(path_join(contents, "Info.plist")) is Some(name) {
+  if bundle_executable_name(path_join(contents, "Info.plist"), bundle=directory)
+    is Some(name) {
     let main = path_join(path_join(contents, "MacOS"), name)
     return if path_exists(main) { Some([main]) } else { None }
   }
   let name = match
-    bundle_executable_name(path_join(directory, "Resources/Info.plist")) {
+    bundle_executable_name(
+      path_join(directory, "Resources/Info.plist"),
+      bundle=directory,
+    ) {
     Some(name) => name
     None =>
-      match bundle_executable_name(path_join(directory, "Info.plist")) {
+      match
+        bundle_executable_name(
+          path_join(directory, "Info.plist"),
+          bundle=directory,
+        ) {
         Some(name) => name
         None => return None
       }

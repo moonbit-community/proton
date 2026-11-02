@@ -412,3 +412,18 @@ async test "a shallow bundle is sealed after its contents" {
     ])
   })
 }
+
+///|
+async test "a framework without CFBundleExecutable uses its own name" {
+  guard current_package_host() is Macos else { return }
+  with_scan_root(async fn(root) {
+    write_fixture(
+      root, "Foo.framework/Resources/Info.plist", b"<plist version=\"1.0\"><dict></dict></plist>",
+    )
+    write_fixture(root, "Foo.framework/Foo", thin_library())
+    write_fixture(root, "Foo.framework/Libraries/libx.dylib", thin_library())
+    assert_eq(relative_paths(root, macos_tree_sign_paths(root)), [
+      "Foo.framework/Libraries/libx.dylib", "Foo.framework/Foo", "Foo.framework",
+    ])
+  })
+}
