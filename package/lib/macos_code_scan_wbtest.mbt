@@ -65,6 +65,15 @@ fn universal(
 }
 
 ///|
+fn bundle_info(executable : String) -> Bytes {
+  @utf8.encode(
+    "<plist version=\"1.0\"><dict><key>CFBundleExecutable</key><string>" +
+    executable +
+    "</string></dict></plist>",
+  )
+}
+
+///|
 async fn write_fixture(root : String, path : String, bytes : Bytes) -> Unit {
   let file = path_join(root, path)
   @async_fs.mkdir(path_parent(file), recursive=true, allow_exist=true)
@@ -177,9 +186,7 @@ async test "signing scan orders nested bundles inside-out" {
   with_scan_root(async fn(root) {
     let library = thin_library()
     write_fixture(root, "tool", library)
-    write_fixture(
-      root, "Nested.app/Contents/Info.plist", b"<plist version=\"1.0\"><dict><key>CFBundleExecutable</key><string>A-main</string></dict></plist>",
-    )
+    write_fixture(root, "Nested.app/Contents/Info.plist", bundle_info("A-main"))
     // The main executable sorts first by name, so the scan has to defer it.
     write_fixture(root, "Nested.app/Contents/MacOS/A-main", library)
     write_fixture(root, "Nested.app/Contents/MacOS/Z-helper", library)
@@ -191,8 +198,23 @@ async test "signing scan orders nested bundles inside-out" {
     write_fixture(
       root, "Nested.app/Contents/Frameworks/Foo.framework/Versions/A/Foo", library,
     )
-    write_fixture(root, "Service.xpc/Contents/Info.plist", b"<plist/>")
-    write_fixture(root, "Plugin.bundle/Contents/MacOS/plugin", library)
+    write_fixture(
+      root,
+      "Nested.app/Contents/Frameworks/Foo.framework/Resources/Info.plist",
+      bundle_info("Foo"),
+    )
+    @async_fs.symlink(
+      target="Versions/A/Foo",
+      path_join(root, "Nested.app/Contents/Frameworks/Foo.framework/Foo"),
+    )
+    // A suffix alone does not make a bundle, and a bundle needs no suffix.
+    write_fixture(root, "Gems.bundle/config", b"BUNDLE_PATH: vendor\n")
+    write_fixture(
+      root,
+      "Effect.vst3/Contents/Info.plist",
+      bundle_info("effect"),
+    )
+    write_fixture(root, "Effect.vst3/Contents/MacOS/effect", library)
     let found = relative_paths(root, macos_tree_sign_paths(root))
     let position = (path : String) => found.search(path).unwrap_or(-1)
     let foo = "Nested.app/Contents/Frameworks/Foo.framework"
@@ -211,10 +233,9 @@ async test "signing scan orders nested bundles inside-out" {
       position("Nested.app/Contents/MacOS/A-main") < position("Nested.app"),
     )
     assert_true(
-      position("Plugin.bundle/Contents/MacOS/plugin") <
-      position("Plugin.bundle"),
+      position("Effect.vst3/Contents/MacOS/effect") < position("Effect.vst3"),
     )
-    assert_true(found.contains("Service.xpc"))
+    assert_false(found.contains("Gems.bundle"))
     assert_true(found.contains("tool"))
   })
 }
@@ -325,4 +346,17 @@ async test "macOS packaging signs every code object in a resource tree" {
       0,
     )
   }
+}
+
+///|
+async test "a bundle at the tree root still signs its main executable last" {
+  guard current_package_host() is Macos else { return }
+  with_scan_root(async fn(root) {
+    write_fixture(root, "Contents/Info.plist", bundle_info("A-main"))
+    write_fixture(root, "Contents/MacOS/A-main", thin_library())
+    write_fixture(root, "Contents/MacOS/Z-helper", thin_library())
+    assert_eq(relative_paths(root, macos_tree_sign_paths(root)), [
+      "Contents/MacOS/Z-helper", "Contents/MacOS/A-main",
+    ])
+  })
 }
