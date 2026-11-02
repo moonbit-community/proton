@@ -196,10 +196,8 @@ fn macos_package_sign_targets(
     @packager.MacosSignTarget(prefix + "/bin/libvk_swiftshader.dylib"),
   ]
   for binary in spec.sign_binaries {
+    // Project configuration admits no other glob than a `dir/**` tree.
     let tree = glob_tree_root(binary)
-    guard tree is Some(_) || !binary.contains("*") else {
-      raise StagingPlanError::UnsupportedSignGlob(path=binary)
-    }
     match relative_to_base(spec.base_dir, tree.unwrap_or(binary)) {
       Some(relative) =>
         targets.push(

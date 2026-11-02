@@ -310,3 +310,42 @@ test "project config sections must be objects" {
     assert_true(error.message().contains(section))
   }
 }
+
+///|
+test "signing inputs accept exact paths and dir/** trees only" {
+  let config = @proton_config.AppConfig::decode(
+    {
+      "identifier": "com.example.tree",
+      "package": {
+        "product_name": "Tree",
+        "version": "1.0.0",
+        "sign": { "binaries": ["payload/**", "bin/tool"] },
+      },
+    },
+    platform=Macos,
+  )
+  assert_eq(config.package_config.unwrap().sign.unwrap().binaries, [
+    "payload/**", "bin/tool",
+  ])
+  for glob in ["payload/*.dylib", "payload/**/tool", "**"] {
+    let error = expect_config_error(() => {
+      ignore(
+        @proton_config.AppConfig::decode({
+          "identifier": "com.example.tree",
+          "package": {
+            "product_name": "Tree",
+            "version": "1.0.0",
+            "sign": { "binaries": [glob] },
+          },
+        }),
+      )
+    })
+    assert_eq(
+      error,
+      InvalidField(
+        path="package.sign.binaries",
+        expectation="must be exact paths or dir/** trees",
+      ),
+    )
+  }
+}

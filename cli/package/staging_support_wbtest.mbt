@@ -176,12 +176,18 @@ async test "packaged configuration retains frontend and platform fields" {
 }
 
 ///|
-test "macOS signing turns a directory tree into a scanned target" {
-  let root = "/tmp/proton-sign-tree"
-  let plan = test_staging_plan(root, sign_binaries=[
-    resolve_path(root, "payload/**"),
-    resolve_path(root, "bin/tool"),
-  ])
+async test "macOS signing turns a configured directory tree into a scanned target" {
+  let project = @proton_config.AppConfig::parse(
+    (
+      #|{"identifier":"com.example.tree","package":{"product_name":"Tree","version":"1.0.0","sign":{"binaries":["payload/**","bin/tool"]}},"platforms":{"windows":{"package":{"sign":null}}}}
+    ),
+    platform=Macos,
+  )
+  let plan = build_package_plan(
+    parse_package_args([]),
+    "proton.project.json",
+    project,
+  )
   let targets = macos_package_sign_targets(plan).filter(target => {
     target.path.has_prefix("Contents/Resources/payload") ||
     target.path.has_prefix("Contents/Resources/bin")
@@ -192,17 +198,4 @@ test "macOS signing turns a directory tree into a scanned target" {
   assert_true(targets[0].entitlements)
   assert_eq(targets[1].path, "Contents/Resources/bin/tool")
   assert_false(targets[1].tree)
-}
-
-///|
-test "macOS signing rejects any other glob" {
-  let root = "/tmp/proton-sign-tree"
-  let glob = resolve_path(root, "payload/*.dylib")
-  let plan = test_staging_plan(root, sign_binaries=[glob])
-  try ignore(macos_package_sign_targets(plan)) catch {
-    StagingPlanError::UnsupportedSignGlob(path~) => assert_eq(path, glob)
-    _ => fail("expected an unsupported signing glob")
-  } noraise {
-    _ => fail("expected the signing glob to be rejected")
-  }
 }
