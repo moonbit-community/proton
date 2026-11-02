@@ -177,7 +177,12 @@ async test "signing scan orders nested bundles inside-out" {
   with_scan_root(async fn(root) {
     let library = thin_library()
     write_fixture(root, "tool", library)
-    write_fixture(root, "Nested.app/Contents/MacOS/Nested", library)
+    write_fixture(
+      root, "Nested.app/Contents/Info.plist", b"<plist version=\"1.0\"><dict><key>CFBundleExecutable</key><string>A-main</string></dict></plist>",
+    )
+    // The main executable sorts first by name, so the scan has to defer it.
+    write_fixture(root, "Nested.app/Contents/MacOS/A-main", library)
+    write_fixture(root, "Nested.app/Contents/MacOS/Z-helper", library)
     write_fixture(root, "Nested.app/Contents/Helpers/helper", library)
     write_fixture(
       root, "Nested.app/Contents/Frameworks/Foo.framework/Versions/A/Libraries/libx.dylib",
@@ -187,6 +192,7 @@ async test "signing scan orders nested bundles inside-out" {
       root, "Nested.app/Contents/Frameworks/Foo.framework/Versions/A/Foo", library,
     )
     write_fixture(root, "Service.xpc/Contents/Info.plist", b"<plist/>")
+    write_fixture(root, "Plugin.bundle/Contents/MacOS/plugin", library)
     let found = relative_paths(root, macos_tree_sign_paths(root))
     let position = (path : String) => found.search(path).unwrap_or(-1)
     let foo = "Nested.app/Contents/Frameworks/Foo.framework"
@@ -195,12 +201,18 @@ async test "signing scan orders nested bundles inside-out" {
       position(foo + "/Versions/A/Foo"),
     )
     assert_true(position(foo + "/Versions/A/Foo") < position(foo))
+    for sibling in ["Contents/Helpers/helper", "Contents/MacOS/Z-helper"] {
+      assert_true(
+        position("Nested.app/" + sibling) <
+        position("Nested.app/Contents/MacOS/A-main"),
+      )
+    }
     assert_true(
-      position("Nested.app/Contents/Helpers/helper") <
-      position("Nested.app/Contents/MacOS/Nested"),
+      position("Nested.app/Contents/MacOS/A-main") < position("Nested.app"),
     )
     assert_true(
-      position("Nested.app/Contents/MacOS/Nested") < position("Nested.app"),
+      position("Plugin.bundle/Contents/MacOS/plugin") <
+      position("Plugin.bundle"),
     )
     assert_true(found.contains("Service.xpc"))
     assert_true(found.contains("tool"))
@@ -248,6 +260,32 @@ async test "macOS packaging signs every code object in a resource tree" {
     ),
   )
   @async_fs.symlink(target="A", path_join(foo, "Versions/Current"))
+  // A plug-in whose main executable sorts before its sibling.
+  let plugin = path_join(payload, "lib/Test.bundle/Contents")
+  ensure_dir(path_join(plugin, "MacOS"))
+  write_fixture(
+    plugin,
+    "Info.plist",
+    @utf8.encode(
+      "<plist version=\"1.0\"><dict>" +
+      "<key>CFBundleIdentifier</key><string>com.example.plugin</string>" +
+      "<key>CFBundleExecutable</key><string>A-plugin</string>" +
+      "</dict></plist>",
+    ),
+  )
+  assert_eq(
+    @process.run("cc", [
+      "-bundle",
+      library,
+      "-o",
+      path_join(plugin, "MacOS/A-plugin"),
+    ]),
+    0,
+  )
+  assert_eq(
+    @process.run("cc", [source, "-o", path_join(plugin, "MacOS/Z-helper")]),
+    0,
+  )
   @async_fs.symlink(target="Versions/Current/Foo", path_join(foo, "Foo"))
   @async_fs.symlink(
     target="Versions/Current/Resources",
@@ -275,13 +313,16 @@ async test "macOS packaging signs every code object in a resource tree" {
     path_join(artifacts[0], "Contents/Resources/payload/bin/tool"),
   ])
   assert_true(details.text().contains("flags=0x10002(adhoc,runtime)"))
-  // Signing out of order leaves the framework's seal invalid.
-  assert_eq(
-    @process.run("/usr/bin/codesign", [
-      "--verify",
-      "--strict",
-      path_join(artifacts[0], "Contents/Resources/payload/lib/Foo.framework"),
-    ]),
-    0,
-  )
+  // Signing out of order leaves a bundle's seal invalid.
+  for bundle in ["Foo.framework", "Test.bundle"] {
+    assert_eq(
+      @process.run("/usr/bin/codesign", [
+        "--verify",
+        "--deep",
+        "--strict",
+        path_join(artifacts[0], "Contents/Resources/payload/lib/" + bundle),
+      ]),
+      0,
+    )
+  }
 }
