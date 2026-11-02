@@ -427,3 +427,31 @@ async test "a framework without CFBundleExecutable uses its own name" {
     ])
   })
 }
+
+///|
+async test "a framework without Info.plist is signed by its stem" {
+  guard current_package_host() is Macos else { return }
+  with_scan_root(async fn(root) {
+    write_fixture(root, "Foo.framework/Foo", thin_library())
+    write_fixture(root, "Foo.framework/Libraries/libx.dylib", thin_library())
+    write_fixture(root, "Plain.bundle/Plain", thin_library())
+    assert_eq(relative_paths(root, macos_tree_sign_paths(root)), [
+      "Plain.bundle/Plain", "Foo.framework/Libraries/libx.dylib", "Foo.framework/Foo",
+      "Foo.framework",
+    ])
+  })
+}
+
+///|
+async test "a tree inside a bundle signs the bundle's main executable last" {
+  guard current_package_host() is Macos else { return }
+  with_scan_root(async fn(root) {
+    write_fixture(root, "Tool.app/Contents/Info.plist", bundle_info("A-main"))
+    write_fixture(root, "Tool.app/Contents/MacOS/A-main", thin_library())
+    write_fixture(root, "Tool.app/Contents/MacOS/Z-helper", thin_library())
+    let tree = path_join(root, "Tool.app/Contents/MacOS")
+    assert_eq(relative_paths(tree, macos_tree_sign_paths(tree)), [
+      "Z-helper", "A-main",
+    ])
+  })
+}

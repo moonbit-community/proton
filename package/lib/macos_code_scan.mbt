@@ -91,9 +91,17 @@ async fn macho_file_is_code(path : String) -> Bool {
 }
 
 ///|
-/// The executable name a bundle's `Info.plist` declares. Like CFBundle,
-/// `codesign` falls back to the bundle's name without its extension when
-/// `CFBundleExecutable` is absent.
+/// A bundle's name without its extension, which CFBundle and `codesign` take
+/// as the executable name when the bundle does not declare one.
+fn bundle_stem(bundle : String) -> String {
+  let name = host_path(bundle).basename()
+  let stem = if name.rev_find(".") is Some(dot) { name[:dot] } else { name }
+  stem.to_owned()
+}
+
+///|
+/// The executable name a bundle's `Info.plist` declares, or the bundle's stem
+/// when the plist lacks `CFBundleExecutable`.
 async fn bundle_executable_name(
   info_plist : String,
   bundle~ : String,
@@ -102,11 +110,7 @@ async fn bundle_executable_name(
   let (code, output) = @process.collect_output_merged("/usr/bin/plutil", [
     "-extract", "CFBundleExecutable", "raw", "-o", "-", info_plist,
   ])
-  guard code == 0 else {
-    let name = host_path(bundle).basename()
-    let stem = if name.rev_find(".") is Some(dot) { name[:dot] } else { name }
-    return Some(stem.to_owned())
-  }
+  guard code == 0 else { return Some(bundle_stem(bundle)) }
   let name = (output.text() catch { _ => return None }).trim().to_owned()
   if name == "" || name.contains("/") {
     None
@@ -120,7 +124,8 @@ async fn bundle_executable_name(
 /// is not one. A bundle is recognized by its structure, not its suffix: an
 /// `Info.plist` naming a `CFBundleExecutable` that exists, in `Contents/MacOS`
 /// for apps and plug-ins, or at the root of a framework, a framework version or
-/// a shallow bundle.
+/// a shallow bundle. A `.framework` needs no `Info.plist`: `codesign` signs it
+/// by its stem.
 /// A framework's other versions are included because symlinks such as
 /// `Versions/Current` are not scanned, so only real paths are compared.
 async fn bundle_main_executables(directory : String) -> Array[String]? {
@@ -143,7 +148,12 @@ async fn bundle_main_executables(directory : String) -> Array[String]? {
           bundle=directory,
         ) {
         Some(name) => name
-        None => return None
+        None =>
+          if directory.has_suffix(".framework") {
+            bundle_stem(directory)
+          } else {
+            return None
+          }
       }
   }
   let main = path_join(directory, name)
@@ -200,16 +210,24 @@ async fn collect_macos_code(
 ///|
 /// The code objects under `root` in signing order: every Mach-O with loadable
 /// code, plus each nested code bundle after its contents. `root` itself is not
-/// included, but when it is a bundle its main executables still come last.
+/// included, but the main executables of the bundles that contain or are `root`
+/// still come last, so a tree such as `Tool.app/Contents/MacOS` keeps the
+/// enclosing bundle's seal valid.
 async fn macos_tree_sign_paths(root : String) -> Array[String] {
+  let main_executables = []
+  for directory = root {
+    if bundle_main_executables(directory) is Some(mains) {
+      main_executables.append(mains)
+    }
+    let parent = path_parent(directory)
+    if parent == directory {
+      break
+    }
+    continue parent
+  }
   let ordered = []
   let deferred = []
-  collect_macos_code(
-    root,
-    bundle_main_executables(root).unwrap_or([]),
-    ordered,
-    deferred,
-  )
+  collect_macos_code(root, main_executables, ordered, deferred)
   ordered.append(deferred)
   ordered
 }
