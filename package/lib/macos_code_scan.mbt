@@ -91,15 +91,6 @@ async fn macho_file_is_code(path : String) -> Bool {
 }
 
 ///|
-/// A code object found under a signing tree.
-priv struct MacosCode {
-  path : String
-  /// Signing a bundle's main executable seals the bundle, so it has to wait
-  /// for every other code object in that bundle.
-  main_executable : Bool
-}
-
-///|
 async fn bundle_executable_name(info_plist : String) -> String? {
   guard path_is_file(info_plist) else { return None }
   let (code, output) = @process.collect_output_merged("/usr/bin/plutil", [
@@ -118,7 +109,8 @@ async fn bundle_executable_name(info_plist : String) -> String? {
 /// The main executable paths of a code bundle, or `None` for a directory that
 /// is not one. A bundle is recognized by its structure, not its suffix: an
 /// `Info.plist` naming a `CFBundleExecutable` that exists, in `Contents/MacOS`
-/// for apps and plug-ins, or at the root of a framework or framework version.
+/// for apps and plug-ins, or at the root of a framework, a framework version or
+/// a shallow bundle.
 /// A framework's other versions are included because symlinks such as
 /// `Versions/Current` are not scanned, so only real paths are compared.
 async fn bundle_main_executables(directory : String) -> Array[String]? {
@@ -127,8 +119,15 @@ async fn bundle_main_executables(directory : String) -> Array[String]? {
     let main = path_join(path_join(contents, "MacOS"), name)
     return if path_exists(main) { Some([main]) } else { None }
   }
-  let info_plist = path_join(directory, "Resources/Info.plist")
-  guard bundle_executable_name(info_plist) is Some(name) else { return None }
+  let name = match
+    bundle_executable_name(path_join(directory, "Resources/Info.plist")) {
+    Some(name) => name
+    None =>
+      match bundle_executable_name(path_join(directory, "Info.plist")) {
+        Some(name) => name
+        None => return None
+      }
+  }
   let main = path_join(directory, name)
   guard path_exists(main) else { return None }
   let paths = [main]
@@ -142,34 +141,38 @@ async fn bundle_main_executables(directory : String) -> Array[String]? {
 }
 
 ///|
-/// Collects code under `directory`. A code bundle is signed as one target after
-/// its contents, because its seal records the signatures of nested code.
+/// Appends the code under `directory` to `ordered` in signing order. Signing a
+/// bundle's main executable or the bundle itself seals the bundle over the code
+/// it contains, so each bundle's contents come first, then its main
+/// executables, which collect in `deferred` while plain subdirectories are
+/// walked, and then the bundle directory.
 async fn collect_macos_code(
   directory : String,
-  found : Array[MacosCode],
   main_executables : Array[String],
+  ordered : Array[String],
+  deferred : Array[String],
 ) -> Unit {
-  for name in @async_fs.readdir(directory, include_hidden=true) {
+  for name in @async_fs.readdir(directory, include_hidden=true, sort=true) {
     let path = path_join(directory, name)
     // Symlinks are skipped: a framework's `Versions/Current` aliases code that
     // is reached through its real path.
     match @async_fs.kind(path, follow_symlink=false) {
-      Directory => {
-        let bundle = bundle_main_executables(path)
-        if bundle is Some(mains) {
-          main_executables.append(mains)
+      Directory =>
+        if bundle_main_executables(path) is Some(mains) {
+          let bundle_deferred = []
+          collect_macos_code(path, mains, ordered, bundle_deferred)
+          ordered.append(bundle_deferred)
+          ordered.push(path)
+        } else {
+          collect_macos_code(path, main_executables, ordered, deferred)
         }
-        collect_macos_code(path, found, main_executables)
-        if bundle is Some(_) {
-          found.push(MacosCode::{ path, main_executable: false, })
-        }
-      }
       Regular =>
         if macho_file_is_code(path) {
-          found.push(MacosCode::{
-            path,
-            main_executable: main_executables.contains(path),
-          })
+          if main_executables.contains(path) {
+            deferred.push(path)
+          } else {
+            ordered.push(path)
+          }
         }
       _ => ()
     }
@@ -177,27 +180,18 @@ async fn collect_macos_code(
 }
 
 ///|
-/// Higher ranks sign first. A deeper path is signed before the bundle that
-/// contains it, and a main executable after the code beside it, so every seal
-/// is made after the code it covers is signed.
-fn macos_sign_rank(code : MacosCode) -> Int32 {
-  code.path.split("/").count() * 2 + (if code.main_executable { 0 } else { 1 })
-}
-
-///|
 /// The code objects under `root` in signing order: every Mach-O with loadable
 /// code, plus each nested code bundle after its contents. `root` itself is not
-/// included.
+/// included, but when it is a bundle its main executables still come last.
 async fn macos_tree_sign_paths(root : String) -> Array[String] {
-  let found = []
-  // The root is not signed itself, but when it is a bundle its main
-  // executable still seals it and has to wait for the rest.
-  collect_macos_code(root, found, bundle_main_executables(root).unwrap_or([]))
-  found.sort_by((left, right) => {
-    match macos_sign_rank(right).compare(macos_sign_rank(left)) {
-      0 => left.path.compare(right.path)
-      order => order
-    }
-  })
-  found.map(code => code.path)
+  let ordered = []
+  let deferred = []
+  collect_macos_code(
+    root,
+    bundle_main_executables(root).unwrap_or([]),
+    ordered,
+    deferred,
+  )
+  ordered.append(deferred)
+  ordered
 }

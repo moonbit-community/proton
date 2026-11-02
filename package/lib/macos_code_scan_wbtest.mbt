@@ -312,6 +312,24 @@ async test "macOS packaging signs every code object in a resource tree" {
     target="Versions/Current/Resources",
     path_join(foo, "Resources"),
   )
+  // A shallow bundle: Info.plist and executables at its root.
+  let flat = path_join(payload, "lib/Flat.bundle")
+  ensure_dir(flat)
+  write_fixture(flat, "Info.plist", bundle_info("A-main"))
+  assert_eq(
+    @process.run("cc", ["-bundle", library, "-o", path_join(flat, "A-main")]),
+    0,
+  )
+  assert_eq(@process.run("cc", [source, "-o", path_join(flat, "Z-helper")]), 0)
+  // A tree rooted at a bundle, with code shallower than its main executable.
+  let app = path_join(root, "Root.app/Contents")
+  ensure_dir(path_join(app, "MacOS"))
+  write_fixture(app, "Info.plist", bundle_info("A-main"))
+  assert_eq(
+    @process.run("cc", [source, "-o", path_join(app, "MacOS/A-main")]),
+    0,
+  )
+  assert_eq(@process.run("cc", [source, "-o", path_join(app, "helper")]), 0)
   let spec = PackageSpec(
     executable,
     "Tree Test",
@@ -319,12 +337,16 @@ async test "macOS packaging signs every code object in a resource tree" {
     "1.0.0",
     [App],
     path_join(root, "out"),
-    payloads=[Payload(payload, "payload")],
+    payloads=[
+      Payload(payload, "payload"),
+      Payload(path_join(root, "Root.app"), "Root.app"),
+    ],
   )
   let artifacts = build_with(
     spec,
     PackageCustomization(macos_sign_targets=[
       MacosSignTarget("Contents/Resources/payload", tree=true),
+      MacosSignTarget("Contents/Resources/Root.app", tree=true),
     ]),
     fn(_) {  },
   )
@@ -335,13 +357,17 @@ async test "macOS packaging signs every code object in a resource tree" {
   ])
   assert_true(details.text().contains("flags=0x10002(adhoc,runtime)"))
   // Signing out of order leaves a bundle's seal invalid.
-  for bundle in ["Foo.framework", "Test.bundle"] {
+  for
+    bundle in [
+      "payload/lib/Foo.framework", "payload/lib/Test.bundle", "payload/lib/Flat.bundle",
+      "Root.app",
+    ] {
     assert_eq(
       @process.run("/usr/bin/codesign", [
         "--verify",
         "--deep",
         "--strict",
-        path_join(artifacts[0], "Contents/Resources/payload/lib/" + bundle),
+        path_join(artifacts[0], "Contents/Resources/" + bundle),
       ]),
       0,
     )
@@ -357,6 +383,32 @@ async test "a bundle at the tree root still signs its main executable last" {
     write_fixture(root, "Contents/MacOS/Z-helper", thin_library())
     assert_eq(relative_paths(root, macos_tree_sign_paths(root)), [
       "Contents/MacOS/Z-helper", "Contents/MacOS/A-main",
+    ])
+  })
+}
+
+///|
+async test "a main executable waits for shallower code in its bundle" {
+  guard current_package_host() is Macos else { return }
+  with_scan_root(async fn(root) {
+    write_fixture(root, "Contents/Info.plist", bundle_info("A-main"))
+    write_fixture(root, "Contents/MacOS/A-main", thin_library())
+    write_fixture(root, "Contents/helper", thin_library())
+    assert_eq(relative_paths(root, macos_tree_sign_paths(root)), [
+      "Contents/helper", "Contents/MacOS/A-main",
+    ])
+  })
+}
+
+///|
+async test "a shallow bundle is sealed after its contents" {
+  guard current_package_host() is Macos else { return }
+  with_scan_root(async fn(root) {
+    write_fixture(root, "Flat.bundle/Info.plist", bundle_info("A-main"))
+    write_fixture(root, "Flat.bundle/A-main", thin_library())
+    write_fixture(root, "Flat.bundle/Z-helper", thin_library())
+    assert_eq(relative_paths(root, macos_tree_sign_paths(root)), [
+      "Flat.bundle/Z-helper", "Flat.bundle/A-main", "Flat.bundle",
     ])
   })
 }
