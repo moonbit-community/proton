@@ -87,6 +87,8 @@ fn relative_paths(root : String, paths : Array[String]) -> Array[String] {
 
 ///|
 async test "signing scan finds executables, libraries and bundles only" {
+  // The scan only runs while signing on macOS, where paths use `/`.
+  guard current_package_host() is Macos else { return }
   with_scan_root(async fn(root) {
     write_fixture(
       root,
@@ -156,6 +158,8 @@ async test "a slice table past the end of the file is not code" {
 
 ///|
 async test "signing scan does not follow symlinks" {
+  // The scan only runs while signing on macOS, where paths use `/`.
+  guard current_package_host() is Macos else { return }
   with_scan_root(async fn(root) {
     write_fixture(root, "real/libfoo.dylib", thin_library())
     @async_fs.symlink(target="real", path_join(root, "alias"))
@@ -168,6 +172,8 @@ async test "signing scan does not follow symlinks" {
 
 ///|
 async test "signing scan orders nested bundles inside-out" {
+  // The scan only runs while signing on macOS, where paths use `/`.
+  guard current_package_host() is Macos else { return }
   with_scan_root(async fn(root) {
     let library = thin_library()
     write_fixture(root, "tool", library)
