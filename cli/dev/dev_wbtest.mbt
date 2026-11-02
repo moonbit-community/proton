@@ -258,7 +258,7 @@ test "occupied frontend URL reports managed frontend guidance" {
 test "dev passes the effective typed configuration without mutating the source" {
   let source = @proton_config.AppConfig::parse(
     (
-      #|{"identifier":"com.example.dev","frontend":{"path":"ui","dev_url":"http://localhost:3000","dist":"dist"},"package":{"product_name":"Dev","version":"1.0.0"}}
+      #|{"identifier":"com.example.dev","frontend":{"path":"ui","dev_url":"http://localhost:3000","dist":"dist"},"package":{"product_name":"Dev","version":"1.0.0"},"platforms":{"windows":{"frontend":{"path":"win-ui","before_dev":"win-dev"}},"macos":{"frontend":{"path":"mac-ui"}},"linux":{"frontend":{"path":"linux-ui"}}}}
     ),
   )
   let config = effective_dev_config(
@@ -288,4 +288,43 @@ test "native CLI path overrides survive the application snapshot" {
     let snapshot = @proton_config.AppConfig::decode(config.to_json())
     assert_eq(snapshot.frontend.unwrap().path, Some(path))
   }
+}
+
+///|
+async test "dev starts the selected script from the CLI-overridden frontend directory" {
+  let root = @async_fs.tmpdir(prefix="proton frontend dev-")
+  defer @async_fs.rmdir(root, recursive=true)
+  let frontend = @fsutil.path_join(root, "cli frontend")
+  @async_fs.mkdir(frontend)
+  let source = @proton_config.AppConfig::decode({
+    "identifier": "com.example.dev",
+    "frontend": { "path": "missing", "before_dev": "exit 91" },
+    "platforms": {
+      "macos": { "frontend": { "before_dev": "echo dev-ready > ready.txt" } },
+      "windows": { "frontend": { "before_dev": "echo dev-ready > ready.txt" } },
+      "linux": { "frontend": { "before_dev": "echo dev-ready > ready.txt" } },
+    },
+  })
+  let config = effective_dev_config(
+    source,
+    parse_dev_args(["--frontend-path", "cli frontend"]),
+  )
+  let settings = config.frontend.unwrap()
+  let cwd = resolve_frontend_path(root, settings.path, true)
+  @async.with_task_group(group => {
+    let child = start_frontend(
+      group,
+      cwd,
+      settings.before_dev.unwrap(),
+      Map([]),
+    )
+    assert_eq(child.wait(), 0)
+  })
+  assert_eq(
+    @async_fs.read_file(@fsutil.path_join(frontend, "ready.txt"))
+    .text()
+    .trim()
+    .to_owned(),
+    "dev-ready",
+  )
 }

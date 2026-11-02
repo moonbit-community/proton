@@ -39,3 +39,12 @@ Run the development and production E2E probes with:
 ```sh
 moon -C e2e run test --target native -- --dev-extension
 ```
+
+The root `platforms` block keeps package format selection beside each host's
+other overrides. It selects `app`/`zip` on macOS and Windows and `appimage` on
+Linux. Linux packaging additionally requires a PNG in `package.icons` and
+`appimagetool`; this example does not ship an application icon.
+A project-local Warren can be invoked as `../tools/warren` from the
+frontend directory, with a Windows `before_dev`/`before_build` override using
+`..\\tools\\warren.exe` in JSON. This configuration format requires the
+unreleased CLI and Proton configuration module.

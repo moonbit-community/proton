@@ -15,3 +15,13 @@ pub async fn load(path : String) -> Project raise @proton_config.AppConfigError 
   let config = @proton_config.AppConfig::parse(source, name=path)
   { base_dir: @fsutil.path_parent(path), config, }
 }
+
+///|
+/// Returns the host shell invocation for a configured script.
+/// Callers supply the frontend or configuration directory as cwd.
+pub fn shell_command(command : String) -> (String, Array[String]) {
+  match @proton_config.current_platform() {
+    Windows => ("cmd", ["/d", "/c", command])
+    Macos | Linux => ("sh", ["-c", command])
+  }
+}

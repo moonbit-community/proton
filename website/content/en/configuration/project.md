@@ -1,8 +1,11 @@
 # Project configuration
 
-`proton.project.json` contains application identity and CLI build/package metadata. It is a JSON object with four recognized top-level fields. Unknown fields are rejected. Window state, command registration and capabilities belong to the MoonBit application builder, not this file.
+`proton.project.json` contains application identity and CLI build/package metadata. It is a JSON object with five recognized top-level fields. Unknown fields are rejected. Window state, command registration and capabilities belong to the MoonBit application builder, not this file.
 
 The default filename is `proton.project.json`. To use another filename such as `moon.proton.json`, pass `--config moon.proton.json` to `dev`, `build` or `package`; it is not an automatically discovered alias.
+
+The root platform-override format below is unreleased; see the migration section
+when upgrading from 0.6.0.
 
 ## Top-level fields
 
@@ -12,6 +15,7 @@ The default filename is `proton.project.json`. To use another filename such as `
 | `backend` | object | Optional at decoding; provides the CLI backend location and entry |
 | `frontend` | object | Optional frontend command and asset configuration |
 | `package` | object | Optional distribution metadata; required for metadata-driven packaging |
+| `platforms` | object | Optional host overrides: `macos`, `windows`, `linux` |
 
 `identifier` is trimmed and must have at least two nonempty dot-separated components. Each component starts with an ASCII letter or digit and contains only ASCII letters, digits or hyphens.
 
@@ -69,7 +73,6 @@ These fields belong to the `package` object in `proton.project.json`.
 | `url_schemes` | string array | Empty; registered application URL schemes |
 | `document_types` | object array | Empty; document associations |
 | `output` | string | `dist`, relative to configuration directory |
-| `platforms` | object | Optional `macos`, `windows`, `linux` overrides |
 
 A document type contains required `name` and `extensions`; `role` defaults to `Viewer`. The canonical identifier is the top-level `identifier`, not a package field. Changing the product name does not change application identity.
 
@@ -91,25 +94,61 @@ Omitting `sign` adds no extra binaries. This object does not enable signing: use
 | `extensions` | string array | Required nonempty list of file extensions |
 | `role` | string | `Viewer`; document role passed to packaging |
 
-## `package.platforms`
+## Platform overrides
+
+Root `platforms` is the only platform-override location. Each `macos`, `windows`,
+or `linux` object may contain partial `backend`, `frontend`, and `package`
+sections. The platform is the operating system running the CLI, not the MoonBit
+compilation target. No additional configuration files are loaded.
+
+Resolution order is common fields, host-platform overrides, then explicit CLI
+options. Defaults apply to omitted effective fields; validation checks every
+platform section, including inactive platforms. Unknown fields are errors.
+
+- Omitted fields inherit the common value.
+- Objects override their individual fields; arrays replace the entire common
+  array, including `resources` and `sign.binaries`. There is no append step.
+- Explicit `null` clears optional fields such as `before_build`, `prepare`, or
+  `sign`. Required fields and arrays cannot be set to `null`.
+- `identifier` and `package.version` are shared across platforms and cannot be
+  overridden. Nested `platforms` objects are not supported.
+- An empty effective `formats` list selects the host's default formats.
+
+The platform-specific package fields are:
 
 | Field | Type | Default / meaning |
 | --- | --- | --- |
-| `macos` | object | Absent; macOS overrides |
-| `windows` | object | Absent; Windows overrides |
-| `linux` | object | Absent; Linux overrides |
+| `platforms.macos.package.minimum_system_version` | string | Unset; `major.minor[.patch]`, written to `LSMinimumSystemVersion`. Does not change compilation targets or validate binary compatibility |
+| `platforms.windows.package.nsis_install_mode` | string | `currentUser`; accepts `currentUser`, `perMachine`, or `both` |
 
-Each platform object accepts the following fields. Unknown fields are rejected, including `nsis_install_mode` outside Windows.
+All other package overrides use the common package field names, except `version`.
+Platform-specific fields are rejected outside their respective platform.
+See [packaging behavior](../command-line-interface/packaging.md).
 
-| Field | Type | Default / meaning |
-| --- | --- | --- |
-| `formats` | string array | Shared `package.formats`; an explicit list replaces it |
-| `resources` | string array | `[]`; appended to shared resources, duplicates removed |
-| `sign` | object | Absent; accepts only `binaries` (string array, default `[]`), appended to shared signing inputs with duplicates removed |
-| `nsis_install_mode` | string | Windows only; `currentUser` (default), `perMachine`, or `both` |
-| `minimum_system_version` | string | macOS only; `major.minor[.patch]`. Sets `LSMinimumSystemVersion`; omitted when unset. Does not change compilation targets or validate binary compatibility. |
+## Command working directories
 
-If the resolved format list is empty, the host default formats apply. CLI options override the resolved configuration. See [packaging behavior](../command-line-interface/packaging.md) for supported formats, signing and installation modes.
+`frontend.path` is the working directory of both frontend commands. If omitted,
+they run from the configuration directory. `package.prepare` always runs from
+the configuration directory. Commands remain shell strings: Windows uses
+`cmd /d /c`, macOS/Linux use `sh -c`. They inherit the CLI process environment;
+Proton does not add project tool directories to `PATH`.
+
+Paths inside a command are interpreted by that shell from its working directory.
+For a project-level `tools/warren` next to `frontend/`, use `../tools/warren build`
+with `frontend.path: "frontend"`; on Windows override it with
+`..\\tools\\warren.exe build` in JSON. The executable and its arguments must
+follow the host shell's syntax. `--frontend-path` overrides the frontend working
+directory; `--command` replaces only the development command, keeping that
+working directory. Changing the working directory also changes the base for
+`frontend.dist`; it does not change package resource or output path bases.
+
+## Migration from 0.6.0
+
+Root platform overrides are unreleased. Move
+`package.platforms.<platform>.*` to `platforms.<platform>.package.*` when updating
+to a release containing this format. Old locations produce a migration error.
+Previously, platform resources and signing inputs were appended to common
+arrays; now list the complete desired array in an override.
 
 ## Configuration ownership and directory layout
 
@@ -138,12 +177,15 @@ The paths below are illustrative: referenced icons, resources and commands must 
 ```json
 {
   "identifier": "com.example.notes",
-  "backend": { "path": "backend", "package": "app" },
+  "backend": {
+    "path": "backend",
+    "package": "app"
+  },
   "frontend": {
     "path": "frontend",
     "dev_url": "http://127.0.0.1:4300",
-    "before_dev": "warren dev --browser-entry main --direct --port 4300",
-    "before_build": "warren build --browser-entry main",
+    "before_dev": "../tools/warren dev --browser-entry main --direct --port 4300",
+    "before_build": "../tools/warren build --browser-entry main",
     "dist": "dist"
   },
   "package": {
@@ -153,16 +195,39 @@ The paths below are illustrative: referenced icons, resources and commands must 
     "icons": ["icons/app.icns", "icons/app.ico", "icons/app.png"],
     "prepare": "node scripts/prepare.mjs",
     "resources": ["resources"],
-    "sign": { "binaries": [] },
+    "sign": {
+      "binaries": []
+    },
     "url_schemes": ["notes"],
     "document_types": [
-      { "name": "Note", "extensions": ["note"], "role": "Editor" }
+      {
+        "name": "Note",
+        "extensions": ["note"],
+        "role": "Editor"
+      }
     ],
-    "output": "dist",
-    "platforms": {
-      "macos": { "formats": ["app", "dmg"] },
-      "windows": { "formats": ["nsis"], "nsis_install_mode": "currentUser" },
-      "linux": { "formats": ["appimage"] }
+    "output": "dist"
+  },
+  "platforms": {
+    "macos": {
+      "package": {
+        "formats": ["app", "dmg"]
+      }
+    },
+    "windows": {
+      "package": {
+        "formats": ["nsis"],
+        "nsis_install_mode": "currentUser"
+      },
+      "frontend": {
+        "before_dev": "..\\tools\\warren.exe dev --browser-entry main --direct --port 4300",
+        "before_build": "..\\tools\\warren.exe build --browser-entry main"
+      }
+    },
+    "linux": {
+      "package": {
+        "formats": ["appimage"]
+      }
     }
   }
 }
@@ -183,14 +248,18 @@ if config.frontend is Some(frontend) {
 }
 ```
 
-`load_config()` reads and validates the complete typed `AppConfig`, raising
+`load_config()` resolves host-platform overrides and returns the effective typed
+`AppConfig`, raising
 `AppConfigError` immediately on failure. Development uses `proton.project.json`;
 packaged applications use `proton-package.json`. For an explicit file path, use
 `@proton.AppConfig::load(path)`. Applications can also construct `AppConfig` directly.
 
 Read fields from the configuration value. Nested sections are optional structs:
 `config.frontend` contains `dev_url`, `path`, `dist`, `before_dev`, and
-`before_build`. JSON `package` maps to `config.package_config`; JSON
+`before_build`. The effective `package_config` also exposes
+`minimum_system_version` and `nsis_install_mode`. Unselected platform definitions
+are not retained in `AppConfig`; `to_json()` writes a reusable effective snapshot.
+JSON `package` maps to `config.package_config`; JSON
 `backend.package` maps to the backend's `app_package` field.
 
 `proton_cli dev` supplies the effective configuration after `--url`, `--command`,

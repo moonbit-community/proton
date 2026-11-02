@@ -521,7 +521,7 @@ async fn[X] start_frontend(
 ) -> @process.Process raise DevProcessError {
   @output.info("Starting frontend: " + command)
   @output.info("Frontend path: " + frontend_path)
-  let (program, args) = shell_command(command)
+  let (program, args) = @project.shell_command(command)
   @process.spawn(
     group,
     program,
@@ -547,15 +547,6 @@ fn managed_frontend_command(
   match (frontend_url, frontend_command) {
     (Some(_), None) => raise FrontendCommandMissing
     (_, command) => command
-  }
-}
-
-///|
-fn shell_command(command : String) -> (String, Array[String]) {
-  if @path.sep == '\\' {
-    ("cmd", ["/c", command])
-  } else {
-    ("sh", ["-c", command])
   }
 }
 

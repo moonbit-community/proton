@@ -68,67 +68,6 @@ pub fn SignConfig::SignConfig(binaries~ : Array[String] = []) -> SignConfig {
 }
 
 ///|
-/// Package inputs that apply only to one desktop platform.
-/// `minimum_system_version` is macOS-only and changes package metadata, not
-/// compiler deployment targets.
-pub(all) struct PlatformPackageConfig {
-  formats : Array[String]?
-  resources : Array[String]
-  sign : SignConfig?
-  minimum_system_version : String?
-  nsis_install_mode : String?
-} derive(Eq, Debug, ToJson, FromJson)
-
-///|
-pub extend PlatformPackageConfig with Eq::{not_equal, equal}
-
-///|
-pub extend PlatformPackageConfig with Debug::{to_repr}
-
-///|
-pub fn PlatformPackageConfig::PlatformPackageConfig(
-  formats? : Array[String],
-  resources~ : Array[String] = [],
-  sign? : SignConfig,
-  minimum_system_version? : String,
-  nsis_install_mode? : String,
-) -> PlatformPackageConfig {
-  PlatformPackageConfig::{
-    formats: match formats {
-      Some(formats) => Some(formats.copy())
-      None => None
-    },
-    resources: resources.copy(),
-    sign,
-    minimum_system_version,
-    nsis_install_mode,
-  }
-}
-
-///|
-/// Optional package overrides for each supported desktop platform.
-pub(all) struct PackagePlatforms {
-  macos : PlatformPackageConfig?
-  windows : PlatformPackageConfig?
-  linux : PlatformPackageConfig?
-} derive(Eq, Debug, ToJson, FromJson)
-
-///|
-pub extend PackagePlatforms with Eq::{not_equal, equal}
-
-///|
-pub extend PackagePlatforms with Debug::{to_repr}
-
-///|
-pub fn PackagePlatforms::PackagePlatforms(
-  macos? : PlatformPackageConfig,
-  windows? : PlatformPackageConfig,
-  linux? : PlatformPackageConfig,
-) -> PackagePlatforms {
-  PackagePlatforms::{ macos, windows, linux, }
-}
-
-///|
 pub(all) struct DocumentType {
   name : String
   extensions : Array[String]
@@ -164,7 +103,8 @@ pub(all) struct PackageConfig {
   url_schemes : Array[String]
   document_types : Array[DocumentType]
   output : String
-  platforms : PackagePlatforms
+  minimum_system_version : String?
+  nsis_install_mode : String?
 } derive(Eq, Debug, ToJson, FromJson)
 
 ///|
@@ -185,7 +125,8 @@ pub fn PackageConfig::PackageConfig(
   url_schemes~ : Array[String] = [],
   document_types~ : Array[DocumentType] = [],
   output~ : String = "dist",
-  platforms~ : PackagePlatforms = PackagePlatforms(),
+  minimum_system_version~ : String? = None,
+  nsis_install_mode~ : String? = None,
 ) -> PackageConfig {
   PackageConfig::{
     product_name,
@@ -198,23 +139,20 @@ pub fn PackageConfig::PackageConfig(
     url_schemes: url_schemes.copy(),
     document_types: document_types.copy(),
     output,
-    platforms,
+    minimum_system_version,
+    nsis_install_mode,
   }
 }
 
 ///|
-/// Project description shared by Proton tooling and managed applications.
+/// Effective host-platform configuration shared by tooling and applications.
+/// Loading resolves root platform overrides; relative paths remain unchanged.
 pub(all) struct AppConfig {
   identifier : String
   backend : BackendConfig?
   frontend : FrontendConfig?
   package_config : PackageConfig?
-} derive (
-  Eq,
-  Debug,
-  ToJson(fields(package_config(rename="package"))),
-  FromJson(fields(package_config(rename="package"))),
-)
+} derive(Eq, Debug)
 
 ///|
 pub extend AppConfig with Eq::{not_equal, equal}
@@ -249,18 +187,6 @@ pub extend SignConfig with ToJson::{to_json}
 
 ///|
 pub extend SignConfig with @json.FromJson::{from_json}
-
-///|
-pub extend PlatformPackageConfig with ToJson::{to_json}
-
-///|
-pub extend PlatformPackageConfig with @json.FromJson::{from_json}
-
-///|
-pub extend PackagePlatforms with ToJson::{to_json}
-
-///|
-pub extend PackagePlatforms with @json.FromJson::{from_json}
 
 ///|
 pub extend DocumentType with ToJson::{to_json}

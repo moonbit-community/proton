@@ -55,113 +55,197 @@ test "application config preserves all fields and relative paths" {
 }
 
 ///|
-test "project package decodes platform-specific inputs" {
-  let source =
-    #|{
-    #|  "identifier": "com.example.todo",
-    #|  "package": {
-    #|    "product_name": "Todo",
-    #|    "version": "1.2.3",
-    #|    "formats": ["app"],
-    #|    "resources": ["assets/common"],
-    #|    "sign": { "binaries": ["helpers/common"] },
-    #|    "platforms": {
-    #|      "macos": {
-    #|        "minimum_system_version": "15.0",
-    #|        "formats": ["app", "dmg"],
-    #|        "resources": ["assets/macos"],
-    #|        "sign": { "binaries": ["helpers/macos"] }
-    #|      },
-    #|      "windows": {
-    #|        "formats": ["app", "zip", "nsis"],
-    #|        "resources": ["assets/windows"]
-    #|      },
-    #|      "linux": { "formats": [] }
-    #|    }
-    #|  }
-    #|}
-  let config = @proton_config.AppConfig::parse(source)
-  let platforms = config.package_config.unwrap().platforms
-  let macos = platforms.macos.unwrap()
-  assert_eq(macos.minimum_system_version, Some("15.0"))
-  assert_eq(macos.formats, Some(["app", "dmg"]))
-  assert_eq(macos.resources, ["assets/macos"])
-  assert_eq(macos.sign.unwrap().binaries, ["helpers/macos"])
-  assert_eq(platforms.windows.unwrap().formats, Some(["app", "zip", "nsis"]))
-  assert_eq(platforms.linux.unwrap().formats, Some([]))
-}
-
-///|
-test "project package rejects unknown platform overrides" {
-  let source =
-    #|{
-    #|  "identifier": "com.example.todo",
-    #|  "package": {
-    #|    "product_name": "Todo",
-    #|    "version": "1.2.3",
-    #|    "platforms": { "android": { "formats": ["app"] } }
-    #|  }
-    #|}
-  let error = expect_config_error(() => {
-    ignore(@proton_config.AppConfig::parse(source))
-  })
-  assert_eq(error, UnknownField(path="package.platforms.android"))
-}
-
-///|
-test "NSIS install modes belong only to the Windows package configuration" {
-  for mode in ["currentUser", "perMachine", "both"] {
-    let config = @proton_config.AppConfig::decode({
-      "identifier": "com.example.demo",
-      "package": {
-        "product_name": "Demo",
-        "version": "1.0.0",
-        "platforms": { "windows": { "nsis_install_mode": mode } },
+test "root overrides resolve all project sections without mutating the source" {
+  let source : Json = {
+    "identifier": "com.example.todo",
+    "backend": { "path": ".", "package": "app" },
+    "frontend": {
+      "path": "frontend",
+      "before_build": "../tools/warren build",
+      "dist": "dist",
+    },
+    "package": {
+      "product_name": "Todo",
+      "version": "1.2.3",
+      "formats": ["app"],
+      "resources": ["assets/common"],
+      "sign": { "binaries": ["helpers/common"] },
+    },
+    "platforms": {
+      "macos": {
+        "package": {
+          "minimum_system_version": "15.0",
+          "formats": ["app", "dmg"],
+          "resources": ["assets/macos"],
+          "sign": { "binaries": ["helpers/macos"] },
+        },
       },
-    })
-    assert_eq(
-      config.package_config.unwrap().platforms.windows.unwrap().nsis_install_mode,
-      Some(mode),
-    )
+      "windows": {
+        "backend": { "package": "windows-app" },
+        "frontend": { "before_build": "..\\tools\\warren.exe build" },
+        "package": { "nsis_install_mode": "both", "resources": [] },
+      },
+      "linux": { "package": { "formats": [] } },
+    },
   }
-  let invalid = expect_config_error(() => {
+  let mac = @proton_config.AppConfig::decode(source, platform=Macos)
+  let package_config = mac.package_config.unwrap()
+  assert_eq(package_config.minimum_system_version, Some("15.0"))
+  assert_eq(package_config.formats, ["app", "dmg"])
+  assert_eq(package_config.resources, ["assets/macos"])
+  assert_eq(package_config.sign.unwrap().binaries, ["helpers/macos"])
+  let win = @proton_config.AppConfig::decode(source, platform=Windows)
+  assert_eq(win.backend.unwrap().path, ".")
+  assert_eq(win.backend.unwrap().app_package, "windows-app")
+  assert_eq(win.frontend.unwrap().path, Some("frontend"))
+  assert_eq(
+    win.frontend.unwrap().before_build,
+    Some("..\\tools\\warren.exe build"),
+  )
+  assert_eq(win.package_config.unwrap().nsis_install_mode, Some("both"))
+  assert_eq(win.package_config.unwrap().resources, [])
+  let linux = @proton_config.AppConfig::decode(source, platform=Linux)
+  assert_eq(linux.package_config.unwrap().formats, [])
+  assert_eq(linux.package_config.unwrap().resources, ["assets/common"])
+  assert_eq(linux.backend.unwrap().app_package, "app")
+  assert_eq(@proton_config.AppConfig::decode(source, platform=Macos), mac)
+  assert_eq(
+    @proton_config.AppConfig::decode(mac.to_json(), platform=Macos),
+    mac,
+  )
+  assert_eq(
+    @proton_config.AppConfig::decode(win.to_json(), platform=Windows),
+    win,
+  )
+}
+
+///|
+test "platform null clears optional fields and omitted fields inherit" {
+  let config = @proton_config.AppConfig::decode(
+    {
+      "identifier": "com.example.todo",
+      "frontend": {
+        "path": "ui",
+        "before_build": "warren build",
+        "dev_url": "http://localhost:4300",
+      },
+      "package": {
+        "product_name": "Todo",
+        "version": "1.0.0",
+        "prepare": "echo prepare",
+        "sign": { "binaries": ["helper"] },
+      },
+      "platforms": {
+        "windows": {
+          "frontend": { "before_build": null },
+          "package": { "prepare": null, "sign": null },
+        },
+      },
+    },
+    platform=Windows,
+  )
+  assert_eq(config.frontend.unwrap().before_build, None)
+  assert_eq(config.frontend.unwrap().path, Some("ui"))
+  assert_eq(config.frontend.unwrap().dev_url, Some("http://localhost:4300"))
+  assert_eq(config.package_config.unwrap().prepare, None)
+  assert_eq(config.package_config.unwrap().sign, None)
+}
+
+///|
+test "platform overrides reject unknown fields and identity changes" {
+  let cases : Array[(Json, String)] = [
+    ({ "android": {} }, "platforms.android"),
+    (
+      { "windows": { "identifier": "com.example.other" } },
+      "platforms.windows.identifier",
+    ),
+    (
+      { "windows": { "package": { "version": "2.0.0" } } },
+      "platforms.windows.package.version",
+    ),
+    ({ "windows": { "platforms": {} } }, "platforms.windows.platforms"),
+    (
+      { "macos": { "package": { "nsis_install_mode": "both" } } },
+      "platforms.macos.package.nsis_install_mode",
+    ),
+    (
+      { "linux": { "package": { "minimum_system_version": "15.0" } } },
+      "platforms.linux.package.minimum_system_version",
+    ),
+    (
+      { "windows": { "package": { "sign": { "unknown": [] } } } },
+      "platforms.windows.package.sign.unknown",
+    ),
+  ]
+  for (patch, field) in cases {
+    let error = expect_config_error(() => {
+      ignore(
+        @proton_config.AppConfig::decode({
+          "identifier": "com.example.todo",
+          "platforms": patch,
+        }),
+      )
+    })
+    assert_eq(error, UnknownField(path=field))
+  }
+}
+
+///|
+test "legacy package platforms reports the new location" {
+  let error = expect_config_error(() => {
     ignore(
       @proton_config.AppConfig::decode({
-        "identifier": "com.example.demo",
+        "identifier": "com.example.todo",
         "package": {
-          "product_name": "Demo",
+          "product_name": "Todo",
           "version": "1.0.0",
-          "platforms": { "windows": { "nsis_install_mode": "admin" } },
+          "platforms": {},
         },
       }),
     )
   })
-  assert_eq(
-    invalid,
-    UnsupportedValue(
-      path="package.platforms.windows.nsis_install_mode",
-      value="admin",
-    ),
-  )
-  for platform in ["macos", "linux"] {
-    let platforms : Map[String, Json] = Map([])
-    platforms[platform] = { "nsis_install_mode": "perMachine" }
-    let invalid = expect_config_error(() => {
-      ignore(
-        @proton_config.AppConfig::decode({
-          "identifier": "com.example.demo",
-          "package": {
-            "product_name": "Demo",
-            "version": "1.0.0",
-            "platforms": Json(platforms),
-          },
-        }),
-      )
-    })
-    assert_eq(
-      invalid,
-      UnknownField(path="package.platforms." + platform + ".nsis_install_mode"),
+  assert_true(error.message().contains("root platforms.<platform>.package"))
+}
+
+///|
+test "invalid inactive platforms and required-field clearing are rejected" {
+  let patches : Array[Json] = [
+    { "package": { "nsis_install_mode": "admin" } },
+    { "package": { "product_name": null } },
+    { "package": { "resources": null } },
+    { "frontend": { "before_build": 42 } },
+    { "frontend": { "path": "" } },
+  ]
+  for patch in patches {
+    ignore(
+      expect_config_error(() => {
+        ignore(
+          @proton_config.AppConfig::decode(
+            {
+              "identifier": "com.example.todo",
+              "package": { "product_name": "Todo", "version": "1.0.0" },
+              "platforms": { "windows": patch },
+            },
+            platform=Linux,
+          ),
+        )
+      }),
     )
+  }
+}
+
+///|
+test "NSIS install modes remain typed Windows package settings" {
+  for mode in ["currentUser", "perMachine", "both"] {
+    let config = @proton_config.AppConfig::decode(
+      {
+        "identifier": "com.example.demo",
+        "package": { "product_name": "Demo", "version": "1.0.0" },
+        "platforms": { "windows": { "package": { "nsis_install_mode": mode } } },
+      },
+      platform=Windows,
+    )
+    assert_eq(config.package_config.unwrap().nsis_install_mode, Some(mode))
   }
 }
 

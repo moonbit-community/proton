@@ -8,6 +8,8 @@ import {
 // Values
 pub async fn load(String) -> Project raise @proton_config.AppConfigError
 
+pub fn shell_command(String) -> (String, Array[String])
+
 // Errors
 
 // Types and methods

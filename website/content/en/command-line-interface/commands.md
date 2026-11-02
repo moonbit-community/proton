@@ -164,7 +164,7 @@ Builds and assembles the application, frontend assets, CEF runtime, matching hel
 | `--icon <path>` | Repeatable; override configured icons |
 | `--url-scheme <scheme>` | Repeatable; override configured URL schemes |
 | `--nsis-install-mode <mode>` | `currentUser`, `perMachine` or `both`; overrides Windows configuration |
-| `--macos-minimum-system-version <version>` | Override `package.platforms.macos.minimum_system_version` |
+| `--macos-minimum-system-version <version>` | Override `platforms.macos.package.minimum_system_version` |
 | `--sign` | Sign the application; disabled by default |
 | `--notarize` | macOS signing, notarization and stapling; implies `--sign` |
 | `--updater-base-url <https-url>` | Emit update metadata using this artifact base URL; requires publication instant; uses `package.version`, overridden by `--version` |

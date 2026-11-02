@@ -1043,11 +1043,9 @@ pub using @types {type MenuRole}
 
 pub using @proton_config {type PackageConfig}
 
-pub using @proton_config {type PackagePlatforms}
-
 pub using @command {type PermissionScopeValidationError}
 
-pub using @proton_config {type PlatformPackageConfig}
+pub using @proton_config {type Platform}
 
 pub using @types {type ProgressBarMode}
 

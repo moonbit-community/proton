@@ -14,10 +14,31 @@
   "package": {
     "product_name": "Proton Dev Extension JS",
     "version": "0.1.0",
-    "formats": [
-      "app",
-      "zip"
-    ],
     "output": "dist"
+  },
+  "platforms": {
+    "macos": {
+      "package": {
+        "formats": [
+          "app",
+          "zip"
+        ]
+      }
+    },
+    "windows": {
+      "package": {
+        "formats": [
+          "app",
+          "zip"
+        ]
+      }
+    },
+    "linux": {
+      "package": {
+        "formats": [
+          "appimage"
+        ]
+      }
+    }
   }
 }
