@@ -90,7 +90,11 @@ async fn with_scan_root(body : async (String) -> Unit) -> Unit {
 ///|
 fn relative_paths(root : String, paths : Array[String]) -> Array[String] {
   paths.map(path => {
-    path.unsafe_substring(start=root.length() + 1, end=path.length())
+    if path == root {
+      "."
+    } else {
+      path.unsafe_substring(start=root.length() + 1, end=path.length())
+    }
   })
 }
 
@@ -330,6 +334,15 @@ async test "macOS packaging signs every code object in a resource tree" {
     0,
   )
   assert_eq(@process.run("cc", [source, "-o", path_join(app, "helper")]), 0)
+  // A tree rooted at a framework without Info.plist.
+  let bare = path_join(root, "Bare.framework")
+  ensure_dir(path_join(bare, "Libraries"))
+  for output in ["Bare", "Libraries/libx.dylib"] {
+    assert_eq(
+      @process.run("cc", ["-dynamiclib", library, "-o", path_join(bare, output)]),
+      0,
+    )
+  }
   let spec = PackageSpec(
     executable,
     "Tree Test",
@@ -340,6 +353,7 @@ async test "macOS packaging signs every code object in a resource tree" {
     payloads=[
       Payload(payload, "payload"),
       Payload(path_join(root, "Root.app"), "Root.app"),
+      Payload(bare, "Bare.framework"),
     ],
   )
   let artifacts = build_with(
@@ -347,6 +361,7 @@ async test "macOS packaging signs every code object in a resource tree" {
     PackageCustomization(macos_sign_targets=[
       MacosSignTarget("Contents/Resources/payload", tree=true),
       MacosSignTarget("Contents/Resources/Root.app", tree=true),
+      MacosSignTarget("Contents/Resources/Bare.framework", tree=true),
     ]),
     fn(_) {  },
   )
@@ -360,7 +375,7 @@ async test "macOS packaging signs every code object in a resource tree" {
   for
     bundle in [
       "payload/lib/Foo.framework", "payload/lib/Test.bundle", "payload/lib/Flat.bundle",
-      "Root.app",
+      "Root.app", "Bare.framework",
     ] {
     assert_eq(
       @process.run("/usr/bin/codesign", [
@@ -382,7 +397,7 @@ async test "a bundle at the tree root still signs its main executable last" {
     write_fixture(root, "Contents/MacOS/A-main", thin_library())
     write_fixture(root, "Contents/MacOS/Z-helper", thin_library())
     assert_eq(relative_paths(root, macos_tree_sign_paths(root)), [
-      "Contents/MacOS/Z-helper", "Contents/MacOS/A-main",
+      "Contents/MacOS/Z-helper", "Contents/MacOS/A-main", ".",
     ])
   })
 }
@@ -395,7 +410,7 @@ async test "a main executable waits for shallower code in its bundle" {
     write_fixture(root, "Contents/MacOS/A-main", thin_library())
     write_fixture(root, "Contents/helper", thin_library())
     assert_eq(relative_paths(root, macos_tree_sign_paths(root)), [
-      "Contents/helper", "Contents/MacOS/A-main",
+      "Contents/helper", "Contents/MacOS/A-main", ".",
     ])
   })
 }
@@ -452,6 +467,32 @@ async test "a tree inside a bundle signs the bundle's main executable last" {
     let tree = path_join(root, "Tool.app/Contents/MacOS")
     assert_eq(relative_paths(tree, macos_tree_sign_paths(tree)), [
       "Z-helper", "A-main",
+    ])
+  })
+}
+
+///|
+async test "a framework at the tree root signs itself last" {
+  guard current_package_host() is Macos else { return }
+  with_scan_root(async fn(parent) {
+    let root = path_join(parent, "Foo.framework")
+    write_fixture(root, "Foo", thin_library())
+    write_fixture(root, "Libraries/libx.dylib", thin_library())
+    assert_eq(relative_paths(root, macos_tree_sign_paths(root)), [
+      "Libraries/libx.dylib", "Foo", ".",
+    ])
+  })
+}
+
+///|
+async test "a declared executable name keeps its whitespace" {
+  guard current_package_host() is Macos else { return }
+  with_scan_root(async fn(root) {
+    write_fixture(root, "Tool.app/Contents/Info.plist", bundle_info("A-main "))
+    write_fixture(root, "Tool.app/Contents/MacOS/A-main ", thin_library())
+    write_fixture(root, "Tool.app/Contents/MacOS/Z-helper", thin_library())
+    assert_eq(relative_paths(root, macos_tree_sign_paths(root)), [
+      "Tool.app/Contents/MacOS/Z-helper", "Tool.app/Contents/MacOS/A-main ", "Tool.app",
     ])
   })
 }

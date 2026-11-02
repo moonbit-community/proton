@@ -111,7 +111,9 @@ async fn bundle_executable_name(
     "-extract", "CFBundleExecutable", "raw", "-o", "-", info_plist,
   ])
   guard code == 0 else { return Some(bundle_stem(bundle)) }
-  let name = (output.text() catch { _ => return None }).trim().to_owned()
+  let text = output.text() catch { _ => return None }
+  // `plutil` ends raw output with a newline; the name itself stays exact.
+  let name = text.strip_suffix("\n").unwrap_or(text).to_owned()
   if name == "" || name.contains("/") {
     None
   } else {
@@ -209,12 +211,14 @@ async fn collect_macos_code(
 
 ///|
 /// The code objects under `root` in signing order: every Mach-O with loadable
-/// code, plus each nested code bundle after its contents. `root` itself is not
-/// included, but the main executables of the bundles that contain or are `root`
-/// still come last, so a tree such as `Tool.app/Contents/MacOS` keeps the
-/// enclosing bundle's seal valid.
+/// code, plus each nested code bundle after its contents. The main executables
+/// of the bundles that contain or are `root` come last, so a tree such as
+/// `Tool.app/Contents/MacOS` keeps the enclosing bundle's seal valid, followed
+/// by `root` itself when it is a bundle: signing a framework's executable does
+/// not reseal the framework.
 async fn macos_tree_sign_paths(root : String) -> Array[String] {
   let main_executables = []
+  let root_is_bundle = bundle_main_executables(root) is Some(_)
   for directory = root {
     if bundle_main_executables(directory) is Some(mains) {
       main_executables.append(mains)
@@ -229,5 +233,8 @@ async fn macos_tree_sign_paths(root : String) -> Array[String] {
   let deferred = []
   collect_macos_code(root, main_executables, ordered, deferred)
   ordered.append(deferred)
+  if root_is_bundle {
+    ordered.push(root)
+  }
   ordered
 }
