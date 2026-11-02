@@ -253,13 +253,25 @@ async fn sign_macos_app(
         detail="required signing target is missing: " + path,
       )
     }
-    codesign_macos_target(
-      identity,
-      path,
-      runtime_options=target.runtime_options,
-      entitlements=if target.entitlements { Some(entitlements) } else { None },
-      identifier=target.identifier,
-    )
+    let paths = if target.tree {
+      guard path_is_dir(path) else {
+        raise MacosSigningError::Verification(
+          detail="signing tree is not a directory: " + path,
+        )
+      }
+      macos_tree_sign_paths(path)
+    } else {
+      [path]
+    }
+    for path in paths {
+      codesign_macos_target(
+        identity,
+        path,
+        runtime_options=target.runtime_options,
+        entitlements=if target.entitlements { Some(entitlements) } else { None },
+        identifier=target.identifier,
+      )
+    }
   }
   codesign_macos_target(
     identity,

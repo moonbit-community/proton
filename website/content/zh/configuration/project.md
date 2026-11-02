@@ -68,7 +68,7 @@
 | `icons` | string array | 空；图标路径相对于配置文件目录 |
 | `prepare` | string | 无；准备命令 |
 | `resources` | string array | 空；附加打包资源 |
-| `sign.binaries` | string array | 空；额外选择签名的二进制文件 |
+| `sign.binaries` | string array | 空；额外选择签名的二进制文件，或 macOS 的 `dir/**` 目录树 |
 | `url_schemes` | string array | 空；应用注册的 URL scheme |
 | `document_types` | object array | 空；文档关联 |
 | `output` | string | `dist`，相对于配置文件目录 |
@@ -82,6 +82,8 @@
 | 字段 | 类型 | 默认值与含义 |
 | --- | --- | --- |
 | `binaries` | string array | `[]`；额外签名的二进制文件，路径相对于配置文件目录 |
+
+每一项都是必须存在于包内的确切目标，`.app` 或 `.framework` 目录按单个目标签名。在 macOS 上，以 `/**` 结尾的项表示目录树：打包时 Proton 会由内向外签名该目录下的所有 Mach-O 可执行文件、库和 bundle，并跳过符号链接和目标文件。其他 glob 写法会被拒绝。带签名的 Windows 打包会拒绝目录树，如果同一份配置也要为 Windows 签名，请把目录树写在 `platforms.macos.package.sign` 下。
 
 省略 `sign` 时不添加额外二进制文件。此对象不会启用签名；启用签名使用 `package --sign` 或 `--notarize`。
 

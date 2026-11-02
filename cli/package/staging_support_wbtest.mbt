@@ -174,3 +174,35 @@ async test "packaged configuration retains frontend and platform fields" {
   assert_eq(loaded.package_config.unwrap().version, "2.0.0")
   assert_eq(plan.frontend_dist, Some(resolve_path(root, "ui/dist")))
 }
+
+///|
+test "macOS signing turns a directory tree into a scanned target" {
+  let root = "/tmp/proton-sign-tree"
+  let plan = test_staging_plan(root, sign_binaries=[
+    resolve_path(root, "payload/**"),
+    resolve_path(root, "bin/tool"),
+  ])
+  let targets = macos_package_sign_targets(plan).filter(target => {
+    target.path.has_prefix("Contents/Resources/payload") ||
+    target.path.has_prefix("Contents/Resources/bin")
+  })
+  assert_eq(targets.length(), 2)
+  assert_eq(targets[0].path, "Contents/Resources/payload")
+  assert_true(targets[0].tree)
+  assert_true(targets[0].entitlements)
+  assert_eq(targets[1].path, "Contents/Resources/bin/tool")
+  assert_false(targets[1].tree)
+}
+
+///|
+test "macOS signing rejects any other glob" {
+  let root = "/tmp/proton-sign-tree"
+  let glob = resolve_path(root, "payload/*.dylib")
+  let plan = test_staging_plan(root, sign_binaries=[glob])
+  try ignore(macos_package_sign_targets(plan)) catch {
+    StagingPlanError::UnsupportedSignGlob(path~) => assert_eq(path, glob)
+    _ => fail("expected an unsupported signing glob")
+  } noraise {
+    _ => fail("expected the signing glob to be rejected")
+  }
+}

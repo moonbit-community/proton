@@ -1,6 +1,7 @@
 ///|
 priv suberror StagingPlanError {
   UnsupportedResourceGlob(path~ : String)
+  UnsupportedSignGlob(path~ : String)
   MissingInput(path~ : String)
   NotLaunchableMachO(path~ : String, filetype~ : Int32)
   InputOutsideBase(path~ : String)
@@ -42,6 +43,9 @@ fn StagingPlanError::message(self : StagingPlanError) -> String {
   match self {
     UnsupportedResourceGlob(path~) =>
       "unsupported bundle resource glob: " + path
+    UnsupportedSignGlob(path~) =>
+      "unsupported signing glob, only macOS `dir/**` trees are supported: " +
+      path
     MissingInput(path~) => "bundle input is missing: " + path
     NotLaunchableMachO(path~, filetype~) =>
       "bundle executable " +

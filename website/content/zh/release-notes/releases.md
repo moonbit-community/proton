@@ -15,6 +15,12 @@
 读取；移除 `PackagePlatforms` 和 `PlatformPackageConfig`。
 参见[项目配置](../configuration/project.md)。
 
+**macOS 签名目录树**
+
+macOS 上的 `sign.binaries` 支持 `dir/**`。Proton 在签名时扫描该打包目录，由内向外签名其中所有
+Mach-O 可执行文件、库和 bundle，因此不再需要手动维护随包工具的列表。确切路径的行为不变。目录树仅限
+macOS，带签名的 Windows 打包会拒绝它。
+
 **Linux 自启动**
 
 修复应用名称、可执行文件路径和启动参数的 desktop entry 编码。

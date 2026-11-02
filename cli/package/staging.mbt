@@ -48,6 +48,7 @@ async fn package_built_application(
   }
   let platform = installation.platform()
   let host = staging_host_from_platform(platform)
+  reject_windows_sign_globs(spec, host)
   let artifacts = @packager.build_with(
     resolved_package_spec(
       spec,
@@ -167,6 +168,20 @@ async fn project_payloads(
 }
 
 ///|
+/// Windows has no code scan, so dropping a glob here would ship unsigned code.
+fn reject_windows_sign_globs(
+  spec : PackagePlan,
+  host : StagingHost,
+) -> Unit raise StagingPlanError {
+  guard spec.sign && host is Windows else { return }
+  for binary in spec.sign_binaries {
+    guard !binary.contains("*") else {
+      raise StagingPlanError::UnsupportedSignGlob(path=binary)
+    }
+  }
+}
+
+///|
 fn package_customization(
   spec : PackagePlan,
 ) -> @packager.PackageCustomization raise StagingPlanError {
@@ -196,12 +211,17 @@ fn macos_package_sign_targets(
     @packager.MacosSignTarget(prefix + "/bin/libvk_swiftshader.dylib"),
   ]
   for binary in spec.sign_binaries {
-    match relative_to_base(spec.base_dir, binary) {
+    let tree = glob_tree_root(binary)
+    guard tree is Some(_) || !binary.contains("*") else {
+      raise StagingPlanError::UnsupportedSignGlob(path=binary)
+    }
+    match relative_to_base(spec.base_dir, tree.unwrap_or(binary)) {
       Some(relative) =>
         targets.push(
           @packager.MacosSignTarget(
             "Contents/Resources/" + relative,
             entitlements=true,
+            tree=tree is Some(_),
           ),
         )
       None => raise StagingPlanError::InputOutsideBase(path=binary)
@@ -224,6 +244,11 @@ fn windows_package_sign_targets(
 ) -> Array[String] raise StagingPlanError {
   let targets = ["cef_process.exe"]
   for binary in spec.sign_binaries {
+    // Customization is planned on every host. A macOS tree in a shared list
+    // only matters to a signed Windows build, which refuses it up front.
+    if binary.contains("*") {
+      continue
+    }
     match relative_to_base(spec.base_dir, binary) {
       Some(relative) => {
         let target = "Resources/" + relative
