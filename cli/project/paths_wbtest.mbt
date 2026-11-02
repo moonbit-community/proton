@@ -25,12 +25,6 @@ async test "loading preserves path spelling without requiring referenced files" 
           resources=[path],
           output=path,
           sign=Some(@proton_config.SignConfig(binaries=[path])),
-          platforms=@proton_config.PackagePlatforms(
-            windows=@proton_config.PlatformPackageConfig(
-              resources=[path],
-              sign=@proton_config.SignConfig(binaries=[path]),
-            ),
-          ),
         ),
       ),
     )

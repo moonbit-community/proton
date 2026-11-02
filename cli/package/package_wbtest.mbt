@@ -21,9 +21,7 @@ test "NSIS mode resolves CLI override before Windows configuration and default" 
     let configured = @proton_config.PackageConfig(
       "Demo",
       "1.0.0",
-      platforms=@proton_config.PackagePlatforms(
-        windows=@proton_config.PlatformPackageConfig(nsis_install_mode=name),
-      ),
+      nsis_install_mode=Some(name),
     )
     assert_eq(resolve_nsis_install_mode(arguments, configured), mode)
     let cli_arguments = parse_package_args([
@@ -57,59 +55,6 @@ test "parse package args accepts repeated formats and overrides" {
   assert_eq(raw.package_args.url_schemes, ["demo"])
   assert_false(raw.release)
   assert_true(raw.dry_run)
-}
-
-///|
-test "project package resolves platform overrides exactly" {
-  let package_config = @proton_config.PackageConfig(
-    "Demo",
-    "1.2.3",
-    formats=["app"],
-    resources=["assets/common"],
-    sign=Some(@proton_config.SignConfig(binaries=["helpers/common"])),
-    platforms=@proton_config.PackagePlatforms(
-      macos=@proton_config.PlatformPackageConfig(
-        formats=["app", "dmg"],
-        resources=["assets/macos"],
-        sign=@proton_config.SignConfig(binaries=["helpers/macos"]),
-      ),
-      windows=@proton_config.PlatformPackageConfig(resources=["assets/windows"]),
-      linux=@proton_config.PlatformPackageConfig(formats=[]),
-    ),
-  )
-  assert_eq(
-    resolve_platform_package_config(
-      package_config,
-      @packager.PackageHost::Macos,
-    ),
-    ResolvedPlatformPackageConfig::{
-      formats: ["app", "dmg"],
-      resources: ["assets/common", "assets/macos"],
-      sign_binaries: ["helpers/common", "helpers/macos"],
-    },
-  )
-  assert_eq(
-    resolve_platform_package_config(
-      package_config,
-      @packager.PackageHost::Windows,
-    ),
-    ResolvedPlatformPackageConfig::{
-      formats: ["app"],
-      resources: ["assets/common", "assets/windows"],
-      sign_binaries: ["helpers/common"],
-    },
-  )
-  assert_eq(
-    resolve_platform_package_config(
-      package_config,
-      @packager.PackageHost::Linux,
-    ),
-    ResolvedPlatformPackageConfig::{
-      formats: [],
-      resources: ["assets/common"],
-      sign_binaries: ["helpers/common"],
-    },
-  )
 }
 
 ///|
@@ -228,8 +173,9 @@ test "macOS package paths normalize absolute and relative inputs" {
 async test "macOS minimum resolves project configuration and CLI override" {
   let project = @proton_config.AppConfig::parse(
     (
-      #|{"identifier":"com.example.minimum","package":{"product_name":"Minimum","version":"1.0.0","platforms":{"macos":{"minimum_system_version":"15.0"}}}}
+      #|{"identifier":"com.example.minimum","package":{"product_name":"Minimum","version":"1.0.0"},"platforms":{"macos":{"package":{"minimum_system_version":"15.0"}}}}
     ),
+    platform=Macos,
   )
   let configured = build_package_plan(
     parse_package_args([]),
@@ -243,4 +189,36 @@ async test "macOS minimum resolves project configuration and CLI override" {
     project,
   )
   assert_eq(overridden.macos_minimum_system_version, Some("16.0"))
+}
+
+///|
+async test "package prepare uses the configuration directory and host command" {
+  let root = @async_fs.tmpdir(prefix="proton package prepare-")
+  defer @async_fs.rmdir(root, recursive=true)
+  let config = @proton_config.AppConfig::decode({
+    "identifier": "com.example.prepare",
+    "package": {
+      "product_name": "Prepare",
+      "version": "1.0.0",
+      "prepare": "exit 91",
+    },
+    "platforms": {
+      "macos": { "package": { "prepare": "echo prepared > prepared.txt" } },
+      "windows": { "package": { "prepare": "echo prepared > prepared.txt" } },
+      "linux": { "package": { "prepare": "echo prepared > prepared.txt" } },
+    },
+  })
+  let plan = build_package_plan(
+    parse_package_args([]),
+    resolve_path(root, "proton.project.json"),
+    config,
+  )
+  run_package_prepare(plan)
+  assert_eq(
+    @async_fs.read_file(resolve_path(root, "prepared.txt"))
+    .text()
+    .trim()
+    .to_owned(),
+    "prepared",
+  )
 }

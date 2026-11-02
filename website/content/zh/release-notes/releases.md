@@ -2,6 +2,19 @@
 
 ## 未发布
 
+**项目平台覆盖（破坏性配置变更）**
+
+在同一个 `proton.project.json` 的根级 `platforms.macos`、`platforms.windows`、
+`platforms.linux` 中集中配置差异，覆盖 backend、frontend 和 package 字段。
+前端命令共用 `frontend.path` 工作目录；`package.prepare` 在配置文件目录执行。
+
+将 `package.platforms.<平台>.*` 迁移为 `platforms.<平台>.package.*`。
+所有数组改为整体替换，包括资源和签名输入，应列出完整目标数组；可选值可用 `null` 清除。
+应用身份和版本仍跨平台共用，显式 CLI 参数优先。
+`load_config()` 返回宿主平台生效配置，平台打包设置直接从 `config.package_config`
+读取；移除 `PackagePlatforms` 和 `PlatformPackageConfig`。
+参见[项目配置](../configuration/project.md)。
+
 **Linux 自启动**
 
 修复应用名称、可执行文件路径和启动参数的 desktop entry 编码。

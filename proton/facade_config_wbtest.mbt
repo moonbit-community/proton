@@ -4,7 +4,7 @@ async test "loaded configuration remains a complete independent snapshot" {
   defer @async_fs.rmdir(dir, recursive=true)
   let path = @mbpath.Path(dir).join("proton.project.json").to_string()
   let source =
-    #|{"identifier":"com.example.snapshot","backend":{"path":"backend","package":"app"},"frontend":{"path":"frontend","dev_url":"http://localhost:4300","dist":"dist"},"package":{"product_name":"Snapshot","version":"1.2.3","resources":["assets"],"platforms":{"macos":{"resources":["mac-assets"]}}}}
+    #|{"identifier":"com.example.snapshot","backend":{"path":"backend","package":"app"},"frontend":{"path":"frontend","dev_url":"http://localhost:4300","dist":"dist"},"package":{"product_name":"Snapshot","version":"1.2.3","resources":["assets"]},"platforms":{"macos":{"package":{"resources":["mac-assets"]}},"windows":{"package":{"resources":["win-assets"]}},"linux":{"package":{"resources":["linux-assets"]}}}}
   @async_fs.write_file(path, source, create_mode=CreateOrTruncate)
   let previous = @env.get_env_var("PROTON_PROJECT_CONFIG")
   @env.set_env_var("PROTON_PROJECT_CONFIG", path)
@@ -23,14 +23,16 @@ async test "loaded configuration remains a complete independent snapshot" {
   assert_eq(snapshot.backend.unwrap().path, "backend")
   assert_eq(snapshot.frontend.unwrap().dev_url, Some("http://localhost:4300"))
   assert_eq(snapshot.frontend.unwrap().dist, Some("dist"))
+  let expected_resources = match @proton_config.current_platform() {
+    Macos => ["mac-assets"]
+    Windows => ["win-assets"]
+    Linux => ["linux-assets"]
+  }
+  assert_eq(snapshot.package_config.unwrap().resources, expected_resources)
   snapshot.package_config.unwrap().resources.push("changed")
-  snapshot.package_config.unwrap().platforms.macos.unwrap().resources.clear()
-  assert_eq(app.configured_config().package_config.unwrap().resources, [
-    "assets",
-  ])
   assert_eq(
-    app.configured_config().package_config.unwrap().platforms.macos.unwrap().resources,
-    ["mac-assets"],
+    app.configured_config().package_config.unwrap().resources,
+    expected_resources,
   )
 }
 

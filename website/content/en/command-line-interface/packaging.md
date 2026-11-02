@@ -36,7 +36,7 @@ The default scaffold does not provide icons. On Linux, missing PNG validation fa
 
 Changing the mode is not an installation-scope migration. Updates to an existing machine-wide installation should retain its intended scope.
 
-**Upgrading older Proton installers:** older Proton releases always generated machine-wide NSIS installers. Applications distributed that way must explicitly set `package.platforms.windows.nsis_install_mode` to `perMachine` in subsequent releases. The current `currentUser` default targets a different installation scope. Existing installation paths are reused within the selected scope; fixed modes do not move installations between scopes.
+**Upgrading older Proton installers:** older Proton releases always generated machine-wide NSIS installers. Applications distributed that way must explicitly set `platforms.windows.package.nsis_install_mode` to `perMachine` in subsequent releases. The current `currentUser` default targets a different installation scope. Existing installation paths are reused within the selected scope; fixed modes do not move installations between scopes.
 
 `both` uses NSIS MultiUser and requests the highest available privileges. Its scope selector can therefore follow a UAC prompt even when the user chooses a per-user installation. `--nsis-install-mode` overrides the project setting; see the [CLI reference](commands.md#package).
 

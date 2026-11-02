@@ -2,6 +2,21 @@
 
 ## Unreleased
 
+**Project platform overrides (breaking configuration change)**
+
+Keep platform differences in root `platforms.macos`, `platforms.windows`, and
+`platforms.linux` in `proton.project.json`. They override backend, frontend and
+package fields. Frontend commands share `frontend.path` as their working
+directory; `package.prepare` runs from the configuration directory.
+
+Move `package.platforms.<platform>.*` to `platforms.<platform>.package.*`.
+All arrays now replace common values, including resources and signing inputs;
+list the full desired array. Optional values can be cleared with `null`.
+Application identity and version remain common. Explicit CLI options win.
+`load_config()` returns the effective host configuration; read native package
+settings directly from `config.package_config`. `PackagePlatforms` and
+`PlatformPackageConfig` are removed. See [configuration](../configuration/project.md).
+
 **Linux auto-launch**
 
 Fixed desktop-entry encoding for names, executable paths and startup arguments.

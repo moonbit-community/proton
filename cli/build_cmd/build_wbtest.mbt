@@ -186,3 +186,45 @@ async test "project resolution does not require frontend build output" {
   @debug.assert_eq(invocation.backend_path, ".")
   @debug.assert_eq(invocation.app_package, default_package)
 }
+
+///|
+async test "frontend build executes the host override from frontend.path" {
+  let root = @async_fs.tmpdir(prefix="proton frontend build-")
+  defer @async_fs.rmdir(root, recursive=true)
+  let frontend = @fsutil.path_join(root, "frontend with spaces")
+  let tools = @fsutil.path_join(root, "tools")
+  @async_fs.mkdir(frontend)
+  @async_fs.mkdir(tools)
+  let helper = @fsutil.path_join(tools, "warren")
+  @async_fs.write_file(
+    helper,
+    "#!/bin/sh\nprintf '%s' \"$1\" > result.txt\n",
+    create_mode=CreateOrTruncate,
+  )
+  if @path.sep != '\\' {
+    @async_fs.chmod(helper, 0o755)
+  }
+  @async_fs.write_file(
+    @fsutil.path_join(tools, "warren.cmd"),
+    "@echo off\r\necho %1> result.txt\r\n",
+    create_mode=CreateOrTruncate,
+  )
+  let config_file = @fsutil.path_join(root, "proton.project.json")
+  @async_fs.write_file(
+    config_file,
+    (
+      #|{"identifier":"com.example.frontend","frontend":{"path":"missing","before_build":"exit 91","dist":"dist"},"platforms":{"macos":{"frontend":{"path":"frontend with spaces","before_build":"../tools/warren build"}},"linux":{"frontend":{"path":"frontend with spaces","before_build":"../tools/warren build"}},"windows":{"frontend":{"path":"frontend with spaces","before_build":"..\\tools\\warren.cmd build"}}}}
+    ),
+    create_mode=CreateOrTruncate,
+  )
+  let loaded = @project.load(config_file)
+  run_frontend_build(loaded.base_dir, loaded.config)
+  assert_eq(
+    @async_fs.read_file(@fsutil.path_join(frontend, "result.txt"))
+    .text()
+    .trim()
+    .to_owned(),
+    "build",
+  )
+  assert_false(@fsutil.path_exists(@fsutil.path_join(root, "result.txt")))
+}

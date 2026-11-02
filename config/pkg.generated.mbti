@@ -7,6 +7,8 @@ import {
 }
 
 // Values
+pub fn current_platform() -> Platform
+
 pub fn validate_application_identifier(String) -> String raise AppConfigError
 
 // Errors
@@ -34,18 +36,20 @@ pub(all) struct AppConfig {
   backend : BackendConfig?
   frontend : FrontendConfig?
   package_config : PackageConfig?
-} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+} derive(Eq, @debug.Debug)
 pub fn AppConfig::AppConfig(String, backend? : BackendConfig?, frontend? : FrontendConfig?, package_config? : PackageConfig?) -> Self
 pub fn AppConfig::copy(Self) -> Self
-pub fn AppConfig::decode(Json) -> Self raise AppConfigError
+pub fn AppConfig::decode(Json, platform? : Platform) -> Self raise AppConfigError
 pub fn AppConfig::equal(Self, Self) -> Bool
 pub fn AppConfig::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
-pub fn AppConfig::load(String) -> Self raise AppConfigError
+pub fn AppConfig::load(String, platform? : Platform) -> Self raise AppConfigError
 pub fn AppConfig::not_equal(Self, Self) -> Bool
-pub fn AppConfig::parse(String, name? : String) -> Self raise AppConfigError
+pub fn AppConfig::parse(String, name? : String, platform? : Platform) -> Self raise AppConfigError
 pub fn AppConfig::to_json(Self) -> Json
 pub fn AppConfig::to_repr(Self) -> @debug.Repr
 pub fn AppConfig::validate(Self) -> Unit raise AppConfigError
+pub impl ToJson for AppConfig
+pub impl @json.FromJson for AppConfig
 
 pub(all) struct BackendConfig {
   path : String
@@ -95,40 +99,24 @@ pub(all) struct PackageConfig {
   url_schemes : Array[String]
   document_types : Array[DocumentType]
   output : String
-  platforms : PackagePlatforms
+  minimum_system_version : String?
+  nsis_install_mode : String?
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
-pub fn PackageConfig::PackageConfig(String, String, formats? : Array[String], icons? : Array[String], prepare? : String?, resources? : Array[String], sign? : SignConfig?, url_schemes? : Array[String], document_types? : Array[DocumentType], output? : String, platforms? : PackagePlatforms) -> Self
+pub fn PackageConfig::PackageConfig(String, String, formats? : Array[String], icons? : Array[String], prepare? : String?, resources? : Array[String], sign? : SignConfig?, url_schemes? : Array[String], document_types? : Array[DocumentType], output? : String, minimum_system_version? : String?, nsis_install_mode? : String?) -> Self
 pub fn PackageConfig::equal(Self, Self) -> Bool
 pub fn PackageConfig::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
 pub fn PackageConfig::not_equal(Self, Self) -> Bool
 pub fn PackageConfig::to_json(Self) -> Json
 pub fn PackageConfig::to_repr(Self) -> @debug.Repr
 
-pub(all) struct PackagePlatforms {
-  macos : PlatformPackageConfig?
-  windows : PlatformPackageConfig?
-  linux : PlatformPackageConfig?
-} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
-pub fn PackagePlatforms::PackagePlatforms(macos? : PlatformPackageConfig, windows? : PlatformPackageConfig, linux? : PlatformPackageConfig) -> Self
-pub fn PackagePlatforms::equal(Self, Self) -> Bool
-pub fn PackagePlatforms::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
-pub fn PackagePlatforms::not_equal(Self, Self) -> Bool
-pub fn PackagePlatforms::to_json(Self) -> Json
-pub fn PackagePlatforms::to_repr(Self) -> @debug.Repr
-
-pub(all) struct PlatformPackageConfig {
-  formats : Array[String]?
-  resources : Array[String]
-  sign : SignConfig?
-  minimum_system_version : String?
-  nsis_install_mode : String?
-} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
-pub fn PlatformPackageConfig::PlatformPackageConfig(formats? : Array[String], resources? : Array[String], sign? : SignConfig, minimum_system_version? : String, nsis_install_mode? : String) -> Self
-pub fn PlatformPackageConfig::equal(Self, Self) -> Bool
-pub fn PlatformPackageConfig::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
-pub fn PlatformPackageConfig::not_equal(Self, Self) -> Bool
-pub fn PlatformPackageConfig::to_json(Self) -> Json
-pub fn PlatformPackageConfig::to_repr(Self) -> @debug.Repr
+pub(all) enum Platform {
+  Macos
+  Windows
+  Linux
+} derive(Eq, @debug.Debug)
+pub fn Platform::equal(Self, Self) -> Bool
+pub fn Platform::not_equal(Self, Self) -> Bool
+pub fn Platform::to_repr(Self) -> @debug.Repr
 
 pub(all) struct SignConfig {
   binaries : Array[String]

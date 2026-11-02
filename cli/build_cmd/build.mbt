@@ -409,10 +409,10 @@ async fn run_frontend_build(
       match frontend.before_build {
         None => ()
         Some(command) => {
-          let cwd = resolve_frontend_path(root, frontend.path, command)
+          let cwd = resolve_frontend_path(root, frontend.path)
           @output.info("Building frontend: " + command)
           @output.info("Frontend cwd: " + cwd)
-          let (program, args) = shell_command(command)
+          let (program, args) = @project.shell_command(command)
           let code = @process.run(program, args, cwd~) catch {
             err =>
               raise BuildProcessError::Start(
@@ -432,9 +432,7 @@ async fn run_frontend_build(
 async fn resolve_frontend_path(
   root : String,
   frontend_path : String?,
-  command : String,
 ) -> String {
-  ignore(command)
   match frontend_path {
     None => root
     Some(configured_path) => {
@@ -655,13 +653,4 @@ async fn run_moon_build_only(
       )
   }
   artifact_path_from_build_output(output)
-}
-
-///|
-fn shell_command(command : String) -> (String, Array[String]) {
-  if @path.sep == '\\' {
-    ("cmd", ["/c", command])
-  } else {
-    ("sh", ["-c", command])
-  }
 }

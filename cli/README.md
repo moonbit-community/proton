@@ -51,3 +51,11 @@ in the configuration. `dev` passes a per-launch configuration snapshot with CLI
 overrides to the application; the source project file is not modified.
 `package` likewise embeds the effective configuration, including CLI overrides
 for the backend package, formats, and platform settings.
+
+Host-specific project settings live under root `platforms.macos`,
+`platforms.windows`, and `platforms.linux` in the same configuration file.
+They override `backend`, `frontend`, and `package` before CLI options apply.
+`frontend.path` is the frontend commands' working directory; `package.prepare`
+runs from the configuration directory. Arrays replace common arrays. See the
+[configuration reference](../website/content/en/configuration/project.md) for
+the unreleased format and migration from `package.platforms`.

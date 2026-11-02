@@ -77,8 +77,10 @@ The top-level `identifier` is the application's canonical identity. The
 ```
 
 When `formats` is omitted, Proton selects the current host's default package
-formats. Use `package.platforms` for platform-specific formats, resources, or
-signing targets.
+formats. Frontend commands run from `frontend.path`; paths inside them are
+relative to that directory. Keep shell syntax appropriate to the host platform.
+The [configuration reference](https://moonbit-community.github.io/proton/configuration/project.html)
+describes the next release's root platform overrides and migration from 0.6.0.
 
 Window behavior, the asset entry, single-instance handling, and renderer
 permissions are declared by the Proton `App` builder in `backend/app/main.mbt`.

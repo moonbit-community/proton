@@ -36,7 +36,7 @@ Proton CLI 将项目组装为分发产物，包含可执行文件、前端资源
 
 修改模式不是安装范围迁移。更新已有的机器级安装时，应保持其预期安装范围。
 
-**升级旧版 Proton 安装器：** 旧版 Proton 始终生成机器级 NSIS 安装器。已采用该方式分发的应用，后续版本必须显式将 `package.platforms.windows.nsis_install_mode` 设为 `perMachine`。当前默认的 `currentUser` 面向另一种安装范围。同一范围内会复用已有安装路径；固定模式不会将安装从用户级迁移到机器级，反之亦然。
+**升级旧版 Proton 安装器：** 旧版 Proton 始终生成机器级 NSIS 安装器。已采用该方式分发的应用，后续版本必须显式将 `platforms.windows.package.nsis_install_mode` 设为 `perMachine`。当前默认的 `currentUser` 面向另一种安装范围。同一范围内会复用已有安装路径；固定模式不会将安装从用户级迁移到机器级，反之亦然。
 
 `both` 使用 NSIS MultiUser，并请求最高可用权限。因此，即使用户选择当前用户安装，也可能先看到 UAC 提示。`--nsis-install-mode` 覆盖项目配置，参见 [CLI 命令参考](commands.md#package)。
 
