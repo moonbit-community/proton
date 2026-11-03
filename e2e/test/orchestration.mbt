@@ -86,7 +86,7 @@ async fn app_process_env(
     fail(
       "native runtime bin directory does not exist: " +
       bin_dir +
-      "\nRun proton_cli cef setup.",
+      "\nRun proton_cli setup.",
     )
   }
   guard @mbfs.path_exists(helper_path) else {

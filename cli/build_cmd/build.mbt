@@ -230,11 +230,13 @@ async fn prepare_build(cwd : String, raw : RawBuildOptions) -> BuildInvocation {
   let (cwd, project) = load_build_project(cwd, raw)
   let config = project.config
   validate_release_config(config)
+  let invocation = project_build_invocation(cwd, project, raw)
+  ignore(@cef_store.setup_default())
   if raw.run_frontend_build {
     run_frontend_build(project.base_dir, config)
   }
   validate_release_files(project.base_dir, config)
-  project_build_invocation(cwd, project, raw)
+  invocation
 }
 
 ///|

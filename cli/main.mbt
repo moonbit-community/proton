@@ -138,10 +138,19 @@ fn cli_command() -> @argparse.Command {
       @build.command(),
       @package.command(),
       doctor_command(),
+      setup_command(),
       @cef.command(),
     ],
     arg_required_else_help=true,
     subcommand_required=true,
+  )
+}
+
+///|
+fn setup_command() -> @argparse.Command {
+  @argparse.Command(
+    "setup",
+    about="Prepare the shared Proton runtime and subprocess helper",
   )
 }
 
@@ -175,6 +184,11 @@ async fn dispatch_cli(cwd : String, matches : @argparse.Matches) -> Bool {
     Some(("dev", dev_matches)) => @dev.run(cwd, dev_matches)
     Some(("build", build_matches)) => @build.run(cwd, build_matches)
     Some(("package", package_matches)) => @package.run(cwd, package_matches)
+    Some(("setup", _)) => {
+      let runtime = @cef_store.setup_default()
+      @output.info("Proton environment ready.")
+      println(runtime.runtime_root())
+    }
     Some(("cef", cef_matches)) => @cef.run(cef_matches)
     _ => abort("argparse invariant violated: missing subcommand")
   }

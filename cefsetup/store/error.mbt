@@ -120,7 +120,7 @@ fn CefHelperError::message(self : CefHelperError) -> String {
     NotInstalled(path~) =>
       "The required Proton helper is missing, empty, or not executable: " +
       path +
-      "\nRun `moonx moonbit-community/proton_cefsetup`."
+      "\nRun `proton_cli setup`."
     CreateTemporaryDirectory(detail~) =>
       "Failed to create the Proton helper build directory: " + detail
     InstallStart(detail~) =>

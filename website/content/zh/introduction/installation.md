@@ -29,6 +29,15 @@ Proton 0.6.0 使用 MoonBit 的 `latest` 工具链通道。源码需要显式 `I
 
 MoonBit 二进制目录必须在 PATH 中。使用内联 HTML 的 minimal 应用不需要 Warren 或 Node.js。本文档的前端命令不依赖已弃用的 native `moonx` 模式。
 
+## 自动准备环境（未发布）
+
+尚未发布的 CLI 会在 `proton_cli dev`、`build`、`package` 中自动准备共享运行时和 helper。
+首次使用需要网络及上文的原生构建工具；完整缓存直接复用。可选的 `proton_cli setup`
+用于提前准备，可在任意目录执行。`doctor` 和 `package --dry-run` 不安装环境。
+CLI 和应用依赖应保持相同 Proton 发行版本。
+
+下方 0.6.0 操作说明仍使用当时的显式安装命令；直接使用 `moon` 也需要事先安装环境。
+
 ## 运行时安装
 
 `proton_cli cef setup` 解析该版本的 Chromium 运行时及从源码构建的匹配 helper。首次执行需要网络，可能耗时数分钟。任意下载的 CEF 不能替代版本匹配的安装。

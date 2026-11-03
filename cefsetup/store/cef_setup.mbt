@@ -58,6 +58,13 @@ async fn install_requirement(
   } noraise {
     _ => return runtime
   }
+  report_info(
+    "[INFO] Preparing Proton " +
+    release_version() +
+    " environment (" +
+    requirement.platform +
+    ")",
+  )
   let staging_root = create_install_staging(runtime.root)
   defer (remove_tree(staging_root) catch { _ => () })
   let staging = InstalledRuntime::{

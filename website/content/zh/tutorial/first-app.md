@@ -1,5 +1,8 @@
 # 创建项目
 
+本教程使用 Proton 0.6.0。使用尚未发布的 CLI 时，可省略下方的 `proton_cli cef setup`：
+`dev`、`build`、`package` 会自动准备环境；只在需要提前准备时执行 `proton_cli setup`。
+
 本章用 minimal 模板创建一个桌面窗口，运行它、修改页面，再构建可执行文件。开始前请完成[环境准备](../introduction/installation.md)。
 
 ## 1. 创建应用

@@ -1,5 +1,8 @@
 # 构建完整 Todo 应用
 
+本教程使用 Proton 0.6.0。使用尚未发布的 CLI 时，可省略下方的 `proton_cli cef setup`：
+`dev`、`build`、`package` 会自动准备环境；只在需要提前准备时执行 `proton_cli setup`。
+
 本教程使用 isomorphic 模板连接共享契约、原生状态和 Rabbita 界面。先运行生成的 Todo 应用，再跨三个模块加入 **Complete all** 和 **Reopen all** 操作。
 
 请先完成[环境准备](../introduction/installation.md)，包括 Warren 构建工具需要的 Node.js。无需修改之前的 minimal 应用。

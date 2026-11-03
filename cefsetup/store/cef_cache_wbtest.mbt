@@ -15,6 +15,15 @@ async fn write_cef_fixture(root : String, platform : ProtonPlatform) -> Unit {
     }
     @async_fs.write_file(path, "fixture", create_mode=CreateOrTruncate)
   }
+  if platform.id == "linux-x64" || platform.id == "win32-x64" {
+    let locales = path_join(root, "Resources/locales")
+    ensure_dir(locales)
+    @async_fs.write_file(
+      path_join(locales, "en-US.pak"),
+      "fixture",
+      create_mode=CreateOrTruncate,
+    )
+  }
 }
 
 ///|
@@ -79,23 +88,30 @@ async test "runtime assembly replaces an incomplete staging layout" {
   defer (remove_tree(temp) catch { _ => () })
   let cef_root = path_join(temp, "cef")
   let runtime = path_join(temp, "runtime")
-  let platform = darwin_arm64_platform()
-  @async_fs.mkdir(cef_root)
-  write_cef_fixture(cef_root, platform)
-  @async_fs.mkdir(runtime)
-  @async_fs.write_file(
-    path_join(runtime, "truncated"),
-    "fixture",
-    create_mode=CreateOrTruncate,
-  )
-  assemble_runtime(
-    platform~,
-    cef_root~,
-    runtime_dir=runtime,
-    report_progress=false,
-  )
-  assert_false(path_exists(path_join(runtime, "truncated")))
-  validate_runtime_dist(runtime, platform)
+  let platforms = ["darwin-arm64", "linux-x64"]
+  if @path.sep == '\\' {
+    platforms.push("win32-x64")
+  }
+  for platform_id in platforms {
+    let platform = platform_from_override(Some(platform_id)).unwrap()
+    ensure_dir(cef_root)
+    write_cef_fixture(cef_root, platform)
+    ensure_dir(runtime)
+    @async_fs.write_file(
+      path_join(runtime, "truncated"),
+      "fixture",
+      create_mode=CreateOrTruncate,
+    )
+    assemble_runtime(
+      platform~,
+      cef_root~,
+      runtime_dir=runtime,
+      report_progress=false,
+    )
+    assert_false(path_exists(path_join(runtime, "truncated")))
+    validate_runtime_dist(runtime, platform)
+    remove_tree(cef_root)
+  }
 }
 
 ///|
@@ -182,4 +198,51 @@ async test "helper validation rejects empty and non-executable installations" {
   )
   publish_staged_directory(staging, target)
   assert_true(helper_is_valid(path_join(target, "cef_process")))
+}
+
+///|
+async test "setup reuses a complete runtime and helper without project state" {
+  let temp = test_cef_fixture_root()
+  defer remove_tree(temp)
+  let home_key = if @path.sep == '\\' { "USERPROFILE" } else { "HOME" }
+  let previous_home = @env.get_env_var(home_key)
+  let previous_store = @env.get_env_var("PROTON_RUNTIME_STORE")
+  @env.set_env_var(home_key, temp)
+  @env.set_env_var("PROTON_RUNTIME_STORE", path_join(temp, "store"))
+  defer {
+    match previous_home {
+      Some(value) => @env.set_env_var(home_key, value)
+      None => @env.unset_env_var(home_key)
+    }
+    match previous_store {
+      Some(value) => @env.set_env_var("PROTON_RUNTIME_STORE", value)
+      None => @env.unset_env_var("PROTON_RUNTIME_STORE")
+    }
+  }
+  let requirement = default_requirement()
+  let platform = platform_from_override(Some(requirement.platform)).unwrap()
+  let runtime = installed_runtime(runtime_store_root(), requirement)
+  ensure_dir(runtime.sdk_root)
+  write_cef_fixture(runtime.sdk_root, platform)
+  assemble_runtime(
+    platform~,
+    cef_root=runtime.sdk_root,
+    runtime_dir=runtime.runtime_root,
+    report_progress=false,
+  )
+  write_runtime_manifest(runtime)
+  let (helper_root, helper, _) = default_helper_paths()
+  ensure_dir(helper_root)
+  @async_fs.write_file(helper, "cached helper", create_mode=CreateOrTruncate)
+  if @path.sep != '\\' {
+    @async_fs.chmod(helper, 0o755)
+  }
+  for _ in 0..<2 {
+    let installed = setup_default()
+    assert_eq(installed.runtime_root(), runtime.runtime_root)
+    assert_eq(
+      @async_fs.read_file(resolve_default_helper()).text(),
+      "cached helper",
+    )
+  }
 }

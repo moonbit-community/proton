@@ -179,7 +179,7 @@ native checks before handing off larger refactors.
   # Alternatively, replace the next line with:
   # moonx moonbit-community/moon-new "$tmp_dir/release-smoke" --template moonbit-community/proton --branch main --subdir templates/isomorphic
   proton_cli -C "$tmp_dir" new release-smoke
-  proton_cli -C "$tmp_dir/release-smoke" cef setup
+  proton_cli -C "$tmp_dir/release-smoke" setup
   proton_cli -C "$tmp_dir/release-smoke" build
   proton_cli -C "$tmp_dir/release-smoke" package --release --format app --dry-run
   proton_cli -C "$tmp_dir/release-smoke" package --release --format app
@@ -208,8 +208,10 @@ native checks before handing off larger refactors.
   C++ stubs directly into the application and the matching `cef_process`
   executable. CEF remains a dynamically loaded third-party runtime.
 - `proton_cefsetup` installs the release's immutable CEF runtime and matching
-  subprocess helper in the user-level stores. `proton_cli cef setup` is a
-  convenience frontend to the same operation and writes no project state.
+  subprocess helper in the user-level stores. `proton_cli setup` is a
+  prewarming command for the same operation and writes no project state.
+  CLI `dev`, `build`, and `package` prepare missing installations automatically;
+  `doctor` and `package --dry-run` remain read-only.
 - Lockstep tooling consumes the requirement embedded in `proton_cefsetup`.
   Never locate a project's Proton dependency by parsing Moon build output or
   scanning workspace and module files.

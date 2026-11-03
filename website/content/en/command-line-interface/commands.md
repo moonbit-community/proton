@@ -27,7 +27,7 @@ proton_cli [--cwd <directory>] <command> [options]
 | [`build`](#build) | Build frontend assets and the native backend |
 | [`package`](#package) | Build and assemble distribution artifacts |
 | [`doctor`](#doctor) | Report environment and project diagnostics |
-| [`cef setup`](#cef-setup) | Install the release-matched runtime and helper |
+| [`setup`](#setup) | Install the release-matched runtime and helper |
 | [`cef requirements`](#cef-requirements) | Print the embedded CEF requirement |
 
 ## `help`
@@ -36,7 +36,7 @@ proton_cli [--cwd <directory>] <command> [options]
 proton_cli help [command] [subcommand]
 ```
 
-Displays help without executing the selected command. For example, `proton_cli help cef setup` describes runtime installation; it does not install anything. `proton_cli <command> --help` is the equivalent option form.
+Displays help without executing the selected command. For example, `proton_cli help setup` describes runtime installation; it does not install anything. `proton_cli <command> --help` is the equivalent option form.
 
 ## `version`
 
@@ -107,7 +107,7 @@ project and run checks explicitly instead.
 proton_cli dev [options] [-- <application-arguments>...]
 ```
 
-Builds and runs the native backend. When a frontend command is configured, it starts that command, waits for readiness and supplies the development URL to the application. Backend changes require a rebuild/restart; frontend refresh is owned by the frontend tool.
+Prepares the release-matched runtime and helper automatically, then builds and runs the native backend. When a frontend command is configured, it starts that command, waits for readiness and supplies the development URL to the application. Backend changes require a rebuild/restart; frontend refresh is owned by the frontend tool.
 
 | Option | Default and meaning |
 | --- | --- |
@@ -120,7 +120,6 @@ Builds and runs the native backend. When a frontend command is configured, it st
 | `--timeout-ms <milliseconds>` | `30000`; frontend readiness timeout |
 | `--ready-path <path>` | Use an HTTP readiness probe at this path; otherwise checks TCP connectivity |
 | `--no-frontend` | Do not start a frontend command; use an externally managed server |
-| `--setup`, `--no-setup` | Automatic installation of missing runtime/helper; disabled by default |
 | `-- <arguments>...` | Arguments for the application, not for Moon |
 
 A CLI-managed frontend requires a command and rejects an already occupied development endpoint. HTTP probing requires `curl`. A readiness timeout prevents application launch. The CLI owns the frontend process it starts; an external server has a separate lifetime.
@@ -204,13 +203,28 @@ Inspects the environment and current project without installing dependencies or 
 | `--quiet` | Render only failing diagnostics; conflicts with `--json` |
 | `--output <path>` | Write the report to a file |
 
-## `cef setup`
+## `setup`
 
 ```text
-proton_cli cef setup
+proton_cli setup
 ```
 
-Installs the CEF runtime and helper selected by this Proton release in the shared user-level stores and prints the runtime root. It accepts no command-specific options, writes no project runtime-selection file and does not select an arbitrary CEF version. Installation requires network access when artifacts are missing.
+Prepares the runtime and subprocess helper required by this CLI release in the
+shared user-level store, then prints the runtime directory. It is independent
+of the current project and working directory, so `-C` does not change the
+installation. There are no command-specific options.
+
+This is an optional prewarming command. `dev`, `build`, and `package` prepare
+the same installation automatically before building or launching an app.
+Complete cached installations are reused. A missing installation requires
+network access, `curl`, `tar`, MoonBit and the native compiler toolchain; the
+helper is built from source. Installation failure stops the requesting command.
+`doctor` and `package --dry-run` do not install anything.
+
+**Unreleased migration:** replace `cef setup` with `setup`. Remove `dev --setup`
+and `dev --no-setup`; automatic preparation is the default. Direct `moon`
+build/run commands still require a prepared environment. CLI and application
+Proton dependencies must use the same release.
 
 ## `cef requirements`
 

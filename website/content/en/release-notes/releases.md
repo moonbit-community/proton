@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+**Automatic environment preparation**
+
+`proton_cli dev`, `build`, and `package` prepare the release-matched runtime and
+helper automatically. Complete caches are reused; first use may download CEF
+and compile the helper, requiring network access and the native toolchain.
+Installation failure stops the original command.
+
+Use optional `proton_cli setup` to prewarm the shared installation, including
+before direct `moon` commands or for CI caches. It does not depend on a project
+or the current directory. Replace `cef setup` with `setup` and remove
+`dev --setup`/`--no-setup`. `doctor` and `package --dry-run` stay read-only.
+Keep the CLI and application Proton dependencies on the same release.
+
 **Project platform overrides (breaking configuration change)**
 
 Keep platform differences in root `platforms.macos`, `platforms.windows`, and

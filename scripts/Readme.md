@@ -104,7 +104,7 @@ starts with three nested Helper.app processes.
 Set up the darwin runtime and Warren first, then run:
 
 ```sh
-moon -C cli run . -- -C .. cef setup
+moon -C cli run . -- -C .. setup
 moon install moonbit-community/warren@0.4.5
 node ./scripts/macos_package_smoke.mjs
 ```
@@ -125,7 +125,7 @@ Set up the `win32-x64` runtime and install Warren with
 `moon install moonbit-community/warren@0.4.5` first:
 
 ```powershell
-moon -C cli run . -- -C .. cef setup
+moon -C cli run . -- -C .. setup
 powershell -NoProfile -File scripts\windows_package_smoke.ps1
 ```
 
