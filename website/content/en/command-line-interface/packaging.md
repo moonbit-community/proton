@@ -54,7 +54,7 @@ An unsigned or locally signed artifact does not establish a trusted publisher id
 
 Packaged frontend files load without the development server. Backend resource paths resolve through `resource_dir()`. Installed resources may be read-only; persistent application data belongs outside them.
 
-`package.resources` supplies shared sidecar files; platform-specific resources are appended. `package.sign.binaries` and its platform override select additional executables for signing. Explicit CLI options take precedence over configuration. Field types and merge rules are listed in [Configuration](../configuration/project.md#package).
+`package.resources` supplies shared sidecar files; platform-specific resources are appended. `package.sign.binaries` and its platform override select additional executables for signing; on macOS an entry such as `resources/**` signs all code found under that packaged directory. Explicit CLI options take precedence over configuration. Field types and merge rules are listed in [Configuration](../configuration/project.md#package).
 
 `--dry-run` validates and displays the packaging plan. It does not prove that packaging, signing or the packaged runtime works. The [Todo tutorial](../tutorial/isomorphic.md) includes the application build and package exercise.
 

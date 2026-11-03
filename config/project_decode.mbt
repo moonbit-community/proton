@@ -426,10 +426,16 @@ fn validate_sign(
   if sign is Some(sign) {
     validate_paths(sign.binaries, label + ".binaries")
     for path in sign.binaries {
-      guard !path.contains("*") else {
+      // `dir/**` is the one supported pattern: a macOS signing tree.
+      let exact = if path.replace_all(old="\\", new="/").has_suffix("/**") {
+        path.unsafe_substring(start=0, end=path.length() - 3)
+      } else {
+        path
+      }
+      guard !exact.contains("*") else {
         raise InvalidField(
           path=label + ".binaries",
-          expectation="must not contain glob patterns",
+          expectation="must be exact paths or dir/** trees",
         )
       }
     }

@@ -196,12 +196,15 @@ fn macos_package_sign_targets(
     @packager.MacosSignTarget(prefix + "/bin/libvk_swiftshader.dylib"),
   ]
   for binary in spec.sign_binaries {
-    match relative_to_base(spec.base_dir, binary) {
+    // Project configuration admits no other glob than a `dir/**` tree.
+    let tree = glob_tree_root(binary)
+    match relative_to_base(spec.base_dir, tree.unwrap_or(binary)) {
       Some(relative) =>
         targets.push(
           @packager.MacosSignTarget(
             "Contents/Resources/" + relative,
             entitlements=true,
+            tree=tree is Some(_),
           ),
         )
       None => raise StagingPlanError::InputOutsideBase(path=binary)

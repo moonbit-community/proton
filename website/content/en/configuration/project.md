@@ -69,7 +69,7 @@ These fields belong to the `package` object in `proton.project.json`.
 | `icons` | string array | Empty; icon paths relative to configuration directory |
 | `prepare` | string | Absent; preparation command |
 | `resources` | string array | Empty; additional packaged resources |
-| `sign.binaries` | string array | Empty; additional binaries selected for signing |
+| `sign.binaries` | string array | Empty; additional binaries selected for signing, or macOS `dir/**` trees |
 | `url_schemes` | string array | Empty; registered application URL schemes |
 | `document_types` | object array | Empty; document associations |
 | `output` | string | `dist`, relative to configuration directory |
@@ -83,6 +83,8 @@ For automatic updates, `package.version` is also the release ordering value. It 
 | Field | Type | Default / meaning |
 | --- | --- | --- |
 | `binaries` | string array | `[]`; additional binaries to sign, relative to the configuration directory |
+
+An entry is an exact target that must exist in the package, and an `.app` or `.framework` directory is signed as one target. On macOS, an entry ending in `/**` is a tree: at packaging time Proton signs every Mach-O executable, library and bundle under that packaged directory, inside out, and skips symlinks and object files. Other glob patterns are rejected. Trees are macOS-only: Windows signs each listed file with `signtool`, so a signed Windows package fails on a tree. Put trees under `platforms.macos.package.sign` when the configuration also signs for Windows.
 
 Omitting `sign` adds no extra binaries. This object does not enable signing: use `package --sign` or `--notarize`.
 

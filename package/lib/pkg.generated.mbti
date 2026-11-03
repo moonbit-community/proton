@@ -119,8 +119,9 @@ pub struct MacosSignTarget {
   runtime_options : Bool
   entitlements : Bool
   identifier : String?
+  tree : Bool
 }
-pub fn MacosSignTarget::MacosSignTarget(String, runtime_options? : Bool, entitlements? : Bool, identifier? : String) -> Self
+pub fn MacosSignTarget::MacosSignTarget(String, runtime_options? : Bool, entitlements? : Bool, identifier? : String, tree? : Bool) -> Self
 
 pub(all) enum NsisInstallMode {
   CurrentUser
