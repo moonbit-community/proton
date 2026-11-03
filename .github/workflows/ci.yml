@@ -126,7 +126,11 @@ jobs:
             --target native -- --runtime-only)
           echo "$runtime_output"
           runtime=$(echo "$runtime_output" | tail -n 1)
-          helper_bin="$RUNNER_TEMP/proton-helper"
+          version=$(sed -n 's/^version = "\([^"]*\)"/\1/p' proton/moon.mod)
+          platform=linux-x64
+          if [ "$RUNNER_OS" = "macOS" ]; then platform=darwin-arm64; fi
+          # Populate setup's cache from source before this release is published.
+          helper_bin="$HOME/.proton/helpers/$platform/$version"
           moon --target-dir "$RUNNER_TEMP/proton-helper-build" install --path \
             proton/internal/cef_process --bin "$helper_bin"
           helper="$helper_bin/cef_process"
@@ -143,7 +147,9 @@ jobs:
           $runtimeOutput | Write-Output
           $runtime = $runtimeOutput | Select-Object -Last 1
           Remove-Item Env:PROTON_CEF_SETUP_BOOTSTRAP
-          $helperBin = Join-Path $env:RUNNER_TEMP "proton-helper"
+          $version = (Select-String -Path proton/moon.mod -Pattern '^version = "([^"]+)"').Matches.Groups[1].Value
+          # Populate setup's cache from source before this release is published.
+          $helperBin = Join-Path $env:USERPROFILE ".proton\helpers\win32-x64\$version"
           $helperBuild = Join-Path $env:RUNNER_TEMP "proton-helper-build"
           moon --target-dir $helperBuild install --path proton/internal/cef_process --bin $helperBin
           $helper = Join-Path $helperBin "cef_process.exe"
