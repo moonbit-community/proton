@@ -7,13 +7,21 @@
 
 **自动准备运行环境（破坏性 CLI 变更）**
 
-`proton_cli dev`、`build`、`package` 自动准备发行版匹配的运行时和 helper。
-完整缓存直接复用；首次使用可能下载 CEF、编译 helper，需要网络与原生工具链。
+`proton_cli dev`、`build`、`package` 自动准备发行版匹配的运行时和子进程程序。
+完整缓存直接复用；首次使用可能下载 CEF、编译子进程程序，需要网络与原生工具链。
 安装失败会停止原命令。
 
 可选的 `proton_cli setup` 用于预安装共享环境，例如为直接 `moon` 命令或 CI 缓存做准备，
 不依赖项目及当前目录。将 `cef setup` 替换为 `setup`，移除 `dev --setup`／`--no-setup`。
 `doctor` 和 `package --dry-run` 保持只读；CLI 和应用 Proton 依赖保持同一发行版本。
+
+**CEF 子进程命名**
+
+Chromium 子进程程序仍名为 `cef_process`（Windows 为 `cef_process.exe`），
+共享安装目录改为 `~/.proton/subprocesses/`。开发环境中的 `PROTON_HELPER_PATH`
+覆盖改用 `PROTON_SUBPROCESS_PATH`；`proton_cefsetup/store` 的
+`resolve_default_helper()` 改为 `resolve_default_subprocess()`。
+执行 `proton_cli setup` 准备新缓存。macOS 保留 Chromium 约定的 `Helper.app` bundle 名称。
 
 **项目平台覆盖（破坏性配置变更）**
 
@@ -59,7 +67,7 @@ Git 初始化遵循 moon-new 的行为。
 **升级要求**
 
 将 CLI 和应用中的 `proton`／`proton_*` 依赖一起升级到 0.7.0。安装 CLI 不会迁移已有项目文件。
-按上述说明更新已移除的命令与选项、迁移平台打包配置，再使用匹配的 helper 重新打包应用。
+按上述说明更新已移除的命令与选项、迁移平台打包配置，再使用匹配的子进程程序重新打包应用。
 直接使用 `moon` 构建前需执行 `proton_cli setup`；普通 CLI 构建会自动准备环境。
 MoonBit `latest` 工具链要求和 CEF 运行时不变。
 

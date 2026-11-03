@@ -159,7 +159,7 @@ Proton 不要求使用 minimal 或 isomorphic 模板的目录布局。CLI 根据
 
 Moon 默认将构建产物写入 _build/。前端输出位置取决于前端构建工具，应与 frontend.dist 对应；frontend/dist 是 isomorphic 模板的选择，不是框架固定路径。打包器将分发产物写入 package.output，默认 dist。
 
-这些目录保存生成产物，内容由源码、构建命令和项目配置决定。setup 安装的运行时与 helper 位于用户级共享存储，不属于应用源码目录。
+这些目录保存生成产物，内容由源码、构建命令和项目配置决定。setup 安装的运行时与子进程程序位于用户级共享存储，不属于应用源码目录。
 
 ## 完整配置示例
 

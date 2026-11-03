@@ -32,7 +32,7 @@ MoonBit 二进制目录必须在 PATH 中。使用内联 HTML 的 minimal 应用
 
 ## 自动准备环境
 
-CLI 会在 `proton_cli dev`、`build`、`package` 中自动准备共享运行时和 helper。
+CLI 会在 `proton_cli dev`、`build`、`package` 中自动准备共享运行时和子进程程序。
 首次使用需要网络及上文的原生构建工具；完整缓存直接复用。可选的 `proton_cli setup`
 用于提前准备，可在任意目录执行。`doctor` 和 `package --dry-run` 不安装环境。
 CLI 和应用依赖应保持相同 Proton 发行版本。
@@ -41,15 +41,15 @@ CLI 和应用依赖应保持相同 Proton 发行版本。
 
 ## 运行时安装
 
-`proton_cli setup` 解析该版本的 Chromium 运行时及从源码构建的匹配 helper。首次执行需要网络，可能耗时数分钟。任意下载的 CEF 不能替代版本匹配的安装。
+`proton_cli setup` 解析该版本的 Chromium 运行时及从源码构建的匹配子进程程序。首次执行需要网络，可能耗时数分钟。任意下载的 CEF 不能替代版本匹配的安装。
 
 | 位置 | 内容 |
 | --- | --- |
 | `~/.proton/store/` | 不可变、共享的 CEF SDK／运行时安装 |
-| `~/.proton/helpers/` | 按平台和 Proton 版本选择的 helper |
+| `~/.proton/subprocesses/` | 按平台和 Proton 版本选择的子进程程序 |
 | `PROTON_RUNTIME_STORE` | 可选的运行时存储绝对路径覆盖 |
 
-运行时和 helper 不写入项目源码，而是在打包时组装到应用产物中。CLI 和 Proton 模块版本应保持一致。`proton_cli doctor` 检查项目配置、工具、运行时和 helper，不修改它们。
+运行时和子进程程序不写入项目源码，而是在打包时组装到应用产物中。CLI 和 Proton 模块版本应保持一致。`proton_cli doctor` 检查项目配置、工具、运行时和子进程程序，不修改它们。
 
 工具安装完成后，可按[最小应用教程](../tutorial/first-app.md)创建自己的应用。下面的源码检出步骤用于运行本书的仓库示例，创建应用不需要检出 Proton 仓库。
 

@@ -19,7 +19,7 @@ starts the required application/runtime route in headless OSR
 mode with `PROTON_REMOTE_DEBUGGING_PORT=0`, discovers Chromium's actual endpoint
 from its `DevTools listening on ws://...` output, performs typed CDP probes,
 closes Chromium through `Browser.close`, and verifies that the application,
-helper process tree, and CDP endpoint stop:
+subprocess tree, and CDP endpoint stop:
 
 ```sh
 moon -C cefsetup run . --target native
@@ -32,12 +32,12 @@ not launch the self-hosted scenarios.
 
 Run one suite at a time: E2E scenarios own native processes,
 CDP ports, frontend servers, and runtime logs. The tests resolve the required
-CEF runtime from the immutable user-wide store. Each isolated scenario installs a release helper
+CEF runtime from the immutable user-wide store. Each isolated scenario installs a release subprocess executable
 from the same Proton source as the application through `moon install --path`.
 The suite covers:
 
 - single-instance forwarding through the real application loop, followed by
-  primary/secondary and CEF helper shutdown, plus a runtime lock release that
+  primary/secondary and CEF subprocess shutdown, plus a runtime lock release that
   lets the next launch become primary (`--single-instance`);
 - the cancelable quit chain, forced exits, and process exit codes
   (`--quit-chain`);
@@ -108,14 +108,14 @@ These scenarios cover closing a view before browser submission, stale view handl
 opening secondary windows from initial startup hooks, task cancellation, window task
 failures, intercepted close decisions, and application-level control
 (`is_ready`, `focus`, and the macOS AppKit group). The `process-events` case
-also kills the renderer helpers of a running application to verify
+also kills the renderer subprocesses of a running application to verify
 `render-process-gone` while the session, window, and web contents creation
 events are observed. The `task-metrics` case starts Chromium's task-manager
 sampling, waits for the first measured footprint, and then asserts the reported
 task types and the browser-first order. The `page-control` case reads the
 session history, injects and removes a page stylesheet through the bridge, and
 checks the entry a later navigation adds. The runner also executes control
-cases, requires explicit success markers, and checks application and helper
+cases, requires explicit success markers, and checks application and subprocess
 shutdown.
 The `cancel-app-startup` and `cancel-app-running` cases cancel `App::run` itself,
 require cancellation to propagate, and verify native teardown after interrupted
@@ -155,7 +155,7 @@ steps while still reporting `quit 7`, and requires a prevented `before-quit` or
 The Warren scenario reports startup, page/reload/origin probes, build, and
 shutdown separately. Startup uses the command timeout, builds have a minimum
 180-second budget on slow platforms, development page probes receive three
-probe budgets, and shutdown retains its own deadline. Helper installation has
+probe budgets, and shutdown retains its own deadline. Subprocess installation has
 a minimum 180-second build budget. There is no single probe-sized deadline
 covering compilation and all subsequent phases.
 

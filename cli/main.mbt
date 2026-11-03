@@ -150,7 +150,7 @@ fn cli_command() -> @argparse.Command {
 fn setup_command() -> @argparse.Command {
   @argparse.Command(
     "setup",
-    about="Prepare the shared Proton runtime and subprocess helper",
+    about="Prepare the shared Proton runtime and subprocess executable",
   )
 }
 

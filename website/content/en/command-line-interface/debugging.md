@@ -6,7 +6,7 @@ Diagnostics come from distinct layers: project/toolchain validation, native star
 
 | Interface | Scope |
 | --- | --- |
-| `proton_cli doctor` | Read-only project, toolchain, runtime and helper checks |
+| `proton_cli doctor` | Read-only project, toolchain, runtime and subprocess checks |
 | `proton_cli --version` / `moon version` | Tool versions |
 | `WebContentsHandle.open_devtools()` | Chromium inspector for a browser |
 | `App.run()` | Typed application execution errors |

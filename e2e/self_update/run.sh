@@ -36,10 +36,10 @@ if [ -z "${PROTON_RUNTIME_ROOT:-}" ]; then
   PROTON_RUNTIME_ROOT=$(PROTON_CEF_SETUP_BOOTSTRAP=1 moon -C "$repo/cefsetup" run . --target native -- --runtime-only | tail -n 1)
   export PROTON_RUNTIME_ROOT
 fi
-if [ -z "${PROTON_HELPER_PATH:-}" ]; then
+if [ -z "${PROTON_SUBPROCESS_PATH:-}" ]; then
   moon install --path "$repo/proton/internal/cef_process" --bin "$work/build"
-  PROTON_HELPER_PATH="$work/build/cef_process"
-  export PROTON_HELPER_PATH
+  PROTON_SUBPROCESS_PATH="$work/build/cef_process"
+  export PROTON_SUBPROCESS_PATH
 fi
 "$openssl_bin" req -x509 -newkey rsa:2048 -nodes -days 1 -subj '/CN=localhost' \
   -addext 'subjectAltName=DNS:localhost' -keyout "$work/keys/tls.key" \

@@ -15,7 +15,7 @@ license = "Apache-2.0"
 
 keywords = [ "proton", "cef", "setup" ]
 
-description = "Install the CEF runtime and subprocess helper required by Proton."
+description = "Install the CEF runtime and subprocess executable required by Proton."
 
 preferred_target = "wasm"
 

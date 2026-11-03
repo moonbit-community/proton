@@ -630,7 +630,7 @@ test "window opacity rejects NaN before native handle access" {
 test "runtime config preserves typed native ABI values" {
   let cache_dir = test_absolute_cache_dir()
   let runtime_config = RuntimeConfig(
-    helper_path="cef_process.exe",
+    subprocess_path="cef_process.exe",
     cache_dir~,
     locale=@locale.Locale::parse("zh-CN"),
     accept_languages=[
@@ -641,7 +641,7 @@ test "runtime config preserves typed native ABI values" {
     headless=true,
     accessibility_mode=AccessibilityMode::AlwaysEnabled,
   )
-  assert_eq(runtime_config.helper_path, Some("cef_process.exe"))
+  assert_eq(runtime_config.subprocess_path, Some("cef_process.exe"))
   assert_eq(runtime_config.cache_dir, Some(cache_dir))
   assert_true(runtime_config.headless)
   assert_eq(runtime_config.accessibility_mode, AccessibilityMode::AlwaysEnabled)
@@ -654,7 +654,7 @@ test "runtime config preserves typed native ABI values" {
   let bundled = RuntimeConfig::bundled(cache_dir~)
   assert_true(bundled.use_bundled)
   assert_eq(bundled.runtime_root, None)
-  assert_eq(bundled.helper_path, None)
+  assert_eq(bundled.subprocess_path, None)
   assert_false(bundled.headless)
   assert_eq(bundled.accessibility_mode, AccessibilityMode::Automatic)
   assert_true(bundled.persist_session_cookies)
@@ -753,7 +753,7 @@ test "runtime create does not fake engine configs" {
     Runtime(
       config=RuntimeConfig(
         runtime_root="missing-runtime-root",
-        helper_path="missing-helper",
+        subprocess_path="missing-helper",
       ),
     )
   })
@@ -788,7 +788,7 @@ async test "runtime probe rejects legacy CEF library layouts" {
   }
   let error = expect_native_error(() => {
     Runtime(
-      config=RuntimeConfig(runtime_root=root, helper_path="missing-helper"),
+      config=RuntimeConfig(runtime_root=root, subprocess_path="missing-helper"),
     )
   })
   assert_true(error.message().contains("runtime engine library"))
@@ -823,15 +823,19 @@ async test "runtime probe accepts Windows store and packaged library layouts" {
     )
     let config = RuntimeConfig(
       runtime_root=root,
-      helper_path=@path.Path(root)
+      subprocess_path=@path.Path(root)
         .join(@path.Path("missing-helper.exe"))
         .to_string(),
     )
     // Stop at the next probe check, without initializing CEF or opening windows.
     let runtime_error = expect_native_error(() => Runtime(config~))
-    assert_true(runtime_error.message().contains("runtime helper executable"))
+    assert_true(
+      runtime_error.message().contains("runtime subprocess executable"),
+    )
     let process_error = expect_native_error(() => execute_process(config~))
-    assert_true(process_error.message().contains("runtime helper executable"))
+    assert_true(
+      process_error.message().contains("runtime subprocess executable"),
+    )
   }
 }
 
@@ -841,7 +845,7 @@ test "execute_process does not ignore engine configs" {
     execute_process(
       config=RuntimeConfig(
         runtime_root="missing-runtime-root",
-        helper_path="missing-helper",
+        subprocess_path="missing-helper",
       ),
     )
   })
@@ -897,7 +901,7 @@ test "runtime config rejects a relative cache directory" {
     Runtime(
       config=RuntimeConfig(
         runtime_root="/runtime",
-        helper_path="/runtime/cef_process",
+        subprocess_path="/runtime/cef_process",
         cache_dir="relative-cache",
       ),
     )

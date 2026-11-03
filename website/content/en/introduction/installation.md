@@ -33,7 +33,7 @@ MoonBit's binary directory must be on PATH. Minimal applications with inline HTM
 
 ## Automatic preparation
 
-The CLI prepares its shared runtime and helper automatically for
+The CLI prepares its shared runtime and subprocess executable automatically for
 `proton_cli dev`, `build`, and `package`. First use requires network access and
 the native build tools listed above; complete caches are reused. Use optional
 `proton_cli setup` to prepare them in advance. It works from any directory.
@@ -44,15 +44,15 @@ Direct `moon` commands require prior setup.
 
 ## Runtime installation
 
-`proton_cli setup` resolves the release's Chromium runtime and matching source-built helper. Its initial run needs network access and may take several minutes. Arbitrary CEF downloads do not satisfy the release contract.
+`proton_cli setup` resolves the release's Chromium runtime and matching source-built subprocess executable. Its initial run needs network access and may take several minutes. Arbitrary CEF downloads do not satisfy the release contract.
 
 | Location | Content |
 | --- | --- |
 | `~/.proton/store/` | Immutable shared CEF SDK/runtime installations |
-| `~/.proton/helpers/` | Helpers selected by platform and Proton version |
+| `~/.proton/subprocesses/` | Subprocess executables selected by platform and Proton version |
 | `PROTON_RUNTIME_STORE` | Optional absolute override for runtime storage |
 
-Runtime/helper files are not copied into project source. They are assembled into distributable applications during packaging. CLI and Proton module versions must agree. `proton_cli doctor` checks project configuration, tools, runtime and helper without changing them.
+Runtime/subprocess executable files are not copied into project source. They are assembled into distributable applications during packaging. CLI and Proton module versions must agree. `proton_cli doctor` checks project configuration, tools, runtime and subprocess executable without changing them.
 
 To create an application with these tools, follow the [minimal application tutorial](../tutorial/first-app.md). The repository checkout below is needed only to run the examples in this book.
 

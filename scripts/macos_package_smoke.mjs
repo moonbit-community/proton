@@ -181,7 +181,7 @@ function childProcessCommands(parentPid) {
     return [];
   }
   if (pgrep.error || pgrep.status !== 0) {
-    fail(`failed to inspect helper processes for ${parentPid}`);
+    fail(`failed to inspect subprocesses for ${parentPid}`);
   }
   return pgrep.stdout
     .split(/\r?\n/)
@@ -258,7 +258,7 @@ async function waitForHelpersToExit(helpers) {
     }
     await delay(100);
   }
-  fail("CEF helper processes did not exit with the packaged app");
+  fail("CEF subprocesses did not exit with the packaged app");
 }
 
 function verifyBundle() {
@@ -456,7 +456,7 @@ async function launchBundle() {
   }
   const helpers = childProcessCommands(appProcess.pid);
   if (helpers.length === 0) {
-    fail("CEF did not start any helper processes");
+    fail("CEF did not start any subprocesses");
   }
   const expectedHelpers = helperNames.map(
     (name) => `${name}.app/Contents/MacOS/${name}`,
@@ -476,10 +476,10 @@ async function launchBundle() {
       )
     )
   ) {
-    fail("the CEF renderer helper did not start");
+    fail("the CEF renderer subprocess did not start");
   }
   console.log(`CDP page: ${page.url}`);
-  console.log(`CEF helpers: ${helpers.length}`);
+  console.log(`CEF subprocesses: ${helpers.length}`);
   await stopAppProcess();
   await waitForHelpersToExit(helpers);
 }

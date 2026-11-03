@@ -27,7 +27,7 @@ proton_cli [--cwd <directory>] <command> [options]
 | [`build`](#build) | 构建前端资源和原生后端 |
 | [`package`](#package) | 构建并组装分发产物 |
 | [`doctor`](#doctor) | 输出环境和项目诊断 |
-| [`setup`](#setup) | 安装匹配当前发行版的运行时和 helper |
+| [`setup`](#setup) | 安装匹配当前发行版的运行时和子进程程序 |
 | [`cef requirements`](#cef-requirements) | 输出内嵌的 CEF 版本要求 |
 
 ## `help`
@@ -142,7 +142,7 @@ proton_cli build [options] [-- <moon-build-arguments>...]
 proton_cli package [options]
 ```
 
-为当前主机平台构建并组装应用、前端资源、CEF 运行时、匹配的 helper 和声明的资源。必须有项目配置。本命令不接收尾随的 Moon 参数。
+为当前主机平台构建并组装应用、前端资源、CEF 运行时、匹配的子进程程序和声明的资源。必须有项目配置。本命令不接收尾随的 Moon 参数。
 
 | 选项 | 默认值及含义 |
 | --- | --- |
@@ -203,12 +203,12 @@ proton_cli doctor [options]
 proton_cli setup
 ```
 
-将当前 CLI 发行版所需的运行时和子进程 helper 准备到用户级共享存储，最后输出运行时目录。
+将当前 CLI 发行版所需的运行时和子进程程序准备到用户级共享存储，最后输出运行时目录。
 命令与当前项目和工作目录无关，`-C` 不改变安装位置。没有专属选项。
 
 这是可选的预安装命令。`dev`、`build`、`package` 会在构建或启动应用前自动准备同一份环境。
 完整缓存会直接复用；缺少安装产物时，需要网络、`curl`、`tar`、MoonBit 和原生编译工具链，
-helper 会从源码构建。安装失败会停止当前命令。`doctor` 和 `package --dry-run` 不执行安装。
+子进程程序会从源码构建。安装失败会停止当前命令。`doctor` 和 `package --dry-run` 不执行安装。
 
 **从 0.6.0 迁移：** 将 `cef setup` 替换为 `setup`，移除 `dev --setup` 和 `dev --no-setup`，
 现在默认自动准备环境。直接使用 `moon` 构建／运行仍需事先准备环境。

@@ -169,7 +169,7 @@ A module dependency makes a module available; a package import selects the APIs 
 
 Moon writes build artifacts under _build/ by default. Frontend output depends on the frontend build tool and should correspond to frontend.dist. frontend/dist is an isomorphic template choice, not a fixed framework path. The packager writes distributables to package.output, which defaults to dist.
 
-These directories hold generated artifacts determined by source, build commands and project configuration. The runtime and helper installed by setup live in shared user-level storage, outside the application source tree.
+These directories hold generated artifacts determined by source, build commands and project configuration. The runtime and subprocess executable installed by setup live in shared user-level storage, outside the application source tree.
 
 ## Complete configuration example
 

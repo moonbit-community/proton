@@ -153,7 +153,7 @@ export function createNativeLinkConfig(env = readPayloadEnv()) {
       { ...process.env, ...env },
     );
     if (resource !== undefined) {
-      // The public app facade is not imported by the CEF subprocess helper.
+      // The public app facade is not imported by the CEF subprocess executable.
       linkConfigs.push({ package: "moonbit-community/proton", link_flags: quote(resource) });
     }
   }

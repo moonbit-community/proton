@@ -8,7 +8,7 @@ pub fn release_version() -> String
 
 pub async fn resolve_default() -> InstalledRuntime
 
-pub async fn resolve_default_helper() -> String
+pub async fn resolve_default_subprocess() -> String
 
 pub async fn setup_default(runtime_only? : Bool) -> InstalledRuntime
 

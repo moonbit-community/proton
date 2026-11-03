@@ -116,10 +116,10 @@ Apple notarization, or the final Gatekeeper assessment used for a release.
 
 Runs the Windows portable packaging regression with a temporary self-signed
 Code Signing certificate. It packages `47_dev_extension_js` with `--sign`,
-verifies the Proton-owned executable, helper, and DLL with Authenticode, checks
+verifies the Proton-owned executable, subprocess executable, and DLL with Authenticode, checks
 the runtime layout and zip, extracts to a path containing spaces, launches the
 real CEF application, confirms the CDP page comes from the extracted package,
-and checks the helper executable path and cleanup.
+and checks the subprocess executable path and cleanup.
 
 Set up the `win32-x64` runtime and install Warren with
 `moon install moonbit-community/warren@0.4.5` first:

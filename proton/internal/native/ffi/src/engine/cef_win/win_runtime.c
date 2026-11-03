@@ -466,7 +466,7 @@ int32_t proton_engine_runtime_create(
   proton_engine_reset_scheduled_pump();
 
   proton_engine_set_string(&settings.browser_subprocess_path,
-                           config.helper_path);
+                           config.subprocess_path);
   proton_engine_set_string(&settings.resources_dir_path, config.resources_dir);
   proton_engine_set_string(&settings.locales_dir_path, config.locales_dir);
   proton_engine_set_string(&settings.locale, config.locale);

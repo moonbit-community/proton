@@ -1,8 +1,8 @@
 ///|
-/// Kills the renderer helpers of a running scenario app so the application
+/// Kills the renderer subprocesses of a running scenario app so the application
 /// observes `render-process-gone`, the way Electron asks applications to review
 /// a crashed or killed renderer.
-async fn kill_renderer_helpers(snapshot : ProcessSnapshot) -> Unit {
+async fn kill_renderer_subprocesses(snapshot : ProcessSnapshot) -> Unit {
   let mut killed = 0
   for pid in snapshot.pids {
     let command = match snapshot.commands.get(pid) {
@@ -14,14 +14,14 @@ async fn kill_renderer_helpers(snapshot : ProcessSnapshot) -> Unit {
     // platform prints only one of them.
     let names_renderer = command.contains("--type=renderer") ||
       command.contains("--renderer-client-id")
-    // Linux forks renderers from a zygote helper, and the forked child keeps
-    // the zygote's command line. Such a child is still a helper whose parent is
-    // another helper, so kill those too instead of missing the renderer.
-    let forked_from_helper = match snapshot.parents.get(pid) {
-      Some(parent) => snapshot.helper_pids.contains(parent)
+    // Linux forks renderers from a zygote subprocess, and the forked child keeps
+    // the zygote's command line. Such a child is still a subprocess whose parent is
+    // another subprocess, so kill those too instead of missing the renderer.
+    let forked_from_subprocess = match snapshot.parents.get(pid) {
+      Some(parent) => snapshot.subprocess_pids.contains(parent)
       None => false
     }
-    guard names_renderer || forked_from_helper else { continue }
+    guard names_renderer || forked_from_subprocess else { continue }
     if @path.sep == '\\' {
       ignore(
         @process.collect_output_merged(
@@ -54,7 +54,7 @@ async fn kill_renderer_helpers(snapshot : ProcessSnapshot) -> Unit {
       )
     }
     fail(
-      "process-events case found no renderer helper to terminate; helpers: " +
+      "process-events case found no renderer subprocess to terminate; subprocesses: " +
       observed.join(" | "),
     )
   }
@@ -80,7 +80,7 @@ fn app_output_lines(path : String) -> Array[String] {
 async fn run_lifecycle_regressions(root : String, timeout : Int32) -> Unit {
   let output_root = @fs.tmpdir(prefix="proton-e2e-lifecycle-")
   defer remove_dev_extension_tree(output_root)
-  install_scenario_helper(root, output_root)
+  install_scenario_subprocess(root, output_root)
   let cases = match @env.get_env_var("PROTON_E2E_LIFECYCLE_CASE") {
     Some(name) => [name]
     None =>
@@ -262,7 +262,7 @@ async fn run_lifecycle_regressions(root : String, timeout : Int32) -> Unit {
           @mbfs.write_string_to_file(gate + ".cleanup-release", "release")
         }
         if name == "process-events" || name == "process-events-no-bridge" {
-          kill_renderer_helpers(snapshot)
+          kill_renderer_subprocesses(snapshot)
         }
         if name == "bridge-recovery" {
           let page = connect_spawned_page(

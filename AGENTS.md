@@ -39,7 +39,7 @@ developer must perform them.
   layer over the portable C stubs in `proton/internal/native/ffi/` and the
   isolated macOS Objective-C stubs in `proton/internal/native/ffi_mac/`.
 - `proton/internal/cef_process/`: source-built MoonBit executable used as CEF's
-  subprocess helper. It is packaged beside the application executable.
+  subprocess executable. It is packaged beside the application executable.
 - `proton/manifest/`, `proton/core/`, `proton/command/`, `proton/ipc/`:
   supporting packages for metadata, command bridge wiring, and transport-neutral
   IPC protocol helpers. Do not reintroduce the old app runtime route without an explicit
@@ -48,7 +48,7 @@ developer must perform them.
   `moonx` by application prebuild rules, plus its reusable parser/renderer library.
 - `cli/`: `moonbit-community/proton_cli`; independent native developer CLI
   module. Its `package` package owns the complete Proton project packaging
-  workflow, including CEF runtime and helper assembly over `proton_package`.
+  workflow, including CEF runtime and subprocess assembly over `proton_package`.
 - `package/`: standalone `moonbit-community/proton_package` module. It packages
   already-built executables from explicit metadata and payloads; it does not
   discover Proton projects, invoke Moon builds, or assemble CEF runtimes.
@@ -85,8 +85,8 @@ developer must perform them.
 - `lib/`, `build/`, and `_build/`: generated or vendored artifacts. Packaged
   application artifacts are written to `dist/`.
 - `~/.proton/store/`: immutable user-level CEF SDK and runtime installations.
-  `~/.proton/helpers/`: immutable subprocess helpers selected by platform and
-  Proton version. Projects do not contain runtime copies, helper copies, or
+  `~/.proton/subprocesses/`: immutable subprocess executables selected by platform and
+  Proton version. Projects do not contain runtime copies, subprocess copies, or
   runtime-selection manifests.
 
 ## Build And Test
@@ -208,7 +208,7 @@ native checks before handing off larger refactors.
   C++ stubs directly into the application and the matching `cef_process`
   executable. CEF remains a dynamically loaded third-party runtime.
 - `proton_cefsetup` installs the release's immutable CEF runtime and matching
-  subprocess helper in the user-level stores. `proton_cli setup` is a
+  subprocess executable in the user-level stores. `proton_cli setup` is a
   prewarming command for the same operation and writes no project state.
   CLI `dev`, `build`, and `package` prepare missing installations automatically;
   `doctor` and `package --dry-run` remain read-only.
@@ -234,7 +234,7 @@ native checks before handing off larger refactors.
 - Windows project builds pass a private `PROTON_WINDOWS_APP_RESOURCE` JSON
   request only to the application Moon subprocess. The native-link hook compiles
   the ICO with `rc.exe` and attaches the resource to the root app facade, not
-  the shared native FFI package or CEF helper. Generated resources are keyed by
+  the shared native FFI package or CEF subprocess executable. Generated resources are keyed by
   icon content under the application's build directory. CLI packaging omits
   ICOs from the subsequent standalone packager request because they are already
   linked; standalone `proton_package` retains its prebuilt-executable behavior.
@@ -290,7 +290,7 @@ native checks before handing off larger refactors.
   have one on their execution thread. Document Objective-C ownership; CEF host
   views returned by `get_window_handle` are borrowed and must not receive an
   unmatched `release`. Validate close changes with the opt-in graphical
-  `e2e/repro_fullscreen_close` runner, including child views and helper exit.
+  `e2e/repro_fullscreen_close` runner, including child views and subprocess exit.
 - Runtime, window, and view objects are private external pointers. Their explicit
   destroy operations validate owner-thread access and lifecycle state; GC
   finalizers never destroy CEF or UI objects.

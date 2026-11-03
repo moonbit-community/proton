@@ -119,7 +119,7 @@ jobs:
       - name: Test Windows resource generation
         run: node --test proton/windows_resources.test.mjs
 
-      - name: Configure CEF runtime and build helper on Unix
+      - name: Configure CEF runtime and build subprocess on Unix
         if: ${{ matrix.os != 'windows-latest' }}
         run: |
           runtime_output=$(PROTON_CEF_SETUP_BOOTSTRAP=1 moon -C cefsetup run . \
@@ -130,14 +130,14 @@ jobs:
           platform=linux-x64
           if [ "$RUNNER_OS" = "macOS" ]; then platform=darwin-arm64; fi
           # Populate setup's cache from source before this release is published.
-          helper_bin="$HOME/.proton/helpers/$platform/$version"
-          moon --target-dir "$RUNNER_TEMP/proton-helper-build" install --path \
-            proton/internal/cef_process --bin "$helper_bin"
-          helper="$helper_bin/cef_process"
+          subprocess_bin="$HOME/.proton/subprocesses/$platform/$version"
+          moon --target-dir "$RUNNER_TEMP/proton-subprocess-build" install --path \
+            proton/internal/cef_process --bin "$subprocess_bin"
+          subprocess="$subprocess_bin/cef_process"
           echo "PROTON_RUNTIME_ROOT=$runtime" >> "$GITHUB_ENV"
-          echo "PROTON_HELPER_PATH=$helper" >> "$GITHUB_ENV"
+          echo "PROTON_SUBPROCESS_PATH=$subprocess" >> "$GITHUB_ENV"
 
-      - name: Configure CEF runtime and build helper on Windows
+      - name: Configure CEF runtime and build subprocess on Windows
         if: ${{ matrix.os == 'windows-latest' }}
         run: |
           $ErrorActionPreference = "Stop"
@@ -149,11 +149,11 @@ jobs:
           Remove-Item Env:PROTON_CEF_SETUP_BOOTSTRAP
           $version = (Select-String -Path proton/moon.mod -Pattern '^version = "([^"]+)"').Matches.Groups[1].Value
           # Populate setup's cache from source before this release is published.
-          $helperBin = Join-Path $env:USERPROFILE ".proton\helpers\win32-x64\$version"
-          $helperBuild = Join-Path $env:RUNNER_TEMP "proton-helper-build"
-          moon --target-dir $helperBuild install --path proton/internal/cef_process --bin $helperBin
-          $helper = Join-Path $helperBin "cef_process.exe"
-          $image = [System.IO.File]::ReadAllBytes($helper)
+          $subprocessBin = Join-Path $env:USERPROFILE ".proton\subprocesses\win32-x64\$version"
+          $subprocessBuild = Join-Path $env:RUNNER_TEMP "proton-subprocess-build"
+          moon --target-dir $subprocessBuild install --path proton/internal/cef_process --bin $subprocessBin
+          $subprocess = Join-Path $subprocessBin "cef_process.exe"
+          $image = [System.IO.File]::ReadAllBytes($subprocess)
           $peOffset = [System.BitConverter]::ToInt32($image, 0x3c)
           $subsystem = [System.BitConverter]::ToUInt16($image, $peOffset + 92)
           if ($subsystem -ne 2) {
@@ -164,7 +164,7 @@ jobs:
           $env:ANGLE_DEFAULT_PLATFORM = "swiftshader"
           "ANGLE_DEFAULT_PLATFORM=swiftshader" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           "PROTON_RUNTIME_ROOT=$runtime" | Out-File -FilePath $env:GITHUB_ENV -Append
-          "PROTON_HELPER_PATH=$helper" | Out-File -FilePath $env:GITHUB_ENV -Append
+          "PROTON_SUBPROCESS_PATH=$subprocess" | Out-File -FilePath $env:GITHUB_ENV -Append
           Join-Path $runtime "bin" | Out-File -FilePath $env:GITHUB_PATH -Append
 
       - name: Test Windows icons through the Wasm CLI
@@ -177,7 +177,7 @@ jobs:
           foreach ($installMode in @("currentUser", "perMachine", "both")) {
             $packageOutput = Join-Path $env:RUNNER_TEMP "proton-update-windows-package-$installMode"
             moon -C package run . --target native -- `
-              --executable $env:PROTON_HELPER_PATH `
+              --executable $env:PROTON_SUBPROCESS_PATH `
               --product-name "Updater Test" `
               --identifier "dev.proton.updater-test" `
               --version "1.0.0" `

@@ -26,13 +26,13 @@ test "dev extension host restores the parent preload" {
 }
 
 ///|
-async test "helper-install command timeout preserves phase, process status and child log" {
+async test "subprocess-install command timeout preserves phase, process status and child log" {
   let root = @fs.tmpdir(prefix="proton-e2e-diagnostic-test-")
   defer remove_dev_extension_tree(root)
   let failed = Ref(false)
   run_dev_extension_command(
     root,
-    "helper-install",
+    "subprocess-install",
     "node",
     ["-e", "console.log('diagnostic sentinel'); setInterval(() => {}, 1000)"],
     root,
@@ -42,16 +42,16 @@ async test "helper-install command timeout preserves phase, process status and c
     error => {
       failed.val = true
       let message = error.to_string()
-      assert_true(message.contains("helper-install"))
+      assert_true(message.contains("subprocess-install"))
       assert_true(message.contains("diagnostic sentinel"))
       assert_true(message.contains("1000ms"))
       assert_true(message.contains("Child pid="))
       assert_true(message.contains("status=None"))
-      assert_true(message.contains("helper-install.log"))
+      assert_true(message.contains("subprocess-install.log"))
     }
   }
   assert_true(failed.val)
-  let log = join_path(root, "helper-install.log")
+  let log = join_path(root, "subprocess-install.log")
   assert_true(@mbfs.path_exists(log))
   assert_true(dev_extension_log_tail(log).contains("diagnostic sentinel"))
 }

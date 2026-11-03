@@ -12,14 +12,14 @@ $PortableDir = Join-Path $DistDir $ExecutableName
 $ArchivePath = Join-Path $DistDir ($ExecutableName + ".zip")
 $CdpTimeoutSeconds = 45
 $ExitTimeoutSeconds = 20
-$HelperTimeoutSeconds = 20
+$SubprocessTimeoutSeconds = 20
 
 $TempRoot = $null
 $Certificate = $null
 $CertificateThumbprint = $null
 $PfxPath = $null
 $AppProcess = $null
-$HelperProcessIds = @()
+$SubprocessIds = @()
 $StdoutLog = $null
 $StderrLog = $null
 $CleanupErrors = @()
@@ -164,29 +164,29 @@ function Wait-ForCdpPage {
     Fail "Timed out waiting for packaged app CDP"
 }
 
-function Wait-ForHelpers {
+function Wait-ForSubprocesses {
     param(
         [int]$ParentProcessId,
         [string]$ExpectedPath
     )
     $deadline = [DateTime]::UtcNow.AddSeconds($CdpTimeoutSeconds)
     while ([DateTime]::UtcNow -lt $deadline) {
-        $helpers = @(Get-CimInstance Win32_Process -Filter "ParentProcessId = $ParentProcessId" | Where-Object { $_.Name -ieq "cef_process.exe" })
-        if ($helpers.Count -gt 0) {
-            foreach ($helper in $helpers) {
-                if (-not $helper.ExecutablePath) {
-                    Fail "Unable to inspect cef_process.exe path for PID $($helper.ProcessId)"
+        $subprocesses = @(Get-CimInstance Win32_Process -Filter "ParentProcessId = $ParentProcessId" | Where-Object { $_.Name -ieq "cef_process.exe" })
+        if ($subprocesses.Count -gt 0) {
+            foreach ($subprocess in $subprocesses) {
+                if (-not $subprocess.ExecutablePath) {
+                    Fail "Unable to inspect cef_process.exe path for PID $($subprocess.ProcessId)"
                 }
-                $actualPath = [IO.Path]::GetFullPath($helper.ExecutablePath)
+                $actualPath = [IO.Path]::GetFullPath($subprocess.ExecutablePath)
                 if (-not $actualPath.Equals($ExpectedPath, [StringComparison]::OrdinalIgnoreCase)) {
-                    Fail "CEF helper is running from an unexpected path: $actualPath"
+                    Fail "CEF subprocess is running from an unexpected path: $actualPath"
                 }
             }
-            return $helpers
+            return $subprocesses
         }
         Start-Sleep -Milliseconds 200
     }
-    Fail "Timed out waiting for cef_process.exe helpers"
+    Fail "Timed out waiting for cef_process.exe subprocesses"
 }
 
 function Send-CdpBrowserClose {
@@ -225,7 +225,7 @@ function Wait-ForProcessExit {
     }
 }
 
-function Wait-ForHelperCleanup {
+function Wait-ForSubprocessCleanup {
     param(
         [int[]]$ProcessIds,
         [int]$TimeoutSeconds
@@ -239,7 +239,7 @@ function Wait-ForHelperCleanup {
         Start-Sleep -Milliseconds 200
     }
     $remaining = @($ProcessIds | Where-Object { Get-Process -Id $_ -ErrorAction SilentlyContinue })
-    Fail "CEF helpers did not exit with the packaged app: $($remaining -join ', ')"
+    Fail "CEF subprocesses did not exit with the packaged app: $($remaining -join ', ')"
 }
 
 try {
@@ -359,7 +359,7 @@ try {
     Expand-Archive -LiteralPath $ArchivePath -DestinationPath $ExtractRoot -Force
     $ExtractedPortable = Join-Path $ExtractRoot $ExecutableName
     $ExtractedExecutable = Join-Path $ExtractedPortable "$ExecutableName.exe"
-    $ExpectedHelper = [IO.Path]::GetFullPath((Join-Path $ExtractedPortable "cef_process.exe"))
+    $ExpectedSubprocess = [IO.Path]::GetFullPath((Join-Path $ExtractedPortable "cef_process.exe"))
     Require-Path $ExtractedExecutable "Extracted package executable is missing."
 
     $cdpPort = Get-FreeTcpPort
@@ -384,16 +384,16 @@ try {
         Fail "CDP page is not loaded from the extracted package: $pageUrl"
     }
 
-    $helpers = Wait-ForHelpers -ParentProcessId $AppProcess.Id -ExpectedPath $ExpectedHelper
-    $HelperProcessIds = @($helpers | ForEach-Object { [int]$_.ProcessId })
+    $subprocesses = Wait-ForSubprocesses -ParentProcessId $AppProcess.Id -ExpectedPath $ExpectedSubprocess
+    $SubprocessIds = @($subprocesses | ForEach-Object { [int]$_.ProcessId })
     Write-Output "CDP page: $pageUrl"
-    Write-Output "CEF helpers: $($HelperProcessIds.Count)"
+    Write-Output "CEF subprocesses: $($SubprocessIds.Count)"
 
     Send-CdpBrowserClose -Port $cdpPort
     Wait-ForProcessExit -Process $AppProcess -TimeoutSeconds $ExitTimeoutSeconds
-    Wait-ForHelperCleanup -ProcessIds $HelperProcessIds -TimeoutSeconds $HelperTimeoutSeconds
+    Wait-ForSubprocessCleanup -ProcessIds $SubprocessIds -TimeoutSeconds $SubprocessTimeoutSeconds
     $AppProcess = $null
-    $HelperProcessIds = @()
+    $SubprocessIds = @()
 
     $leftovers = @(Get-ChildItem -LiteralPath $DistDir -Force | Where-Object {
         $_.Name -match "\.staging($|\.zip$)|\.backup$"
@@ -425,15 +425,15 @@ finally {
             $CleanupErrors += "failed to stop app process $($AppProcess.Id): $($_.Exception.Message)"
         }
     }
-    foreach ($helperId in $HelperProcessIds) {
+    foreach ($subprocessId in $SubprocessIds) {
         try {
-            $helper = Get-Process -Id $helperId -ErrorAction SilentlyContinue
-            if ($helper) {
-                Stop-Process -Id $helperId -Force -ErrorAction Stop
+            $subprocess = Get-Process -Id $subprocessId -ErrorAction SilentlyContinue
+            if ($subprocess) {
+                Stop-Process -Id $subprocessId -Force -ErrorAction Stop
             }
         }
         catch {
-            $CleanupErrors += "failed to stop helper process $helperId`: $($_.Exception.Message)"
+            $CleanupErrors += "failed to stop subprocess process $subprocessId`: $($_.Exception.Message)"
         }
     }
     if ($CertificateThumbprint) {

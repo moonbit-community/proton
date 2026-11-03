@@ -544,7 +544,7 @@ async test "AppImage staging keeps a single-file executable payload executable" 
   defer (remove_tree(root) catch { _ => () })
   let executable = path_join(root, "fixture")
   @async_fs.write_file(executable, "fixture", create_mode=CreateOrTruncate)
-  // Stands in for the CEF helper, which Proton stages as its own payload.
+  // Stands in for the CEF subprocess executable, which Proton stages as its own payload.
   let helper = path_join(root, "helper")
   @async_fs.write_file(helper, "#!/bin/sh\n", create_mode=CreateOrTruncate)
   @async_fs.chmod(helper, 0o755)

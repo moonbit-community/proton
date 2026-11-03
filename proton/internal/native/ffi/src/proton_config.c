@@ -293,7 +293,7 @@ static bool proton_config_macos_is_helper_executable(
          proton_path_basename_equals(app_dir, "Frameworks");
 }
 
-bool proton_config_macos_bundle_helper_path(const char *executable_path,
+bool proton_config_macos_bundle_subprocess_path(const char *executable_path,
                                             char *out,
                                             size_t out_len) {
   if (executable_path == NULL || executable_path[0] == '\0' || out == NULL ||
@@ -347,10 +347,10 @@ bool proton_config_macos_bundle_helper_path(const char *executable_path,
 }
 #endif
 
-bool proton_config_default_helper_path(char *out, size_t out_len) {
-  const char *env_helper = getenv("PROTON_HELPER_PATH");
-  if (env_helper != NULL && env_helper[0] != '\0') {
-    int written = snprintf(out, out_len, "%s", env_helper);
+bool proton_config_default_subprocess_path(char *out, size_t out_len) {
+  const char *env_subprocess = getenv("PROTON_SUBPROCESS_PATH");
+  if (env_subprocess != NULL && env_subprocess[0] != '\0') {
+    int written = snprintf(out, out_len, "%s", env_subprocess);
     return written > 0 && (size_t)written < out_len;
   }
 #ifdef __APPLE__
@@ -361,7 +361,7 @@ bool proton_config_default_helper_path(char *out, size_t out_len) {
       int written = snprintf(out, out_len, "%s", executable_path);
       return written >= 0 && (size_t)written < out_len;
     }
-    if (proton_config_macos_bundle_helper_path(executable_path, out, out_len) &&
+    if (proton_config_macos_bundle_subprocess_path(executable_path, out, out_len) &&
         proton_path_exists(out)) {
       return true;
     }
@@ -406,7 +406,7 @@ static bool proton_copy_runtime_path(char *out, size_t out_len,
 }
 
 int32_t proton_config_prepare_runtime(
-    int32_t use_bundled, const char *runtime_root, const char *helper_path,
+    int32_t use_bundled, const char *runtime_root, const char *subprocess_path,
     const char *resources_dir, const char *locales_dir, const char *cache_dir,
     const char *locale, const char *accept_languages,
     const char *dialog_ok_label, const char *dialog_cancel_label,
@@ -428,13 +428,13 @@ int32_t proton_config_prepare_runtime(
     return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
                             "runtime config requires runtime_root");
   }
-  if (!proton_copy_runtime_path(config.helper_path,
-                                sizeof(config.helper_path), helper_path) &&
-      !(use_bundled && proton_config_default_helper_path(
-                            config.helper_path,
-                            sizeof(config.helper_path)))) {
+  if (!proton_copy_runtime_path(config.subprocess_path,
+                                sizeof(config.subprocess_path), subprocess_path) &&
+      !(use_bundled && proton_config_default_subprocess_path(
+                            config.subprocess_path,
+                            sizeof(config.subprocess_path)))) {
     return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
-                            "runtime config requires helper_path");
+                            "runtime config requires subprocess_path");
   }
   if (!proton_copy_runtime_path(config.resources_dir,
                                 sizeof(config.resources_dir), resources_dir) &&
@@ -550,8 +550,8 @@ int32_t proton_config_probe_runtime(
   if (status != PROTON_OK) {
     return status;
   }
-  status = proton_require_file(config->helper_path,
-                               "runtime helper executable");
+  status = proton_require_file(config->subprocess_path,
+                               "runtime subprocess executable");
   if (status != PROTON_OK) {
     return status;
   }

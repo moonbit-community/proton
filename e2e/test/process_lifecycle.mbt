@@ -39,7 +39,7 @@ pub extend ProcessRowJson with FromJson::{from_json}
 ///|
 struct ProcessSnapshot {
   pids : Array[Int32]
-  helper_pids : Array[Int32]
+  subprocess_pids : Array[Int32]
   commands : Map[Int32, String]
   parents : Map[Int32, Int32]
   created_at : Map[Int32, Int32]
@@ -47,7 +47,7 @@ struct ProcessSnapshot {
 
 ///|
 struct ShutdownProbeResult {
-  helper_processes : Int32
+  subprocess_count : Int32
 } derive(Eq, Debug)
 
 ///|
@@ -86,8 +86,8 @@ async fn snapshot_scenario_process_tree(
   app : SpawnedScenarioApp,
 ) -> ProcessSnapshot {
   let snapshot = snapshot_process_tree(app.process.pid)
-  guard snapshot.helper_pids.length() > 0 else {
-    fail("headless process tree did not contain a cef_process helper")
+  guard snapshot.subprocess_pids.length() > 0 else {
+    fail("headless process tree did not contain a cef_process subprocess")
   }
   snapshot
 }
@@ -105,7 +105,7 @@ async fn wait_for_scenario_app_shutdown(
     cdp_http_endpoint_from(target),
     process_shutdown_timeout_ms,
   )
-  ShutdownProbeResult::{ helper_processes: snapshot.helper_pids.length(), }
+  ShutdownProbeResult::{ subprocess_count: snapshot.subprocess_pids.length(), }
 }
 
 ///|
@@ -154,14 +154,14 @@ async fn snapshot_process_tree(root_pid : Int32) -> ProcessSnapshot {
     }
   }
   let pids = [root_pid]
-  let helper_pids : Array[Int32] = []
+  let subprocess_pids : Array[Int32] = []
   for row in descendants {
     pids.push(row.pid)
-    if process_command_is_helper(row.command) {
-      helper_pids.push(row.pid)
+    if process_command_is_subprocess(row.command) {
+      subprocess_pids.push(row.pid)
     }
   }
-  ProcessSnapshot::{ pids, helper_pids, commands, parents, created_at, }
+  ProcessSnapshot::{ pids, subprocess_pids, commands, parents, created_at, }
 }
 
 ///|
@@ -191,7 +191,7 @@ async fn list_unix_processes() -> Array[ProcessRow] {
   // a pipe read can surface a transient EAGAIN on a loaded runner and
   // truncate the tree, dropping the root process from the snapshot.
   // `-ww` asks for unlimited width: a redirect is not a terminal, so the
-  // default width would clip long helper command lines and hide the switches
+  // default width would clip long subprocess command lines and hide the switches
   // the tests match on, such as `--type=renderer`.
   let tmp_root = @fs.tmpdir(prefix="proton-e2e-ps-")
   let ps_log = join_path(tmp_root, "ps.out")
@@ -300,7 +300,7 @@ fn process_row_from_json(json : Json) -> ProcessRow raise {
 }
 
 ///|
-fn process_command_is_helper(command : String) -> Bool {
+fn process_command_is_subprocess(command : String) -> Bool {
   let command = command.to_lower()
   command.contains("cef_process.exe") || command.contains("cef_process")
 }
@@ -419,8 +419,8 @@ async fn run_pending_lifecycle_probe_once(
       app, target, browser,
     )
     println(
-      "MoonBit pending lifecycle passed: helpers=" +
-      shutdown.helper_processes.to_string(),
+      "MoonBit pending lifecycle passed: subprocesses=" +
+      shutdown.subprocess_count.to_string(),
     )
     stopped = true
   })
@@ -430,7 +430,7 @@ async fn run_pending_lifecycle_probe_once(
 async fn run_pending_lifecycle_probe(root : String, timeout : Int32) -> Unit {
   let output_root = @fs.tmpdir(prefix="proton-e2e-lifecycle-")
   defer remove_dev_extension_tree(output_root)
-  install_scenario_helper(root, output_root)
+  install_scenario_subprocess(root, output_root)
   run_e2e_operation_with_timeout(timeout, "41_app_commands pending lifecycle", () => {
     run_pending_lifecycle_probe_once(root, output_root, timeout)
   })
@@ -479,8 +479,8 @@ async fn run_event_lifecycle_probe_once(
       app, target, browser,
     )
     println(
-      "MoonBit event lifecycle passed: helpers=" +
-      shutdown.helper_processes.to_string(),
+      "MoonBit event lifecycle passed: subprocesses=" +
+      shutdown.subprocess_count.to_string(),
     )
     stopped = true
   })
@@ -490,7 +490,7 @@ async fn run_event_lifecycle_probe_once(
 async fn run_event_lifecycle_probe(root : String, timeout : Int32) -> Unit {
   let output_root = @fs.tmpdir(prefix="proton-e2e-lifecycle-")
   defer remove_dev_extension_tree(output_root)
-  install_scenario_helper(root, output_root)
+  install_scenario_subprocess(root, output_root)
   run_e2e_operation_with_timeout(
     timeout,
     "40_event_broadcast event lifecycle",

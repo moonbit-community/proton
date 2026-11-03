@@ -59,7 +59,7 @@ modules: a shared command contract, a Rabbita frontend and a native backend.
 The list is held in memory and resets when the application restarts.
 
 `dev`, `build`, and `package` prepare the environment automatically, downloading
-the release-matched Chromium runtime and building its subprocess helper in a
+the release-matched Chromium runtime and building its subprocess executable in a
 shared user-level store when needed. First use requires network access and the
 native toolchain and can take several minutes; complete caches are reused.
 Use optional `proton_cli setup` to prepare the same installation in advance.
@@ -97,7 +97,7 @@ From the generated project directory, stop the development app, then build:
 proton_cli build -- --release
 ```
 
-Packaging assembles the executable, frontend assets, browser runtime and helper
+Packaging assembles the executable, frontend assets, browser runtime and subprocess executable
 into a distribution for the current host platform. Review the
 [packaging prerequisites](website/content/en/command-line-interface/packaging.md#icon-and-tool-prerequisites)
 before running:

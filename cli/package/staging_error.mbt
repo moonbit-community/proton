@@ -9,7 +9,7 @@ priv suberror StagingPlanError {
 ///|
 priv suberror StagingRuntimeError {
   ExecutableMissing(path~ : String)
-  HelperMissing(path~ : String)
+  SubprocessMissing(path~ : String)
   UnsupportedPlatform(platform~ : String)
 }
 
@@ -57,7 +57,8 @@ fn StagingPlanError::message(self : StagingPlanError) -> String {
 fn StagingRuntimeError::message(self : StagingRuntimeError) -> String {
   match self {
     ExecutableMissing(path~) => "application executable is missing: " + path
-    HelperMissing(path~) => "Proton helper executable is missing: " + path
+    SubprocessMissing(path~) =>
+      "Proton subprocess executable is missing: " + path
     UnsupportedPlatform(platform~) =>
       "unsupported Proton package platform: " + platform
   }

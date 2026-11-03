@@ -433,7 +433,7 @@ async fn copy_file(source : String, destination : String) -> Unit {
   }
   ensure_dir(path_parent(destination))
   // Copy with the host tool wherever file modes matter: a single-file payload
-  // such as the CEF helper must stay executable, and the byte copy below
+  // such as the CEF subprocess executable must stay executable, and the byte copy below
   // creates every file with default permissions.
   let tool = match current_package_host() {
     Macos => Some("ditto")

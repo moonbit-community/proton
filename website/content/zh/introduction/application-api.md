@@ -625,7 +625,7 @@ CEF 通过 `on_render_process_gone` 报告 renderer 终止，但不提供同等�
 
 ApplicationContext.task_metrics() 返回 Chromium task 的 AppTaskMetric 列表。renderer 和多个 worker 可以共享进程。task id 标识任务；多个条目的 process_cpu_percent 和 process_memory_bytes 可能完全相同，因为它们属于同一个进程。不能将各行相加作为进程或应用总用量。
 
-采样间隔尚未完成时 CPU 为零，100% 表示一个核心满载；内存测量前为 -1，不是零字节。这些观测不赋予应用对进程的所有权，不应借此绕过 Proton 生命周期单独杀死 helper。
+采样间隔尚未完成时 CPU 为零，100% 表示一个核心满载；内存测量前为 -1，不是零字节。这些观测不赋予应用对进程的所有权，不应借此绕过 Proton 生命周期单独杀死子进程程序。
 
 ## API 参考
 

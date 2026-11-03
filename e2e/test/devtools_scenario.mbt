@@ -50,8 +50,8 @@ async fn run_devtools_scenario_page_probe(
     app, target, snapshot, process_shutdown_timeout_ms,
   )
   println(
-    "MoonBit 54_devtools lifecycle passed: helpers=" +
-    shutdown.helper_processes.to_string(),
+    "MoonBit 54_devtools lifecycle passed: subprocesses=" +
+    shutdown.subprocess_count.to_string(),
   )
   shutdown
 }

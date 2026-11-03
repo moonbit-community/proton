@@ -1,4 +1,4 @@
-// Requires the setup-managed CEF runtime and helper, like Windows package CI.
+// Requires the setup-managed CEF runtime and subprocess, like Windows package CI.
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
@@ -14,7 +14,7 @@ const root = fs.mkdtempSync(path.join(os.tmpdir(), "proton icon smoke 测试 "))
 const app = path.join(root, "app");
 const version = fs.readFileSync(path.join(repo, "proton/moon.mod"), "utf8").match(/^version = "([^"]+)"/m)?.[1];
 assert.ok(version);
-const helper = process.env.PROTON_HELPER_PATH ?? path.join(os.homedir(), ".proton/helpers/win32-x64", version, "cef_process.exe");
+const subprocess = process.env.PROTON_SUBPROCESS_PATH ?? path.join(os.homedir(), ".proton/subprocesses/win32-x64", version, "cef_process.exe");
 const testHome = path.join(root, "home");
 const env = {
   ...process.env, PROTON_NO_UPDATE_CHECK: "1",
@@ -85,11 +85,11 @@ function iconResources(executable) {
 }
 
 try {
-  // Use the setup/CI helper in a private fixture store, without modifying the
-  // developer's immutable helper installation or depending on one in CI.
-  const helperRoot = path.join(testHome, ".proton/helpers/win32-x64", version);
-  fs.mkdirSync(helperRoot, { recursive: true });
-  fs.copyFileSync(helper, path.join(helperRoot, "cef_process.exe"));
+  // Use the setup/CI subprocess in a private fixture store, without modifying the
+  // developer's immutable subprocess installation or depending on one in CI.
+  const subprocessRoot = path.join(testHome, ".proton/subprocesses/win32-x64", version);
+  fs.mkdirSync(subprocessRoot, { recursive: true });
+  fs.copyFileSync(subprocess, path.join(subprocessRoot, "cef_process.exe"));
   fs.mkdirSync(app);
   const members = [...fs.readFileSync(path.join(repo, "moon.work"), "utf8").matchAll(/"(\.\/[^\"]+)"/g)]
     .map(match => path.resolve(repo, match[1]).replace(/\\/g, "/"));
@@ -144,7 +144,7 @@ public static class IconProbe {
 if ([IconProbe]::ExtractIconExW($Executable, -1, [IntPtr]::Zero, [IntPtr]::Zero, 0) -ne 1) { throw 'Windows could not read the application icon' }
 `);
   run("powershell.exe", ["-NoProfile", "-File", inspect, packaged]);
-  console.log("PASS: Wasm build/package, incremental replacement/removal, CLI override, helper isolation, executable launch and Windows icon extraction.");
+  console.log("PASS: Wasm build/package, incremental replacement/removal, CLI override, subprocess isolation, executable launch and Windows icon extraction.");
 } finally {
   // root was created by this invocation, outside the source checkout.
   fs.rmSync(root, { recursive: true, force: true });

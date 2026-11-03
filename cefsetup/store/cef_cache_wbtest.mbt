@@ -168,20 +168,24 @@ async test "installation lock serializes one runtime identity" {
 }
 
 ///|
-async test "helper validation rejects empty and non-executable installations" {
+async test "subprocess validation rejects empty and non-executable installations" {
   let temp = test_cef_fixture_root()
   defer (remove_tree(temp) catch { _ => () })
-  let helper = path_join(temp, "cef_process")
-  assert_false(helper_is_valid(helper))
-  @async_fs.write_file(helper, "", create_mode=CreateOrTruncate)
-  assert_false(helper_is_valid(helper))
-  @async_fs.write_file(helper, "helper fixture", create_mode=CreateOrTruncate)
+  let subprocess = path_join(temp, "cef_process")
+  assert_false(subprocess_is_valid(subprocess))
+  @async_fs.write_file(subprocess, "", create_mode=CreateOrTruncate)
+  assert_false(subprocess_is_valid(subprocess))
+  @async_fs.write_file(
+    subprocess,
+    "subprocess fixture",
+    create_mode=CreateOrTruncate,
+  )
   if @path.sep != '\\' {
-    @async_fs.chmod(helper, 0o644)
-    assert_false(helper_is_valid(helper))
-    @async_fs.chmod(helper, 0o755)
+    @async_fs.chmod(subprocess, 0o644)
+    assert_false(subprocess_is_valid(subprocess))
+    @async_fs.chmod(subprocess, 0o755)
   }
-  assert_true(helper_is_valid(helper))
+  assert_true(subprocess_is_valid(subprocess))
   let staging = path_join(temp, "repair")
   @async_fs.mkdir(staging)
   let repaired = path_join(staging, "cef_process")
@@ -197,11 +201,11 @@ async test "helper validation rejects empty and non-executable installations" {
     create_mode=CreateOrTruncate,
   )
   publish_staged_directory(staging, target)
-  assert_true(helper_is_valid(path_join(target, "cef_process")))
+  assert_true(subprocess_is_valid(path_join(target, "cef_process")))
 }
 
 ///|
-async test "setup reuses a complete runtime and helper without project state" {
+async test "setup reuses a complete runtime and subprocess without project state" {
   let temp = test_cef_fixture_root()
   defer remove_tree(temp)
   let home_key = if @path.sep == '\\' { "USERPROFILE" } else { "HOME" }
@@ -231,18 +235,22 @@ async test "setup reuses a complete runtime and helper without project state" {
     report_progress=false,
   )
   write_runtime_manifest(runtime)
-  let (helper_root, helper, _) = default_helper_paths()
-  ensure_dir(helper_root)
-  @async_fs.write_file(helper, "cached helper", create_mode=CreateOrTruncate)
+  let (subprocess_root, subprocess, _) = default_subprocess_paths()
+  ensure_dir(subprocess_root)
+  @async_fs.write_file(
+    subprocess,
+    "cached subprocess",
+    create_mode=CreateOrTruncate,
+  )
   if @path.sep != '\\' {
-    @async_fs.chmod(helper, 0o755)
+    @async_fs.chmod(subprocess, 0o755)
   }
   for _ in 0..<2 {
     let installed = setup_default()
     assert_eq(installed.runtime_root(), runtime.runtime_root)
     assert_eq(
-      @async_fs.read_file(resolve_default_helper()).text(),
-      "cached helper",
+      @async_fs.read_file(resolve_default_subprocess()).text(),
+      "cached subprocess",
     )
   }
 }

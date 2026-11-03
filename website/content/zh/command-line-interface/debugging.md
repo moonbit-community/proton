@@ -6,7 +6,7 @@
 
 | 接口 | 范围 |
 | --- | --- |
-| `proton_cli doctor` | 只读检查项目、工具链、运行时和 helper |
+| `proton_cli doctor` | 只读检查项目、工具链、运行时和子进程程序 |
 | `proton_cli --version` / `moon version` | 工具版本 |
 | `WebContentsHandle.open_devtools()` | 浏览器的 Chromium 检查器 |
 | `App.run()` | 类型化应用运行错误 |

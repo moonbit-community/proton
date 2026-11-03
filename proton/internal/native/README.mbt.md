@@ -55,11 +55,11 @@ For persistent profiles, `persist_session_cookies` defaults to `true`, so
 session cookies without an expiry are stored alongside permanent cookies.
 
 For packaged applications, the private runtime config resolves CEF resources
-and the matching helper from the application bundle.
+and the matching subprocess executable from the application bundle.
 
-The default configuration resolves the CEF runtime and matching helper from the
+The default configuration resolves the CEF runtime and matching subprocess executable from the
 packaged application or the environment installed by Proton tooling. Explicit
-runtime configs must include both `runtime_root` and `helper_path`; creating the
+runtime configs must include both `runtime_root` and `subprocess_path`; creating the
 runtime validates the complete configuration before initializing CEF.
 The runtime root uses the assembled store/bundle layout: `bin/libcef.dll` in the
 Windows store or `libcef.dll` beside the executable in a Windows package,
@@ -84,7 +84,7 @@ ownership objects directly.
 Proton uses the compiler's deployment target rather than overriding it for
 only its own native stubs and the final link. To target an older macOS release,
 set `MACOSX_DEPLOYMENT_TARGET` for the entire Moon build, including dependencies
-and helper installation. Rebuild from a clean build directory when changing
+and subprocess installation. Rebuild from a clean build directory when changing
 this value. For example:
 
 ```sh
@@ -112,7 +112,7 @@ CEF close callback is deferred. Browser finalization still waits for CEF's
 `on_before_close`; neither a hidden window nor a cleared pointer proves closure.
 
 The opt-in graphical regression in `e2e/repro_fullscreen_close` exercises real
-host-view destruction and verifies application and helper exit. Headless tests
+host-view destruction and verifies application and subprocess exit. Headless tests
 cannot validate this ownership path.
 
 ## Handle and record lifetime

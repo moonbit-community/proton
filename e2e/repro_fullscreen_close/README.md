@@ -15,11 +15,11 @@ From the repository root:
 node e2e/repro_fullscreen_close/run.mjs
 ```
 
-The runner builds a small app and a helper from the current source. It starts
+The runner builds a small app and a subprocess executable from the current source. It starts
 one isolated process group, records the result after at most 20 seconds, and
 kills any remaining processes in that group on completion or interruption.
 It prints an artifact directory containing `app.log`, `result.json`, and the
-helper used by that run. No remote debugging port or external UI automation
+subprocess executable used by that run. No remote debugging port or external UI automation
 is required.
 
 The app performs:
@@ -51,7 +51,7 @@ reproduction, not proof of identical animation timing on every Mac.
 
 ## Expected and observed behavior
 
-Expected: the window closes, the application exits with code 0, and its helpers
+Expected: the window closes, the application exits with code 0, and its subprocesses
 exit. The runner returns 0 only when these conditions hold.
 
 Observed during investigation on macOS: fullscreen return followed by closing
@@ -61,7 +61,7 @@ can report:
 runtime failed during poll event (-2): window is not initialized
 ```
 
-The application and CEF helpers can remain alive. The runner returns 1 for a
+The application and CEF subprocesses can remain alive. The runner returns 1 for a
 failure and records the process group **before** forced cleanup; forced cleanup
 must not be interpreted as successful application shutdown. `matchingError`
 distinguishes this exact error from other failures or a timeout. MoonBit stdout
@@ -72,7 +72,7 @@ prove that a step was not reached.
 
 These commands open real windows. Run them deliberately in a graphical session;
 do not run them during unrelated desktop work. The existing runner checks both
-normal application return and the absence of remaining helper processes before
+normal application return and the absence of remaining subprocesses before
 any forced cleanup.
 
 ```sh

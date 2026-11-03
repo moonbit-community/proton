@@ -658,7 +658,7 @@ Negative badge counts are rejected. `DockBounceType::Informational` bounces once
 
 `ApplicationContext.task_metrics()` returns `AppTaskMetric` rows for Chromium tasks. A renderer and multiple workers can share a process. Task ids identify tasks; the hosting process usage in multiple rows may be identical because it belongs to the shared process. Do not sum rows into a process or application total.
 
-CPU is zero until a sampling interval has passed; 100% represents one fully used core. Memory is -1 before measurement, not zero bytes. The fields are `process_cpu_percent` and `process_memory_bytes`. These observations do not confer ownership of a process and should not be used to kill helpers independently of Proton's lifecycle.
+CPU is zero until a sampling interval has passed; 100% represents one fully used core. Memory is -1 before measurement, not zero bytes. The fields are `process_cpu_percent` and `process_memory_bytes`. These observations do not confer ownership of a process and should not be used to kill subprocesses independently of Proton's lifecycle.
 
 ## API references
 

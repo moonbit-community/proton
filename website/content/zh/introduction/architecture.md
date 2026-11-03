@@ -33,7 +33,7 @@ Proton 将原生 MoonBit 应用与 Chromium 浏览器引擎组合为桌面应用
        └── utility 等进程：浏览器服务
 ```
 
-`cef_process` 是供 CEF 启动子进程的辅助可执行文件。CEF 在启动时选择进程角色，同一个 helper 可用于不同子进程；helper 不执行应用的 MoonBit 入口。它与应用使用匹配的 Proton 版本和 CEF 运行时。
+`cef_process` 是 CEF 启动 Chromium 子进程时执行的程序。CEF 在启动时选择进程角色，因此同一个程序可以承载不同类型的子进程。它不执行应用的 MoonBit 入口，并与应用使用匹配的 Proton 版本和 CEF 运行时。
 
 进程数量由 Chromium 根据页面和运行状态管理。一个 renderer 可以承载多个 task，例如页面和 worker。因此，窗口数、浏览器实例数、task 数与操作系统进程数不是一一对应的，task 的资源指标也不能直接相加作为应用总用量。
 
@@ -70,8 +70,8 @@ renderer 与宿主有独立的执行环境。Proton 在页面中注入 bridge，
 
 | 场景 | 页面来源 | 原生运行时来源 |
 | --- | --- | --- |
-| 内联 HTML | 编译进应用的字符串 | setup 安装的共享运行时与 helper |
-| 使用前端开发服务器 | CLI 配置的开发 URL | setup 安装的共享运行时与 helper |
-| 打包应用 | 内联内容或打包的静态资源；URL 入口也可使用远程页面 | 产物携带的运行时与 helper |
+| 内联 HTML | 编译进应用的字符串 | setup 安装的共享运行时与子进程程序 |
+| 使用前端开发服务器 | CLI 配置的开发 URL | setup 安装的共享运行时与子进程程序 |
+| 打包应用 | 内联内容或打包的静态资源；URL 入口也可使用远程页面 | 产物携带的运行时与子进程程序 |
 
-前端开发服务器只提供页面资源，不承担宿主业务逻辑。通过普通浏览器访问同一个 URL 时，没有 Proton 注入的原生 bridge。打包将应用可执行文件、所需页面资源、CEF 运行时和 helper 组装成可分发产物，文件职责与输出路径见 Configuration 章节，打包格式及前提见 Command Line Interface 章节。
+前端开发服务器只提供页面资源，不承担宿主业务逻辑。通过普通浏览器访问同一个 URL 时，没有 Proton 注入的原生 bridge。打包将应用可执行文件、所需页面资源、CEF 运行时和子进程程序组装成可分发产物，文件职责与输出路径见 Configuration 章节，打包格式及前提见 Command Line Interface 章节。

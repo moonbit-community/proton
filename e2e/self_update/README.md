@@ -10,8 +10,8 @@ e2e/self_update/run.sh
 ```
 
 The runner requires MoonBit, Python 3, and Homebrew OpenSSL 3. It resolves the
-installed CEF runtime and builds the helper unless `PROTON_RUNTIME_ROOT` and
-`PROTON_HELPER_PATH` are already set. No application windows are opened.
+installed CEF runtime and builds the subprocess executable unless `PROTON_RUNTIME_ROOT` and
+`PROTON_SUBPROCESS_PATH` are already set. No application windows are opened.
 
 The existing application and its replacement use different executable names.
 Each case starts from a fresh copy of the old bundle and records lifecycle
