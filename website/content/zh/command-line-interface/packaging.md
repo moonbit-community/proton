@@ -54,7 +54,7 @@ minimum_system_version 只写 macOS 的 LSMinimumSystemVersion 元数据，不�
 
 打包前端资源不依赖开发服务器。后端资源路径通过 `resource_dir()` 解析。安装资源可能只读，持久应用数据不应写入其中。
 
-`package.resources` 提供共享的附加资源，平台资源会追加到共享列表。`package.sign.binaries` 及其平台覆盖指定额外参与签名的可执行文件。显式 CLI 选项优先于配置。字段类型和合并规则见 [Configuration](../configuration/project.md#package)。
+`package.resources` 提供共享的附加资源，平台资源会追加到共享列表。`package.sign.binaries` 及其平台覆盖指定额外参与签名的可执行文件；在 macOS 上，`resources/**` 这样的项会签名该打包目录下找到的所有代码。显式 CLI 选项优先于配置。字段类型和合并规则见 [Configuration](../configuration/project.md#package)。
 
 `--dry-run` 校验并展示打包计划，不证明实际打包、签名或产物运行成功。[Todo 教程](../tutorial/isomorphic.md)包含应用构建与打包练习。
 

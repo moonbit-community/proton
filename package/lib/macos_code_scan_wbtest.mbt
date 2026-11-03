@@ -1,0 +1,498 @@
+///|
+fn macho_header(
+  magic : UInt32,
+  filetype : UInt32,
+  little_endian~ : Bool,
+) -> Bytes {
+  let bytes = Array::make(16, b'\x00')
+  let write = (offset : Int32, value : UInt32) => {
+    for index in 0..<4 {
+      let shift = if little_endian { index * 8 } else { (3 - index) * 8 }
+      bytes[offset + index] = ((value >> shift) & 0xff).to_byte()
+    }
+  }
+  write(0, magic)
+  write(12, filetype)
+  Bytes::from_array(bytes)
+}
+
+///|
+const MachoMagic64 : UInt32 = 0xfeedfacf
+
+///|
+fn thin_library() -> Bytes {
+  macho_header(MachoMagic64, 6, little_endian=true)
+}
+
+///|
+fn thin_object() -> Bytes {
+  macho_header(MachoMagic64, 1, little_endian=true)
+}
+
+///|
+fn universal(
+  slices : Array[Bytes],
+  fat64~ : Bool,
+  little_endian~ : Bool,
+) -> Bytes {
+  let entry_size = if fat64 { 32 } else { 20 }
+  let header_size = 8 + slices.length() * entry_size
+  let bytes = Array::make(header_size + slices.length() * 16, b'\x00')
+  let write32 = (offset : Int32, value : UInt32) => {
+    for index in 0..<4 {
+      let shift = if little_endian { index * 8 } else { (3 - index) * 8 }
+      bytes[offset + index] = ((value >> shift) & 0xff).to_byte()
+    }
+  }
+  write32(0, if fat64 { 0xcafebabfU } else { 0xcafebabeU })
+  write32(4, slices.length().reinterpret_as_uint())
+  for index, slice in slices {
+    let position = header_size + index * 16
+    let entry = 8 + index * entry_size
+    if fat64 {
+      write32(
+        entry + (if little_endian { 8 } else { 12 }),
+        position.reinterpret_as_uint(),
+      )
+    } else {
+      write32(entry + 8, position.reinterpret_as_uint())
+    }
+    for offset, byte in slice {
+      bytes[position + offset] = byte
+    }
+  }
+  Bytes::from_array(bytes)
+}
+
+///|
+fn bundle_info(executable : String) -> Bytes {
+  @utf8.encode(
+    "<plist version=\"1.0\"><dict><key>CFBundleExecutable</key><string>" +
+    executable +
+    "</string></dict></plist>",
+  )
+}
+
+///|
+async fn write_fixture(root : String, path : String, bytes : Bytes) -> Unit {
+  let file = path_join(root, path)
+  @async_fs.mkdir(path_parent(file), recursive=true, allow_exist=true)
+  @async_fs.write_file(file, bytes, create_mode=CreateOrTruncate)
+}
+
+///|
+async fn with_scan_root(body : async (String) -> Unit) -> Unit {
+  let root = @async_fs.tmpdir(prefix="proton-code-scan-")
+  defer (@async_fs.rmdir(root, recursive=true) catch { _ => () })
+  body(root)
+}
+
+///|
+fn relative_paths(root : String, paths : Array[String]) -> Array[String] {
+  paths.map(path => {
+    if path == root {
+      "."
+    } else {
+      path.unsafe_substring(start=root.length() + 1, end=path.length())
+    }
+  })
+}
+
+///|
+async test "signing scan finds executables, libraries and bundles only" {
+  // The scan only runs while signing on macOS, where paths use `/`.
+  guard current_package_host() is Macos else { return }
+  with_scan_root(async fn(root) {
+    write_fixture(
+      root,
+      "bin/big-endian",
+      macho_header(MachoMagic64, 2, little_endian=false),
+    )
+    write_fixture(
+      root,
+      "bin/thin-32",
+      macho_header(0xfeedface, 2, little_endian=true),
+    )
+    write_fixture(root, "lib/.hidden", thin_library())
+    write_fixture(
+      root,
+      "lib/plugin.cmxs",
+      macho_header(MachoMagic64, 8, little_endian=true),
+    )
+    write_fixture(root, "lib/runtime.o", thin_object())
+    write_fixture(root, "doc/readme.md", b"Bundled documentation\n")
+    write_fixture(root, "empty", b"")
+    let found = relative_paths(root, macos_tree_sign_paths(root))
+    assert_eq(found.length(), 4)
+    for
+      path in [
+        "bin/big-endian", "bin/thin-32", "lib/.hidden", "lib/plugin.cmxs",
+      ] {
+      assert_true(found.contains(path))
+    }
+  })
+}
+
+///|
+async test "universal files count when any slice is code" {
+  with_scan_root(async fn(root) {
+    for fat64 in [false, true] {
+      for little_endian in [false, true] {
+        let name = "\{fat64}-\{little_endian}"
+        write_fixture(
+          root,
+          "plugin-\{name}.cmxs",
+          universal([thin_object(), thin_library()], fat64~, little_endian~),
+        )
+        write_fixture(
+          root,
+          "runtime-\{name}.o",
+          universal([thin_object(), thin_object()], fat64~, little_endian~),
+        )
+      }
+    }
+    let found = relative_paths(root, macos_tree_sign_paths(root))
+    assert_eq(found.length(), 4)
+    assert_true(found.all(path => path.has_prefix("plugin-")))
+  })
+}
+
+///|
+async test "a slice table past the end of the file is not code" {
+  with_scan_root(async fn(root) {
+    // A Java class file: the universal magic, then a version number.
+    write_fixture(
+      root, "Example.class", b"\xca\xfe\xba\xbe\x00\x00\x00\x34\x00\x10",
+    )
+    write_fixture(root, "short", b"\xca\xfe\xba\xbe\xff\xff\xff\xff")
+    assert_eq(macos_tree_sign_paths(root), [])
+  })
+}
+
+///|
+async test "signing scan does not follow symlinks" {
+  // The scan only runs while signing on macOS, where paths use `/`.
+  guard current_package_host() is Macos else { return }
+  with_scan_root(async fn(root) {
+    write_fixture(root, "real/libfoo.dylib", thin_library())
+    @async_fs.symlink(target="real", path_join(root, "alias"))
+    @async_fs.symlink(target="real/libfoo.dylib", path_join(root, "link.dylib"))
+    assert_eq(relative_paths(root, macos_tree_sign_paths(root)), [
+      "real/libfoo.dylib",
+    ])
+  })
+}
+
+///|
+async test "signing scan orders nested bundles inside-out" {
+  // The scan only runs while signing on macOS, where paths use `/`.
+  guard current_package_host() is Macos else { return }
+  with_scan_root(async fn(root) {
+    let library = thin_library()
+    write_fixture(root, "tool", library)
+    write_fixture(root, "Nested.app/Contents/Info.plist", bundle_info("A-main"))
+    // The main executable sorts first by name, so the scan has to defer it.
+    write_fixture(root, "Nested.app/Contents/MacOS/A-main", library)
+    write_fixture(root, "Nested.app/Contents/MacOS/Z-helper", library)
+    write_fixture(root, "Nested.app/Contents/Helpers/helper", library)
+    write_fixture(
+      root, "Nested.app/Contents/Frameworks/Foo.framework/Versions/A/Libraries/libx.dylib",
+      library,
+    )
+    write_fixture(
+      root, "Nested.app/Contents/Frameworks/Foo.framework/Versions/A/Foo", library,
+    )
+    write_fixture(
+      root,
+      "Nested.app/Contents/Frameworks/Foo.framework/Resources/Info.plist",
+      bundle_info("Foo"),
+    )
+    @async_fs.symlink(
+      target="Versions/A/Foo",
+      path_join(root, "Nested.app/Contents/Frameworks/Foo.framework/Foo"),
+    )
+    // A suffix alone does not make a bundle, and a bundle needs no suffix.
+    write_fixture(root, "Gems.bundle/config", b"BUNDLE_PATH: vendor\n")
+    write_fixture(
+      root,
+      "Effect.vst3/Contents/Info.plist",
+      bundle_info("effect"),
+    )
+    write_fixture(root, "Effect.vst3/Contents/MacOS/effect", library)
+    let found = relative_paths(root, macos_tree_sign_paths(root))
+    let position = (path : String) => found.search(path).unwrap_or(-1)
+    let foo = "Nested.app/Contents/Frameworks/Foo.framework"
+    assert_true(
+      position(foo + "/Versions/A/Libraries/libx.dylib") <
+      position(foo + "/Versions/A/Foo"),
+    )
+    assert_true(position(foo + "/Versions/A/Foo") < position(foo))
+    for sibling in ["Contents/Helpers/helper", "Contents/MacOS/Z-helper"] {
+      assert_true(
+        position("Nested.app/" + sibling) <
+        position("Nested.app/Contents/MacOS/A-main"),
+      )
+    }
+    assert_true(
+      position("Nested.app/Contents/MacOS/A-main") < position("Nested.app"),
+    )
+    assert_true(
+      position("Effect.vst3/Contents/MacOS/effect") < position("Effect.vst3"),
+    )
+    assert_false(found.contains("Gems.bundle"))
+    assert_true(found.contains("tool"))
+  })
+}
+
+///|
+async test "macOS packaging signs every code object in a resource tree" {
+  guard current_package_host() is Macos else { return }
+  let root = @async_fs.tmpdir(prefix="proton-package-sign-tree-")
+  defer (remove_tree(root) catch { _ => () })
+  let source = path_join(root, "main.c")
+  @async_fs.write_file(source, "int main(void) { return 0; }")
+  let executable = path_join(root, "main")
+  assert_eq(@process.run("cc", [source, "-o", executable]), 0)
+  let payload = path_join(root, "payload")
+  let tool = path_join(payload, "bin/tool")
+  ensure_dir(path_parent(tool))
+  assert_eq(@process.run("cc", [source, "-o", tool]), 0)
+  write_fixture(payload, "share/notes.txt", b"not code\n")
+  let foo = path_join(payload, "lib/Foo.framework")
+  let version = path_join(foo, "Versions/A")
+  ensure_dir(path_join(version, "Libraries"))
+  let library = path_join(root, "library.c")
+  @async_fs.write_file(library, "int foo(void) { return 1; }")
+  for output in ["Foo", "Libraries/libx.dylib"] {
+    assert_eq(
+      @process.run("cc", [
+        "-dynamiclib",
+        library,
+        "-o",
+        path_join(version, output),
+      ]),
+      0,
+    )
+  }
+  write_fixture(
+    version,
+    "Resources/Info.plist",
+    @utf8.encode(
+      "<plist version=\"1.0\"><dict>" +
+      "<key>CFBundleIdentifier</key><string>com.example.foo</string>" +
+      "<key>CFBundleExecutable</key><string>Foo</string>" +
+      "</dict></plist>",
+    ),
+  )
+  @async_fs.symlink(target="A", path_join(foo, "Versions/Current"))
+  // A plug-in whose main executable sorts before its sibling.
+  let plugin = path_join(payload, "lib/Test.bundle/Contents")
+  ensure_dir(path_join(plugin, "MacOS"))
+  write_fixture(
+    plugin,
+    "Info.plist",
+    @utf8.encode(
+      "<plist version=\"1.0\"><dict>" +
+      "<key>CFBundleIdentifier</key><string>com.example.plugin</string>" +
+      "<key>CFBundleExecutable</key><string>A-plugin</string>" +
+      "</dict></plist>",
+    ),
+  )
+  assert_eq(
+    @process.run("cc", [
+      "-bundle",
+      library,
+      "-o",
+      path_join(plugin, "MacOS/A-plugin"),
+    ]),
+    0,
+  )
+  assert_eq(
+    @process.run("cc", [source, "-o", path_join(plugin, "MacOS/Z-helper")]),
+    0,
+  )
+  @async_fs.symlink(target="Versions/Current/Foo", path_join(foo, "Foo"))
+  @async_fs.symlink(
+    target="Versions/Current/Resources",
+    path_join(foo, "Resources"),
+  )
+  // A shallow bundle: Info.plist and executables at its root.
+  let flat = path_join(payload, "lib/Flat.bundle")
+  ensure_dir(flat)
+  write_fixture(flat, "Info.plist", bundle_info("A-main"))
+  assert_eq(
+    @process.run("cc", ["-bundle", library, "-o", path_join(flat, "A-main")]),
+    0,
+  )
+  assert_eq(@process.run("cc", [source, "-o", path_join(flat, "Z-helper")]), 0)
+  // A tree rooted at a bundle, with code shallower than its main executable.
+  let app = path_join(root, "Root.app/Contents")
+  ensure_dir(path_join(app, "MacOS"))
+  write_fixture(app, "Info.plist", bundle_info("A-main"))
+  assert_eq(
+    @process.run("cc", [source, "-o", path_join(app, "MacOS/A-main")]),
+    0,
+  )
+  assert_eq(@process.run("cc", [source, "-o", path_join(app, "helper")]), 0)
+  // A tree rooted at a framework without Info.plist.
+  let bare = path_join(root, "Bare.framework")
+  ensure_dir(path_join(bare, "Libraries"))
+  for output in ["Bare", "Libraries/libx.dylib"] {
+    assert_eq(
+      @process.run("cc", ["-dynamiclib", library, "-o", path_join(bare, output)]),
+      0,
+    )
+  }
+  let spec = PackageSpec(
+    executable,
+    "Tree Test",
+    "com.example.tree",
+    "1.0.0",
+    [App],
+    path_join(root, "out"),
+    payloads=[
+      Payload(payload, "payload"),
+      Payload(path_join(root, "Root.app"), "Root.app"),
+      Payload(bare, "Bare.framework"),
+    ],
+  )
+  let artifacts = build_with(
+    spec,
+    PackageCustomization(macos_sign_targets=[
+      MacosSignTarget("Contents/Resources/payload", tree=true),
+      MacosSignTarget("Contents/Resources/Root.app", tree=true),
+      MacosSignTarget("Contents/Resources/Bare.framework", tree=true),
+    ]),
+    fn(_) {  },
+  )
+  let (_, details) = @process.collect_output_merged("/usr/bin/codesign", [
+    "--display",
+    "--verbose=2",
+    path_join(artifacts[0], "Contents/Resources/payload/bin/tool"),
+  ])
+  assert_true(details.text().contains("flags=0x10002(adhoc,runtime)"))
+  // Signing out of order leaves a bundle's seal invalid.
+  for
+    bundle in [
+      "payload/lib/Foo.framework", "payload/lib/Test.bundle", "payload/lib/Flat.bundle",
+      "Root.app", "Bare.framework",
+    ] {
+    assert_eq(
+      @process.run("/usr/bin/codesign", [
+        "--verify",
+        "--deep",
+        "--strict",
+        path_join(artifacts[0], "Contents/Resources/" + bundle),
+      ]),
+      0,
+    )
+  }
+}
+
+///|
+async test "a bundle at the tree root still signs its main executable last" {
+  guard current_package_host() is Macos else { return }
+  with_scan_root(async fn(root) {
+    write_fixture(root, "Contents/Info.plist", bundle_info("A-main"))
+    write_fixture(root, "Contents/MacOS/A-main", thin_library())
+    write_fixture(root, "Contents/MacOS/Z-helper", thin_library())
+    assert_eq(relative_paths(root, macos_tree_sign_paths(root)), [
+      "Contents/MacOS/Z-helper", "Contents/MacOS/A-main", ".",
+    ])
+  })
+}
+
+///|
+async test "a main executable waits for shallower code in its bundle" {
+  guard current_package_host() is Macos else { return }
+  with_scan_root(async fn(root) {
+    write_fixture(root, "Contents/Info.plist", bundle_info("A-main"))
+    write_fixture(root, "Contents/MacOS/A-main", thin_library())
+    write_fixture(root, "Contents/helper", thin_library())
+    assert_eq(relative_paths(root, macos_tree_sign_paths(root)), [
+      "Contents/helper", "Contents/MacOS/A-main", ".",
+    ])
+  })
+}
+
+///|
+async test "a shallow bundle is sealed after its contents" {
+  guard current_package_host() is Macos else { return }
+  with_scan_root(async fn(root) {
+    write_fixture(root, "Flat.bundle/Info.plist", bundle_info("A-main"))
+    write_fixture(root, "Flat.bundle/A-main", thin_library())
+    write_fixture(root, "Flat.bundle/Z-helper", thin_library())
+    assert_eq(relative_paths(root, macos_tree_sign_paths(root)), [
+      "Flat.bundle/Z-helper", "Flat.bundle/A-main", "Flat.bundle",
+    ])
+  })
+}
+
+///|
+async test "a framework without CFBundleExecutable uses its own name" {
+  guard current_package_host() is Macos else { return }
+  with_scan_root(async fn(root) {
+    write_fixture(
+      root, "Foo.framework/Resources/Info.plist", b"<plist version=\"1.0\"><dict></dict></plist>",
+    )
+    write_fixture(root, "Foo.framework/Foo", thin_library())
+    write_fixture(root, "Foo.framework/Libraries/libx.dylib", thin_library())
+    assert_eq(relative_paths(root, macos_tree_sign_paths(root)), [
+      "Foo.framework/Libraries/libx.dylib", "Foo.framework/Foo", "Foo.framework",
+    ])
+  })
+}
+
+///|
+async test "a framework without Info.plist is signed by its stem" {
+  guard current_package_host() is Macos else { return }
+  with_scan_root(async fn(root) {
+    write_fixture(root, "Foo.framework/Foo", thin_library())
+    write_fixture(root, "Foo.framework/Libraries/libx.dylib", thin_library())
+    write_fixture(root, "Plain.bundle/Plain", thin_library())
+    assert_eq(relative_paths(root, macos_tree_sign_paths(root)), [
+      "Plain.bundle/Plain", "Foo.framework/Libraries/libx.dylib", "Foo.framework/Foo",
+      "Foo.framework",
+    ])
+  })
+}
+
+///|
+async test "a tree inside a bundle signs the bundle's main executable last" {
+  guard current_package_host() is Macos else { return }
+  with_scan_root(async fn(root) {
+    write_fixture(root, "Tool.app/Contents/Info.plist", bundle_info("A-main"))
+    write_fixture(root, "Tool.app/Contents/MacOS/A-main", thin_library())
+    write_fixture(root, "Tool.app/Contents/MacOS/Z-helper", thin_library())
+    let tree = path_join(root, "Tool.app/Contents/MacOS")
+    assert_eq(relative_paths(tree, macos_tree_sign_paths(tree)), [
+      "Z-helper", "A-main",
+    ])
+  })
+}
+
+///|
+async test "a framework at the tree root signs itself last" {
+  guard current_package_host() is Macos else { return }
+  with_scan_root(async fn(parent) {
+    let root = path_join(parent, "Foo.framework")
+    write_fixture(root, "Foo", thin_library())
+    write_fixture(root, "Libraries/libx.dylib", thin_library())
+    assert_eq(relative_paths(root, macos_tree_sign_paths(root)), [
+      "Libraries/libx.dylib", "Foo", ".",
+    ])
+  })
+}
+
+///|
+async test "a declared executable name keeps its whitespace" {
+  guard current_package_host() is Macos else { return }
+  with_scan_root(async fn(root) {
+    write_fixture(root, "Tool.app/Contents/Info.plist", bundle_info("A-main "))
+    write_fixture(root, "Tool.app/Contents/MacOS/A-main ", thin_library())
+    write_fixture(root, "Tool.app/Contents/MacOS/Z-helper", thin_library())
+    assert_eq(relative_paths(root, macos_tree_sign_paths(root)), [
+      "Tool.app/Contents/MacOS/Z-helper", "Tool.app/Contents/MacOS/A-main ", "Tool.app",
+    ])
+  })
+}

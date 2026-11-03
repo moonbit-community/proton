@@ -185,11 +185,16 @@ pub fn MacosPlistString::MacosPlistString(
 ///
 /// `path` is relative to the staged `.app` root. Array order is signing order,
 /// allowing callers to describe inside-out signing for nested frameworks.
+///
+/// With `tree`, `path` is a directory and is not signed itself: every code
+/// object found under it at signing time is signed inside-out with these
+/// options.
 pub struct MacosSignTarget {
   path : String
   runtime_options : Bool
   entitlements : Bool
   identifier : String?
+  tree : Bool
 }
 
 ///|
@@ -198,8 +203,9 @@ pub fn MacosSignTarget::MacosSignTarget(
   runtime_options~ : Bool = true,
   entitlements~ : Bool = false,
   identifier? : String,
+  tree~ : Bool = false,
 ) -> MacosSignTarget {
-  MacosSignTarget::{ path, runtime_options, entitlements, identifier, }
+  MacosSignTarget::{ path, runtime_options, entitlements, identifier, tree, }
 }
 
 ///|
