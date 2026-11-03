@@ -126,7 +126,7 @@ AC and onboard-battery notifications now produce `OnAC` and `OnBattery` correctl
 
 **Upgrading**
 
-Once 0.6.0 is published, update the CLI and application `proton_*` dependencies together. Migrate window creation and direct clipboard/keep-awake calls as described above, run `proton_cli cef setup`, and rebuild packaged applications with the matching helper. The MoonBit `latest` toolchain requirement and CEF version are unchanged. Installing the CLI does not rewrite existing application source.
+Update the CLI and application `proton_*` dependencies to 0.6.0 together. Migrate window creation and direct clipboard/keep-awake calls as described above, run `proton_cli cef setup`, and rebuild packaged applications with the matching helper. The MoonBit `latest` toolchain requirement and CEF version are unchanged. Installing the CLI does not rewrite existing application source.
 
 [Complete changes](https://github.com/moonbit-community/proton/compare/c63c9d2963551802481f4b2f13094afcce9222a5...91ffc6210878af84a639d773efdc71669dc47430)
 

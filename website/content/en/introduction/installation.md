@@ -1,6 +1,6 @@
 # Environment requirements
 
-The installation commands below target Proton 0.6.0 (not yet published); they become available after publication. See [Release Notes](../release-notes/releases.md) for API migration details.
+The installation commands below target Proton 0.6.0. See [Release Notes](../release-notes/releases.md) for API migration details.
 
 Proton 0.6.0 supports the following host build environments. Native builds and packages target the host operating system; cross-compilation is not provided by the Proton CLI.
 
