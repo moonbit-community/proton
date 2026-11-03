@@ -1,5 +1,9 @@
 # Create a project
 
+This tutorial uses Proton 0.6.0. With the unreleased CLI, omit the
+`proton_cli cef setup` step below: `dev`, `build`, and `package` prepare the
+environment automatically. Use `proton_cli setup` only to prepare it in advance.
+
 This guide creates a desktop window with the minimal template. You will run it, change its contents, and build the executable. Finish [prerequisites](../introduction/installation.md) before starting.
 
 ## 1. Create the application

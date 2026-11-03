@@ -37,9 +37,7 @@ pub extend DevConfigError with Show::{to_string, output}
 ///|
 /// Failures while locating and validating the native development installation.
 pub(all) suberror DevInstallationError {
-  Setup(detail~ : String)
   DirectoryMissing(label~ : String, path~ : String)
-  SetupRequired(detail~ : String)
 } derive(Debug, Eq)
 
 ///|
@@ -120,11 +118,7 @@ pub fn DevConfigError::message(self : DevConfigError) -> String {
 ///|
 pub fn DevInstallationError::message(self : DevInstallationError) -> String {
   match self {
-    Setup(detail~) => "failed to set up Proton installation: " + detail
     DirectoryMissing(label~, path~) => label + " directory is missing: " + path
-    SetupRequired(detail~) =>
-      detail +
-      "\n\nRun `moonx moonbit-community/proton_cefsetup`, or retry with `proton_cli dev --setup`."
   }
 }
 

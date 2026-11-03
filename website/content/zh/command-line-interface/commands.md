@@ -27,7 +27,7 @@ proton_cli [--cwd <directory>] <command> [options]
 | [`build`](#build) | 构建前端资源和原生后端 |
 | [`package`](#package) | 构建并组装分发产物 |
 | [`doctor`](#doctor) | 输出环境和项目诊断 |
-| [`cef setup`](#cef-setup) | 安装匹配当前发行版的运行时和 helper |
+| [`setup`](#setup) | 安装匹配当前发行版的运行时和 helper |
 | [`cef requirements`](#cef-requirements) | 输出内嵌的 CEF 版本要求 |
 
 ## `help`
@@ -36,7 +36,7 @@ proton_cli [--cwd <directory>] <command> [options]
 proton_cli help [command] [subcommand]
 ```
 
-显示帮助，不执行所选命令。例如 `proton_cli help cef setup` 说明运行时安装命令，不执行安装。对应的选项形式是 `proton_cli <command> --help`。
+显示帮助，不执行所选命令。例如 `proton_cli help setup` 说明运行时安装命令，不执行安装。对应的选项形式是 `proton_cli <command> --help`。
 
 ## `version`
 
@@ -114,7 +114,6 @@ proton_cli dev [options] [-- <application-arguments>...]
 | `--timeout-ms <milliseconds>` | `30000`；等待前端就绪的超时时间 |
 | `--ready-path <path>` | 在此路径使用 HTTP 就绪探测；未指定时检查 TCP 连接 |
 | `--no-frontend` | 不启动前端命令，使用外部管理的服务 |
-| `--setup`、`--no-setup` | 自动安装缺失的运行时和 helper；默认关闭 |
 | `-- <arguments>...` | 传给应用的参数，不是 Moon 参数 |
 
 由 CLI 管理的前端必须配置启动命令，且开发地址已被占用时会报错。HTTP 探测需要 `curl`。等待超时后不会启动应用。CLI 负责自己启动的前端进程，外部服务的生命周期独立。
@@ -198,13 +197,22 @@ proton_cli doctor [options]
 | `--quiet` | 只输出失败的诊断，与 `--json` 冲突 |
 | `--output <path>` | 将报告写入文件 |
 
-## `cef setup`
+## `setup`
 
 ```text
-proton_cli cef setup
+proton_cli setup
 ```
 
-将当前 Proton 发行版指定的 CEF 运行时和 helper 安装到用户级共享存储，并输出运行时根目录。没有专属选项，不写入项目运行时选择文件，也不选择任意 CEF 版本。缺少安装产物时需要网络访问。
+将当前 CLI 发行版所需的运行时和子进程 helper 准备到用户级共享存储，最后输出运行时目录。
+命令与当前项目和工作目录无关，`-C` 不改变安装位置。没有专属选项。
+
+这是可选的预安装命令。`dev`、`build`、`package` 会在构建或启动应用前自动准备同一份环境。
+完整缓存会直接复用；缺少安装产物时，需要网络、`curl`、`tar`、MoonBit 和原生编译工具链，
+helper 会从源码构建。安装失败会停止当前命令。`doctor` 和 `package --dry-run` 不执行安装。
+
+**未发布迁移：** 将 `cef setup` 替换为 `setup`，移除 `dev --setup` 和 `dev --no-setup`，
+现在默认自动准备环境。直接使用 `moon` 构建／运行仍需事先准备环境。
+CLI 和应用的 Proton 依赖必须使用相同发行版本。
 
 ## `cef requirements`
 

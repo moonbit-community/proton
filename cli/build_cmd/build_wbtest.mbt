@@ -228,3 +228,28 @@ async test "frontend build executes the host override from frontend.path" {
   )
   assert_false(@fsutil.path_exists(@fsutil.path_join(root, "result.txt")))
 }
+
+///|
+async test "build prepares the runtime before starting Moon" {
+  let root = @async_fs.tmpdir(prefix="proton-auto-build-")
+  defer @async_fs.rmdir(root, recursive=true)
+  let store = @fsutil.path_join(root, "blocked-store")
+  @async_fs.write_file(store, "not a directory", create_mode=CreateOrTruncate)
+  let previous = @env.get_env_var("PROTON_RUNTIME_STORE")
+  @env.set_env_var("PROTON_RUNTIME_STORE", store)
+  defer (match previous {
+    Some(value) => @env.set_env_var("PROTON_RUNTIME_STORE", value)
+    None => @env.unset_env_var("PROTON_RUNTIME_STORE")
+  })
+  let source = @fsutil.path_join(root, "proton.project.json")
+  @async_fs.write_file(
+    source,
+    "{\"identifier\":\"com.example.auto\"}",
+    create_mode=CreateOrTruncate,
+  )
+  try run(root, command().parse(argv=[], env=Map([]))) catch {
+    error => assert_true(error.to_string().contains(store))
+  } noraise {
+    _ => fail("installation failure must stop the build before Moon runs")
+  }
+}

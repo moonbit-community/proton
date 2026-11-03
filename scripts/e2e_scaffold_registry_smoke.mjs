@@ -151,11 +151,10 @@ try {
     cwd: projectDir,
   });
   usePublishedRelease();
-  run(cli, ["-C", projectDir, "cef", "setup"], { timeout: 900000 });
+  run(cli, ["-C", projectDir, "build"], { timeout: 900000 });
   run("moon", ["check", "--target", "js,native", "--diagnostic-limit", "80"], {
     cwd: projectDir,
   });
-  run(cli, ["-C", projectDir, "build"], { timeout: 900000 });
   const format = process.platform === "linux" ? "appimage" : "app";
   const packageArgs = ["-C", projectDir, "package", "--release", "--format", format];
   if (process.platform === "linux") {

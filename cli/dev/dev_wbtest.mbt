@@ -328,3 +328,27 @@ async test "dev starts the selected script from the CLI-overridden frontend dire
     "dev-ready",
   )
 }
+
+///|
+async test "dev prepares the runtime without an opt-in flag" {
+  let root = @async_fs.tmpdir(prefix="proton-auto-dev-")
+  defer @async_fs.rmdir(root, recursive=true)
+  let store = @fsutil.path_join(root, "blocked-store")
+  @async_fs.write_file(store, "not a directory", create_mode=CreateOrTruncate)
+  let previous = @env.get_env_var("PROTON_RUNTIME_STORE")
+  @env.set_env_var("PROTON_RUNTIME_STORE", store)
+  defer (match previous {
+    Some(value) => @env.set_env_var("PROTON_RUNTIME_STORE", value)
+    None => @env.unset_env_var("PROTON_RUNTIME_STORE")
+  })
+  @async_fs.write_file(
+    @fsutil.path_join(root, "proton.project.json"),
+    "{\"identifier\":\"com.example.auto\"}",
+    create_mode=CreateOrTruncate,
+  )
+  try run(root, command().parse(argv=[], env=Map([]))) catch {
+    error => assert_true(error.to_string().contains(store))
+  } noraise {
+    _ => fail("installation failure must stop dev before the app starts")
+  }
+}

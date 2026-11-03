@@ -113,3 +113,24 @@ test "doctor exposes only readonly diagnostics" {
     _ => fail("doctor must not execute project commands")
   }
 }
+
+///|
+test "setup is a root command and does not require a project directory" {
+  let matches = cli_command().parse(
+    argv=["-C", "not-a-project", "setup"],
+    env=Map([]),
+  )
+  assert_true(matches.subcommand is Some(("setup", _)))
+  for args in [["cef", "setup"], ["dev", "--setup"], ["dev", "--no-setup"]] {
+    try cli_command().parse(argv=args, env=Map([])) catch {
+      _ => ()
+    } noraise {
+      _ => fail("removed setup syntax must be rejected")
+    }
+  }
+  let requirements = cli_command().parse(
+    argv=["cef", "requirements"],
+    env=Map([]),
+  )
+  assert_true(requirements.subcommand is Some(("cef", _)))
+}

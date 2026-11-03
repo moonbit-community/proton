@@ -15,7 +15,7 @@ with the application on each supported platform.
 
 ## Quick start
 
-This README targets Proton 0.6.0. Changes to project creation are described in the [unreleased notes](website/content/en/release-notes/releases.md#unreleased).
+This README targets Proton 0.6.0. Unreleased changes to project creation and automatic environment preparation are described in the [unreleased notes](website/content/en/release-notes/releases.md#unreleased).
 
 Install [MoonBit and the native build prerequisites](website/content/en/introduction/installation.md)
 for your platform. The default template uses Rabbita for its MoonBit frontend
@@ -49,6 +49,11 @@ The default `isomorphic` template creates a working Todo application with three
 modules: a shared command contract, a Rabbita frontend and a native backend.
 `dev` starts the configured frontend server and opens the desktop application.
 The list is held in memory and resets when the application restarts.
+
+With the unreleased CLI, omit the explicit setup step above: `dev`, `build` and
+`package` prepare the environment automatically. Use `proton_cli setup` only to
+prepare it in advance. The 0.6.0 command shown above remains necessary for that
+published CLI.
 
 `cef setup` downloads the release-matched Chromium runtime and subprocess
 helper into a shared user-level store. Its first run requires network access

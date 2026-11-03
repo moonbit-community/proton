@@ -80,7 +80,7 @@ App.path(AppPathKind::Logs) 返回解析后的路径。通过 set_path 或 set_a
 
 | 现象 | 检查与下一步 |
 | --- | --- |
-| CLI 找不到运行时 | 比较 proton_cli --version 与应用 proton 依赖版本；运行 cef requirements 查看该 CLI 要求，再执行 cef setup；保留 setup 的完整错误 |
+| CLI 找不到运行时 | 比较 proton_cli --version 与应用 proton 依赖版本；运行 cef requirements 查看该 CLI 要求，再执行 setup；保留 setup 的完整错误 |
 | dev 等不到前端 | 在 frontend.path 中单独执行 before_dev，检查 dev_url 的主机和端口；已有服务用 --no-frontend，不要同时启动第二个 |
 | 普通浏览器里没有 bridge | 改为通过 proton_cli dev 启动原生应用；网页预览不注入宿主 bridge |
 | permission_denied / unknown_op | 检查注册的命令描述符、capability 目标与当前窗口／页面；不要只检查是否添加模块依赖 |

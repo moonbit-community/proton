@@ -1,5 +1,9 @@
 # Build a complete Todo application
 
+This tutorial uses Proton 0.6.0. With the unreleased CLI, omit the
+`proton_cli cef setup` step below: `dev`, `build`, and `package` prepare the
+environment automatically. Use `proton_cli setup` only to prepare it in advance.
+
 This tutorial uses the isomorphic template to connect a shared contract, native state, and a Rabbita UI. You will first run the generated Todo app, then add **Complete all** and **Reopen all** operations across all three modules.
 
 Complete [prerequisites](../introduction/installation.md), including Node.js for Warren's build tooling. You do not need to modify the earlier minimal app.

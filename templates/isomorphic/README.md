@@ -26,6 +26,11 @@ update frontend titles where applicable. The initial values are `Proton App`,
 
 ## Setup
 
+These templates depend on Proton 0.6.0. With its matching CLI, run the setup
+command below. The unreleased CLI prepares the environment automatically for
+`dev`, `build`, and `package`; with that CLI, omit `cef setup` and use optional
+`proton_cli setup` only for prewarming.
+
 ```sh
 moon update
 moon install moonbit-community/warren@0.4.5

@@ -996,8 +996,10 @@ framework failure shell.
 ## Learn more
 
 - Runnable demos live in the repository's `examples/` directory.
-- The CLI covers the project workflow: `proton_cli new`, `proton_cli cef setup`,
-  `proton_cli dev`, `proton_cli build`, and `proton_cli package`.
+- The CLI covers the project workflow: `proton_cli new`, `proton_cli dev`,
+  `proton_cli build`, and `proton_cli package`. `dev`, `build`, and `package`
+  automatically prepare the release-matched runtime and subprocess helper;
+  `proton_cli setup` optionally prewarms the same shared installation.
 - Project creation can also use `moon-new` directly:
 
 ```sh

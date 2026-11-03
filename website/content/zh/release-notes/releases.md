@@ -2,6 +2,16 @@
 
 ## 未发布
 
+**自动准备运行环境**
+
+`proton_cli dev`、`build`、`package` 自动准备发行版匹配的运行时和 helper。
+完整缓存直接复用；首次使用可能下载 CEF、编译 helper，需要网络与原生工具链。
+安装失败会停止原命令。
+
+可选的 `proton_cli setup` 用于预安装共享环境，例如为直接 `moon` 命令或 CI 缓存做准备，
+不依赖项目及当前目录。将 `cef setup` 替换为 `setup`，移除 `dev --setup`／`--no-setup`。
+`doctor` 和 `package --dry-run` 保持只读；CLI 和应用 Proton 依赖保持同一发行版本。
+
 **项目平台覆盖（破坏性配置变更）**
 
 在同一个 `proton.project.json` 的根级 `platforms.macos`、`platforms.windows`、
