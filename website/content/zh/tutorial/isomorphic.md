@@ -1,7 +1,7 @@
 # 构建完整 Todo 应用
 
-本教程使用 Proton 0.6.0。使用尚未发布的 CLI 时，可省略下方的 `proton_cli cef setup`：
-`dev`、`build`、`package` 会自动准备环境；只在需要提前准备时执行 `proton_cli setup`。
+本教程使用 Proton 0.7.0。`dev`、`build`、`package` 会自动准备环境；
+只在需要提前准备时执行 `proton_cli setup`。版本可用性见[运行环境](../introduction/installation.md)。
 
 本教程使用 isomorphic 模板连接共享契约、原生状态和 Rabbita 界面。先运行生成的 Todo 应用，再跨三个模块加入 **Complete all** 和 **Reopen all** 操作。
 
@@ -27,9 +27,15 @@ moonx moonbit-community/moon-new todo-app \
 
 ```sh
 cd todo-app
+```
+
+将 `shared/moon.mod`、`backend/moon.mod`、`frontend/moon.mod` 中所有
+`moonbit-community/proton` 和 `moonbit-community/proton_*` 依赖统一为 `0.7.0`，
+与 CLI 匹配。生成的依赖若使用更早版本，请先更新，再继续：
+
+```sh
 moon update
 moon install moonbit-community/warren@0.4.5
-proton_cli cef setup
 ```
 
 生成的配置已经调用安装好的 Warren 可执行文件。启动应用：

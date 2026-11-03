@@ -1,8 +1,8 @@
 # Build a complete Todo application
 
-This tutorial uses Proton 0.6.0. With the unreleased CLI, omit the
-`proton_cli cef setup` step below: `dev`, `build`, and `package` prepare the
+This tutorial uses Proton 0.7.0. `dev`, `build`, and `package` prepare the
 environment automatically. Use `proton_cli setup` only to prepare it in advance.
+See [environment requirements](../introduction/installation.md) for release availability.
 
 This tutorial uses the isomorphic template to connect a shared contract, native state, and a Rabbita UI. You will first run the generated Todo app, then add **Complete all** and **Reopen all** operations across all three modules.
 
@@ -29,9 +29,15 @@ Then enter the project and continue with the same setup commands:
 
 ```sh
 cd todo-app
+```
+
+Keep all `moonbit-community/proton` and `moonbit-community/proton_*` requirements
+in `shared/moon.mod`, `backend/moon.mod`, and `frontend/moon.mod` on `0.7.0`,
+matching the CLI. Update older generated requirements before continuing:
+
+```sh
 moon update
 moon install moonbit-community/warren@0.4.5
-proton_cli cef setup
 ```
 
 The generated configuration already invokes the installed Warren executable. Start the application:

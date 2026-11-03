@@ -1,8 +1,11 @@
 # Release Notes
 
-## 未发布
+## 0.7.0（未发布）
 
-**自动准备运行环境**
+0.7.0 简化项目创建与运行环境准备，统一平台配置，并新增 macOS 资源目录树签名。
+已有 CLI 脚本及平台打包配置需要按下文迁移。
+
+**自动准备运行环境（破坏性 CLI 变更）**
 
 `proton_cli dev`、`build`、`package` 自动准备发行版匹配的运行时和 helper。
 完整缓存直接复用；首次使用可能下载 CEF、编译 helper，需要网络与原生工具链。
@@ -39,7 +42,7 @@ Linux 通过 `/usr/bin/env` 启动，使含 `%` 的路径可被 GLib 和 systemd
 请直接传入字面值，无需自行转义；升级后再次调用 `enable()` 以重新生成已有条目。
 旧版 systemd 生成器仍存在反斜杠转义处理限制，包括参数中的 `$` 和反引号。
 
-**项目创建**
+**项目创建（破坏性 CLI 变更）**
 
 `proton_cli new` 改为调用 `moon-new`，从 Proton 的 `main` 分支下载所选模板。
 保留目标路径、`--template` 和 `--author`；创建时不再提问或执行 `moon check`。
@@ -52,6 +55,15 @@ Git 初始化遵循 moon-new 的行为。
 
 移除旧的标题、标识、窗口尺寸、检查、Git、预览和确认选项，改为编辑生成的配置与源码，
 并显式运行检查。参见 [new 命令](../command-line-interface/commands.md#new)。
+
+**升级要求**
+
+将 CLI 和应用中的 `proton`／`proton_*` 依赖一起升级到 0.7.0。安装 CLI 不会迁移已有项目文件。
+按上述说明更新已移除的命令与选项、迁移平台打包配置，再使用匹配的 helper 重新打包应用。
+直接使用 `moon` 构建前需执行 `proton_cli setup`；普通 CLI 构建会自动准备环境。
+MoonBit `latest` 工具链要求和 CEF 运行时不变。
+
+[完整改动](https://github.com/moonbit-community/proton/compare/e5937a746a9709db64552963c15c7e9f3fb6c3ac...53348e89339a06dfb1b38c4506126f512c16a420)
 
 ## 0.6.0
 

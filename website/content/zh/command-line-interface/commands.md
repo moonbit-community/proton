@@ -48,7 +48,7 @@ proton_cli version
 
 ## `new`
 
-**未发布：** 以下接口替代 0.6.0 中的项目生成器。
+**自 0.7.0 起：** 以下接口替代 0.6.0 中的项目生成器。
 
 ```text
 proton_cli new [path] [options]
@@ -210,7 +210,7 @@ proton_cli setup
 完整缓存会直接复用；缺少安装产物时，需要网络、`curl`、`tar`、MoonBit 和原生编译工具链，
 helper 会从源码构建。安装失败会停止当前命令。`doctor` 和 `package --dry-run` 不执行安装。
 
-**未发布迁移：** 将 `cef setup` 替换为 `setup`，移除 `dev --setup` 和 `dev --no-setup`，
+**从 0.6.0 迁移：** 将 `cef setup` 替换为 `setup`，移除 `dev --setup` 和 `dev --no-setup`，
 现在默认自动准备环境。直接使用 `moon` 构建／运行仍需事先准备环境。
 CLI 和应用的 Proton 依赖必须使用相同发行版本。
 

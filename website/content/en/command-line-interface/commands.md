@@ -48,7 +48,7 @@ Prints `proton_cli <version>`. It accepts no command-specific options and does n
 
 ## `new`
 
-**Unreleased:** the interface below replaces the project generator in 0.6.0.
+**Since 0.7.0:** the interface below replaces the project generator in 0.6.0.
 
 ```text
 proton_cli new [path] [options]
@@ -221,7 +221,7 @@ network access, `curl`, `tar`, MoonBit and the native compiler toolchain; the
 helper is built from source. Installation failure stops the requesting command.
 `doctor` and `package --dry-run` do not install anything.
 
-**Unreleased migration:** replace `cef setup` with `setup`. Remove `dev --setup`
+**Migration from 0.6.0:** replace `cef setup` with `setup`. Remove `dev --setup`
 and `dev --no-setup`; automatic preparation is the default. Direct `moon`
 build/run commands still require a prepared environment. CLI and application
 Proton dependencies must use the same release.

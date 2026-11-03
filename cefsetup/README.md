@@ -6,7 +6,7 @@ are shared by all projects for a user and are selected by platform, archive
 digest, and layout version. Helpers are shared by platform and Proton version
 under `~/.proton/helpers`.
 
-The unreleased Proton CLI prepares this installation automatically for `dev`,
+Proton CLI 0.7.0 prepares this installation automatically for `dev`,
 `build`, and `package`. Use `proton_cli setup` for optional prewarming from any
 directory. Direct Moon builds still require prior setup.
 

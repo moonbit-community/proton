@@ -27,9 +27,10 @@ update frontend titles where applicable. The initial values are `Proton App`,
 ## Setup
 
 These templates depend on Proton 0.6.0. With its matching CLI, run the setup
-command below. The unreleased CLI prepares the environment automatically for
+command below. The upcoming 0.7.0 CLI prepares the environment automatically for
 `dev`, `build`, and `package`; with that CLI, omit `cef setup` and use optional
-`proton_cli setup` only for prewarming.
+`proton_cli setup` only for prewarming. Before using CLI 0.7.0, upgrade the
+application's `proton` and `proton_*` dependencies to the same version after it is published.
 
 ```sh
 moon update
@@ -85,7 +86,7 @@ When `formats` is omitted, Proton selects the current host's default package
 formats. Frontend commands run from `frontend.path`; paths inside them are
 relative to that directory. Keep shell syntax appropriate to the host platform.
 The [configuration reference](https://moonbit-community.github.io/proton/configuration/project.html)
-describes the next release's root platform overrides and migration from 0.6.0.
+describes 0.7.0's root platform overrides and migration from 0.6.0.
 
 Window behavior, the asset entry, single-instance handling, and renderer
 permissions are declared by the Proton `App` builder in `backend/app/main.mbt`.

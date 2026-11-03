@@ -15,7 +15,9 @@ with the application on each supported platform.
 
 ## Quick start
 
-This README targets Proton 0.6.0. Unreleased changes to project creation and automatic environment preparation are described in the [unreleased notes](website/content/en/release-notes/releases.md#unreleased).
+This README targets the upcoming Proton 0.7.0 release. Registry installation
+commands require its publication. See [release notes](website/content/en/release-notes/releases.md#070-unreleased)
+for migration from 0.6.0.
 
 Install [MoonBit and the native build prerequisites](website/content/en/introduction/installation.md)
 for your platform. The default template uses Rabbita for its MoonBit frontend
@@ -23,12 +25,18 @@ and Warren to serve and build it; install Node.js/npm as described in the
 prerequisites. Run these commands outside another MoonBit workspace:
 
 ```sh
-moon install moonbit-community/proton_cli@0.6.0
+moon install moonbit-community/proton_cli@0.7.0
 moon install moonbit-community/warren@0.4.5
 proton_cli new my-app
 cd my-app
+```
+
+Keep all `moonbit-community/proton` and `moonbit-community/proton_*` requirements
+in `shared/moon.mod`, `backend/moon.mod`, and `frontend/moon.mod` on `0.7.0`,
+matching the CLI. Update older generated requirements before continuing:
+
+```sh
 moon update
-proton_cli cef setup
 proton_cli dev
 ```
 
@@ -50,15 +58,12 @@ modules: a shared command contract, a Rabbita frontend and a native backend.
 `dev` starts the configured frontend server and opens the desktop application.
 The list is held in memory and resets when the application restarts.
 
-With the unreleased CLI, omit the explicit setup step above: `dev`, `build` and
-`package` prepare the environment automatically. Use `proton_cli setup` only to
-prepare it in advance. The 0.6.0 command shown above remains necessary for that
-published CLI.
-
-`cef setup` downloads the release-matched Chromium runtime and subprocess
-helper into a shared user-level store. Its first run requires network access
-and can take several minutes. Keep the CLI and application dependencies on the
-same Proton release.
+`dev`, `build`, and `package` prepare the environment automatically, downloading
+the release-matched Chromium runtime and building its subprocess helper in a
+shared user-level store when needed. First use requires network access and the
+native toolchain and can take several minutes; complete caches are reused.
+Use optional `proton_cli setup` to prepare the same installation in advance.
+Keep the CLI and application dependencies on the same Proton release.
 
 Follow the [Todo tutorial](website/content/en/tutorial/isomorphic.md) to extend
 the generated application. For a smaller app with inline HTML and no frontend
@@ -68,7 +73,7 @@ tooling, use `--template minimal` and follow the
 ## Application API
 
 An application's native entry point configures an `App` and runs it. For
-example, an inline-HTML app inside a generated 0.6.0 minimal project can use:
+example, an inline-HTML app inside a generated 0.7.0 minimal project can use:
 
 ```moonbit
 async fn main {

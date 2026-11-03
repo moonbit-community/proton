@@ -14,7 +14,7 @@ The root `moonbit-community/proton` package is the public application facade. Us
 | Process ownership and activation | single-instance builder, context methods | [Process control](#process-control-and-metrics) |
 | Paths, files and build metadata | project configuration and application paths | [Configuration](../configuration/project.md) |
 
-For the complete set of methods, overloads, typed errors and defaults, use the [versioned API index](https://github.com/moonbit-community/proton/blob/91ffc6210878af84a639d773efdc71669dc47430/proton/pkg.generated.mbti). This reference describes when to use each entry point, which object owns its state, and how it behaves during startup, cancellation and shutdown.
+For the complete set of methods, overloads, typed errors and defaults, use the [versioned API index](https://github.com/moonbit-community/proton/blob/53348e89339a06dfb1b38c4506126f512c16a420/proton/pkg.generated.mbti). This reference describes when to use each entry point, which object owns its state, and how it behaves during startup, cancellation and shutdown.
 
 ## Application lifecycle
 
@@ -178,7 +178,7 @@ response type.
 
 Proton does not impose a fixed payload-size limit on commands. Payloads are serialized as JSON and remain subject to memory and underlying transport constraints. Large messages increase serialization, copying and parsing costs.
 
-Request concurrency has no global fixed admission limit in 0.6.0. Applications still need to bound expensive work according to their own resource and ordering requirements; the bridge does not serialize unrelated business operations into a transaction.
+Request concurrency has no global fixed admission limit in 0.7.0. Applications still need to bound expensive work according to their own resource and ordering requirements; the bridge does not serialize unrelated business operations into a transaction.
 
 ## Events
 
@@ -198,7 +198,7 @@ Host payloads require `ToJson`. Window emitters belong to window lifetime; a sav
 
 `proton_client.subscribe(event, listener, failure)` decodes payloads through `FromJson` and returns a `Subscription`. `Subscription.close()` releases the listener. Subscription setup can raise `ClientFailure`; event decoding failures are reported as `EventDecode` through the failure callback.
 
-`proton_rabbita.subscribe` integrates subscription ownership into Rabbita. Its options include a subscription key, retry count, ready command and client override; full signatures are in the [Rabbita API](https://github.com/moonbit-community/proton/blob/91ffc6210878af84a639d773efdc71669dc47430/rabbita/pkg.generated.mbti).
+`proton_rabbita.subscribe` integrates subscription ownership into Rabbita. Its options include a subscription key, retry count, ready command and client override; full signatures are in the [Rabbita API](https://github.com/moonbit-community/proton/blob/53348e89339a06dfb1b38c4506126f512c16a420/rabbita/pkg.generated.mbti).
 
 The JavaScript interface is `window.__MoonBit__.app.on(name, callback)`. The callback receives an event envelope containing `payload`; registration returns an unsubscribe function.
 
@@ -297,7 +297,7 @@ A view declaration sets initial geometry; it does not provide automatic layout. 
 
 **Accessibility and headless execution**
 
-Web content uses Chromium's native accessibility tree. Use semantic HTML, ARIA, keyboard navigation and visible focus. Accessibility follows the platform's policy by default; `App.accessibility(AccessibilityMode::AlwaysEnabled)` keeps the tree available throughout the runtime. See [platform accessibility behavior](https://github.com/moonbit-community/proton/blob/91ffc6210878af84a639d773efdc71669dc47430/proton/README.md#accessibility).
+Web content uses Chromium's native accessibility tree. Use semantic HTML, ARIA, keyboard navigation and visible focus. Accessibility follows the platform's policy by default; `App.accessibility(AccessibilityMode::AlwaysEnabled)` keeps the tree available throughout the runtime. See [platform accessibility behavior](https://github.com/moonbit-community/proton/blob/53348e89339a06dfb1b38c4506126f512c16a420/proton/README.md#accessibility).
 
 `App.headless()` or `PROTON_HEADLESS=1` selects off-screen rendering without native top-level windows. Native dialogs, menus, titlebars and other window-bound UI are unavailable. Linux still requires an X11 display, such as Xvfb. Browser automation and native-window behavior therefore require different validation environments.
 
@@ -334,7 +334,7 @@ Capability-specific scope types are documented in the extension API; platform co
 
 **Platform differences and selection**
 
-These are key boundaries of implemented 0.6.0 capabilities, not a promise of availability without desktop services:
+These are key boundaries of implemented 0.7.0 capabilities, not a promise of availability without desktop services:
 
 | Capability | macOS | Windows | Linux |
 | --- | --- | --- | --- |
@@ -347,7 +347,7 @@ These are key boundaries of implemented 0.6.0 capabilities, not a promise of ava
 
 Capability grants are separate from operating-system authorization. Declaring a screen or media capability does not grant OS privacy permission. Handle OS denial, unavailable backends and missing application grants separately. Check support where provided, such as the tray capability; menu events are more portable than platform mouse gestures.
 
-**Auto-launch (unreleased)**
+**Auto-launch**
 
 Pass executable paths and startup arguments as literal values; Proton applies
 the platform's quoting rules. Linux writes an XDG autostart desktop entry and
@@ -451,7 +451,7 @@ tokens and destination authorization in the backend; `net.capability()` does
 not gain filesystem write access. Use the calling task's cancellation and
 `@async.with_timeout` for cancellation and deadlines.
 
-See the [extension API](https://github.com/moonbit-community/proton/blob/91ffc6210878af84a639d773efdc71669dc47430/extensions/pkg.generated.mbti) for the complete inventory and scope types. Check target grants, OS permission and platform backend support independently.
+See the [extension API](https://github.com/moonbit-community/proton/blob/53348e89339a06dfb1b38c4506126f512c16a420/extensions/pkg.generated.mbti) for the complete inventory and scope types. Check target grants, OS permission and platform backend support independently.
 
 ## Host callback contracts
 
@@ -569,7 +569,7 @@ The `on_session_created` callback exposes the partition and resolved data path b
 
 Operations raise `SessionError` and require a live application runtime, not a live page. Handles remain usable with no windows under `KeepRunning`; application teardown wakes pending cookie readers and invalidates retained session handles. Concurrent cookie reads are independent. A clearing operation does not erase application-owned files or implement an application logout protocol; invalidate backend credentials and UI state separately.
 
-Full attributes and `StorageDataKind` variants are in the [API reference](https://github.com/moonbit-community/proton/blob/91ffc6210878af84a639d773efdc71669dc47430/proton/pkg.generated.mbti).
+Full attributes and `StorageDataKind` variants are in the [API reference](https://github.com/moonbit-community/proton/blob/53348e89339a06dfb1b38c4506126f512c16a420/proton/pkg.generated.mbti).
 
 ## Application updates
 
@@ -638,7 +638,7 @@ Application focus, hide/show, active/hidden queries and readiness describe the a
 
 `ApplicationContext.focus(steal=...)` activates the application on macOS; `steal` controls whether another foreground application may be displaced. On Windows and Linux it focuses the first visible window. The application-level `hide`, `show`, `is_active` and `is_hidden` methods are macOS-only and raise `AppControlError::UnsupportedPlatform` elsewhere. `@proton.is_ready()` reports application readiness.
 
-CEF reports renderer termination through `on_render_process_gone`, but does not expose equivalent non-renderer child-process exit notifications. Electron's `child-process-gone` is therefore unsupported. Browser-operation mappings and other unsupported Electron equivalents are listed in the [page-control reference](https://github.com/moonbit-community/proton/blob/91ffc6210878af84a639d773efdc71669dc47430/proton/README.md#page-history-and-inserted-css).
+CEF reports renderer termination through `on_render_process_gone`, but does not expose equivalent non-renderer child-process exit notifications. Electron's `child-process-gone` is therefore unsupported. Browser-operation mappings and other unsupported Electron equivalents are listed in the [page-control reference](https://github.com/moonbit-community/proton/blob/53348e89339a06dfb1b38c4506126f512c16a420/proton/README.md#page-history-and-inserted-css).
 
 **Dock and application badges**
 
@@ -662,8 +662,8 @@ CPU is zero until a sampling interval has passed; 100% represents one fully used
 
 ## API references
 
-- [Application API](https://github.com/moonbit-community/proton/blob/91ffc6210878af84a639d773efdc71669dc47430/proton/pkg.generated.mbti)
-- [Extension API](https://github.com/moonbit-community/proton/blob/91ffc6210878af84a639d773efdc71669dc47430/extensions/pkg.generated.mbti)
-- [Typed contracts](https://github.com/moonbit-community/proton/blob/91ffc6210878af84a639d773efdc71669dc47430/contract/pkg.generated.mbti)
-- [Frontend client](https://github.com/moonbit-community/proton/blob/91ffc6210878af84a639d773efdc71669dc47430/client/pkg.generated.mbti)
-- [Rabbita integration](https://github.com/moonbit-community/proton/blob/91ffc6210878af84a639d773efdc71669dc47430/rabbita/pkg.generated.mbti)
+- [Application API](https://github.com/moonbit-community/proton/blob/53348e89339a06dfb1b38c4506126f512c16a420/proton/pkg.generated.mbti)
+- [Extension API](https://github.com/moonbit-community/proton/blob/53348e89339a06dfb1b38c4506126f512c16a420/extensions/pkg.generated.mbti)
+- [Typed contracts](https://github.com/moonbit-community/proton/blob/53348e89339a06dfb1b38c4506126f512c16a420/contract/pkg.generated.mbti)
+- [Frontend client](https://github.com/moonbit-community/proton/blob/53348e89339a06dfb1b38c4506126f512c16a420/client/pkg.generated.mbti)
+- [Rabbita integration](https://github.com/moonbit-community/proton/blob/53348e89339a06dfb1b38c4506126f512c16a420/rabbita/pkg.generated.mbti)

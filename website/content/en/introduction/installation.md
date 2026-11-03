@@ -1,8 +1,10 @@
 # Environment requirements
 
-The installation commands below target Proton 0.6.0. See [Release Notes](../release-notes/releases.md) for API migration details.
+This book targets Proton 0.7.0, which is not yet published. Registry installation
+commands require its publication. See [Release Notes](../release-notes/releases.md)
+for migration from 0.6.0.
 
-Proton 0.6.0 supports the following host build environments. Native builds and packages target the host operating system; cross-compilation is not provided by the Proton CLI.
+Proton 0.7.0 supports the following host build environments. Native builds and packages target the host operating system; cross-compilation is not provided by the Proton CLI.
 
 | Platform | Architecture | Build requirements |
 | --- | --- | --- |
@@ -21,29 +23,28 @@ NSIS is required only for NSIS output. Signing identities and notarization crede
 | Tool | Role | Installation or inspection |
 | --- | --- | --- |
 | MoonBit | Compiler, package manager and runtime tools | [Official installation](https://www.moonbitlang.com/download/); `moon version` |
-| Proton CLI | Project development and packaging | `moon install moonbit-community/proton_cli@0.6.0`; `proton_cli --version` |
+| Proton CLI | Project development and packaging | `moon install moonbit-community/proton_cli@0.7.0`; `proton_cli --version` |
 | Warren | Isomorphic frontend dev server and build | `moon install moonbit-community/warren@0.4.5`; `warren --help` |
 | Node.js / npm | Warren's JavaScript build tooling | [Node.js installation](https://nodejs.org/en/download); `node --version`, `npm --version` |
 
-Use the MoonBit `latest` toolchain channel for Proton 0.6.0. The sources require explicit `Int32` / `UInt32` types, the updated labeled-parameter syntax, and JSON parsing with `preserve_number_repr`. The older 2026-10-12 stable toolchain is insufficient. Select `latest` when installing MoonBit and check the installed version with `moon version`.
+Use the MoonBit `latest` toolchain channel for Proton 0.7.0. The sources require explicit `Int32` / `UInt32` types, the updated labeled-parameter syntax, and JSON parsing with `preserve_number_repr`. The older 2026-10-12 stable toolchain is insufficient. Select `latest` when installing MoonBit and check the installed version with `moon version`.
 
 MoonBit's binary directory must be on PATH. Minimal applications with inline HTML do not require Warren or Node.js. `moonx`'s deprecated native mode is not required by the documented frontend commands.
 
-## Automatic preparation (unreleased)
+## Automatic preparation
 
-The unreleased CLI prepares its shared runtime and helper automatically for
+The CLI prepares its shared runtime and helper automatically for
 `proton_cli dev`, `build`, and `package`. First use requires network access and
 the native build tools listed above; complete caches are reused. Use optional
 `proton_cli setup` to prepare them in advance. It works from any directory.
 `doctor` and `package --dry-run` do not install anything. Keep the CLI and
 application dependencies on the same Proton release.
 
-The 0.6.0 instructions below still use that release's explicit setup command.
-Direct `moon` commands also require prior setup.
+Direct `moon` commands require prior setup.
 
 ## Runtime installation
 
-`proton_cli cef setup` resolves the release's Chromium runtime and matching source-built helper. Its initial run needs network access and may take several minutes. Arbitrary CEF downloads do not satisfy the release contract.
+`proton_cli setup` resolves the release's Chromium runtime and matching source-built helper. Its initial run needs network access and may take several minutes. Arbitrary CEF downloads do not satisfy the release contract.
 
 | Location | Content |
 | --- | --- |
@@ -57,14 +58,14 @@ To create an application with these tools, follow the [minimal application tutor
 
 ## Source checkout and runtime
 
-Examples use the repository workspace. Clone the release commit, install the [required tools](installation.md), and set up its runtime once:
+Examples use the repository's `main` branch and workspace. Install the [required tools](installation.md) and a CLI matching the checkout's Proton version, then prepare its runtime once:
 
 ```sh
 git clone https://github.com/moonbit-community/proton.git
 cd proton
-git checkout 91ffc6210878af84a639d773efdc71669dc47430
+git checkout main
 moon update
-proton_cli cef setup
+proton_cli setup
 ```
 
 After setup, run the command listed on the chosen [example page](../examples/01_run.md) from this repository root. These commands use the repository workspace, not a scaffolded application.

@@ -2,7 +2,7 @@
 
 本例将后台驻留与单实例激活结合起来。最后一个窗口关闭后应用继续运行，后续启动可以联系已有实例，而不是再创建一个运行时。
 
-[57_background_residency](https://github.com/moonbit-community/proton/tree/91ffc6210878af84a639d773efdc71669dc47430/examples/57_background_residency) · 关键文件：[main.mbt](https://github.com/moonbit-community/proton/tree/91ffc6210878af84a639d773efdc71669dc47430/examples/57_background_residency/main.mbt)
+[57_background_residency](https://github.com/moonbit-community/proton/tree/53348e89339a06dfb1b38c4506126f512c16a420/examples/57_background_residency) · 关键文件：[main.mbt](https://github.com/moonbit-community/proton/tree/53348e89339a06dfb1b38c4506126f512c16a420/examples/57_background_residency/main.mbt)
 
 ## 行为
 
