@@ -100,7 +100,7 @@ macOS 使用原生剪贴板。Linux 继续使用 `wl-clipboard`、`xclip` 或 `x
 
 **升级要求**
 
-0.6.0 发布后，将 CLI 和应用的 `proton_*` 依赖一起升级。按上述说明迁移窗口创建及直接调用的剪贴板／休眠抑制接口，执行 `proton_cli cef setup`，再使用匹配的 helper 重新打包应用。MoonBit `latest` 工具链要求和 CEF 版本不变。安装 CLI 不会改写已有应用源码。
+将 CLI 和应用的 `proton_*` 依赖一起升级至 0.6.0。按上述说明迁移窗口创建及直接调用的剪贴板／休眠抑制接口，执行 `proton_cli cef setup`，再使用匹配的 helper 重新打包应用。MoonBit `latest` 工具链要求和 CEF 版本不变。安装 CLI 不会改写已有应用源码。
 
 [完整改动](https://github.com/moonbit-community/proton/compare/c63c9d2963551802481f4b2f13094afcce9222a5...91ffc6210878af84a639d773efdc71669dc47430)
 
