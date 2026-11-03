@@ -2,7 +2,7 @@
 
 本例通过文件系统扩展让页面请求宿主文件操作。后端声明允许访问的目录和操作，页面通过命令 bridge 使用这份授权。
 
-[18_extension_fs](https://github.com/moonbit-community/proton/tree/53348e89339a06dfb1b38c4506126f512c16a420/examples/18_extension_fs) · 关键文件：[main.mbt](https://github.com/moonbit-community/proton/tree/53348e89339a06dfb1b38c4506126f512c16a420/examples/18_extension_fs/main.mbt), [fs.html](https://github.com/moonbit-community/proton/tree/53348e89339a06dfb1b38c4506126f512c16a420/examples/18_extension_fs/fs.html)
+[18_extension_fs](https://github.com/moonbit-community/proton/tree/885948a4e3e7ca24e7dcca84446d2494f13f9df5/examples/18_extension_fs) · 关键文件：[main.mbt](https://github.com/moonbit-community/proton/tree/885948a4e3e7ca24e7dcca84446d2494f13f9df5/examples/18_extension_fs/main.mbt), [fs.html](https://github.com/moonbit-community/proton/tree/885948a4e3e7ca24e7dcca84446d2494f13f9df5/examples/18_extension_fs/fs.html)
 
 ## 行为
 

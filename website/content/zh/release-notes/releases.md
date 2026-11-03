@@ -1,6 +1,6 @@
 # Release Notes
 
-## 0.7.0（未发布）
+## 0.7.0
 
 0.7.0 简化项目创建与运行环境准备，统一平台配置，并新增 macOS 资源目录树签名。
 已有 CLI 脚本及平台打包配置需要按下文迁移。
@@ -71,7 +71,7 @@ Git 初始化遵循 moon-new 的行为。
 直接使用 `moon` 构建前需执行 `proton_cli setup`；普通 CLI 构建会自动准备环境。
 MoonBit `latest` 工具链要求和 CEF 运行时不变。
 
-[完整改动](https://github.com/moonbit-community/proton/compare/e5937a746a9709db64552963c15c7e9f3fb6c3ac...53348e89339a06dfb1b38c4506126f512c16a420)
+[完整改动](https://github.com/moonbit-community/proton/compare/e5937a746a9709db64552963c15c7e9f3fb6c3ac...885948a4e3e7ca24e7dcca84446d2494f13f9df5)
 
 ## 0.6.0
 

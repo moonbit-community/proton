@@ -99,4 +99,4 @@ async fn main {
 
 对话框、剪贴板、shell、托盘等扩展也采用显式安装和授权的方式，但各自定义作用范围与平台支持。此版本的通知扩展面向 macOS，不能从框架的平台列表推断每个扩展都支持全部平台。
 
-需要某项能力时，查阅[扩展 API](https://github.com/moonbit-community/proton/blob/53348e89339a06dfb1b38c4506126f512c16a420/extensions/pkg.generated.mbti)中的 capability 构建器及请求、响应类型。
+需要某项能力时，查阅[扩展 API](https://github.com/moonbit-community/proton/blob/885948a4e3e7ca24e7dcca84446d2494f13f9df5/extensions/pkg.generated.mbti)中的 capability 构建器及请求、响应类型。

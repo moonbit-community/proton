@@ -99,4 +99,4 @@ The local workspace directory is useful for this development exercise. Installed
 
 Dialogs, clipboard, shell, tray, and other extensions follow the same explicit installation/grant model, but each defines its own scope and platform support. The notification extension in this release targets macOS; do not infer platform support from the framework's overall platform list.
 
-Consult the [extension API](https://github.com/moonbit-community/proton/blob/53348e89339a06dfb1b38c4506126f512c16a420/extensions/pkg.generated.mbti) for the capability builder and request/response types you need.
+Consult the [extension API](https://github.com/moonbit-community/proton/blob/885948a4e3e7ca24e7dcca84446d2494f13f9df5/extensions/pkg.generated.mbti) for the capability builder and request/response types you need.

@@ -1,6 +1,6 @@
 # 运行环境要求
 
-本书面向尚未发布的 Proton 0.7.0，registry 安装命令需等正式发布后使用。
+本书面向 Proton 0.7.0。
 从 0.6.0 升级的方法见 [Release Notes](../release-notes/releases.md)。
 
 Proton 0.7.0 支持以下宿主构建环境。原生构建与打包面向当前操作系统，Proton CLI 不提供跨操作系统交叉编译流程。
@@ -55,12 +55,12 @@ CLI 和应用依赖应保持相同 Proton 发行版本。
 
 ## 源码与运行时
 
-示例使用仓库 `main` 分支和工作区。安装[所需工具](installation.md)及与检出源码版本匹配的 CLI，并先准备该版本的运行时：
+示例使用 0.7.0 发布提交的仓库工作区。安装[所需工具](installation.md)及匹配的 CLI，并先准备该版本的运行时：
 
 ```sh
 git clone https://github.com/moonbit-community/proton.git
 cd proton
-git checkout main
+git checkout 885948a4e3e7ca24e7dcca84446d2494f13f9df5
 moon update
 proton_cli setup
 ```
