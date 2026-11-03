@@ -15,6 +15,15 @@ async fn write_cef_fixture(root : String, platform : ProtonPlatform) -> Unit {
     }
     @async_fs.write_file(path, "fixture", create_mode=CreateOrTruncate)
   }
+  if platform.id == "linux-x64" || platform.id == "win32-x64" {
+    let locales = path_join(root, "Resources/locales")
+    ensure_dir(locales)
+    @async_fs.write_file(
+      path_join(locales, "en-US.pak"),
+      "fixture",
+      create_mode=CreateOrTruncate,
+    )
+  }
 }
 
 ///|
@@ -79,23 +88,30 @@ async test "runtime assembly replaces an incomplete staging layout" {
   defer (remove_tree(temp) catch { _ => () })
   let cef_root = path_join(temp, "cef")
   let runtime = path_join(temp, "runtime")
-  let platform = darwin_arm64_platform()
-  @async_fs.mkdir(cef_root)
-  write_cef_fixture(cef_root, platform)
-  @async_fs.mkdir(runtime)
-  @async_fs.write_file(
-    path_join(runtime, "truncated"),
-    "fixture",
-    create_mode=CreateOrTruncate,
-  )
-  assemble_runtime(
-    platform~,
-    cef_root~,
-    runtime_dir=runtime,
-    report_progress=false,
-  )
-  assert_false(path_exists(path_join(runtime, "truncated")))
-  validate_runtime_dist(runtime, platform)
+  let platforms = ["darwin-arm64", "linux-x64"]
+  if @path.sep == '\\' {
+    platforms.push("win32-x64")
+  }
+  for platform_id in platforms {
+    let platform = platform_from_override(Some(platform_id)).unwrap()
+    ensure_dir(cef_root)
+    write_cef_fixture(cef_root, platform)
+    ensure_dir(runtime)
+    @async_fs.write_file(
+      path_join(runtime, "truncated"),
+      "fixture",
+      create_mode=CreateOrTruncate,
+    )
+    assemble_runtime(
+      platform~,
+      cef_root~,
+      runtime_dir=runtime,
+      report_progress=false,
+    )
+    assert_false(path_exists(path_join(runtime, "truncated")))
+    validate_runtime_dist(runtime, platform)
+    remove_tree(cef_root)
+  }
 }
 
 ///|
