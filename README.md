@@ -15,8 +15,7 @@ with the application on each supported platform.
 
 ## Quick start
 
-This README targets the upcoming Proton 0.7.0 release. Registry installation
-commands require its publication. See [release notes](website/content/en/release-notes/releases.md#070-unreleased)
+This README targets Proton 0.7.0. See [release notes](website/content/en/release-notes/releases.md#070)
 for migration from 0.6.0.
 
 Install [MoonBit and the native build prerequisites](website/content/en/introduction/installation.md)

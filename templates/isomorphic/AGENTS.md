@@ -10,8 +10,9 @@ This is a MoonBit Proton native desktop app.
 - Build with `proton_cli build`.
 - Inspect packaging with `proton_cli package --dry-run`.
 - Package with `proton_cli package`.
-- Published CLI 0.6.0 requires `proton_cli cef setup` before native builds. The unreleased
-  CLI prepares the environment automatically; `proton_cli setup` is optional prewarming.
+- Use CLI 0.7.0 to match the application dependencies. `dev`, `build`, and `package`
+  prepare the environment automatically; `proton_cli setup` prepares it in advance
+  for direct `moon` builds.
 
 ## Project Notes
 

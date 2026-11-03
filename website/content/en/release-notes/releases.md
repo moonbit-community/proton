@@ -1,6 +1,6 @@
 # Release Notes
 
-## 0.7.0 (unreleased)
+## 0.7.0
 
 0.7.0 simplifies project creation and runtime setup, consolidates platform
 configuration, and adds macOS resource-tree signing. Existing CLI scripts and
@@ -85,7 +85,7 @@ and rebuild packaged applications with the matching subprocess executable. Direc
 need `proton_cli setup` first; normal CLI builds prepare it automatically.
 The MoonBit `latest` toolchain requirement and CEF runtime are unchanged.
 
-[Complete changes](https://github.com/moonbit-community/proton/compare/e5937a746a9709db64552963c15c7e9f3fb6c3ac...53348e89339a06dfb1b38c4506126f512c16a420)
+[Complete changes](https://github.com/moonbit-community/proton/compare/e5937a746a9709db64552963c15c7e9f3fb6c3ac...885948a4e3e7ca24e7dcca84446d2494f13f9df5)
 
 ## 0.6.0
 
