@@ -32,6 +32,7 @@ async fn download_file(
 
 ///|
 async fn verify_file_sha256(path : String, expected : String) -> Unit {
+  report_info("[INFO] Verifying CEF archive checksum")
   let file = @async_fs.open(path, mode=ReadOnly) catch {
     err =>
       raise CefDownloadError::OpenArchive(

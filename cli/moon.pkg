@@ -6,6 +6,7 @@ import {
   "moonbitlang/core/json",
   "moonbitlang/x/sys",
   "moonbit-community/proton_cli/cef",
+  "moonbit-community/proton_cefsetup/store" @cef_store,
   "moonbit-community/proton_cli/build_cmd" @build,
   "moonbit-community/proton_cli/dev",
   "moonbit-community/proton_cli/doctor",

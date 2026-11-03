@@ -80,7 +80,7 @@ App.path(AppPathKind::Logs) returns the resolved path. Use that result when set_
 
 | Symptom | Check and next action |
 | --- | --- |
-| CLI cannot find runtime | Compare proton_cli --version with the application's proton dependency; inspect cef requirements and run cef setup; retain the complete setup error |
+| CLI cannot find runtime | Compare proton_cli --version with the application's proton dependency; inspect cef requirements and run setup; retain the complete setup error |
 | dev never reaches frontend readiness | Run before_dev inside frontend.path, check dev_url host/port; use --no-frontend for an existing service instead of starting a second one |
 | No bridge in a normal browser | Launch the native application through proton_cli dev; browser previews have no host bridge |
 | permission_denied / unknown_op | Check bound descriptors, capability targets and current window/page; adding a module dependency is insufficient |

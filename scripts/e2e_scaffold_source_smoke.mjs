@@ -845,7 +845,7 @@ async function main() {
   fs.writeFileSync(configPath, JSON.stringify(config, null, 2) + "\n");
   connectLocalSourceModules();
   run("moon", ["fmt"], { cwd: projectDir });
-  localCli(["-C", projectDir, "cef", "setup"]);
+  localCli(["-C", projectDir, "setup"]);
 
   run("moon", ["check", "--target", "js,native", "--diagnostic-limit", "80"], { cwd: projectDir });
   run("moon", ["-C", "frontend", "test", "--target", "js"], { cwd: projectDir });

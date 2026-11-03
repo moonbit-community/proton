@@ -92,8 +92,7 @@ async fn collect_runtime(verbose~ : Bool) -> DoctorSection {
           "runtime.missing",
           Error,
           "CEF runtime is not installed",
-          hint=error.to_string() +
-            "\nRun `moonx moonbit-community/proton_cefsetup`.",
+          hint=error.to_string() + "\nRun `proton_cli setup`.",
         ),
       )
       return DoctorSection("runtime", "Runtime", lines)
@@ -109,8 +108,7 @@ async fn collect_runtime(verbose~ : Bool) -> DoctorSection {
           "runtime.helper_missing",
           Error,
           "CEF subprocess helper is not installed",
-          hint=error.to_string() +
-            "\nRun `moonx moonbit-community/proton_cefsetup`.",
+          hint=error.to_string() + "\nRun `proton_cli setup`.",
         ),
       )
       return DoctorSection("runtime", "Runtime", lines)

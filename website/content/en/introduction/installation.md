@@ -29,6 +29,18 @@ Use the MoonBit `latest` toolchain channel for Proton 0.6.0. The sources require
 
 MoonBit's binary directory must be on PATH. Minimal applications with inline HTML do not require Warren or Node.js. `moonx`'s deprecated native mode is not required by the documented frontend commands.
 
+## Automatic preparation (unreleased)
+
+The unreleased CLI prepares its shared runtime and helper automatically for
+`proton_cli dev`, `build`, and `package`. First use requires network access and
+the native build tools listed above; complete caches are reused. Use optional
+`proton_cli setup` to prepare them in advance. It works from any directory.
+`doctor` and `package --dry-run` do not install anything. Keep the CLI and
+application dependencies on the same Proton release.
+
+The 0.6.0 instructions below still use that release's explicit setup command.
+Direct `moon` commands also require prior setup.
+
 ## Runtime installation
 
 `proton_cli cef setup` resolves the release's Chromium runtime and matching source-built helper. Its initial run needs network access and may take several minutes. Arbitrary CEF downloads do not satisfy the release contract.
