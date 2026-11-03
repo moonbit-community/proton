@@ -101,13 +101,13 @@ async fn collect_runtime(verbose~ : Bool) -> DoctorSection {
     value => value
   }
   lines.push(DoctorLine("runtime.layout", Ok, "runtime installation is valid"))
-  let helper = try @cef_store.resolve_default_helper() catch {
+  let subprocess = try @cef_store.resolve_default_subprocess() catch {
     error => {
       lines.push(
         DoctorLine(
-          "runtime.helper_missing",
+          "runtime.subprocess_missing",
           Error,
-          "CEF subprocess helper is not installed",
+          "CEF subprocess executable is not installed",
           hint=error.to_string() + "\nRun `proton_cli setup`.",
         ),
       )
@@ -116,13 +116,15 @@ async fn collect_runtime(verbose~ : Bool) -> DoctorSection {
   } noraise {
     value => value
   }
-  lines.push(DoctorLine("runtime.helper", Ok, "subprocess helper is installed"))
+  lines.push(
+    DoctorLine("runtime.subprocess", Ok, "subprocess executable is installed"),
+  )
   if verbose {
     lines.push(
       DoctorLine("runtime.versions", Neutral, "CEF " + runtime.cef_archive()),
     )
     lines.push(DoctorLine("runtime.path", Neutral, runtime.runtime_root()))
-    lines.push(DoctorLine("runtime.helper_path", Neutral, helper))
+    lines.push(DoctorLine("runtime.subprocess_path", Neutral, subprocess))
   }
   DoctorSection("runtime", "Runtime", lines)
 }

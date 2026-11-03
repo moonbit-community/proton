@@ -11,7 +11,7 @@ fn proton_linux_apprun(name : String) -> String {
     #|PROTON_ROOT="$HERE/usr/Resources/proton"
     #|CEF_LIBRARY="$PROTON_ROOT/bin/libcef.so"
     #|export PROTON_RUNTIME_ROOT="$PROTON_ROOT"
-    #|export PROTON_HELPER_PATH="$HERE/usr/bin/cef_process"
+    #|export PROTON_SUBPROCESS_PATH="$HERE/usr/bin/cef_process"
     #|export LD_LIBRARY_PATH="$PROTON_ROOT/bin${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
     #|export LD_PRELOAD="$CEF_LIBRARY${LD_PRELOAD:+:$LD_PRELOAD}"
   prefix + "\nexec \"$HERE/usr/bin/" + name + "\" \"$@\"\n"

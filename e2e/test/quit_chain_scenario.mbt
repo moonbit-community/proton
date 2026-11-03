@@ -241,7 +241,7 @@ async fn run_quit_chain_case(
 async fn run_quit_chain_probe(root : String, timeout : Int32) -> Unit {
   let output_root = @fs.tmpdir(prefix="proton-e2e-quit-chain-")
   defer remove_dev_extension_tree(output_root)
-  install_scenario_helper(root, output_root)
+  install_scenario_subprocess(root, output_root)
   run_e2e_operation_with_timeout(timeout * 2, "quit event chain", () => {
     run_quit_chain_case(
       root,

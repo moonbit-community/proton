@@ -33,7 +33,7 @@ Application process
        +-- Utility and other processes: browser services
 ```
 
-`cef_process` is the helper executable CEF launches for subprocesses. CEF selects the role at launch, so the same helper can serve different subprocess roles. It does not execute the application's MoonBit entry point. The helper matches the application's Proton release and CEF runtime.
+`cef_process` is the executable CEF launches for Chromium subprocesses. CEF selects the role at launch, so the same program can serve different subprocess roles. It does not execute the application's MoonBit entry point and matches the application's Proton release and CEF runtime.
 
 Chromium manages process allocation according to pages and runtime state. One renderer can host multiple tasks, such as a page and workers. Window counts, browser-instance counts, task counts and OS process counts therefore do not map one to one. Task resource metrics cannot simply be summed into application-wide usage.
 
@@ -70,8 +70,8 @@ Development and distribution use the same native host and browser architecture. 
 
 | Scenario | Page source | Native runtime source |
 | --- | --- | --- |
-| Inline HTML | A string compiled into the application | Shared runtime and helper installed by setup |
-| Frontend development server | Development URL configured through the CLI | Shared runtime and helper installed by setup |
-| Packaged application | Inline content or packaged static resources; URL entries may also use remote pages | Runtime and helper shipped in the artifact |
+| Inline HTML | A string compiled into the application | Shared runtime and subprocess executable installed by setup |
+| Frontend development server | Development URL configured through the CLI | Shared runtime and subprocess executable installed by setup |
+| Packaged application | Inline content or packaged static resources; URL entries may also use remote pages | Runtime and subprocess executable shipped in the artifact |
 
-A frontend development server serves page resources; it does not run host business logic. Opening the same URL in an ordinary browser provides no Proton native bridge. Packaging assembles the application executable, required page resources, CEF runtime and helper into a distributable artifact. Configuration documents file responsibilities and output paths; Command Line Interface documents packaging formats and requirements.
+A frontend development server serves page resources; it does not run host business logic. Opening the same URL in an ordinary browser provides no Proton native bridge. Packaging assembles the application executable, required page resources, CEF runtime and subprocess executable into a distributable artifact. Configuration documents file responsibilities and output paths; Command Line Interface documents packaging formats and requirements.

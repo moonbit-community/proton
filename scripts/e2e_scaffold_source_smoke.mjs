@@ -246,10 +246,10 @@ function verifyPackagedApp() {
       "Frameworks",
       `${helperName}.app`,
     );
-    assert(isDirectory(helper), `packaged helper is missing: ${helperName}`);
+    assert(isDirectory(helper), `packaged subprocess bundle is missing: ${helperName}`);
     assert(
       isFile(path.join(helper, "Contents", "MacOS", helperName)),
-      `packaged helper executable is missing: ${helperName}`,
+      `packaged subprocess executable is missing: ${helperName}`,
     );
     const plist = fs.readFileSync(
       path.join(helper, "Contents", "Info.plist"),
@@ -259,7 +259,7 @@ function verifyPackagedApp() {
       plist.includes(
         `<key>CFBundleExecutable</key><string>${helperName}</string>`,
       ),
-      `packaged helper plist does not name its executable: ${helperName}`,
+      `packaged subprocess bundle plist does not name its executable: ${helperName}`,
     );
   }
   return {
@@ -628,7 +628,7 @@ function processLinesForProject() {
 async function waitForNoProjectProcesses() {
   await waitUntil(
     () => processLinesForProject().length === 0,
-    "all packaged app and helper processes to exit",
+    "all packaged app and subprocesses to exit",
     10000,
   );
 }
@@ -680,7 +680,7 @@ async function runPackagedAppSmoke(executable, expectedRevision, fixture = false
     PROTON_NO_UPDATE_CHECK: "1",
     PROTON_REMOTE_DEBUGGING_PORT: String(cdpPort),
   };
-  delete packagedEnv.PROTON_HELPER_PATH;
+  delete packagedEnv.PROTON_SUBPROCESS_PATH;
   delete packagedEnv.PROTON_RUNTIME_ROOT;
   delete packagedEnv.PROTON_MODE;
   appProcess = spawn(executable, [`--remote-debugging-port=${cdpPort}`], {

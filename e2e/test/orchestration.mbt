@@ -61,14 +61,14 @@ async fn active_runtime_dist() -> String {
 }
 
 ///|
-fn helper_install_dir(output_root : String) -> String {
-  join_path(output_root, "helper-bin")
+fn subprocess_install_dir(output_root : String) -> String {
+  join_path(output_root, "subprocess-bin")
 }
 
 ///|
-fn installed_helper_path(output_root : String) -> String {
+fn installed_subprocess_path(output_root : String) -> String {
   let name = if @path.sep == '\\' { "cef_process.exe" } else { "cef_process" }
-  join_path(helper_install_dir(output_root), name)
+  join_path(subprocess_install_dir(output_root), name)
 }
 
 ///|
@@ -81,7 +81,7 @@ async fn app_process_env(
   let runtime_dist = active_runtime_dist()
   let bin_dir = join_path(runtime_dist, "bin")
   let lib_dir = join_path(runtime_dist, "lib")
-  let helper_path = installed_helper_path(output_root)
+  let subprocess_path = installed_subprocess_path(output_root)
   guard @mbfs.path_exists(bin_dir) else {
     fail(
       "native runtime bin directory does not exist: " +
@@ -89,14 +89,14 @@ async fn app_process_env(
       "\nRun proton_cli setup.",
     )
   }
-  guard @mbfs.path_exists(helper_path) else {
-    fail("native runtime helper does not exist: " + helper_path)
+  guard @mbfs.path_exists(subprocess_path) else {
+    fail("native runtime subprocess does not exist: " + subprocess_path)
   }
   let path_key = path_env_key()
   let current_path = @env.get_env_var(path_key).unwrap_or("")
   let result : Map[String, String] = {
     "PROTON_RUNTIME_ROOT": runtime_dist,
-    "PROTON_HELPER_PATH": helper_path,
+    "PROTON_SUBPROCESS_PATH": subprocess_path,
     "PROTON_REMOTE_DEBUGGING_PORT": "0",
     "PROTON_HEADLESS": "1",
     "PROTON_E2E_LIFECYCLE_GATE": join_path(output_root, "lifecycle-go"),
@@ -245,25 +245,25 @@ fn scenario_app_command() -> (String, Array[String]) raise {
 }
 
 ///|
-async fn install_scenario_helper(
+async fn install_scenario_subprocess(
   root : String,
   output_root : String,
   timeout? : Int32,
 ) -> Unit {
   let args = [
     "--target-dir",
-    join_path(output_root, "helper-build"),
+    join_path(output_root, "subprocess-build"),
     "install",
     "--path",
     join_path(root, "proton/internal/cef_process"),
     "--bin",
-    helper_install_dir(output_root),
+    subprocess_install_dir(output_root),
   ]
   match timeout {
     Some(timeout) =>
       run_dev_extension_command(
         output_root,
-        "helper-install",
+        "subprocess-install",
         "moon",
         args,
         root,
@@ -271,7 +271,7 @@ async fn install_scenario_helper(
         timeout,
       )
     None => {
-      let log_path = join_path(output_root, "helper-install.log")
+      let log_path = join_path(output_root, "subprocess-install.log")
       let output = @process.redirect_to_file(
         log_path,
         create_mode=@fs.CreateOrTruncate,
@@ -285,13 +285,14 @@ async fn install_scenario_helper(
       )
       guard code == 0 else {
         fail(
-          "failed to install the E2E CEF helper" + app_output_suffix(log_path),
+          "failed to install the E2E CEF subprocess" +
+          app_output_suffix(log_path),
         )
       }
     }
   }
-  guard @mbfs.path_exists(installed_helper_path(output_root)) else {
-    fail("moon install did not produce the E2E CEF helper")
+  guard @mbfs.path_exists(installed_subprocess_path(output_root)) else {
+    fail("moon install did not produce the E2E CEF subprocess")
   }
 }
 
@@ -702,8 +703,8 @@ async fn run_scenario_probe_once(
     println(
       "MoonBit " +
       name +
-      " headless shutdown passed: helpers=" +
-      shutdown.helper_processes.to_string(),
+      " headless shutdown passed: subprocesses=" +
+      shutdown.subprocess_count.to_string(),
     )
     stopped = true
   })
@@ -717,7 +718,7 @@ async fn run_scenario_probe(
 ) -> Unit {
   let output_root = @fs.tmpdir(prefix="proton-e2e-")
   defer remove_dev_extension_tree(output_root)
-  install_scenario_helper(root, output_root)
+  install_scenario_subprocess(root, output_root)
   run_e2e_operation_with_timeout(
     scenario_operation_timeout(name, timeout),
     "E2E scenario " + name,

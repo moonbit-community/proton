@@ -133,8 +133,8 @@ async fn run_multi_window_scenario_probe(
     app, target, snapshot, process_shutdown_timeout_ms,
   )
   println(
-    "MoonBit 45_bridge_multi_window sequential lifecycle passed: helpers=" +
-    shutdown.helper_processes.to_string(),
+    "MoonBit 45_bridge_multi_window sequential lifecycle passed: subprocesses=" +
+    shutdown.subprocess_count.to_string(),
   )
   shutdown
 }

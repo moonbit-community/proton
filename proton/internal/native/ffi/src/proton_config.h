@@ -9,7 +9,7 @@
 #include <stddef.h>
 
 PROTON_INTERNAL int32_t proton_config_prepare_runtime(
-    int32_t use_bundled, const char *runtime_root, const char *helper_path,
+    int32_t use_bundled, const char *runtime_root, const char *subprocess_path,
     const char *resources_dir, const char *locales_dir, const char *cache_dir,
     const char *locale, const char *accept_languages,
     const char *dialog_ok_label, const char *dialog_cancel_label,
@@ -36,11 +36,11 @@ PROTON_INTERNAL int32_t proton_config_prepare_view(
     uint32_t background_color,
     proton_engine_view_config_t *out_config);
 PROTON_INTERNAL bool
-proton_config_default_helper_path(char *out, size_t out_len);
+proton_config_default_subprocess_path(char *out, size_t out_len);
 PROTON_INTERNAL bool
 proton_config_default_runtime_root(char *out, size_t out_len);
 #ifdef __APPLE__
-PROTON_INTERNAL bool proton_config_macos_bundle_helper_path(
+PROTON_INTERNAL bool proton_config_macos_bundle_subprocess_path(
     const char *executable_path, char *out, size_t out_len);
 #endif
 #endif

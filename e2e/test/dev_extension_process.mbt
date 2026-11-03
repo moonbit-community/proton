@@ -380,8 +380,8 @@ async fn run_dev_extension_dev_probe_once(
       phase.val = "development shutdown"
       let shutdown = finish_scenario_app_with_exit_timeout(app, target, 30000)
       println(
-        "MoonBit 47_dev_extension_js dev shutdown passed: helpers=" +
-        shutdown.helper_processes.to_string(),
+        "MoonBit 47_dev_extension_js dev shutdown passed: subprocesses=" +
+        shutdown.subprocess_count.to_string(),
       )
       stopped = true
     } catch {
@@ -450,8 +450,8 @@ async fn run_dev_extension_production_probe_once(
       phase.val = "production shutdown"
       let shutdown = finish_scenario_app(app, target)
       println(
-        "MoonBit 47_dev_extension_js production shutdown passed: helpers=" +
-        shutdown.helper_processes.to_string(),
+        "MoonBit 47_dev_extension_js production shutdown passed: subprocesses=" +
+        shutdown.subprocess_count.to_string(),
       )
       stopped = true
     } catch {
@@ -503,7 +503,7 @@ async fn run_dev_extension_scenario(root : String, timeout : Int32) -> Unit {
     )
   })
   try {
-    install_scenario_helper(
+    install_scenario_subprocess(
       root,
       output_root,
       timeout=dev_extension_build_timeout(timeout, true),

@@ -1,5 +1,5 @@
 ///|
-let cli_current_version : String = "0.6.0"
+let cli_current_version : String = "0.7.0"
 
 ///|
 let cli_manifest_url : String = "https://mooncakes.io/api/v0/manifest/moonbit-community/proton_cli"
@@ -150,7 +150,7 @@ fn cli_command() -> @argparse.Command {
 fn setup_command() -> @argparse.Command {
   @argparse.Command(
     "setup",
-    about="Prepare the shared Proton runtime and subprocess helper",
+    about="Prepare the shared Proton runtime and subprocess executable",
   )
 }
 

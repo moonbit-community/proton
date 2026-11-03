@@ -90,7 +90,7 @@ async test "dev selects xlog info on stderr unless the caller overrides it" {
   }
   let child = dev_process_env(
     runtime,
-    "/helper",
+    "/subprocess",
     None,
     "/project",
     "/project/proton.project.json",
@@ -117,7 +117,13 @@ async test "dev injects only the selected platform's CEF library paths" {
       bin_dir: "/runtime with spaces/bin",
       platform,
     }
-    let child = dev_process_env(runtime, "/helper", None, "/project", "/config")
+    let child = dev_process_env(
+      runtime,
+      "/subprocess",
+      None,
+      "/project",
+      "/config",
+    )
     assert_eq(child.get("DYLD_LIBRARY_PATH"), None)
     if platform == "linux-x64" {
       assert_eq(

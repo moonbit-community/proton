@@ -58,11 +58,11 @@ They override `backend`, `frontend`, and `package` before CLI options apply.
 `frontend.path` is the frontend commands' working directory; `package.prepare`
 runs from the configuration directory. Arrays replace common arrays. See the
 [configuration reference](../website/content/en/configuration/project.md) for
-the unreleased format and migration from `package.platforms`.
+the 0.7.0 format and migration from `package.platforms`.
 
 `dev`, `build`, and `package` automatically prepare their release's shared
-runtime and subprocess helper. `proton_cli setup` prewarms the same installation
+runtime and subprocess executable. `proton_cli setup` prewarms the same installation
 from any directory; it replaces `cef setup`. Remove `dev --setup`/`--no-setup`.
 `doctor` and `package --dry-run` do not install anything. First preparation needs
 network access and native build tools; complete cached installations are reused.
-CLI and application Proton versions must match. This behavior is unreleased.
+CLI and application Proton versions must match. This behavior starts in 0.7.0.

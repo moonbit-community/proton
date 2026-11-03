@@ -57,7 +57,7 @@ async fn spawn_single_instance_probe(
 async fn run_single_instance_probe(root : String, timeout : Int32) -> Unit {
   let output_root = @fs.tmpdir(prefix="proton-e2e-single-instance-")
   defer remove_dev_extension_tree(output_root)
-  install_scenario_helper(root, output_root)
+  install_scenario_subprocess(root, output_root)
   run_e2e_operation_with_timeout(timeout + 2000, "single instance activation", () => {
     let run_id = next_app_run_id()
     @async.with_task_group(group => {

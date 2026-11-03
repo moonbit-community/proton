@@ -1,5 +1,5 @@
 ///|
-fn helper_executable_name(platform : String) -> String {
+fn subprocess_executable_name(platform : String) -> String {
   if platform.has_prefix("win32-") {
     "cef_process.exe"
   } else {
@@ -8,16 +8,19 @@ fn helper_executable_name(platform : String) -> String {
 }
 
 ///|
-fn helper_installation_root(
+fn subprocess_installation_root(
   proton_home : String,
   platform : String,
   version : String,
 ) -> String {
-  path_join(path_join(path_join(proton_home, "helpers"), platform), version)
+  path_join(
+    path_join(path_join(proton_home, "subprocesses"), platform),
+    version,
+  )
 }
 
 ///|
-fn helper_package(version : String) -> String {
+fn subprocess_package(version : String) -> String {
   "moonbit-community/proton/internal/cef_process@" + version
 }
 
@@ -30,10 +33,10 @@ fn proton_home() -> String raise CefRuntimeError {
 }
 
 ///|
-async fn default_helper_paths() -> (String, String, String) {
+async fn default_subprocess_paths() -> (String, String, String) {
   let requirement = default_requirement()
-  let executable_name = helper_executable_name(requirement.platform)
-  let root = helper_installation_root(
+  let executable_name = subprocess_executable_name(requirement.platform)
+  let root = subprocess_installation_root(
     proton_home(),
     requirement.platform,
     release_version(),
@@ -42,9 +45,9 @@ async fn default_helper_paths() -> (String, String, String) {
 }
 
 ///|
-async fn helper_moon_environment() -> Map[String, String] noraise {
+async fn subprocess_moon_environment() -> Map[String, String] noraise {
   let macos = is_macos_host() catch { _ => false }
-  helper_moon_environment_for(
+  subprocess_moon_environment_for(
     @env.get_env_vars(),
     windows=@path.sep == '\\',
     macos~,
@@ -53,7 +56,7 @@ async fn helper_moon_environment() -> Map[String, String] noraise {
 }
 
 ///|
-fn helper_moon_environment_for(
+fn subprocess_moon_environment_for(
   environment : Map[String, String],
   windows~ : Bool,
   macos~ : Bool,
@@ -73,17 +76,17 @@ fn helper_moon_environment_for(
 }
 
 ///|
-async fn helper_build_directory() -> String {
-  @async_fs.tmpdir(prefix="proton-helper-build-") catch {
+async fn subprocess_build_directory() -> String {
+  @async_fs.tmpdir(prefix="proton-subprocess-build-") catch {
     error =>
-      raise CefHelperError::CreateTemporaryDirectory(
+      raise CefSubprocessError::CreateTemporaryDirectory(
         detail=@debug.render(Repr(error)),
       )
   }
 }
 
 ///|
-async fn helper_is_valid(path : String) -> Bool {
+async fn subprocess_is_valid(path : String) -> Bool {
   guard file_is_nonempty(path) else { return false }
   if @path.sep == '\\' {
     true
@@ -96,79 +99,79 @@ async fn helper_is_valid(path : String) -> Bool {
 }
 
 ///|
-/// Resolves the helper executable installed for this Proton release.
-pub async fn resolve_default_helper() -> String {
-  let (_, executable, _) = default_helper_paths()
-  guard helper_is_valid(executable) else {
-    raise CefHelperError::NotInstalled(path=executable)
+/// Resolves the subprocess executable installed for this Proton release.
+pub async fn resolve_default_subprocess() -> String {
+  let (_, executable, _) = default_subprocess_paths()
+  guard subprocess_is_valid(executable) else {
+    raise CefSubprocessError::NotInstalled(path=executable)
   }
   executable
 }
 
 ///|
-/// Installs the helper executable selected by this Proton release.
-async fn install_default_helper() -> String {
-  let (root, executable, executable_name) = default_helper_paths()
+/// Installs the subprocess executable selected by this Proton release.
+async fn install_default_subprocess() -> String {
+  let (root, executable, executable_name) = default_subprocess_paths()
   ensure_dir(path_parent(root))
   let lock = acquire_install_lock(root)
   defer lock.close()
   defer lock.unlock()
-  if helper_is_valid(executable) {
+  if subprocess_is_valid(executable) {
     return executable
   }
   let staging = create_install_staging(root)
   defer (remove_tree(staging) catch { _ => () })
-  let build_dir = helper_build_directory()
+  let build_dir = subprocess_build_directory()
   defer (remove_tree(build_dir) catch { _ => () })
   let args = [
     "install",
-    helper_package(release_version()),
+    subprocess_package(release_version()),
     "--bin",
     staging,
     "--target-dir",
     build_dir,
   ]
-  report_info("[INFO] Installing Proton helper: " + executable)
+  report_info("[INFO] Installing Proton subprocess: " + executable)
   let code = @process.run(
     "moon",
     args,
     cwd=build_dir,
-    extra_env=helper_moon_environment(),
+    extra_env=subprocess_moon_environment(),
     inherit_env=false,
   ) catch {
     error =>
-      raise CefHelperError::InstallStart(detail=@debug.render(Repr(error)))
+      raise CefSubprocessError::InstallStart(detail=@debug.render(Repr(error)))
   }
-  guard code == 0 else { raise CefHelperError::InstallExit(code~) }
+  guard code == 0 else { raise CefSubprocessError::InstallExit(code~) }
   let staged_executable = path_join(staging, executable_name)
-  guard helper_is_valid(staged_executable) else {
-    raise CefHelperError::InstalledExecutableMissing(path=staged_executable)
+  guard subprocess_is_valid(staged_executable) else {
+    raise CefSubprocessError::InstalledExecutableMissing(path=staged_executable)
   }
   publish_staged_directory(staging, root)
-  guard helper_is_valid(executable) else {
-    raise CefHelperError::InstalledExecutableMissing(path=executable)
+  guard subprocess_is_valid(executable) else {
+    raise CefSubprocessError::InstalledExecutableMissing(path=executable)
   }
   executable
 }
 
 ///|
-test "helper cache identity includes platform and Proton version" {
+test "subprocess cache identity includes platform and Proton version" {
   assert_eq(
-    helper_installation_root("/home/user/.proton", "darwin-arm64", "1.2.3"),
-    path_join("/home/user/.proton", "helpers/darwin-arm64/1.2.3"),
+    subprocess_installation_root("/home/user/.proton", "darwin-arm64", "1.2.3"),
+    path_join("/home/user/.proton", "subprocesses/darwin-arm64/1.2.3"),
   )
-  assert_eq(helper_executable_name("win32-x64"), "cef_process.exe")
-  assert_eq(helper_executable_name("linux-x64"), "cef_process")
+  assert_eq(subprocess_executable_name("win32-x64"), "cef_process.exe")
+  assert_eq(subprocess_executable_name("linux-x64"), "cef_process")
   assert_eq(
-    helper_package("1.2.3"),
+    subprocess_package("1.2.3"),
     "moonbit-community/proton/internal/cef_process@1.2.3",
   )
 }
 
 ///|
-test "helper build uses the normal Proton native link configuration" {
+test "subprocess build uses the normal Proton native link configuration" {
   assert_eq(
-    helper_moon_environment_for(
+    subprocess_moon_environment_for(
       {},
       windows=false,
       macos=true,

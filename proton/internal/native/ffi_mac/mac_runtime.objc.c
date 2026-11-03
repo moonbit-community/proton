@@ -777,7 +777,7 @@ int32_t proton_engine_runtime_create(
                                          : PROTON_REMOTE_DEBUGGING_DISABLED;
     settings.persist_session_cookies = config.persist_session_cookies;
     proton_engine_set_string(&settings.browser_subprocess_path,
-                             config.helper_path);
+                             config.subprocess_path);
     proton_engine_set_string(&settings.framework_dir_path, config.framework_dir);
     proton_engine_set_string(&settings.resources_dir_path, config.resources_dir);
     if (config.locales_dir[0] != '\0') {

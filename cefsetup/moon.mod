@@ -1,6 +1,6 @@
 name = "moonbit-community/proton_cefsetup"
 
-version = "0.6.0"
+version = "0.7.0"
 
 import {
   "moonbitlang/async@0.22.5",
@@ -15,7 +15,7 @@ license = "Apache-2.0"
 
 keywords = [ "proton", "cef", "setup" ]
 
-description = "Install the CEF runtime and subprocess helper required by Proton."
+description = "Install the CEF runtime and subprocess executable required by Proton."
 
 preferred_target = "wasm"
 

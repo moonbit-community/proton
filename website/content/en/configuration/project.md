@@ -4,8 +4,8 @@
 
 The default filename is `proton.project.json`. To use another filename such as `moon.proton.json`, pass `--config moon.proton.json` to `dev`, `build` or `package`; it is not an automatically discovered alias.
 
-The root platform-override format below is unreleased; see the migration section
-when upgrading from 0.6.0.
+The root platform-override format below requires Proton 0.7.0; see the migration
+section when upgrading from 0.6.0.
 
 ## Top-level fields
 
@@ -146,9 +146,8 @@ working directory. Changing the working directory also changes the base for
 
 ## Migration from 0.6.0
 
-Root platform overrides are unreleased. Move
-`package.platforms.<platform>.*` to `platforms.<platform>.package.*` when updating
-to a release containing this format. Old locations produce a migration error.
+In 0.7.0, move `package.platforms.<platform>.*` to
+`platforms.<platform>.package.*`. Old locations produce a migration error.
 Previously, platform resources and signing inputs were appended to common
 arrays; now list the complete desired array in an override.
 
@@ -170,7 +169,7 @@ A module dependency makes a module available; a package import selects the APIs 
 
 Moon writes build artifacts under _build/ by default. Frontend output depends on the frontend build tool and should correspond to frontend.dist. frontend/dist is an isomorphic template choice, not a fixed framework path. The packager writes distributables to package.output, which defaults to dist.
 
-These directories hold generated artifacts determined by source, build commands and project configuration. The runtime and helper installed by setup live in shared user-level storage, outside the application source tree.
+These directories hold generated artifacts determined by source, build commands and project configuration. The runtime and subprocess executable installed by setup live in shared user-level storage, outside the application source tree.
 
 ## Complete configuration example
 

@@ -1,6 +1,6 @@
 # Packaging reference
 
-The Proton CLI packages a project into a distributable containing its executable, frontend assets, CEF runtime, matching helper and declared resources. A backend executable alone is not a complete distribution. Packaging targets the host platform.
+The Proton CLI packages a project into a distributable containing its executable, frontend assets, CEF runtime, matching subprocess executable and declared resources. A backend executable alone is not a complete distribution. Packaging targets the host platform.
 
 Field types and defaults are defined in [Configuration](../configuration/project.md).
 
@@ -62,7 +62,7 @@ Packaged frontend files load without the development server. Backend resource pa
 
 `package.prepare` runs once from the project configuration directory after the frontend and native executable have been built, before resources are assembled. Use it to generate declared package-only resources or additional binaries. A nonzero exit stops packaging.
 
-`proton_cli build` and `proton_cli package --dry-run` do not execute this hook. The standalone `proton_package` tool packages already-built executables and supplied payloads; it does not discover projects, run build/preparation commands or assemble CEF. See the [standalone packager](https://github.com/moonbit-community/proton/blob/91ffc6210878af84a639d773efdc71669dc47430/package/README.md).
+`proton_cli build` and `proton_cli package --dry-run` do not execute this hook. The standalone `proton_package` tool packages already-built executables and supplied payloads; it does not discover projects, run build/preparation commands or assemble CEF. See the [standalone packager](https://github.com/moonbit-community/proton/blob/53348e89339a06dfb1b38c4506126f512c16a420/package/README.md).
 
 ## Update artifacts and metadata
 

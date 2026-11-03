@@ -39,7 +39,7 @@ enum {
 
 typedef struct {
   char runtime_root[PROTON_ENGINE_MAX_PATH_BYTES];
-  char helper_path[PROTON_ENGINE_MAX_PATH_BYTES];
+  char subprocess_path[PROTON_ENGINE_MAX_PATH_BYTES];
   char resources_dir[PROTON_ENGINE_MAX_PATH_BYTES];
   char locales_dir[PROTON_ENGINE_MAX_PATH_BYTES];
   char cache_dir[PROTON_ENGINE_MAX_PATH_BYTES];

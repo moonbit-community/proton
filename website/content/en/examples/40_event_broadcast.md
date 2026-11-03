@@ -2,7 +2,7 @@
 
 This example sends progress notifications while an asynchronous command runs. It demonstrates the separate roles of a command response and an event subscription when displaying ongoing backend work.
 
-[40_event_broadcast](https://github.com/moonbit-community/proton/tree/91ffc6210878af84a639d773efdc71669dc47430/examples/40_event_broadcast) · Source files: [main.mbt](https://github.com/moonbit-community/proton/tree/91ffc6210878af84a639d773efdc71669dc47430/examples/40_event_broadcast/main.mbt), [app.html](https://github.com/moonbit-community/proton/tree/91ffc6210878af84a639d773efdc71669dc47430/examples/40_event_broadcast/app.html)
+[40_event_broadcast](https://github.com/moonbit-community/proton/tree/53348e89339a06dfb1b38c4506126f512c16a420/examples/40_event_broadcast) · Source files: [main.mbt](https://github.com/moonbit-community/proton/tree/53348e89339a06dfb1b38c4506126f512c16a420/examples/40_event_broadcast/main.mbt), [app.html](https://github.com/moonbit-community/proton/tree/53348e89339a06dfb1b38c4506126f512c16a420/examples/40_event_broadcast/app.html)
 
 ## Behavior
 

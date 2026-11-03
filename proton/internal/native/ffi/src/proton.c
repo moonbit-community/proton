@@ -196,7 +196,7 @@ int32_t proton_app_instance_release(proton_app_instance_id_t instance) {
 }
 
 int32_t proton_internal_execute_process(
-    int32_t use_bundled, const char *runtime_root, const char *helper_path,
+    int32_t use_bundled, const char *runtime_root, const char *subprocess_path,
     const char *resources_dir, const char *locales_dir, const char *cache_dir,
     const char *locale, const char *accept_languages,
     const char *dialog_ok_label, const char *dialog_cancel_label,
@@ -208,7 +208,7 @@ int32_t proton_internal_execute_process(
   }
   proton_engine_runtime_config_t config;
   int32_t status = proton_config_prepare_runtime(
-      use_bundled, runtime_root, helper_path, resources_dir, locales_dir,
+      use_bundled, runtime_root, subprocess_path, resources_dir, locales_dir,
       cache_dir, locale, accept_languages, dialog_ok_label,
       dialog_cancel_label, remote_debugging_port, headless,
       PROTON_ACCESSIBILITY_AUTOMATIC,
@@ -227,7 +227,7 @@ int32_t proton_internal_execute_process(
 }
 
 int32_t proton_internal_runtime_create(
-    int32_t use_bundled, const char *runtime_root, const char *helper_path,
+    int32_t use_bundled, const char *runtime_root, const char *subprocess_path,
     const char *resources_dir, const char *locales_dir, const char *cache_dir,
     const char *locale, const char *accept_languages,
     const char *proxy_server, const char *proxy_bypass,
@@ -242,7 +242,7 @@ int32_t proton_internal_runtime_create(
   *out_runtime = PROTON_INVALID_HANDLE;
   proton_engine_runtime_config_t config;
   int32_t status = proton_config_prepare_runtime(
-      use_bundled, runtime_root, helper_path, resources_dir, locales_dir,
+      use_bundled, runtime_root, subprocess_path, resources_dir, locales_dir,
       cache_dir, locale, accept_languages, dialog_ok_label,
       dialog_cancel_label, remote_debugging_port, headless,
       accessibility_mode,

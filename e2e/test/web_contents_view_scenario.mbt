@@ -99,8 +99,8 @@ async fn run_web_contents_view_scenario_probe(
   )
   assert_web_contents_view_events(event_path)
   println(
-    "MoonBit 52_web_contents_view sequential lifecycle passed: helpers=" +
-    shutdown.helper_processes.to_string(),
+    "MoonBit 52_web_contents_view sequential lifecycle passed: subprocesses=" +
+    shutdown.subprocess_count.to_string(),
   )
   shutdown
 }

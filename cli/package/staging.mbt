@@ -33,7 +33,7 @@ async fn resolved_package_spec(
 
 ///|
 /// Packages an already-built Proton application using the active immutable
-/// runtime and helper installation.
+/// runtime and subprocess installation.
 async fn package_built_application(
   spec : PackagePlan,
   executable : String,
@@ -42,9 +42,9 @@ async fn package_built_application(
     raise StagingRuntimeError::ExecutableMissing(path=executable)
   }
   let installation = @cef_store.resolve_default()
-  let cef_process = @cef_store.resolve_default_helper()
+  let cef_process = @cef_store.resolve_default_subprocess()
   guard path_is_file(cef_process) else {
-    raise StagingRuntimeError::HelperMissing(path=cef_process)
+    raise StagingRuntimeError::SubprocessMissing(path=cef_process)
   }
   let platform = installation.platform()
   let host = staging_host_from_platform(platform)
@@ -261,13 +261,13 @@ async fn stage_proton_runtime(
     Windows =>
       validate_windows_portable_layout(layout.root(), layout.executable())
     Linux => {
-      let staged_helper = resolve_path(layout.executables(), "cef_process")
-      guard path_is_file(staged_helper) else {
-        raise StagingRuntimeError::HelperMissing(path=staged_helper)
+      let staged_subprocess = resolve_path(layout.executables(), "cef_process")
+      guard path_is_file(staged_subprocess) else {
+        raise StagingRuntimeError::SubprocessMissing(path=staged_subprocess)
       }
-      @async_fs.chmod(staged_helper, 0o755)
+      @async_fs.chmod(staged_subprocess, 0o755)
       set_linux_rpath(layout.executable(), linux_package_rpath)
-      set_linux_rpath(staged_helper, linux_package_rpath)
+      set_linux_rpath(staged_subprocess, linux_package_rpath)
       let executable_name = host_path(layout.executable()).basename().to_owned()
       let apprun = resolve_path(layout.root(), "AppRun")
       write_text(apprun, proton_linux_apprun(executable_name))

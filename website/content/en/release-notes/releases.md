@@ -1,12 +1,16 @@
 # Release Notes
 
-## Unreleased
+## 0.7.0 (unreleased)
 
-**Automatic environment preparation**
+0.7.0 simplifies project creation and runtime setup, consolidates platform
+configuration, and adds macOS resource-tree signing. Existing CLI scripts and
+platform package configuration require the migrations below.
+
+**Automatic environment preparation (breaking CLI change)**
 
 `proton_cli dev`, `build`, and `package` prepare the release-matched runtime and
-helper automatically. Complete caches are reused; first use may download CEF
-and compile the helper, requiring network access and the native toolchain.
+subprocess executable automatically. Complete caches are reused; first use may download CEF
+and compile the subprocess executable, requiring network access and the native toolchain.
 Installation failure stops the original command.
 
 Use optional `proton_cli setup` to prewarm the shared installation, including
@@ -14,6 +18,16 @@ before direct `moon` commands or for CI caches. It does not depend on a project
 or the current directory. Replace `cef setup` with `setup` and remove
 `dev --setup`/`--no-setup`. `doctor` and `package --dry-run` stay read-only.
 Keep the CLI and application Proton dependencies on the same release.
+
+**CEF subprocess naming**
+
+The Chromium subprocess executable is named `cef_process` (`cef_process.exe`
+on Windows). Its shared installation now lives under `~/.proton/subprocesses/`.
+Replace development overrides using `PROTON_HELPER_PATH` with
+`PROTON_SUBPROCESS_PATH`, and calls to `resolve_default_helper()` in
+`proton_cefsetup/store` with `resolve_default_subprocess()`. Run `proton_cli setup`
+to prepare the new cache. macOS retains Chromium's conventional `Helper.app`
+bundle names.
 
 **Project platform overrides (breaking configuration change)**
 
@@ -46,7 +60,7 @@ arguments remains supported. Pass literal values without pre-escaping them and
 call `enable()` again to regenerate existing entries. Older systemd generators
 still have backslash-escape limitations, including `$` and backticks in arguments.
 
-**Project creation**
+**Project creation (breaking CLI change)**
 
 `proton_cli new` delegates to `moon-new` and downloads the selected template from
 Proton's `main` branch. It retains the destination path, `--template` and
@@ -61,6 +75,17 @@ Use `--user` in place of the CLI's `--author`.
 Remove the old title, identifier, window size, check, Git, dry-run and confirmation
 options. Customize the generated configuration and source files instead; run
 checks explicitly. See the [new command](../command-line-interface/commands.md#new).
+
+**Upgrading**
+
+Update the CLI and all application `proton` / `proton_*` dependencies to 0.7.0
+together. Installing the CLI does not migrate existing project files. Update
+removed commands and options, move platform package settings as described above,
+and rebuild packaged applications with the matching subprocess executable. Direct `moon` builds
+need `proton_cli setup` first; normal CLI builds prepare it automatically.
+The MoonBit `latest` toolchain requirement and CEF runtime are unchanged.
+
+[Complete changes](https://github.com/moonbit-community/proton/compare/e5937a746a9709db64552963c15c7e9f3fb6c3ac...53348e89339a06dfb1b38c4506126f512c16a420)
 
 ## 0.6.0
 

@@ -24,14 +24,14 @@ function moon(args) {
   if (result.status !== 0) throw new Error(`moon ${args.join(' ')} failed`);
 }
 moon(['-C', 'e2e', 'build', 'repro_fullscreen_close', '--target', 'native']);
-moon(['install', '--path', 'proton/internal/cef_process', '--bin', join(output, 'helper')]);
+moon(['install', '--path', 'proton/internal/cef_process', '--bin', join(output, 'subprocess')]);
 const binary = resolve(root, '_build/native/debug/build/moonbit-community/proton/e2e/repro_fullscreen_close/repro_fullscreen_close.exe');
 const log = join(output, 'app.log');
 const fd = openSync(log, 'w');
 const child = spawn(binary, options, {
   cwd: root,
   detached: true,
-  env: { ...process.env, PROTON_HEADLESS: '0', PROTON_HELPER_PATH: join(output, 'helper/cef_process'), PROTON_REMOTE_DEBUGGING_PORT: '0' },
+  env: { ...process.env, PROTON_HEADLESS: '0', PROTON_SUBPROCESS_PATH: join(output, 'subprocess/cef_process'), PROTON_REMOTE_DEBUGGING_PORT: '0' },
   stdio: ['ignore', fd, fd],
 });
 closeSync(fd);
@@ -69,7 +69,7 @@ try {
   console.log(text);
   console.log(JSON.stringify(summary, null, 2));
   const passed = summary.normalExitMarker && result?.code === 0 && rows.length === 0 && !summary.matchingError;
-  console.log(passed ? 'PASS: application and helpers exited.' : 'FAIL: inspect app.log and result.json; cleanup follows.');
+  console.log(passed ? 'PASS: application and subprocesses exited.' : 'FAIL: inspect app.log and result.json; cleanup follows.');
   process.exitCode = passed ? 0 : 1;
 } finally {
   clearTimeout(timer);

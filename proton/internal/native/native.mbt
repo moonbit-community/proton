@@ -498,8 +498,8 @@ fn validate_runtime_config(config : RuntimeConfig) -> Unit raise NativeError {
     if config.runtime_root is None {
       raise invalid_argument("runtime config requires runtime_root")
     }
-    if config.helper_path is None {
-      raise invalid_argument("runtime config requires helper_path")
+    if config.subprocess_path is None {
+      raise invalid_argument("runtime config requires subprocess_path")
     }
   }
 }
@@ -514,7 +514,7 @@ pub fn execute_process(
   let status = @native_ffi.execute_process(
     runtime_config_bool(config.use_bundled),
     runtime_config_string(config.runtime_root),
-    runtime_config_string(config.helper_path),
+    runtime_config_string(config.subprocess_path),
     runtime_config_string(config.resources_dir),
     runtime_config_string(config.locales_dir),
     runtime_config_string(config.cache_dir),
@@ -559,7 +559,7 @@ pub fn Runtime::Runtime(
   let status = @native_ffi.runtime_create(
     runtime_config_bool(config.use_bundled),
     runtime_config_string(config.runtime_root),
-    runtime_config_string(config.helper_path),
+    runtime_config_string(config.subprocess_path),
     runtime_config_string(config.resources_dir),
     runtime_config_string(config.locales_dir),
     runtime_config_string(config.cache_dir),

@@ -1,8 +1,8 @@
 # Create a project
 
-This tutorial uses Proton 0.6.0. With the unreleased CLI, omit the
-`proton_cli cef setup` step below: `dev`, `build`, and `package` prepare the
+This tutorial uses Proton 0.7.0. `dev`, `build`, and `package` prepare the
 environment automatically. Use `proton_cli setup` only to prepare it in advance.
+See [environment requirements](../introduction/installation.md) for release availability.
 
 This guide creates a desktop window with the minimal template. You will run it, change its contents, and build the executable. Finish [prerequisites](../introduction/installation.md) before starting.
 
@@ -28,6 +28,9 @@ Then enter the project and continue with the same setup commands:
 ```sh
 cd hello-proton
 ```
+
+Ensure `moon.mod` requires `moonbit-community/proton@0.7.0` to match the CLI.
+If the generated template uses an earlier version, update that requirement before continuing.
 
 Specify `--template minimal` because the default is `isomorphic`. Before distributing the app, edit `identifier` in `proton.project.json` to your own unique identifier, such as `com.example.hello-proton`.
 
@@ -55,7 +58,6 @@ From `hello-proton/`:
 
 ```sh
 moon update
-proton_cli cef setup
 proton_cli dev
 ```
 

@@ -39,7 +39,7 @@ section. They state prerequisites, file edits and expected results. All other
 pages are independently readable technical documentation: define concepts, API
 contracts, configuration types/defaults, lifecycle, failure behavior and platform
 limits. Do not make reference pages depend on completing a tutorial project.
-Examples and API links are pinned to the Proton 0.6.0 source. When updating the documented release, update the CLI/dependency versions, source links, and both book titles together.
+Examples and API links are pinned to the source snapshot documented for Proton 0.7.0. When updating the documented release, update the CLI/dependency versions, source links, and both book titles together.
 
 ## Preview
 

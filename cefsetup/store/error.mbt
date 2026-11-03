@@ -38,7 +38,7 @@ priv suberror CefRuntimeError {
 }
 
 ///|
-priv suberror CefHelperError {
+priv suberror CefSubprocessError {
   NotInstalled(path~ : String)
   CreateTemporaryDirectory(detail~ : String)
   InstallStart(detail~ : String)
@@ -115,21 +115,23 @@ fn CefRuntimeError::message(self : CefRuntimeError) -> String {
 }
 
 ///|
-fn CefHelperError::message(self : CefHelperError) -> String {
+fn CefSubprocessError::message(self : CefSubprocessError) -> String {
   match self {
     NotInstalled(path~) =>
-      "The required Proton helper is missing, empty, or not executable: " +
+      "The required Proton subprocess executable is missing, empty, or not executable: " +
       path +
       "\nRun `proton_cli setup`."
     CreateTemporaryDirectory(detail~) =>
-      "Failed to create the Proton helper build directory: " + detail
+      "Failed to create the Proton subprocess executable build directory: " +
+      detail
     InstallStart(detail~) =>
-      "Failed to start the Proton helper build: " + detail
+      "Failed to start the Proton subprocess executable build: " + detail
     InstallExit(code~) =>
-      "Failed to build the Proton helper: moon install exited with code " +
+      "Failed to build the Proton subprocess executable: moon install exited with code " +
       code.to_string()
     InstalledExecutableMissing(path~) =>
-      "The Proton helper build did not produce a nonempty executable: " + path
+      "The Proton subprocess executable build did not produce a nonempty executable: " +
+      path
   }
 }
 
@@ -154,6 +156,6 @@ impl Show for CefRuntimeError with fn output(self, logger) {
 }
 
 ///|
-impl Show for CefHelperError with fn output(self, logger) {
+impl Show for CefSubprocessError with fn output(self, logger) {
   logger.write_string(self.message())
 }

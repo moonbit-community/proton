@@ -27,7 +27,7 @@ proton_cli [--cwd <directory>] <command> [options]
 | [`build`](#build) | Build frontend assets and the native backend |
 | [`package`](#package) | Build and assemble distribution artifacts |
 | [`doctor`](#doctor) | Report environment and project diagnostics |
-| [`setup`](#setup) | Install the release-matched runtime and helper |
+| [`setup`](#setup) | Install the release-matched runtime and subprocess executable |
 | [`cef requirements`](#cef-requirements) | Print the embedded CEF requirement |
 
 ## `help`
@@ -48,7 +48,7 @@ Prints `proton_cli <version>`. It accepts no command-specific options and does n
 
 ## `new`
 
-**Unreleased:** the interface below replaces the project generator in 0.6.0.
+**Since 0.7.0:** the interface below replaces the project generator in 0.6.0.
 
 ```text
 proton_cli new [path] [options]
@@ -107,7 +107,7 @@ project and run checks explicitly instead.
 proton_cli dev [options] [-- <application-arguments>...]
 ```
 
-Prepares the release-matched runtime and helper automatically, then builds and runs the native backend. When a frontend command is configured, it starts that command, waits for readiness and supplies the development URL to the application. Backend changes require a rebuild/restart; frontend refresh is owned by the frontend tool.
+Prepares the release-matched runtime and subprocess executable automatically, then builds and runs the native backend. When a frontend command is configured, it starts that command, waits for readiness and supplies the development URL to the application. Backend changes require a rebuild/restart; frontend refresh is owned by the frontend tool.
 
 | Option | Default and meaning |
 | --- | --- |
@@ -148,7 +148,7 @@ The backend target is always native. A forwarded `--target` override is rejected
 proton_cli package [options]
 ```
 
-Builds and assembles the application, frontend assets, CEF runtime, matching helper and declared resources for the host platform. A project configuration is required. This command does not accept trailing Moon arguments.
+Builds and assembles the application, frontend assets, CEF runtime, matching subprocess executable and declared resources for the host platform. A project configuration is required. This command does not accept trailing Moon arguments.
 
 | Option | Default and meaning |
 | --- | --- |
@@ -209,7 +209,7 @@ Inspects the environment and current project without installing dependencies or 
 proton_cli setup
 ```
 
-Prepares the runtime and subprocess helper required by this CLI release in the
+Prepares the runtime and subprocess executable required by this CLI release in the
 shared user-level store, then prints the runtime directory. It is independent
 of the current project and working directory, so `-C` does not change the
 installation. There are no command-specific options.
@@ -218,10 +218,10 @@ This is an optional prewarming command. `dev`, `build`, and `package` prepare
 the same installation automatically before building or launching an app.
 Complete cached installations are reused. A missing installation requires
 network access, `curl`, `tar`, MoonBit and the native compiler toolchain; the
-helper is built from source. Installation failure stops the requesting command.
+subprocess executable is built from source. Installation failure stops the requesting command.
 `doctor` and `package --dry-run` do not install anything.
 
-**Unreleased migration:** replace `cef setup` with `setup`. Remove `dev --setup`
+**Migration from 0.6.0:** replace `cef setup` with `setup`. Remove `dev --setup`
 and `dev --no-setup`; automatic preparation is the default. Direct `moon`
 build/run commands still require a prepared environment. CLI and application
 Proton dependencies must use the same release.

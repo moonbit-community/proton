@@ -143,7 +143,7 @@ pub async fn run(cwd : String, matches : @argparse.Matches) -> Unit {
   let app_package = backend
     .map(config => config.app_package)
     .unwrap_or(default_package)
-  let (runtime, helper_path) = prepare_dev_installation()
+  let (runtime, subprocess_path) = prepare_dev_installation()
   let snapshot_dir = @async_fs.tmpdir(prefix="proton-dev-config-")
   defer @async_fs.rmdir(snapshot_dir, recursive=true)
   let snapshot_path = @fsutil.path_join(snapshot_dir, "proton.project.json")
@@ -153,7 +153,7 @@ pub async fn run(cwd : String, matches : @argparse.Matches) -> Unit {
     create_mode=CreateOrTruncate,
   )
   let app_env = dev_process_env(
-    runtime, helper_path, frontend_url, project_base, snapshot_path,
+    runtime, subprocess_path, frontend_url, project_base, snapshot_path,
   )
   let frontend_env = dev_frontend_process_env(
     app_env,
@@ -349,13 +349,14 @@ fn effective_dev_config(
 
 ///|
 async fn prepare_dev_installation() -> (DevRuntime, String) {
-  // A caller-supplied helper remains authoritative for source development.
-  let custom_helper = @env.get_env_var("PROTON_HELPER_PATH") is Some(path) &&
+  // A caller-supplied subprocess executable remains authoritative for source development.
+  let custom_subprocess = @env.get_env_var("PROTON_SUBPROCESS_PATH")
+    is Some(path) &&
     path.trim() != ""
-  let runtime = @cef_store.setup_default(runtime_only=custom_helper)
-  let helper = match @env.get_env_var("PROTON_HELPER_PATH") {
+  let runtime = @cef_store.setup_default(runtime_only=custom_subprocess)
+  let subprocess = match @env.get_env_var("PROTON_SUBPROCESS_PATH") {
     Some(path) if path.trim() != "" => path
-    _ => @cef_store.resolve_default_helper()
+    _ => @cef_store.resolve_default_subprocess()
   }
   (
     dev_runtime_from_root(
@@ -363,7 +364,7 @@ async fn prepare_dev_installation() -> (DevRuntime, String) {
       runtime.platform(),
       "Proton runtime store",
     ),
-    helper,
+    subprocess,
   )
 }
 
@@ -394,7 +395,7 @@ fn validate_frontend_dev_url(
 ///|
 fn dev_process_env(
   runtime : DevRuntime,
-  helper_path : String,
+  subprocess_path : String,
   frontend_url : String?,
   resource_dir : String,
   project_config : String,
@@ -406,7 +407,7 @@ fn dev_process_env(
       "stderr",
     ),
     "PROTON_RUNTIME_ROOT": runtime.root,
-    "PROTON_HELPER_PATH": helper_path,
+    "PROTON_SUBPROCESS_PATH": subprocess_path,
     "PROTON_RESOURCE_DIR": resource_dir,
     "PROTON_PROJECT_CONFIG": project_config,
   }

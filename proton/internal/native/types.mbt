@@ -1349,7 +1349,7 @@ struct RuntimeConfig {
   accessibility_mode : AccessibilityMode
   persist_session_cookies : Bool
   runtime_root : String?
-  helper_path : String?
+  subprocess_path : String?
   resources_dir : String?
   locales_dir : String?
   cache_dir : String?
@@ -1404,7 +1404,7 @@ pub extend WindowConfig with Debug::{to_repr}
 /// absolute, process-exclusive path for persistent browser state.
 pub fn RuntimeConfig::RuntimeConfig(
   runtime_root? : String,
-  helper_path? : String,
+  subprocess_path? : String,
   resources_dir? : String,
   locales_dir? : String,
   cache_dir? : String,
@@ -1423,7 +1423,7 @@ pub fn RuntimeConfig::RuntimeConfig(
     accessibility_mode,
     persist_session_cookies,
     runtime_root,
-    helper_path,
+    subprocess_path,
     resources_dir,
     locales_dir,
     cache_dir,
@@ -1438,13 +1438,13 @@ pub fn RuntimeConfig::RuntimeConfig(
 }
 
 ///|
-/// `helper_path`, when set, overrides the subprocess executable the bundled
+/// `subprocess_path`, when set, overrides the subprocess executable the bundled
 /// runtime discovers. Packaged macOS applications automatically use their
 /// nested base Helper app. Set `headless` to enable CEF off-screen rendering
 /// for every window. Omit `cache_dir` for an isolated temporary browser
 /// profile, or provide an absolute, process-exclusive path for persistence.
 pub fn RuntimeConfig::bundled(
-  helper_path? : String,
+  subprocess_path? : String,
   cache_dir? : String,
   locale? : @locale.Locale,
   accept_languages~ : Array[@locale.Locale] = [],
@@ -1461,7 +1461,7 @@ pub fn RuntimeConfig::bundled(
     accessibility_mode,
     persist_session_cookies,
     runtime_root: None,
-    helper_path,
+    subprocess_path,
     resources_dir: None,
     locales_dir: None,
     cache_dir,
@@ -1525,7 +1525,7 @@ pub fn RuntimeConfig::with_framework_dialog_labels(
     accessibility_mode: self.accessibility_mode,
     persist_session_cookies: self.persist_session_cookies,
     runtime_root: self.runtime_root,
-    helper_path: self.helper_path,
+    subprocess_path: self.subprocess_path,
     resources_dir: self.resources_dir,
     locales_dir: self.locales_dir,
     cache_dir: self.cache_dir,

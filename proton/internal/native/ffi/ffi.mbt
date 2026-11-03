@@ -387,11 +387,11 @@ pub extern "C" fn proton_task_metric_at_ffi(
 ) -> Int32 = "proton_task_metric_at"
 
 ///|
-#borrow(runtime_root, helper_path, resources_dir, locales_dir, cache_dir, locale, accept_languages, dialog_ok_label, dialog_cancel_label, out_exit_code)
+#borrow(runtime_root, subprocess_path, resources_dir, locales_dir, cache_dir, locale, accept_languages, dialog_ok_label, dialog_cancel_label, out_exit_code)
 pub extern "C" fn execute_process(
   use_bundled : Int32,
   runtime_root : Bytes,
-  helper_path : Bytes,
+  subprocess_path : Bytes,
   resources_dir : Bytes,
   locales_dir : Bytes,
   cache_dir : Bytes,
@@ -406,11 +406,11 @@ pub extern "C" fn execute_process(
 ) -> Int32 = "proton_internal_execute_process"
 
 ///|
-#borrow(runtime_root, helper_path, resources_dir, locales_dir, cache_dir, locale, accept_languages, proxy_server, proxy_bypass, dialog_ok_label, dialog_cancel_label, out_runtime)
+#borrow(runtime_root, subprocess_path, resources_dir, locales_dir, cache_dir, locale, accept_languages, proxy_server, proxy_bypass, dialog_ok_label, dialog_cancel_label, out_runtime)
 pub extern "C" fn runtime_create(
   use_bundled : Int32,
   runtime_root : Bytes,
-  helper_path : Bytes,
+  subprocess_path : Bytes,
   resources_dir : Bytes,
   locales_dir : Bytes,
   cache_dir : Bytes,

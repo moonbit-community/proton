@@ -1,23 +1,23 @@
 name = "moonbit-community/proton_ext"
 
-version = "0.6.0"
+version = "0.7.0"
 
 import {
-  "moonbit-community/proton_ffi@0.6.0",
+  "moonbit-community/proton_ffi@0.7.0",
   "moonbitlang/x@0.5.5",
   "moonbitlang/async@0.22.5",
-  "moonbit-community/proton_clipboard@0.6.0",
-  "moonbit-community/proton_safe_storage@0.6.0",
-  "moonbit-community/proton_tray@0.6.0",
-  "moonbit-community/proton_global_hotkey@0.6.0",
-  "moonbit-community/proton@0.6.0",
-  "moonbit-community/proton_contract@0.6.0",
-  "moonbit-community/proton_microphone@0.6.0",
-  "moonbit-community/proton_auto_launch@0.6.0",
-  "moonbit-community/proton_keepawake@0.6.0",
-  "moonbit-community/proton_power_monitor@0.6.0",
-  "moonbit-community/proton_screen_monitor@0.6.0",
-  "moonbit-community/proton_shell@0.6.0",
+  "moonbit-community/proton_clipboard@0.7.0",
+  "moonbit-community/proton_safe_storage@0.7.0",
+  "moonbit-community/proton_tray@0.7.0",
+  "moonbit-community/proton_global_hotkey@0.7.0",
+  "moonbit-community/proton@0.7.0",
+  "moonbit-community/proton_contract@0.7.0",
+  "moonbit-community/proton_microphone@0.7.0",
+  "moonbit-community/proton_auto_launch@0.7.0",
+  "moonbit-community/proton_keepawake@0.7.0",
+  "moonbit-community/proton_power_monitor@0.7.0",
+  "moonbit-community/proton_screen_monitor@0.7.0",
+  "moonbit-community/proton_shell@0.7.0",
 }
 
 readme = "README.md"

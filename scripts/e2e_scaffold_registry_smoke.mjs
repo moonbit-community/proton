@@ -14,7 +14,7 @@ const tempRoot = fs.mkdtempSync(
 );
 const projectDir = path.join(tempRoot, "todo");
 const smokeEnv = { ...process.env, PROTON_NO_UPDATE_CHECK: "1" };
-for (const name of ["PROTON_RUNTIME_ROOT", "PROTON_RUNTIME_STORE", "PROTON_HELPER_PATH", "PROTON_CEF_SETUP_BOOTSTRAP"]) {
+for (const name of ["PROTON_RUNTIME_ROOT", "PROTON_RUNTIME_STORE", "PROTON_SUBPROCESS_PATH", "PROTON_CEF_SETUP_BOOTSTRAP"]) {
   delete smokeEnv[name];
 }
 let succeeded = false;
