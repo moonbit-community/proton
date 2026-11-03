@@ -199,3 +199,37 @@ async test "macOS signing turns a configured directory tree into a scanned targe
   assert_eq(targets[1].path, "Contents/Resources/bin/tool")
   assert_false(targets[1].tree)
 }
+
+///|
+async test "macOS signing rejects a configured filesystem root tree outside the project" {
+  let project = @proton_config.AppConfig::parse(
+    (
+      #|{"identifier":"com.example.tree","package":{"product_name":"Tree","version":"1.0.0","sign":{"binaries":["/**"]}}}
+    ),
+    platform=Macos,
+  )
+  let plan = build_package_plan(
+    parse_package_args([]),
+    "fixtures/sign-root/proton.project.json",
+    project,
+  )
+  try ignore(macos_package_sign_targets(plan)) catch {
+    StagingPlanError::InputOutsideBase(path~) =>
+      assert_eq(path, plan.sign_binaries[0])
+    _ => abort("expected an outside-project error")
+  } noraise {
+    _ => abort("expected the filesystem root tree to be rejected")
+  }
+}
+
+///|
+test "resource tree roots preserve their directory separator" {
+  assert_eq(glob_tree_root("/**"), Some("/"))
+  assert_eq(glob_tree_root("C:/**"), Some("C:/"))
+  assert_eq(glob_tree_root("C:\\**"), Some("C:\\"))
+  assert_eq(
+    glob_tree_root("\\\\server\\share\\**"),
+    Some("\\\\server\\share\\"),
+  )
+  assert_eq(glob_tree_root("payload/**"), Some("payload/"))
+}

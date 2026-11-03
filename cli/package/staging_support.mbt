@@ -69,7 +69,8 @@ fn relative_to_base(base : String, value : String) -> String? {
 fn glob_tree_root(value : String) -> String? {
   let normalized = value.replace_all(old="\\", new="/")
   if normalized.has_suffix("/**") {
-    Some(value.unsafe_substring(start=0, end=value.length() - 3).to_string())
+    // Keep the separator so filesystem roots remain absolute paths.
+    Some(value.unsafe_substring(start=0, end=value.length() - 2).to_string())
   } else {
     None
   }
