@@ -5,9 +5,8 @@
 **新窗口打开方式（破坏性 API 变更）**
 
 `NewWindowRequest.disposition` 表示点击或脚本要求在哪里打开新的浏览上下文：
-`ForegroundTab`、`BackgroundTab`、`Window`、`Popup` 或 `Other`。可据此区分
-Cmd/Ctrl 点击、中键点击与普通 `target="_blank"` 点击，并识别带窗口特性的
-`window.open` 弹出窗口。自行构造 `NewWindowRequest` 的代码（例如测试）需要补上该字段。
+`ForegroundTab`、`BackgroundTab`、`Window`、`Popup` 或 `Other`。处理函数可以为
+后台标签页和弹出窗口分别选择处理策略。自行构造 `NewWindowRequest` 的代码（例如测试）需要补上该字段。
 参见[宿主回调契约](../introduction/application-api.md#宿主回调契约)。
 
 ## 0.7.0

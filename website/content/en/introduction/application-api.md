@@ -530,9 +530,11 @@ browsing context to open, following Chromium's dispositions (Electron's
 | `Popup` | `window.open` with window features such as a size |
 | `Other` | A disposition this release does not name |
 
-`user_gesture` is also true for a script that calls `window.open` while
-handling a click; check `disposition` to tell such a popup from a modified
-link click.
+Use `disposition` to choose how to handle the requested destination. Links
+and scripts can request the same destination. For example, on macOS, a Cmd-click
+on a link and a Cmd-click on a button whose handler calls
+`window.open(url, "_blank", "width=600")` can both report `BackgroundTab`
+with `user_gesture == true`.
 
 ```moonbit
 let policy = @proton.WebContentsPolicy(navigation_handler=fn(_contents, request) {

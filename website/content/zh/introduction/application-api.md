@@ -499,8 +499,10 @@ net 扩展在宿主执行 HTTP 请求，返回状态、响应头及 UTF-8 文本
 | `Popup` | 带尺寸等窗口特性的 `window.open` |
 | `Other` | 当前版本未命名的打开方式 |
 
-脚本在处理点击时调用 `window.open`，`user_gesture` 同样为 true；
-需要区分这类弹出窗口与带修饰键的链接点击时，应检查 `disposition`。
+可以根据 `disposition` 为不同的打开方式选择处理策略。链接和脚本可能请求相同的打开方式。
+例如，在 macOS 上，按住 Cmd 点击链接，或按住 Cmd 点击在处理函数中调用
+`window.open(url, "_blank", "width=600")` 的按钮，都可能得到 `BackgroundTab`，
+且 `user_gesture == true`。
 
 ```moonbit
 let policy = @proton.WebContentsPolicy(navigation_handler=fn(_contents, request) {
