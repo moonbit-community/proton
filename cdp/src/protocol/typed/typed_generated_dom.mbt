@@ -7,11 +7,12 @@
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMBackendNode {
   node_type : Int32
   node_name : String
   backend_node_id : DOMBackendNodeId
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMBackendNode with Eq::{not_equal, equal}
@@ -57,9 +58,10 @@ pub fn DOMBackendNode::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMBackendNodeId {
   value : Int32
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMBackendNodeId with Eq::{not_equal, equal}
@@ -104,6 +106,7 @@ pub fn DOMBackendNodeId::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMBoxModel {
   content : DOMQuad
   padding : DOMQuad
@@ -112,7 +115,7 @@ pub(all) struct DOMBoxModel {
   width : Int32
   height : Int32
   shape_outside : DOMShapeOutsideInfo?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMBoxModel with Eq::{not_equal, equal}
@@ -177,9 +180,10 @@ pub fn DOMBoxModel::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMCompatibilityMode {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMCompatibilityMode with Eq::{not_equal, equal}
@@ -217,10 +221,11 @@ pub fn DOMCompatibilityMode::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMCSSComputedStyleProperty {
   name : String
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMCSSComputedStyleProperty with Eq::{not_equal, equal}
@@ -266,10 +271,11 @@ pub fn DOMCSSComputedStyleProperty::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMDetachedElementInfo {
   tree_node : DOMNode
   retained_node_ids : Array[DOMNodeId]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMDetachedElementInfo with Eq::{not_equal, equal}
@@ -320,9 +326,10 @@ pub fn DOMDetachedElementInfo::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMLogicalAxes {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMLogicalAxes with Eq::{not_equal, equal}
@@ -360,6 +367,7 @@ pub fn DOMLogicalAxes::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMNode {
   node_id : DOMNodeId
   parent_id : DOMNodeId?
@@ -396,7 +404,7 @@ pub(all) struct DOMNode {
   affected_by_starting_styles : Bool?
   adopted_style_sheets : Array[DOMStyleSheetId]?
   is_ad_related : Bool?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMNode with Eq::{not_equal, equal}
@@ -669,9 +677,10 @@ pub fn DOMNode::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMNodeId {
   value : Int32
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMNodeId with Eq::{not_equal, equal}
@@ -716,9 +725,10 @@ pub fn DOMNodeId::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMPhysicalAxes {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMPhysicalAxes with Eq::{not_equal, equal}
@@ -756,9 +766,10 @@ pub fn DOMPhysicalAxes::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMPseudoType {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMPseudoType with Eq::{not_equal, equal}
@@ -796,9 +807,10 @@ pub fn DOMPseudoType::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMQuad {
   value : Array[Double]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMQuad with Eq::{not_equal, equal}
@@ -837,12 +849,13 @@ pub fn DOMQuad::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMRect {
   x : Double
   y : Double
   width : Double
   height : Double
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMRect with Eq::{not_equal, equal}
@@ -888,12 +901,13 @@ pub fn DOMRect::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMRGBA {
   r : Int32
   g : Int32
   b : Int32
   a : Double?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMRGBA with Eq::{not_equal, equal}
@@ -941,9 +955,10 @@ pub fn DOMRGBA::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMScrollOrientation {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMScrollOrientation with Eq::{not_equal, equal}
@@ -981,9 +996,10 @@ pub fn DOMScrollOrientation::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMShadowRootType {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMShadowRootType with Eq::{not_equal, equal}
@@ -1021,11 +1037,12 @@ pub fn DOMShadowRootType::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMShapeOutsideInfo {
   bounds : DOMQuad
   shape : Json
   margin_shape : Json
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMShapeOutsideInfo with Eq::{not_equal, equal}
@@ -1071,9 +1088,10 @@ pub fn DOMShapeOutsideInfo::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMStyleSheetId {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMStyleSheetId with Eq::{not_equal, equal}
@@ -1111,9 +1129,10 @@ pub fn DOMStyleSheetId::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMCollectClassNamesFromSubtreeParams {
   node_id : DOMNodeId
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMCollectClassNamesFromSubtreeParams with Eq::{not_equal, equal}
@@ -1142,9 +1161,10 @@ pub fn DOMCollectClassNamesFromSubtreeParams::to_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMCollectClassNamesFromSubtreeResult {
   class_names : Array[String]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMCollectClassNamesFromSubtreeResult with Eq::{not_equal, equal}
@@ -1220,11 +1240,12 @@ pub fn dom_collect_class_names_from_subtree_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMCopyToParams {
   node_id : DOMNodeId
   target_node_id : DOMNodeId
   insert_before_node_id : DOMNodeId?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMCopyToParams with Eq::{not_equal, equal}
@@ -1253,9 +1274,10 @@ pub fn DOMCopyToParams::to_json(self : DOMCopyToParams) -> Json {
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMCopyToResult {
   node_id : DOMNodeId
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMCopyToResult with Eq::{not_equal, equal}
@@ -1318,13 +1340,14 @@ pub fn dom_copy_to_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMDescribeNodeParams {
   node_id : DOMNodeId?
   backend_node_id : DOMBackendNodeId?
   object_id : RuntimeRemoteObjectId?
   depth : Int32?
   pierce : Bool?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMDescribeNodeParams with Eq::{not_equal, equal}
@@ -1363,9 +1386,10 @@ pub fn DOMDescribeNodeParams::to_json(self : DOMDescribeNodeParams) -> Json {
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMDescribeNodeResult {
   node : DOMNode
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMDescribeNodeResult with Eq::{not_equal, equal}
@@ -1446,9 +1470,10 @@ pub fn dom_disable_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMDiscardSearchResultsParams {
   search_id : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMDiscardSearchResultsParams with Eq::{not_equal, equal}
@@ -1501,9 +1526,10 @@ pub fn dom_discard_search_results_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMEnableParams {
   include_whitespace : String?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMEnableParams with Eq::{not_equal, equal}
@@ -1554,11 +1580,12 @@ pub fn dom_enable_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMFocusParams {
   node_id : DOMNodeId?
   backend_node_id : DOMBackendNodeId?
   object_id : RuntimeRemoteObjectId?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMFocusParams with Eq::{not_equal, equal}
@@ -1615,10 +1642,11 @@ pub fn dom_focus_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMForceShowPopoverParams {
   node_id : DOMNodeId
   enable : Bool
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMForceShowPopoverParams with Eq::{not_equal, equal}
@@ -1648,9 +1676,10 @@ pub fn DOMForceShowPopoverParams::to_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMForceShowPopoverResult {
   node_ids : Array[DOMNodeId]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMForceShowPopoverResult with Eq::{not_equal, equal}
@@ -1718,10 +1747,11 @@ pub fn dom_force_show_popover_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMGetAnchorElementParams {
   node_id : DOMNodeId
   anchor_specifier : String?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMGetAnchorElementParams with Eq::{not_equal, equal}
@@ -1753,9 +1783,10 @@ pub fn DOMGetAnchorElementParams::to_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMGetAnchorElementResult {
   node_id : DOMNodeId
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMGetAnchorElementResult with Eq::{not_equal, equal}
@@ -1820,9 +1851,10 @@ pub fn dom_get_anchor_element_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMGetAttributesParams {
   node_id : DOMNodeId
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMGetAttributesParams with Eq::{not_equal, equal}
@@ -1847,9 +1879,10 @@ pub fn DOMGetAttributesParams::to_json(self : DOMGetAttributesParams) -> Json {
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMGetAttributesResult {
   attributes : Array[String]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMGetAttributesResult with Eq::{not_equal, equal}
@@ -1919,11 +1952,12 @@ pub fn dom_get_attributes_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMGetBoxModelParams {
   node_id : DOMNodeId?
   backend_node_id : DOMBackendNodeId?
   object_id : RuntimeRemoteObjectId?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMGetBoxModelParams with Eq::{not_equal, equal}
@@ -1956,9 +1990,10 @@ pub fn DOMGetBoxModelParams::to_json(self : DOMGetBoxModelParams) -> Json {
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMGetBoxModelResult {
   model : DOMBoxModel
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMGetBoxModelResult with Eq::{not_equal, equal}
@@ -2021,6 +2056,7 @@ pub fn dom_get_box_model_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMGetContainerForNodeParams {
   node_id : DOMNodeId
   container_name : String?
@@ -2028,7 +2064,7 @@ pub(all) struct DOMGetContainerForNodeParams {
   logical_axes : DOMLogicalAxes?
   queries_scroll_state : Bool?
   queries_anchored : Bool?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMGetContainerForNodeParams with Eq::{not_equal, equal}
@@ -2072,9 +2108,10 @@ pub fn DOMGetContainerForNodeParams::to_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMGetContainerForNodeResult {
   node_id : DOMNodeId?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMGetContainerForNodeResult with Eq::{not_equal, equal}
@@ -2140,11 +2177,12 @@ pub fn dom_get_container_for_node_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMGetContentQuadsParams {
   node_id : DOMNodeId?
   backend_node_id : DOMBackendNodeId?
   object_id : RuntimeRemoteObjectId?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMGetContentQuadsParams with Eq::{not_equal, equal}
@@ -2181,9 +2219,10 @@ pub fn DOMGetContentQuadsParams::to_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMGetContentQuadsResult {
   quads : Array[DOMQuad]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMGetContentQuadsResult with Eq::{not_equal, equal}
@@ -2251,9 +2290,10 @@ pub fn dom_get_content_quads_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMGetDetachedDomNodesResult {
   detached_nodes : Array[DOMDetachedElementInfo]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMGetDetachedDomNodesResult with Eq::{not_equal, equal}
@@ -2319,10 +2359,11 @@ pub fn dom_get_detached_dom_nodes_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMGetDocumentParams {
   depth : Int32?
   pierce : Bool?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMGetDocumentParams with Eq::{not_equal, equal}
@@ -2352,9 +2393,10 @@ pub fn DOMGetDocumentParams::to_json(self : DOMGetDocumentParams) -> Json {
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMGetDocumentResult {
   root : DOMNode
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMGetDocumentResult with Eq::{not_equal, equal}
@@ -2417,10 +2459,11 @@ pub fn dom_get_document_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMGetElementByRelationParams {
   node_id : DOMNodeId
   relation : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMGetElementByRelationParams with Eq::{not_equal, equal}
@@ -2450,9 +2493,10 @@ pub fn DOMGetElementByRelationParams::to_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMGetElementByRelationResult {
   node_id : DOMNodeId
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMGetElementByRelationResult with Eq::{not_equal, equal}
@@ -2517,9 +2561,10 @@ pub fn dom_get_element_by_relation_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMGetFileInfoParams {
   object_id : RuntimeRemoteObjectId
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMGetFileInfoParams with Eq::{not_equal, equal}
@@ -2544,9 +2589,10 @@ pub fn DOMGetFileInfoParams::to_json(self : DOMGetFileInfoParams) -> Json {
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMGetFileInfoResult {
   path : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMGetFileInfoResult with Eq::{not_equal, equal}
@@ -2605,10 +2651,11 @@ pub fn dom_get_file_info_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMGetFlattenedDocumentParams {
   depth : Int32?
   pierce : Bool?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMGetFlattenedDocumentParams with Eq::{not_equal, equal}
@@ -2642,9 +2689,10 @@ pub fn DOMGetFlattenedDocumentParams::to_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMGetFlattenedDocumentResult {
   nodes : Array[DOMNode]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMGetFlattenedDocumentResult with Eq::{not_equal, equal}
@@ -2712,9 +2760,10 @@ pub fn dom_get_flattened_document_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMGetFrameOwnerParams {
   frame_id : PageFrameId
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMGetFrameOwnerParams with Eq::{not_equal, equal}
@@ -2739,10 +2788,11 @@ pub fn DOMGetFrameOwnerParams::to_json(self : DOMGetFrameOwnerParams) -> Json {
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMGetFrameOwnerResult {
   backend_node_id : DOMBackendNodeId
   node_id : DOMNodeId?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMGetFrameOwnerResult with Eq::{not_equal, equal}
@@ -2809,12 +2859,13 @@ pub fn dom_get_frame_owner_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMGetNodeForLocationParams {
   x : Int32
   y : Int32
   include_user_agent_shadow_dom : Bool?
   ignore_pointer_events_none : Bool?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMGetNodeForLocationParams with Eq::{not_equal, equal}
@@ -2850,11 +2901,12 @@ pub fn DOMGetNodeForLocationParams::to_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMGetNodeForLocationResult {
   backend_node_id : DOMBackendNodeId
   frame_id : PageFrameId
   node_id : DOMNodeId?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMGetNodeForLocationResult with Eq::{not_equal, equal}
@@ -2926,11 +2978,12 @@ pub fn dom_get_node_for_location_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMGetNodesForSubtreeByStyleParams {
   node_id : DOMNodeId
   computed_styles : Array[DOMCSSComputedStyleProperty]
   pierce : Bool?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMGetNodesForSubtreeByStyleParams with Eq::{not_equal, equal}
@@ -2965,9 +3018,10 @@ pub fn DOMGetNodesForSubtreeByStyleParams::to_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMGetNodesForSubtreeByStyleResult {
   node_ids : Array[DOMNodeId]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMGetNodesForSubtreeByStyleResult with Eq::{not_equal, equal}
@@ -3039,9 +3093,10 @@ pub fn dom_get_nodes_for_subtree_by_style_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMGetNodeStackTracesParams {
   node_id : DOMNodeId
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMGetNodeStackTracesParams with Eq::{not_equal, equal}
@@ -3070,9 +3125,10 @@ pub fn DOMGetNodeStackTracesParams::to_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMGetNodeStackTracesResult {
   creation : RuntimeStackTrace?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMGetNodeStackTracesResult with Eq::{not_equal, equal}
@@ -3138,12 +3194,13 @@ pub fn dom_get_node_stack_traces_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMGetOuterHTMLParams {
   node_id : DOMNodeId?
   backend_node_id : DOMBackendNodeId?
   object_id : RuntimeRemoteObjectId?
   include_shadow_dom : Bool?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMGetOuterHTMLParams with Eq::{not_equal, equal}
@@ -3179,9 +3236,10 @@ pub fn DOMGetOuterHTMLParams::to_json(self : DOMGetOuterHTMLParams) -> Json {
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMGetOuterHTMLResult {
   outer_html : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMGetOuterHTMLResult with Eq::{not_equal, equal}
@@ -3244,9 +3302,10 @@ pub fn dom_get_outer_html_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMGetQueryingDescendantsForContainerParams {
   node_id : DOMNodeId
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMGetQueryingDescendantsForContainerParams with Eq::{
@@ -3278,9 +3337,10 @@ pub fn DOMGetQueryingDescendantsForContainerParams::to_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMGetQueryingDescendantsForContainerResult {
   node_ids : Array[DOMNodeId]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMGetQueryingDescendantsForContainerResult with Eq::{
@@ -3355,9 +3415,10 @@ pub fn dom_get_querying_descendants_for_container_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMGetRelayoutBoundaryParams {
   node_id : DOMNodeId
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMGetRelayoutBoundaryParams with Eq::{not_equal, equal}
@@ -3386,9 +3447,10 @@ pub fn DOMGetRelayoutBoundaryParams::to_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMGetRelayoutBoundaryResult {
   node_id : DOMNodeId
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMGetRelayoutBoundaryResult with Eq::{not_equal, equal}
@@ -3453,11 +3515,12 @@ pub fn dom_get_relayout_boundary_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMGetSearchResultsParams {
   search_id : String
   from_index : Int32
   to_index : Int32
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMGetSearchResultsParams with Eq::{not_equal, equal}
@@ -3488,9 +3551,10 @@ pub fn DOMGetSearchResultsParams::to_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMGetSearchResultsResult {
   node_ids : Array[DOMNodeId]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMGetSearchResultsResult with Eq::{not_equal, equal}
@@ -3558,9 +3622,10 @@ pub fn dom_get_search_results_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMGetTopLayerElementsResult {
   node_ids : Array[DOMNodeId]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMGetTopLayerElementsResult with Eq::{not_equal, equal}
@@ -3714,11 +3779,12 @@ pub fn dom_mark_undoable_state_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMMoveToParams {
   node_id : DOMNodeId
   target_node_id : DOMNodeId
   insert_before_node_id : DOMNodeId?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMMoveToParams with Eq::{not_equal, equal}
@@ -3747,9 +3813,10 @@ pub fn DOMMoveToParams::to_json(self : DOMMoveToParams) -> Json {
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMMoveToResult {
   node_id : DOMNodeId
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMMoveToResult with Eq::{not_equal, equal}
@@ -3812,10 +3879,11 @@ pub fn dom_move_to_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMPerformSearchParams {
   query : String
   include_user_agent_shadow_dom : Bool?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMPerformSearchParams with Eq::{not_equal, equal}
@@ -3843,10 +3911,11 @@ pub fn DOMPerformSearchParams::to_json(self : DOMPerformSearchParams) -> Json {
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMPerformSearchResult {
   search_id : String
   result_count : Int32
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMPerformSearchResult with Eq::{not_equal, equal}
@@ -3912,9 +3981,10 @@ pub fn dom_perform_search_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMPushNodeByPathToFrontendParams {
   path : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMPushNodeByPathToFrontendParams with Eq::{not_equal, equal}
@@ -3943,9 +4013,10 @@ pub fn DOMPushNodeByPathToFrontendParams::to_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMPushNodeByPathToFrontendResult {
   node_id : DOMNodeId
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMPushNodeByPathToFrontendResult with Eq::{not_equal, equal}
@@ -4014,9 +4085,10 @@ pub fn dom_push_node_by_path_to_frontend_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMPushNodesByBackendIdsToFrontendParams {
   backend_node_ids : Array[DOMBackendNodeId]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMPushNodesByBackendIdsToFrontendParams with Eq::{not_equal, equal}
@@ -4047,9 +4119,10 @@ pub fn DOMPushNodesByBackendIdsToFrontendParams::to_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMPushNodesByBackendIdsToFrontendResult {
   node_ids : Array[DOMNodeId]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMPushNodesByBackendIdsToFrontendResult with Eq::{not_equal, equal}
@@ -4121,10 +4194,11 @@ pub fn dom_push_nodes_by_backend_ids_to_frontend_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMQuerySelectorParams {
   node_id : DOMNodeId
   selector : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMQuerySelectorParams with Eq::{not_equal, equal}
@@ -4150,9 +4224,10 @@ pub fn DOMQuerySelectorParams::to_json(self : DOMQuerySelectorParams) -> Json {
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMQuerySelectorResult {
   node_id : DOMNodeId
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMQuerySelectorResult with Eq::{not_equal, equal}
@@ -4215,10 +4290,11 @@ pub fn dom_query_selector_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMQuerySelectorAllParams {
   node_id : DOMNodeId
   selector : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMQuerySelectorAllParams with Eq::{not_equal, equal}
@@ -4248,9 +4324,10 @@ pub fn DOMQuerySelectorAllParams::to_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMQuerySelectorAllResult {
   node_ids : Array[DOMNodeId]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMQuerySelectorAllResult with Eq::{not_equal, equal}
@@ -4336,10 +4413,11 @@ pub fn dom_redo_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMRemoveAttributeParams {
   node_id : DOMNodeId
   name : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMRemoveAttributeParams with Eq::{not_equal, equal}
@@ -4393,9 +4471,10 @@ pub fn dom_remove_attribute_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMRemoveNodeParams {
   node_id : DOMNodeId
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMRemoveNodeParams with Eq::{not_equal, equal}
@@ -4444,11 +4523,12 @@ pub fn dom_remove_node_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMRequestChildNodesParams {
   node_id : DOMNodeId
   depth : Int32?
   pierce : Bool?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMRequestChildNodesParams with Eq::{not_equal, equal}
@@ -4507,9 +4587,10 @@ pub fn dom_request_child_nodes_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMRequestNodeParams {
   object_id : RuntimeRemoteObjectId
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMRequestNodeParams with Eq::{not_equal, equal}
@@ -4534,9 +4615,10 @@ pub fn DOMRequestNodeParams::to_json(self : DOMRequestNodeParams) -> Json {
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMRequestNodeResult {
   node_id : DOMNodeId
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMRequestNodeResult with Eq::{not_equal, equal}
@@ -4599,12 +4681,13 @@ pub fn dom_request_node_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMResolveNodeParams {
   node_id : DOMNodeId?
   backend_node_id : DOMBackendNodeId?
   object_group : String?
   execution_context_id : RuntimeExecutionContextId?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMResolveNodeParams with Eq::{not_equal, equal}
@@ -4640,9 +4723,10 @@ pub fn DOMResolveNodeParams::to_json(self : DOMResolveNodeParams) -> Json {
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMResolveNodeResult {
   object : RuntimeRemoteObject
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMResolveNodeResult with Eq::{not_equal, equal}
@@ -4705,12 +4789,13 @@ pub fn dom_resolve_node_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMScrollIntoViewIfNeededParams {
   node_id : DOMNodeId?
   backend_node_id : DOMBackendNodeId?
   object_id : RuntimeRemoteObjectId?
   rect : DOMRect?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMScrollIntoViewIfNeededParams with Eq::{not_equal, equal}
@@ -4778,11 +4863,12 @@ pub fn dom_scroll_into_view_if_needed_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMSetAttributesAsTextParams {
   node_id : DOMNodeId
   text : String
   name : String?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMSetAttributesAsTextParams with Eq::{not_equal, equal}
@@ -4839,11 +4925,12 @@ pub fn dom_set_attributes_as_text_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMSetAttributeValueParams {
   node_id : DOMNodeId
   name : String
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMSetAttributeValueParams with Eq::{not_equal, equal}
@@ -4898,12 +4985,13 @@ pub fn dom_set_attribute_value_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMSetFileInputFilesParams {
   files : Array[String]
   node_id : DOMNodeId?
   backend_node_id : DOMBackendNodeId?
   object_id : RuntimeRemoteObjectId?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMSetFileInputFilesParams with Eq::{not_equal, equal}
@@ -4965,9 +5053,10 @@ pub fn dom_set_file_input_files_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMSetInspectedNodeParams {
   node_id : DOMNodeId
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMSetInspectedNodeParams with Eq::{not_equal, equal}
@@ -5020,10 +5109,11 @@ pub fn dom_set_inspected_node_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMSetNodeNameParams {
   node_id : DOMNodeId
   name : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMSetNodeNameParams with Eq::{not_equal, equal}
@@ -5049,9 +5139,10 @@ pub fn DOMSetNodeNameParams::to_json(self : DOMSetNodeNameParams) -> Json {
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMSetNodeNameResult {
   node_id : DOMNodeId
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMSetNodeNameResult with Eq::{not_equal, equal}
@@ -5114,9 +5205,10 @@ pub fn dom_set_node_name_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMSetNodeStackTracesEnabledParams {
   enable : Bool
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMSetNodeStackTracesEnabledParams with Eq::{not_equal, equal}
@@ -5173,10 +5265,11 @@ pub fn dom_set_node_stack_traces_enabled_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMSetNodeValueParams {
   node_id : DOMNodeId
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMSetNodeValueParams with Eq::{not_equal, equal}
@@ -5226,10 +5319,11 @@ pub fn dom_set_node_value_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMSetOuterHTMLParams {
   node_id : DOMNodeId
   outer_html : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMSetOuterHTMLParams with Eq::{not_equal, equal}
@@ -5297,10 +5391,11 @@ pub fn dom_undo_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMAdoptedStyleSheetsModifiedEventParams {
   node_id : DOMNodeId
   adopted_style_sheets : Array[DOMStyleSheetId]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMAdoptedStyleSheetsModifiedEventParams with Eq::{not_equal, equal}
@@ -5379,10 +5474,11 @@ pub fn dom_adopted_style_sheets_modified_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMAdRelatedStateUpdatedEventParams {
   node_id : DOMNodeId
   is_ad_related : Bool
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMAdRelatedStateUpdatedEventParams with Eq::{not_equal, equal}
@@ -5456,10 +5552,11 @@ pub fn dom_ad_related_state_updated_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMAffectedByStartingStylesFlagUpdatedEventParams {
   node_id : DOMNodeId
   affected_by_starting_styles : Bool
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMAffectedByStartingStylesFlagUpdatedEventParams with Eq::{
@@ -5541,11 +5638,12 @@ pub fn dom_affected_by_starting_styles_flag_updated_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMAttributeModifiedEventParams {
   node_id : DOMNodeId
   name : String
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMAttributeModifiedEventParams with Eq::{not_equal, equal}
@@ -5619,10 +5717,11 @@ pub fn dom_attribute_modified_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMAttributeRemovedEventParams {
   node_id : DOMNodeId
   name : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMAttributeRemovedEventParams with Eq::{not_equal, equal}
@@ -5694,10 +5793,11 @@ pub fn dom_attribute_removed_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMCharacterDataModifiedEventParams {
   node_id : DOMNodeId
   character_data : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMCharacterDataModifiedEventParams with Eq::{not_equal, equal}
@@ -5771,10 +5871,11 @@ pub fn dom_character_data_modified_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMChildNodeCountUpdatedEventParams {
   node_id : DOMNodeId
   child_node_count : Int32
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMChildNodeCountUpdatedEventParams with Eq::{not_equal, equal}
@@ -5848,11 +5949,12 @@ pub fn dom_child_node_count_updated_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMChildNodeInsertedEventParams {
   parent_node_id : DOMNodeId
   previous_node_id : DOMNodeId
   node : DOMNode
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMChildNodeInsertedEventParams with Eq::{not_equal, equal}
@@ -5928,10 +6030,11 @@ pub fn dom_child_node_inserted_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMChildNodeRemovedEventParams {
   parent_node_id : DOMNodeId
   node_id : DOMNodeId
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMChildNodeRemovedEventParams with Eq::{not_equal, equal}
@@ -6005,10 +6108,11 @@ pub fn dom_child_node_removed_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMDistributedNodesUpdatedEventParams {
   insertion_point_id : DOMNodeId
   distributed_nodes : Array[DOMBackendNode]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMDistributedNodesUpdatedEventParams with Eq::{not_equal, equal}
@@ -6103,9 +6207,10 @@ pub fn dom_document_updated_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMInlineStyleInvalidatedEventParams {
   node_ids : Array[DOMNodeId]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMInlineStyleInvalidatedEventParams with Eq::{not_equal, equal}
@@ -6178,10 +6283,11 @@ pub fn dom_inline_style_invalidated_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMPseudoElementAddedEventParams {
   parent_id : DOMNodeId
   pseudo_element : DOMNode
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMPseudoElementAddedEventParams with Eq::{not_equal, equal}
@@ -6255,10 +6361,11 @@ pub fn dom_pseudo_element_added_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMPseudoElementRemovedEventParams {
   parent_id : DOMNodeId
   pseudo_element_id : DOMNodeId
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMPseudoElementRemovedEventParams with Eq::{not_equal, equal}
@@ -6332,10 +6439,11 @@ pub fn dom_pseudo_element_removed_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMScrollableFlagUpdatedEventParams {
   node_id : DOMNodeId
   is_scrollable : Bool
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMScrollableFlagUpdatedEventParams with Eq::{not_equal, equal}
@@ -6409,10 +6517,11 @@ pub fn dom_scrollable_flag_updated_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMSetChildNodesEventParams {
   parent_id : DOMNodeId
   nodes : Array[DOMNode]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMSetChildNodesEventParams with Eq::{not_equal, equal}
@@ -6489,10 +6598,11 @@ pub fn dom_set_child_nodes_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMShadowRootPoppedEventParams {
   host_id : DOMNodeId
   root_id : DOMNodeId
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMShadowRootPoppedEventParams with Eq::{not_equal, equal}
@@ -6566,10 +6676,11 @@ pub fn dom_shadow_root_popped_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMShadowRootPushedEventParams {
   host_id : DOMNodeId
   root : DOMNode
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMShadowRootPushedEventParams with Eq::{not_equal, equal}

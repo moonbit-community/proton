@@ -97,6 +97,7 @@ struct CdpCloseHandler {
 /// // guard client.last_command_failure() is Some(failure) else { return }
 /// // println(failure.message)
 /// ```
+#derive(Eq, ToJson, Debug)
 pub(all) struct CdpCommandFailure {
   id : Int32
   method_name : String
@@ -104,7 +105,7 @@ pub(all) struct CdpCommandFailure {
   code : Int32
   message : String
   data : Json?
-} derive(Eq, ToJson, Debug)
+}
 
 ///|
 pub extend CdpCommandFailure with Eq::{not_equal, equal}
@@ -125,6 +126,7 @@ pub extend CdpCommandFailure with ToJson::{to_json}
 /// commands. `target_id`, `target_type`, `title`, and `url` come from the
 /// event's `targetInfo` payload. `attached` and `waiting_for_debugger` reflect
 /// Chrome's event fields at the time the attach event was observed.
+#derive(Eq, ToJson, Debug)
 pub(all) struct CdpAttachedTarget {
   session_id : String
   target_id : String
@@ -134,7 +136,7 @@ pub(all) struct CdpAttachedTarget {
   attached : Bool
   browser_context_id : String?
   waiting_for_debugger : Bool
-} derive(Eq, ToJson, Debug)
+}
 
 ///|
 pub extend CdpAttachedTarget with Eq::{not_equal, equal}
@@ -151,10 +153,11 @@ pub extend CdpAttachedTarget with ToJson::{to_json}
 /// `ConnectionTimeout` means the connection attempt did not finish before the
 /// configured timeout. `WebSocketHandshakeFailed` means the socket attempt
 /// completed but the endpoint rejected or failed the WebSocket handshake.
+#derive(Eq, ToJson, Debug)
 pub(all) suberror CdpConnectionError {
   ConnectionTimeout(String, Int32)
   WebSocketHandshakeFailed(String, String)
-} derive(Eq, ToJson, Debug)
+}
 
 ///|
 pub extend CdpConnectionError with Eq::{not_equal, equal}
@@ -167,6 +170,7 @@ pub extend CdpConnectionError with ToJson::{to_json}
 
 ///|
 /// Structured diagnostic data for `CdpConnectionError`.
+#derive(Eq, ToJson, Debug)
 pub(all) struct CdpConnectionErrorDiagnostic {
   kind : String
   web_socket_url : String
@@ -174,7 +178,7 @@ pub(all) struct CdpConnectionErrorDiagnostic {
   reason : String?
   path : String
   message : String
-} derive(Eq, ToJson, Debug)
+}
 
 ///|
 pub extend CdpConnectionErrorDiagnostic with Eq::{not_equal, equal}

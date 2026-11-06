@@ -13,12 +13,13 @@ pub fn command() -> @argparse.Command
 pub async fn run(String, @argparse.Matches) -> Unit
 
 // Errors
+#derive(Eq, @debug.Debug)
 pub(all) suberror PackageConfigError {
   NotFound(path~ : String)
   Invalid(path~ : String, error~ : @proton_config.AppConfigError)
   PackageMissing
   MissingField(field~ : String)
-} derive(Eq, @debug.Debug)
+}
 pub fn PackageConfigError::equal(Self, Self) -> Bool
 pub fn PackageConfigError::message(Self) -> String
 pub fn PackageConfigError::not_equal(Self, Self) -> Bool
@@ -26,13 +27,14 @@ pub fn PackageConfigError::output(Self, &Logger) -> Unit
 pub fn PackageConfigError::to_repr(Self) -> @debug.Repr
 pub fn PackageConfigError::to_string(Self) -> String
 
+#derive(Eq)
 pub(all) suberror UpdaterMetadataError {
   NoDistributableArtifact
   UnreadableArtifact(path~ : String, detail~ : String)
   InvalidBaseUrl(url~ : String)
   MissingPublishedAt
   UndecodableFragment(detail~ : String)
-} derive(Eq)
+}
 pub fn UpdaterMetadataError::equal(Self, Self) -> Bool
 pub fn UpdaterMetadataError::message(Self) -> String
 pub fn UpdaterMetadataError::not_equal(Self, Self) -> Bool
@@ -40,12 +42,14 @@ pub fn UpdaterMetadataError::output(Self, &Logger) -> Unit
 pub fn UpdaterMetadataError::to_string(Self) -> String
 
 // Types and methods
-type PackagePlan derive(Eq, @debug.Debug)
+#derive(Eq, @debug.Debug)
+type PackagePlan
 pub fn PackagePlan::equal(Self, Self) -> Bool
 pub fn PackagePlan::not_equal(Self, Self) -> Bool
 pub fn PackagePlan::to_repr(Self) -> @debug.Repr
 
-type RawPackageOptions derive(Eq, @debug.Debug)
+#derive(Eq, @debug.Debug)
+type RawPackageOptions
 pub fn RawPackageOptions::equal(Self, Self) -> Bool
 pub fn RawPackageOptions::not_equal(Self, Self) -> Bool
 pub fn RawPackageOptions::to_repr(Self) -> @debug.Repr

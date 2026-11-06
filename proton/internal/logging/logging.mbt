@@ -21,10 +21,11 @@ extern "C" fn write_stderr(data : Bytes) -> Int32 = "proton_logging_write_stderr
 extern "C" fn process_id() -> Int32 = "proton_logging_process_id"
 
 ///|
+#derive(Debug)
 pub(all) suberror LoggingError {
   OpenFile(path~ : String)
   WriteFailed
-} derive(Debug)
+}
 
 ///|
 pub extend LoggingError with Debug::{to_repr}

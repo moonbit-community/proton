@@ -1,9 +1,10 @@
 ///|
 /// Captures the work needed to register one new normalized shortcut.
+#derive(Debug, Eq)
 struct RegisterPlan {
   id : Int32
   parsed : ParsedGlobalHotkey
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend RegisterPlan with Eq::{not_equal, equal}
@@ -13,10 +14,11 @@ pub extend RegisterPlan with Debug::{to_repr}
 
 ///|
 /// Captures the work needed to unregister one previously normalized shortcut.
+#derive(Debug, Eq)
 struct UnregisterPlan {
   id : Int32
   normalized : String
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend UnregisterPlan with Eq::{not_equal, equal}

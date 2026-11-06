@@ -7,10 +7,11 @@
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct SchemaDomain {
   name : String
   version : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend SchemaDomain with Eq::{not_equal, equal}
@@ -52,9 +53,10 @@ pub fn SchemaDomain::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct SchemaGetDomainsResult {
   domains : Array[SchemaDomain]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend SchemaGetDomainsResult with Eq::{not_equal, equal}

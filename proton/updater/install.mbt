@@ -1,8 +1,9 @@
 ///|
+#derive(Debug, Eq)
 pub enum InstallOutcome {
   Installed
   AlreadyInstalled
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend InstallOutcome with Eq::{not_equal, equal}

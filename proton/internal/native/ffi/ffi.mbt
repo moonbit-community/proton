@@ -1,5 +1,6 @@
 ///|
 /// Native event ABI; checked against proton_event.h by the contract regression.
+#derive(Debug)
 pub(all) enum EventKind {
   Unknown = 0
   WindowCreated = 1
@@ -39,12 +40,13 @@ pub(all) enum EventKind {
   BrowserResourceRequested = 42
   NativeThemeChanged = 43
   TaskbarButtonClicked = 44
-} derive(Debug)
+}
 
 ///|
 pub extend EventKind with Debug::{to_repr}
 
 ///|
+#derive(Debug)
 pub(all) enum EventInt64Field {
   Window
   View
@@ -52,12 +54,13 @@ pub(all) enum EventInt64Field {
   Revision
   ReceivedBytes
   TotalBytes
-} derive(Debug)
+}
 
 ///|
 pub extend EventInt64Field with Debug::{to_repr}
 
 ///|
+#derive(Debug)
 pub(all) enum EventIntField {
   Status
   ErrorCode
@@ -79,12 +82,13 @@ pub(all) enum EventIntField {
   DarkColors
   HighContrastColors
   ReopenWhenEmpty
-} derive(Debug)
+}
 
 ///|
 pub extend EventIntField with Debug::{to_repr}
 
 ///|
+#derive(Debug)
 pub(all) enum EventTextField {
   Url
   Title
@@ -97,7 +101,7 @@ pub(all) enum EventTextField {
   Activation
   NotificationPayload
   Method
-} derive(Debug)
+}
 
 ///|
 pub extend EventTextField with Debug::{to_repr}

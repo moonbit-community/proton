@@ -1,9 +1,10 @@
 ///|
 /// Invalid template selection or a failed moon-new invocation.
+#derive(Debug)
 pub(all) suberror NewProjectError {
   InvalidTemplate(String)
   GeneratorFailed(Int32)
-} derive(Debug)
+}
 
 ///|
 pub extend NewProjectError with @debug.Debug::{to_repr}

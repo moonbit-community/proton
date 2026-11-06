@@ -1,8 +1,9 @@
 ///|
 /// Invalid microphone capture configuration supplied by JavaScript.
+#derive(Debug, Eq)
 suberror MicrophoneError {
   UnknownSampleFormat(format~ : String)
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend MicrophoneError with Eq::{not_equal, equal}

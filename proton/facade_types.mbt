@@ -1,9 +1,10 @@
 ///|
 /// Controls what Proton does after the last application window closes.
+#derive(Eq, Debug)
 pub(all) enum LastWindowClosedPolicy {
   Quit
   KeepRunning
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend LastWindowClosedPolicy with Eq::{not_equal, equal}
@@ -16,10 +17,11 @@ pub extend LastWindowClosedPolicy with Debug::{to_repr}
 ///
 /// `Prevent` is the typed counterpart of Electron's `event.preventDefault()`
 /// on `before-quit` and `will-quit`.
+#derive(Eq, Debug)
 pub(all) enum ApplicationQuitDecision {
   Allow
   Prevent
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend ApplicationQuitDecision with Eq::{not_equal, equal}
@@ -29,11 +31,12 @@ pub extend ApplicationQuitDecision with Debug::{to_repr}
 
 ///|
 /// Selects browser storage that can be cleared from a live Proton session.
+#derive(Eq, Debug)
 pub(all) enum StorageDataKind {
   Cookies
   HttpCache
   AllSupported
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend StorageDataKind with Eq::{not_equal, equal}
@@ -49,9 +52,10 @@ pub struct NativeImage {
 
 ///|
 /// A failure while creating, reading, or converting a native image.
+#derive(Debug, Eq)
 pub(all) suberror NativeImageError {
   OperationFailed(action~ : String, status~ : Int32, detail~ : String)
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend NativeImageError with Eq::{not_equal, equal}
@@ -294,10 +298,11 @@ priv struct ResolvedUpdateChannel {
 /// line. Setting either field switches to Electron's override behavior: the
 /// executable still defaults to the current executable, while omitted
 /// arguments become an empty array.
+#derive(Debug, Eq)
 pub(all) struct RelaunchOptions {
   executable : String?
   arguments : Array[String]?
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend RelaunchOptions with Eq::{not_equal, equal}
@@ -379,6 +384,7 @@ priv struct PendingResourceRequest {
 }
 
 ///|
+#derive(Eq)
 priv enum CloseCoordinatorState {
   CloseRunning = 0
   CloseBeforeQuit = 1
@@ -387,7 +393,7 @@ priv enum CloseCoordinatorState {
   CloseClosingWindows = 4
   CloseWillQuit = 5
   CloseCommitted = 7
-} derive(Eq)
+}
 
 ///|
 priv struct PendingCloseDecision {
@@ -405,11 +411,12 @@ priv struct ApplicationExit {
 }
 
 ///|
+#derive(Eq)
 priv enum ExitPurpose {
   Quit(Int32)
   ForceExit(Int32)
   InstallUpdate
-} derive(Eq)
+}
 
 ///|
 priv struct CloseCoordinator {
@@ -708,6 +715,7 @@ pub struct WindowManager {
 
 ///|
 /// An observed change to a running native window.
+#derive(Debug, Eq)
 pub(all) enum WindowEvent {
   StateChanged(WindowState)
   Closed
@@ -724,7 +732,7 @@ pub(all) enum WindowEvent {
   Unmaximize
   EnterFullScreen
   LeaveFullScreen
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend WindowEvent with Eq::{not_equal, equal}
@@ -782,11 +790,12 @@ fn window_state_events(
 
 ///|
 /// Margins used when printing browser contents to PDF.
+#derive(Debug, Eq)
 pub(all) enum PdfPrintMargins {
   Default
   NoMargins
   Custom(top~ : Double, right~ : Double, bottom~ : Double, left~ : Double)
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend PdfPrintMargins with Eq::{not_equal, equal}
@@ -798,6 +807,7 @@ pub extend PdfPrintMargins with Debug::{to_repr}
 /// Electron-style PDF print settings. Paper dimensions and custom margins use
 /// inches, and scale must be between `0.1` and `2.0`. An empty page range
 /// prints the complete document.
+#derive(Debug, Eq)
 pub(all) struct PdfPrintOptions {
   landscape : Bool
   print_background : Bool
@@ -812,7 +822,7 @@ pub(all) struct PdfPrintOptions {
   footer_template : String
   generate_tagged_pdf : Bool
   generate_document_outline : Bool
-} derive(Debug, Eq)
+}
 
 ///|
 pub fn PdfPrintOptions::PdfPrintOptions(
@@ -855,10 +865,11 @@ pub extend PdfPrintOptions with Debug::{to_repr}
 
 ///|
 /// The result of an asynchronous native close request.
+#derive(Debug, Eq)
 pub(all) enum WindowCloseDecision {
   Allow
   Deny
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend WindowCloseDecision with Eq::{not_equal, equal}
@@ -867,12 +878,13 @@ pub extend WindowCloseDecision with Eq::{not_equal, equal}
 pub extend WindowCloseDecision with Debug::{to_repr}
 
 ///|
+#derive(Debug, Eq)
 pub(all) struct NavigationRequest {
   url : String
   http_method : String
   user_gesture : Bool
   redirect : Bool
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend NavigationRequest with Eq::{not_equal, equal}
@@ -881,10 +893,11 @@ pub extend NavigationRequest with Eq::{not_equal, equal}
 pub extend NavigationRequest with Debug::{to_repr}
 
 ///|
+#derive(Debug, Eq)
 pub(all) enum NavigationDecision {
   Allow
   Deny
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend NavigationDecision with Eq::{not_equal, equal}
@@ -893,10 +906,11 @@ pub extend NavigationDecision with Eq::{not_equal, equal}
 pub extend NavigationDecision with Debug::{to_repr}
 
 ///|
+#derive(Debug, Eq)
 pub(all) struct NewWindowRequest {
   url : String
   user_gesture : Bool
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend NewWindowRequest with Eq::{not_equal, equal}
@@ -905,12 +919,13 @@ pub extend NewWindowRequest with Eq::{not_equal, equal}
 pub extend NewWindowRequest with Debug::{to_repr}
 
 ///|
+#derive(Debug, Eq)
 pub(all) enum NewWindowDecision {
   Deny
   OpenInCurrent
   /// Navigates an existing window. Create it in the handler first if needed.
   OpenInWindow(String)
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend NewWindowDecision with Eq::{not_equal, equal}
@@ -919,11 +934,12 @@ pub extend NewWindowDecision with Eq::{not_equal, equal}
 pub extend NewWindowDecision with Debug::{to_repr}
 
 ///|
+#derive(Debug, Eq)
 pub(all) struct DownloadRequest {
   id : Int32
   url : String
   suggested_name : String
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend DownloadRequest with Eq::{not_equal, equal}
@@ -932,11 +948,12 @@ pub extend DownloadRequest with Eq::{not_equal, equal}
 pub extend DownloadRequest with Debug::{to_repr}
 
 ///|
+#derive(Debug, Eq)
 pub(all) enum DownloadDecision {
   Deny
   ShowSaveDialog
   SaveTo(String)
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend DownloadDecision with Eq::{not_equal, equal}
@@ -945,10 +962,11 @@ pub extend DownloadDecision with Eq::{not_equal, equal}
 pub extend DownloadDecision with Debug::{to_repr}
 
 ///|
+#derive(Debug, Eq)
 pub(all) struct CertificateError {
   url : String
   error_code : Int32
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend CertificateError with Eq::{not_equal, equal}
@@ -957,10 +975,11 @@ pub extend CertificateError with Eq::{not_equal, equal}
 pub extend CertificateError with Debug::{to_repr}
 
 ///|
+#derive(Debug, Eq)
 pub(all) struct MediaPermissionRequest {
   origin : String
   permissions : Int32
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend MediaPermissionRequest with Eq::{not_equal, equal}
@@ -969,10 +988,11 @@ pub extend MediaPermissionRequest with Eq::{not_equal, equal}
 pub extend MediaPermissionRequest with Debug::{to_repr}
 
 ///|
+#derive(Debug, Eq)
 pub(all) enum BrowserPermissionDecision {
   Allow
   Deny
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend BrowserPermissionDecision with Eq::{not_equal, equal}
@@ -981,13 +1001,14 @@ pub extend BrowserPermissionDecision with Eq::{not_equal, equal}
 pub extend BrowserPermissionDecision with Debug::{to_repr}
 
 ///|
+#derive(Debug, Eq)
 pub(all) struct DownloadEvent {
   id : Int32
   state : String
   received_bytes : Int64
   total_bytes : Int64
   percent : Int32
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend DownloadEvent with Eq::{not_equal, equal}
@@ -997,6 +1018,7 @@ pub extend DownloadEvent with Debug::{to_repr}
 
 ///|
 /// Failures from runtime window lookup, creation, or control.
+#derive(Debug)
 pub(all) suberror WindowSessionError {
   AlreadyOpen(id~ : String)
   ApplicationQuitting
@@ -1007,7 +1029,7 @@ pub(all) suberror WindowSessionError {
   Cancelled
   OperationFailed(action~ : String, status~ : Int32, detail~ : String)
   StartupFailed(id~ : String, error~ : AppRunError)
-} derive(Debug)
+}
 
 ///|
 pub extend WindowSessionError with Debug::{to_repr}
@@ -1025,6 +1047,7 @@ priv enum AppLifecycleState {
 
 ///|
 /// An observed page event from a window or child view.
+#derive(Debug, Eq)
 pub(all) enum WebContentsEvent {
   Closed
   /// The running page lost its command bridge. Reload or close this browser to recover.
@@ -1051,7 +1074,7 @@ pub(all) enum WebContentsEvent {
     error_code~ : Int32,
     detail~ : String
   )
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend WebContentsEvent with Eq::{not_equal, equal}
@@ -1067,6 +1090,7 @@ pub extend WebContentsEvent with Debug::{to_repr}
 /// statuses instead of passing the raw number. Electron additionally
 /// distinguishes `clean-exit` and `memory-eviction`, which CEF does not report
 /// as renderer termination.
+#derive(Debug, Eq)
 pub(all) enum RenderProcessGoneReason {
   /// The renderer exited with a non-zero status (`abnormal-exit`).
   AbnormalExit
@@ -1084,7 +1108,7 @@ pub(all) enum RenderProcessGoneReason {
   IntegrityFailure
   /// The platform reported a termination status Proton does not name yet.
   Unknown
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend RenderProcessGoneReason with Eq::{not_equal, equal}
@@ -1094,12 +1118,13 @@ pub extend RenderProcessGoneReason with Debug::{to_repr}
 
 ///|
 /// One renderer termination, following Electron's `RenderProcessGoneDetails`.
+#derive(Debug, Eq)
 pub(all) struct RenderProcessGoneDetails {
   /// Why the renderer disappeared.
   reason : RenderProcessGoneReason
   /// The platform exit code of the terminated renderer.
   exit_code : Int32
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend RenderProcessGoneDetails with Eq::{not_equal, equal}
@@ -1114,6 +1139,7 @@ pub extend RenderProcessGoneDetails with Debug::{to_repr}
 /// Proton runs one session per application, so the event fires once during
 /// startup. Session operations stay on `WebContentsHandle::session()`, which is
 /// backed by the same request context.
+#derive(Debug, Eq)
 pub(all) struct ApplicationSession {
   /// The partition configured with `App::session_partition`, or `None` for the
   /// default session.
@@ -1122,7 +1148,7 @@ pub(all) struct ApplicationSession {
   /// profile because Proton does not own the application's single-instance
   /// route.
   data_path : String?
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend ApplicationSession with Eq::{not_equal, equal}
@@ -1133,6 +1159,7 @@ pub extend ApplicationSession with Debug::{to_repr}
 ///|
 /// How the browser reached one navigation-history entry, following Chromium's
 /// page-transition types, which Electron reports as `transitionType`.
+#derive(Debug, Eq)
 pub(all) enum NavigationTransition {
   Link
   Typed
@@ -1148,7 +1175,7 @@ pub(all) enum NavigationTransition {
   KeywordGenerated
   /// A transition type this Proton release does not name.
   Other(Int32)
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend NavigationTransition with Eq::{not_equal, equal}
@@ -1159,6 +1186,7 @@ pub extend NavigationTransition with Debug::{to_repr}
 ///|
 /// Extra context Chromium recorded for a navigation entry, corresponding to
 /// Electron's transition qualifiers.
+#derive(Debug, Eq)
 pub(all) enum NavigationTransitionQualifier {
   /// The page redirected the navigation itself.
   ClientRedirect
@@ -1168,7 +1196,7 @@ pub(all) enum NavigationTransitionQualifier {
   ForwardBack
   /// The entry came from a user-typed address.
   FromAddressBar
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend NavigationTransitionQualifier with Eq::{not_equal, equal}
@@ -1179,6 +1207,7 @@ pub extend NavigationTransitionQualifier with Debug::{to_repr}
 ///|
 /// One entry of a browser's session history, corresponding to Electron's
 /// `NavigationEntry`.
+#derive(Debug, Eq)
 pub(all) struct NavigationEntry {
   url : String
   /// Chromium's display-friendly version of `url`.
@@ -1190,7 +1219,7 @@ pub(all) struct NavigationEntry {
   transition_qualifiers : Array[NavigationTransitionQualifier]
   has_post_data : Bool
   http_status_code : Int32
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend NavigationEntry with Eq::{not_equal, equal}
@@ -1204,11 +1233,12 @@ pub extend NavigationEntry with Debug::{to_repr}
 ///
 /// Chromium keeps one history per tab, so the snapshot belongs to the browser
 /// that produced it; `ApplicationContext` navigation elsewhere replaces it.
+#derive(Debug, Eq)
 pub(all) struct NavigationHistory {
   entries : Array[NavigationEntry]
   /// Index of the active entry, or `-1` while the browser has none.
   active_index : Int32
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend NavigationHistory with Eq::{not_equal, equal}
@@ -1217,13 +1247,14 @@ pub extend NavigationHistory with Eq::{not_equal, equal}
 pub extend NavigationHistory with Debug::{to_repr}
 
 ///|
+#derive(Eq)
 priv enum BridgeRequestLifecycleState {
   Running = 0
   Responding = 1
   Completed = 2
   Cancelled = 3
   Stale = 4
-} derive(Eq)
+}
 
 ///|
 priv struct AppLifecycle {
@@ -1232,6 +1263,7 @@ priv struct AppLifecycle {
 
 ///|
 /// One cookie returned by the browser session.
+#derive(Debug, Eq)
 pub(all) struct Cookie {
   name : String
   value : String
@@ -1241,7 +1273,7 @@ pub(all) struct Cookie {
   http_only : Bool
   same_site : CookieSameSite
   expiration_date : Double?
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend Cookie with Eq::{not_equal, equal}
@@ -1251,6 +1283,7 @@ pub extend Cookie with Debug::{to_repr}
 
 ///|
 /// Failures while resolving and validating an application's configuration.
+#derive(Debug)
 pub(all) suberror AppConfigurationError {
   InvalidSetting(name~ : String, message~ : String)
   ExtensionDependencyCycle(extension_id~ : String)
@@ -1267,10 +1300,11 @@ pub(all) suberror AppConfigurationError {
   InvalidJavaScriptApi(js_namespace~ : String, api_name~ : String)
   InvalidEntryUrl(url~ : String, reason~ : String)
   InvalidRendererCapability(detail~ : String)
-} derive(Debug)
+}
 
 ///|
 /// Failures from application-level desktop and process controls.
+#derive(Debug, Eq)
 pub(all) suberror AppControlError {
   InvalidProtocolScheme(scheme~ : String)
   UndeclaredProtocolScheme(scheme~ : String)
@@ -1279,7 +1313,7 @@ pub(all) suberror AppControlError {
   /// `app` object omits the same methods outside macOS.
   UnsupportedPlatform(action~ : String)
   NativeControlFailure(action~ : String, status~ : Int32, detail~ : String)
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend AppControlError with Eq::{not_equal, equal}
@@ -1292,53 +1326,58 @@ pub extend AppConfigurationError with Debug::{to_repr}
 
 ///|
 /// Failures while loading the application's initial document.
+#derive(Debug)
 pub(all) suberror AppEntryError {
   ReadFailed(path~ : String, detail~ : String)
   PlatformLoad(action~ : String, status~ : Int32, detail~ : String)
   ClosedDuringStartup
-} derive(Debug)
+}
 
 ///|
 pub extend AppEntryError with Debug::{to_repr}
 
 ///|
 /// Failures while starting or stopping command extensions.
+#derive(Debug)
 pub(all) suberror CommandExtensionLifecycleError {
   ApplicationRegistrationFailed(detail~ : String)
   RegistrationFailed(extension_id~ : String, detail~ : String)
   EventSourceStartFailed(extension_id~ : String, detail~ : String)
   DestroyFailed(extension_id~ : String, detail~ : String)
-} derive(Debug)
+}
 
 ///|
 pub extend CommandExtensionLifecycleError with Debug::{to_repr}
 
 ///|
 /// Failures produced by application or window lifecycle hooks.
+#derive(Debug)
 pub(all) suberror LifecycleHookError {
   ApplicationStart(index~ : Int32, detail~ : String)
   ApplicationShutdown(detail~ : String)
   WindowReady(index~ : Int32, detail~ : String)
   WindowClose(window~ : String, detail~ : String)
-} derive(Debug)
+}
 
 ///|
 pub extend LifecycleHookError with Debug::{to_repr}
 
 ///|
 /// A failure from one stage of best-effort application teardown.
+#derive(Debug)
 pub(all) suberror AppCleanupError {
   CommandExtension(CommandExtensionLifecycleError)
   LifecycleHook(LifecycleHookError)
   WindowDestroy(status~ : Int32, detail~ : String)
   RuntimeDestroy(status~ : Int32, detail~ : String)
-} derive(Debug)
+}
 
 ///|
 pub extend AppCleanupError with Debug::{to_repr}
 
 ///|
 /// Failures produced while configuring, starting, or running an application.
+#derive(Debug)
 pub(all) suberror AppRunError {
   EventLoopError(String)
   ConfigurationError(AppConfigurationError)
@@ -1352,7 +1391,7 @@ pub(all) suberror AppRunError {
   BridgeRuntimeError(BridgeDiagnostic)
   CleanupFailed(primary~ : String?, failures~ : Array[AppCleanupError])
   UnexpectedTaskFailure(detail~ : String)
-} derive(Debug)
+}
 
 ///|
 pub extend AppRunError with Debug::{to_repr}

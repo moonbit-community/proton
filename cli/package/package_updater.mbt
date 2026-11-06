@@ -1,12 +1,13 @@
 ///|
 /// An update manifest fragment could not be produced.
+#derive(Eq)
 pub(all) suberror UpdaterMetadataError {
   NoDistributableArtifact
   UnreadableArtifact(path~ : String, detail~ : String)
   InvalidBaseUrl(url~ : String)
   MissingPublishedAt
   UndecodableFragment(detail~ : String)
-} derive(Eq)
+}
 
 ///|
 pub extend UpdaterMetadataError with Eq::{not_equal, equal}

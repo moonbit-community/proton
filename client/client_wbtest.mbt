@@ -1,15 +1,17 @@
 ///|
+#derive(ToJson)
 struct EchoRequest {
   value : String
-} derive(ToJson)
+}
 
 ///|
 pub extend EchoRequest with ToJson::{to_json}
 
 ///|
+#derive(FromJson, Eq, Debug)
 struct EchoResponse {
   value : String
-} derive(FromJson, Eq, Debug)
+}
 
 ///|
 pub extend EchoResponse with Eq::{not_equal, equal}
@@ -21,9 +23,10 @@ pub extend EchoResponse with Debug::{to_repr}
 pub extend EchoResponse with FromJson::{from_json}
 
 ///|
+#derive(FromJson, Eq, Debug)
 struct CountChanged {
   count : Int32
-} derive(FromJson, Eq, Debug)
+}
 
 ///|
 pub extend CountChanged with Eq::{not_equal, equal}

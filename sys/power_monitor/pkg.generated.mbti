@@ -8,10 +8,11 @@ import {
 // Values
 
 // Errors
+#derive(Eq)
 pub(all) suberror PowerMonitorError {
   BackendUnavailable(detail~ : String)
   OperationFailed(operation~ : String, detail~ : String)
-} derive(Eq)
+}
 pub fn PowerMonitorError::equal(Self, Self) -> Bool
 pub fn PowerMonitorError::not_equal(Self, Self) -> Bool
 pub fn PowerMonitorError::output(Self, &Logger) -> Unit
@@ -29,6 +30,7 @@ pub fn PowerMonitor::idle_seconds(Self) -> Int32 raise PowerMonitorError
 pub fn PowerMonitor::power_source(Self) -> PowerSourceInfo raise PowerMonitorError
 pub async fn[T] PowerMonitor::with_watching(Self, async () -> T) -> T
 
+#derive(Eq, @debug.Debug)
 pub enum PowerMonitorEvent {
   Suspend
   Resume
@@ -36,24 +38,26 @@ pub enum PowerMonitorEvent {
   OnBattery
   LockScreen
   UnlockScreen
-} derive(Eq, @debug.Debug)
+}
 pub fn PowerMonitorEvent::equal(Self, Self) -> Bool
 pub fn PowerMonitorEvent::not_equal(Self, Self) -> Bool
 pub fn PowerMonitorEvent::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug)
 pub(all) enum PowerSource {
   Unknown
   AC
   Battery
-} derive(Eq, @debug.Debug)
+}
 pub fn PowerSource::equal(Self, Self) -> Bool
 pub fn PowerSource::not_equal(Self, Self) -> Bool
 pub fn PowerSource::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug)
 pub(all) struct PowerSourceInfo {
   source : PowerSource
   battery_percent : Int32?
-} derive(Eq, @debug.Debug)
+}
 pub fn PowerSourceInfo::equal(Self, Self) -> Bool
 pub fn PowerSourceInfo::not_equal(Self, Self) -> Bool
 pub fn PowerSourceInfo::to_repr(Self) -> @debug.Repr

@@ -1,10 +1,11 @@
 ///|
+#derive(ToJson, FromJson, Debug, Eq)
 pub(all) struct DisplayBounds {
   x : Int32
   y : Int32
   width : Int32
   height : Int32
-} derive(ToJson, FromJson, Debug, Eq)
+}
 
 ///|
 pub extend DisplayBounds with Eq::{not_equal, equal}
@@ -21,13 +22,14 @@ pub extend DisplayBounds with FromJson::{from_json}
 ///|
 /// A display snapshot mirroring Electron's `Display` object: identity, bounds,
 /// work area, scale factor, and whether it is the primary display.
+#derive(ToJson, FromJson, Debug, Eq)
 pub(all) struct DisplayJSON {
   id : Int32
   bounds : DisplayBounds
   work_area : DisplayBounds
   scale_factor : Double
   is_primary : Bool
-} derive(ToJson, FromJson, Debug, Eq)
+}
 
 ///|
 pub extend DisplayJSON with Eq::{not_equal, equal}
@@ -43,9 +45,10 @@ pub extend DisplayJSON with FromJson::{from_json}
 
 ///|
 /// Reply for `getAllDisplays`, mirroring Electron's `screen.getAllDisplays()`.
+#derive(ToJson, FromJson, Debug, Eq)
 pub(all) struct DisplaysReply {
   displays : Array[DisplayJSON]
-} derive(ToJson, FromJson, Debug, Eq)
+}
 
 ///|
 pub extend DisplaysReply with Eq::{not_equal, equal}
@@ -62,9 +65,10 @@ pub extend DisplaysReply with FromJson::{from_json}
 ///|
 /// Reply for `getPrimaryDisplay` and `getDisplayNearestPoint`, each of which
 /// returns a single display.
+#derive(ToJson, FromJson, Debug, Eq)
 pub(all) struct DisplayReply {
   display : DisplayJSON
-} derive(ToJson, FromJson, Debug, Eq)
+}
 
 ///|
 pub extend DisplayReply with Eq::{not_equal, equal}
@@ -80,10 +84,11 @@ pub extend DisplayReply with FromJson::{from_json}
 
 ///|
 /// A point in root (physical pixel) coordinates.
+#derive(ToJson, FromJson, Debug, Eq)
 pub(all) struct PointJSON {
   x : Int32
   y : Int32
-} derive(ToJson, FromJson, Debug, Eq)
+}
 
 ///|
 pub extend PointJSON with Eq::{not_equal, equal}
@@ -100,9 +105,10 @@ pub extend PointJSON with FromJson::{from_json}
 ///|
 /// Reply for `getCursorScreenPoint`, mirroring Electron's
 /// `screen.getCursorScreenPoint()`.
+#derive(ToJson, FromJson, Debug, Eq)
 pub(all) struct CursorPointReply {
   point : PointJSON
-} derive(ToJson, FromJson, Debug, Eq)
+}
 
 ///|
 pub extend CursorPointReply with Eq::{not_equal, equal}
@@ -119,10 +125,11 @@ pub extend CursorPointReply with FromJson::{from_json}
 ///|
 /// Request for `getDisplayNearestPoint`, mirroring the point argument of
 /// Electron's `screen.getDisplayNearestPoint(point)`.
+#derive(ToJson, FromJson, Debug, Eq)
 pub(all) struct NearestPointRequest {
   x : Int32
   y : Int32
-} derive(ToJson, FromJson, Debug, Eq)
+}
 
 ///|
 pub extend NearestPointRequest with Eq::{not_equal, equal}
@@ -138,12 +145,13 @@ pub extend NearestPointRequest with FromJson::{from_json}
 
 ///|
 /// Request rectangle for `getDisplayMatching`.
+#derive(ToJson, FromJson, Debug, Eq)
 pub(all) struct MatchingRectRequest {
   x : Int32
   y : Int32
   width : Int32
   height : Int32
-} derive(ToJson, FromJson, Debug, Eq)
+}
 
 ///|
 pub extend MatchingRectRequest with Eq::{not_equal, equal}
@@ -161,9 +169,10 @@ pub extend MatchingRectRequest with FromJson::{from_json}
 /// Telemetry for screen query commands, so renderers can observe which screen
 /// APIs were exercised. Follows the activity-event convention shared by the
 /// other `proton_ext` command extensions.
+#derive(ToJson, FromJson, Debug, Eq)
 pub(all) struct ScreenMonitorActivity {
   operation : String
-} derive(ToJson, FromJson, Debug, Eq)
+}
 
 ///|
 pub extend ScreenMonitorActivity with Eq::{not_equal, equal}

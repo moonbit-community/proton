@@ -7,10 +7,11 @@
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct AuditsAdAncestry {
   ad_ancestry_chain : Array[AuditsAdScriptIdentifier]
   root_script_filterlist_rule : String?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AuditsAdAncestry with Eq::{not_equal, equal}
@@ -63,11 +64,12 @@ pub fn AuditsAdAncestry::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct AuditsAdScriptIdentifier {
   script_id : RuntimeScriptId
   debugger_id : RuntimeUniqueDebuggerId
   name : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AuditsAdScriptIdentifier with Eq::{not_equal, equal}
@@ -119,11 +121,12 @@ pub fn AuditsAdScriptIdentifier::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct AuditsAffectedCookie {
   name : String
   path : String
   domain : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AuditsAffectedCookie with Eq::{not_equal, equal}
@@ -167,9 +170,10 @@ pub fn AuditsAffectedCookie::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct AuditsAffectedFrame {
   frame_id : PageFrameId
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AuditsAffectedFrame with Eq::{not_equal, equal}
@@ -211,10 +215,11 @@ pub fn AuditsAffectedFrame::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct AuditsAffectedRequest {
   request_id : NetworkRequestId?
   url : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AuditsAffectedRequest with Eq::{not_equal, equal}
@@ -261,12 +266,13 @@ pub fn AuditsAffectedRequest::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct AuditsAttributionReportingIssueDetails {
   violation_type : AuditsAttributionReportingIssueType
   request : AuditsAffectedRequest?
   violating_node_id : DOMBackendNodeId?
   invalid_parameter : String?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AuditsAttributionReportingIssueDetails with Eq::{not_equal, equal}
@@ -332,9 +338,10 @@ pub fn AuditsAttributionReportingIssueDetails::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct AuditsAttributionReportingIssueType {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AuditsAttributionReportingIssueType with Eq::{not_equal, equal}
@@ -376,12 +383,13 @@ pub fn AuditsAttributionReportingIssueType::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct AuditsBlockedByResponseIssueDetails {
   request : AuditsAffectedRequest
   parent_frame : AuditsAffectedFrame?
   blocked_frame : AuditsAffectedFrame?
   reason : AuditsBlockedByResponseReason
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AuditsBlockedByResponseIssueDetails with Eq::{not_equal, equal}
@@ -445,9 +453,10 @@ pub fn AuditsBlockedByResponseIssueDetails::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct AuditsBlockedByResponseReason {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AuditsBlockedByResponseReason with Eq::{not_equal, equal}
@@ -489,9 +498,10 @@ pub fn AuditsBlockedByResponseReason::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct AuditsBounceTrackingIssueDetails {
   tracking_sites : Array[String]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AuditsBounceTrackingIssueDetails with Eq::{not_equal, equal}
@@ -544,10 +554,11 @@ pub fn AuditsBounceTrackingIssueDetails::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct AuditsClientHintIssueDetails {
   source_code_location : AuditsSourceCodeLocation
   client_hint_issue_reason : AuditsClientHintIssueReason
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AuditsClientHintIssueDetails with Eq::{not_equal, equal}
@@ -597,9 +608,10 @@ pub fn AuditsClientHintIssueDetails::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct AuditsClientHintIssueReason {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AuditsClientHintIssueReason with Eq::{not_equal, equal}
@@ -641,9 +653,10 @@ pub fn AuditsClientHintIssueReason::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct AuditsConnectionAllowlistError {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AuditsConnectionAllowlistError with Eq::{not_equal, equal}
@@ -685,10 +698,11 @@ pub fn AuditsConnectionAllowlistError::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct AuditsConnectionAllowlistIssueDetails {
   error : AuditsConnectionAllowlistError
   request : AuditsAffectedRequest
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AuditsConnectionAllowlistIssueDetails with Eq::{not_equal, equal}
@@ -738,6 +752,7 @@ pub fn AuditsConnectionAllowlistIssueDetails::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct AuditsContentSecurityPolicyIssueDetails {
   blocked_url : String?
   violated_directive : String
@@ -746,7 +761,7 @@ pub(all) struct AuditsContentSecurityPolicyIssueDetails {
   frame_ancestor : AuditsAffectedFrame?
   source_code_location : AuditsSourceCodeLocation?
   violating_node_id : DOMBackendNodeId?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AuditsContentSecurityPolicyIssueDetails with Eq::{not_equal, equal}
@@ -830,9 +845,10 @@ pub fn AuditsContentSecurityPolicyIssueDetails::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct AuditsContentSecurityPolicyViolationType {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AuditsContentSecurityPolicyViolationType with Eq::{not_equal, equal}
@@ -874,12 +890,13 @@ pub fn AuditsContentSecurityPolicyViolationType::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct AuditsCookieDeprecationMetadataIssueDetails {
   allowed_sites : Array[String]
   opt_out_percentage : Double
   is_opt_out_top_level : Bool
   operation : AuditsCookieOperation
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AuditsCookieDeprecationMetadataIssueDetails with Eq::{
@@ -947,9 +964,10 @@ pub fn AuditsCookieDeprecationMetadataIssueDetails::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct AuditsCookieExclusionReason {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AuditsCookieExclusionReason with Eq::{not_equal, equal}
@@ -991,6 +1009,7 @@ pub fn AuditsCookieExclusionReason::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct AuditsCookieIssueDetails {
   cookie : AuditsAffectedCookie?
   raw_cookie_line : String?
@@ -1001,7 +1020,7 @@ pub(all) struct AuditsCookieIssueDetails {
   cookie_url : String?
   request : AuditsAffectedRequest?
   insight : AuditsCookieIssueInsight?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AuditsCookieIssueDetails with Eq::{not_equal, equal}
@@ -1104,10 +1123,11 @@ pub fn AuditsCookieIssueDetails::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct AuditsCookieIssueInsight {
   type_ : AuditsInsightType
   table_entry_url : String?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AuditsCookieIssueInsight with Eq::{not_equal, equal}
@@ -1159,9 +1179,10 @@ pub fn AuditsCookieIssueInsight::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct AuditsCookieOperation {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AuditsCookieOperation with Eq::{not_equal, equal}
@@ -1199,9 +1220,10 @@ pub fn AuditsCookieOperation::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct AuditsCookieWarningReason {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AuditsCookieWarningReason with Eq::{not_equal, equal}
@@ -1243,6 +1265,7 @@ pub fn AuditsCookieWarningReason::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct AuditsCorsIssueDetails {
   cors_error_status : NetworkCorsErrorStatus
   is_warning : Bool
@@ -1251,7 +1274,7 @@ pub(all) struct AuditsCorsIssueDetails {
   initiator_origin : String?
   resource_ipaddress_space : NetworkIPAddressSpace?
   client_security_state : NetworkClientSecurityState?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AuditsCorsIssueDetails with Eq::{not_equal, equal}
@@ -1328,11 +1351,12 @@ pub fn AuditsCorsIssueDetails::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct AuditsDeprecationIssueDetails {
   affected_frame : AuditsAffectedFrame?
   source_code_location : AuditsSourceCodeLocation
   type_ : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AuditsDeprecationIssueDetails with Eq::{not_equal, equal}
@@ -1387,11 +1411,12 @@ pub fn AuditsDeprecationIssueDetails::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct AuditsElementAccessibilityIssueDetails {
   node_id : DOMBackendNodeId
   element_accessibility_issue_reason : AuditsElementAccessibilityIssueReason
   has_disallowed_attributes : Bool
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AuditsElementAccessibilityIssueDetails with Eq::{not_equal, equal}
@@ -1449,9 +1474,10 @@ pub fn AuditsElementAccessibilityIssueDetails::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct AuditsElementAccessibilityIssueReason {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AuditsElementAccessibilityIssueReason with Eq::{not_equal, equal}
@@ -1493,11 +1519,12 @@ pub fn AuditsElementAccessibilityIssueReason::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct AuditsFailedRequestInfo {
   url : String
   failure_message : String
   request_id : NetworkRequestId?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AuditsFailedRequestInfo with Eq::{not_equal, equal}
@@ -1548,9 +1575,10 @@ pub fn AuditsFailedRequestInfo::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct AuditsFederatedAuthRequestIssueDetails {
   federated_auth_request_issue_reason : AuditsFederatedAuthRequestIssueReason
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AuditsFederatedAuthRequestIssueDetails with Eq::{not_equal, equal}
@@ -1598,9 +1626,10 @@ pub fn AuditsFederatedAuthRequestIssueDetails::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct AuditsFederatedAuthRequestIssueReason {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AuditsFederatedAuthRequestIssueReason with Eq::{not_equal, equal}
@@ -1642,9 +1671,10 @@ pub fn AuditsFederatedAuthRequestIssueReason::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct AuditsFederatedAuthUserInfoRequestIssueDetails {
   federated_auth_user_info_request_issue_reason : AuditsFederatedAuthUserInfoRequestIssueReason
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AuditsFederatedAuthUserInfoRequestIssueDetails with Eq::{
@@ -1695,9 +1725,10 @@ pub fn AuditsFederatedAuthUserInfoRequestIssueDetails::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct AuditsFederatedAuthUserInfoRequestIssueReason {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AuditsFederatedAuthUserInfoRequestIssueReason with Eq::{
@@ -1742,13 +1773,14 @@ pub fn AuditsFederatedAuthUserInfoRequestIssueReason::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct AuditsGenericIssueDetails {
   error_type : AuditsGenericIssueErrorType
   frame_id : PageFrameId?
   violating_node_id : DOMBackendNodeId?
   violating_node_attribute : String?
   request : AuditsAffectedRequest?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AuditsGenericIssueDetails with Eq::{not_equal, equal}
@@ -1821,9 +1853,10 @@ pub fn AuditsGenericIssueDetails::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct AuditsGenericIssueErrorType {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AuditsGenericIssueErrorType with Eq::{not_equal, equal}
@@ -1865,11 +1898,12 @@ pub fn AuditsGenericIssueErrorType::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct AuditsHeavyAdIssueDetails {
   resolution : AuditsHeavyAdResolutionStatus
   reason : AuditsHeavyAdReason
   frame : AuditsAffectedFrame
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AuditsHeavyAdIssueDetails with Eq::{not_equal, equal}
@@ -1923,9 +1957,10 @@ pub fn AuditsHeavyAdIssueDetails::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct AuditsHeavyAdReason {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AuditsHeavyAdReason with Eq::{not_equal, equal}
@@ -1963,9 +1998,10 @@ pub fn AuditsHeavyAdReason::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct AuditsHeavyAdResolutionStatus {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AuditsHeavyAdResolutionStatus with Eq::{not_equal, equal}
@@ -2007,9 +2043,10 @@ pub fn AuditsHeavyAdResolutionStatus::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct AuditsInsightType {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AuditsInsightType with Eq::{not_equal, equal}
@@ -2047,11 +2084,12 @@ pub fn AuditsInsightType::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct AuditsInspectorIssue {
   code : AuditsInspectorIssueCode
   details : AuditsInspectorIssueDetails
   issue_id : AuditsIssueId?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AuditsInspectorIssue with Eq::{not_equal, equal}
@@ -2104,9 +2142,10 @@ pub fn AuditsInspectorIssue::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct AuditsInspectorIssueCode {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AuditsInspectorIssueCode with Eq::{not_equal, equal}
@@ -2148,6 +2187,7 @@ pub fn AuditsInspectorIssueCode::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct AuditsInspectorIssueDetails {
   cookie_issue_details : AuditsCookieIssueDetails?
   mixed_content_issue_details : AuditsMixedContentIssueDetails?
@@ -2179,7 +2219,7 @@ pub(all) struct AuditsInspectorIssueDetails {
   permission_element_issue_details : AuditsPermissionElementIssueDetails?
   performance_issue_details : AuditsPerformanceIssueDetails?
   selective_permissions_intervention_issue_details : AuditsSelectivePermissionsInterventionIssueDetails?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AuditsInspectorIssueDetails with Eq::{not_equal, equal}
@@ -2476,9 +2516,10 @@ pub fn AuditsInspectorIssueDetails::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct AuditsIssueId {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AuditsIssueId with Eq::{not_equal, equal}
@@ -2516,6 +2557,7 @@ pub fn AuditsIssueId::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct AuditsLowTextContrastIssueDetails {
   violating_node_id : DOMBackendNodeId
   violating_node_selector : String
@@ -2524,7 +2566,7 @@ pub(all) struct AuditsLowTextContrastIssueDetails {
   threshold_aaa : Double
   font_size : String
   font_weight : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AuditsLowTextContrastIssueDetails with Eq::{not_equal, equal}
@@ -2592,6 +2634,7 @@ pub fn AuditsLowTextContrastIssueDetails::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct AuditsMixedContentIssueDetails {
   resource_type : AuditsMixedContentResourceType?
   resolution_status : AuditsMixedContentResolutionStatus
@@ -2599,7 +2642,7 @@ pub(all) struct AuditsMixedContentIssueDetails {
   main_resource_url : String
   request : AuditsAffectedRequest?
   frame : AuditsAffectedFrame?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AuditsMixedContentIssueDetails with Eq::{not_equal, equal}
@@ -2674,9 +2717,10 @@ pub fn AuditsMixedContentIssueDetails::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct AuditsMixedContentResolutionStatus {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AuditsMixedContentResolutionStatus with Eq::{not_equal, equal}
@@ -2718,9 +2762,10 @@ pub fn AuditsMixedContentResolutionStatus::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct AuditsMixedContentResourceType {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AuditsMixedContentResourceType with Eq::{not_equal, equal}
@@ -2762,10 +2807,11 @@ pub fn AuditsMixedContentResourceType::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct AuditsNavigatorUserAgentIssueDetails {
   url : String
   location : AuditsSourceCodeLocation?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AuditsNavigatorUserAgentIssueDetails with Eq::{not_equal, equal}
@@ -2816,9 +2862,10 @@ pub fn AuditsNavigatorUserAgentIssueDetails::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct AuditsPartitioningBlobURLInfo {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AuditsPartitioningBlobURLInfo with Eq::{not_equal, equal}
@@ -2860,10 +2907,11 @@ pub fn AuditsPartitioningBlobURLInfo::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct AuditsPartitioningBlobURLIssueDetails {
   url : String
   partitioning_blob_urlinfo : AuditsPartitioningBlobURLInfo
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AuditsPartitioningBlobURLIssueDetails with Eq::{not_equal, equal}
@@ -2911,10 +2959,11 @@ pub fn AuditsPartitioningBlobURLIssueDetails::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct AuditsPerformanceIssueDetails {
   performance_issue_type : AuditsPerformanceIssueType
   source_code_location : AuditsSourceCodeLocation?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AuditsPerformanceIssueDetails with Eq::{not_equal, equal}
@@ -2968,9 +3017,10 @@ pub fn AuditsPerformanceIssueDetails::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct AuditsPerformanceIssueType {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AuditsPerformanceIssueType with Eq::{not_equal, equal}
@@ -3012,6 +3062,7 @@ pub fn AuditsPerformanceIssueType::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct AuditsPermissionElementIssueDetails {
   issue_type : AuditsPermissionElementIssueType
   type_ : String?
@@ -3021,7 +3072,7 @@ pub(all) struct AuditsPermissionElementIssueDetails {
   occluder_node_info : String?
   occluder_parent_node_info : String?
   disable_reason : String?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AuditsPermissionElementIssueDetails with Eq::{not_equal, equal}
@@ -3106,9 +3157,10 @@ pub fn AuditsPermissionElementIssueDetails::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct AuditsPermissionElementIssueType {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AuditsPermissionElementIssueType with Eq::{not_equal, equal}
@@ -3150,11 +3202,12 @@ pub fn AuditsPermissionElementIssueType::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct AuditsPropertyRuleIssueDetails {
   source_code_location : AuditsSourceCodeLocation
   property_rule_issue_reason : AuditsPropertyRuleIssueReason
   property_value : String?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AuditsPropertyRuleIssueDetails with Eq::{not_equal, equal}
@@ -3210,9 +3263,10 @@ pub fn AuditsPropertyRuleIssueDetails::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct AuditsPropertyRuleIssueReason {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AuditsPropertyRuleIssueReason with Eq::{not_equal, equal}
@@ -3254,13 +3308,14 @@ pub fn AuditsPropertyRuleIssueReason::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct AuditsQuirksModeIssueDetails {
   is_limited_quirks_mode : Bool
   document_node_id : DOMBackendNodeId
   url : String
   frame_id : PageFrameId
   loader_id : NetworkLoaderId
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AuditsQuirksModeIssueDetails with Eq::{not_equal, equal}
@@ -3320,11 +3375,12 @@ pub fn AuditsQuirksModeIssueDetails::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct AuditsSelectivePermissionsInterventionIssueDetails {
   api_name : String
   ad_ancestry : AuditsAdAncestry
   stack_trace : RuntimeStackTrace?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AuditsSelectivePermissionsInterventionIssueDetails with Eq::{
@@ -3382,11 +3438,12 @@ pub fn AuditsSelectivePermissionsInterventionIssueDetails::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct AuditsSharedArrayBufferIssueDetails {
   source_code_location : AuditsSourceCodeLocation
   is_warning : Bool
   type_ : AuditsSharedArrayBufferIssueType
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AuditsSharedArrayBufferIssueDetails with Eq::{not_equal, equal}
@@ -3438,9 +3495,10 @@ pub fn AuditsSharedArrayBufferIssueDetails::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct AuditsSharedArrayBufferIssueType {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AuditsSharedArrayBufferIssueType with Eq::{not_equal, equal}
@@ -3482,9 +3540,10 @@ pub fn AuditsSharedArrayBufferIssueType::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct AuditsSharedDictionaryError {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AuditsSharedDictionaryError with Eq::{not_equal, equal}
@@ -3526,10 +3585,11 @@ pub fn AuditsSharedDictionaryError::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct AuditsSharedDictionaryIssueDetails {
   shared_dictionary_error : AuditsSharedDictionaryError
   request : AuditsAffectedRequest
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AuditsSharedDictionaryIssueDetails with Eq::{not_equal, equal}
@@ -3579,12 +3639,13 @@ pub fn AuditsSharedDictionaryIssueDetails::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct AuditsSourceCodeLocation {
   script_id : RuntimeScriptId?
   url : String
   line_number : Int32
   column_number : Int32
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AuditsSourceCodeLocation with Eq::{not_equal, equal}
@@ -3643,9 +3704,10 @@ pub fn AuditsSourceCodeLocation::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct AuditsSRIMessageSignatureError {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AuditsSRIMessageSignatureError with Eq::{not_equal, equal}
@@ -3687,12 +3749,13 @@ pub fn AuditsSRIMessageSignatureError::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct AuditsSRIMessageSignatureIssueDetails {
   error : AuditsSRIMessageSignatureError
   signature_base : String
   integrity_assertions : Array[String]
   request : AuditsAffectedRequest
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AuditsSRIMessageSignatureIssueDetails with Eq::{not_equal, equal}
@@ -3759,11 +3822,12 @@ pub fn AuditsSRIMessageSignatureIssueDetails::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct AuditsStylesheetLoadingIssueDetails {
   source_code_location : AuditsSourceCodeLocation
   style_sheet_loading_issue_reason : AuditsStyleSheetLoadingIssueReason
   failed_request_info : AuditsFailedRequestInfo?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AuditsStylesheetLoadingIssueDetails with Eq::{not_equal, equal}
@@ -3821,9 +3885,10 @@ pub fn AuditsStylesheetLoadingIssueDetails::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct AuditsStyleSheetLoadingIssueReason {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AuditsStyleSheetLoadingIssueReason with Eq::{not_equal, equal}
@@ -3865,9 +3930,10 @@ pub fn AuditsStyleSheetLoadingIssueReason::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct AuditsUnencodedDigestError {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AuditsUnencodedDigestError with Eq::{not_equal, equal}
@@ -3909,10 +3975,11 @@ pub fn AuditsUnencodedDigestError::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct AuditsUnencodedDigestIssueDetails {
   error : AuditsUnencodedDigestError
   request : AuditsAffectedRequest
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AuditsUnencodedDigestIssueDetails with Eq::{not_equal, equal}
@@ -3962,11 +4029,12 @@ pub fn AuditsUnencodedDigestIssueDetails::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct AuditsUserReidentificationIssueDetails {
   type_ : AuditsUserReidentificationIssueType
   request : AuditsAffectedRequest?
   source_code_location : AuditsSourceCodeLocation?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AuditsUserReidentificationIssueDetails with Eq::{not_equal, equal}
@@ -4027,9 +4095,10 @@ pub fn AuditsUserReidentificationIssueDetails::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct AuditsUserReidentificationIssueType {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AuditsUserReidentificationIssueType with Eq::{not_equal, equal}
@@ -4071,9 +4140,10 @@ pub fn AuditsUserReidentificationIssueType::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct AuditsCheckContrastParams {
   report_aaa : Bool?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AuditsCheckContrastParams with Eq::{not_equal, equal}
@@ -4128,9 +4198,10 @@ pub fn audits_check_contrast_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct AuditsCheckFormsIssuesResult {
   form_issues : Array[AuditsGenericIssueDetails]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AuditsCheckFormsIssuesResult with Eq::{not_equal, equal}
@@ -4232,12 +4303,13 @@ pub fn audits_enable_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct AuditsGetEncodedResponseParams {
   request_id : NetworkRequestId
   encoding : String
   quality : Double?
   size_only : Bool?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AuditsGetEncodedResponseParams with Eq::{not_equal, equal}
@@ -4273,11 +4345,12 @@ pub fn AuditsGetEncodedResponseParams::to_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct AuditsGetEncodedResponseResult {
   body : String?
   original_size : Int32
   encoded_size : Int32
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AuditsGetEncodedResponseResult with Eq::{not_equal, equal}
@@ -4346,9 +4419,10 @@ pub fn audits_get_encoded_response_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct AuditsIssueAddedEventParams {
   issue : AuditsInspectorIssue
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AuditsIssueAddedEventParams with Eq::{not_equal, equal}

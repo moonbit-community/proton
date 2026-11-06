@@ -7,9 +7,10 @@
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct CSSComputedStyleExtraFields {
   is_appearance_base : Bool
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend CSSComputedStyleExtraFields with Eq::{not_equal, equal}
@@ -55,10 +56,11 @@ pub fn CSSComputedStyleExtraFields::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct CSSCSSAnimationStyle {
   name : String?
   style : CSSCSSStyle
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend CSSCSSAnimationStyle with Eq::{not_equal, equal}
@@ -104,6 +106,7 @@ pub fn CSSCSSAnimationStyle::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct CSSCSSAtRule {
   type_ : String
   subsection : String?
@@ -111,7 +114,7 @@ pub(all) struct CSSCSSAtRule {
   style_sheet_id : DOMStyleSheetId?
   origin : CSSStyleSheetOrigin
   style : CSSCSSStyle
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend CSSCSSAtRule with Eq::{not_equal, equal}
@@ -179,10 +182,11 @@ pub fn CSSCSSAtRule::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct CSSCSSComputedStyleProperty {
   name : String
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend CSSCSSComputedStyleProperty with Eq::{not_equal, equal}
@@ -228,6 +232,7 @@ pub fn CSSCSSComputedStyleProperty::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct CSSCSSContainerQuery {
   text : String
   range : CSSSourceRange?
@@ -237,7 +242,7 @@ pub(all) struct CSSCSSContainerQuery {
   logical_axes : DOMLogicalAxes?
   queries_scroll_state : Bool?
   queries_anchored : Bool?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend CSSCSSContainerQuery with Eq::{not_equal, equal}
@@ -321,13 +326,14 @@ pub fn CSSCSSContainerQuery::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct CSSCSSFunctionConditionNode {
   media : CSSCSSMedia?
   container_queries : CSSCSSContainerQuery?
   supports : CSSCSSSupports?
   children : Array[CSSCSSFunctionNode]
   condition_text : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend CSSCSSFunctionConditionNode with Eq::{not_equal, equal}
@@ -401,10 +407,11 @@ pub fn CSSCSSFunctionConditionNode::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct CSSCSSFunctionNode {
   condition : CSSCSSFunctionConditionNode?
   style : CSSCSSStyle?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend CSSCSSFunctionNode with Eq::{not_equal, equal}
@@ -456,10 +463,11 @@ pub fn CSSCSSFunctionNode::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct CSSCSSFunctionParameter {
   name : String
   type_ : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend CSSCSSFunctionParameter with Eq::{not_equal, equal}
@@ -501,13 +509,14 @@ pub fn CSSCSSFunctionParameter::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct CSSCSSFunctionRule {
   name : CSSValue
   style_sheet_id : DOMStyleSheetId?
   origin : CSSStyleSheetOrigin
   parameters : Array[CSSCSSFunctionParameter]
   children : Array[CSSCSSFunctionNode]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend CSSCSSFunctionRule with Eq::{not_equal, equal}
@@ -574,12 +583,13 @@ pub fn CSSCSSFunctionRule::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct CSSCSSKeyframeRule {
   style_sheet_id : DOMStyleSheetId?
   origin : CSSStyleSheetOrigin
   key_text : CSSValue
   style : CSSCSSStyle
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend CSSCSSKeyframeRule with Eq::{not_equal, equal}
@@ -636,10 +646,11 @@ pub fn CSSCSSKeyframeRule::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct CSSCSSKeyframesRule {
   animation_name : CSSValue
   keyframes : Array[CSSCSSKeyframeRule]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend CSSCSSKeyframesRule with Eq::{not_equal, equal}
@@ -688,11 +699,12 @@ pub fn CSSCSSKeyframesRule::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct CSSCSSLayer {
   text : String
   range : CSSSourceRange?
   style_sheet_id : DOMStyleSheetId?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend CSSCSSLayer with Eq::{not_equal, equal}
@@ -746,11 +758,12 @@ pub fn CSSCSSLayer::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct CSSCSSLayerData {
   name : String
   sub_layers : Array[CSSCSSLayerData]?
   order : Double
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend CSSCSSLayerData with Eq::{not_equal, equal}
@@ -804,6 +817,7 @@ pub fn CSSCSSLayerData::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct CSSCSSMedia {
   text : String
   source : String
@@ -811,7 +825,7 @@ pub(all) struct CSSCSSMedia {
   range : CSSSourceRange?
   style_sheet_id : DOMStyleSheetId?
   media_list : Array[CSSMediaQuery]?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend CSSCSSMedia with Eq::{not_equal, equal}
@@ -885,13 +899,14 @@ pub fn CSSCSSMedia::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct CSSCSSPositionTryRule {
   name : CSSValue
   style_sheet_id : DOMStyleSheetId?
   origin : CSSStyleSheetOrigin
   style : CSSCSSStyle
   active : Bool
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend CSSCSSPositionTryRule with Eq::{not_equal, equal}
@@ -948,6 +963,7 @@ pub fn CSSCSSPositionTryRule::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct CSSCSSProperty {
   name : String
   value : String
@@ -958,7 +974,7 @@ pub(all) struct CSSCSSProperty {
   disabled : Bool?
   range : CSSSourceRange?
   longhand_properties : Array[CSSCSSProperty]?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend CSSCSSProperty with Eq::{not_equal, equal}
@@ -1042,12 +1058,13 @@ pub fn CSSCSSProperty::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct CSSCSSPropertyRegistration {
   property_name : String
   initial_value : CSSValue?
   inherits : Bool
   syntax : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend CSSCSSPropertyRegistration with Eq::{not_equal, equal}
@@ -1104,12 +1121,13 @@ pub fn CSSCSSPropertyRegistration::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct CSSCSSPropertyRule {
   style_sheet_id : DOMStyleSheetId?
   origin : CSSStyleSheetOrigin
   property_name : CSSValue
   style : CSSCSSStyle
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend CSSCSSPropertyRule with Eq::{not_equal, equal}
@@ -1166,6 +1184,7 @@ pub fn CSSCSSPropertyRule::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct CSSCSSRule {
   style_sheet_id : DOMStyleSheetId?
   selector_list : CSSSelectorList
@@ -1180,7 +1199,7 @@ pub(all) struct CSSCSSRule {
   scopes : Array[CSSCSSScope]?
   rule_types : Array[CSSCSSRuleType]?
   starting_styles : Array[CSSCSSStartingStyle]?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend CSSCSSRule with Eq::{not_equal, equal}
@@ -1350,9 +1369,10 @@ pub fn CSSCSSRule::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct CSSCSSRuleType {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend CSSCSSRuleType with Eq::{not_equal, equal}
@@ -1390,11 +1410,12 @@ pub fn CSSCSSRuleType::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct CSSCSSScope {
   text : String
   range : CSSSourceRange?
   style_sheet_id : DOMStyleSheetId?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend CSSCSSScope with Eq::{not_equal, equal}
@@ -1448,10 +1469,11 @@ pub fn CSSCSSScope::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct CSSCSSStartingStyle {
   range : CSSSourceRange?
   style_sheet_id : DOMStyleSheetId?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend CSSCSSStartingStyle with Eq::{not_equal, equal}
@@ -1503,13 +1525,14 @@ pub fn CSSCSSStartingStyle::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct CSSCSSStyle {
   style_sheet_id : DOMStyleSheetId?
   css_properties : Array[CSSCSSProperty]
   shorthand_entries : Array[CSSShorthandEntry]
   css_text : String?
   range : CSSSourceRange?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend CSSCSSStyle with Eq::{not_equal, equal}
@@ -1583,6 +1606,7 @@ pub fn CSSCSSStyle::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct CSSCSSStyleSheetHeader {
   style_sheet_id : DOMStyleSheetId
   frame_id : PageFrameId
@@ -1602,7 +1626,7 @@ pub(all) struct CSSCSSStyleSheetHeader {
   end_line : Double
   end_column : Double
   loading_failed : Bool?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend CSSCSSStyleSheetHeader with Eq::{not_equal, equal}
@@ -1709,12 +1733,13 @@ pub fn CSSCSSStyleSheetHeader::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct CSSCSSSupports {
   text : String
   active : Bool
   range : CSSSourceRange?
   style_sheet_id : DOMStyleSheetId?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend CSSCSSSupports with Eq::{not_equal, equal}
@@ -1770,11 +1795,12 @@ pub fn CSSCSSSupports::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct CSSCSSTryRule {
   style_sheet_id : DOMStyleSheetId?
   origin : CSSStyleSheetOrigin
   style : CSSCSSStyle
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend CSSCSSTryRule with Eq::{not_equal, equal}
@@ -1827,6 +1853,7 @@ pub fn CSSCSSTryRule::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct CSSFontFace {
   font_family : String
   font_style : String
@@ -1838,7 +1865,7 @@ pub(all) struct CSSFontFace {
   src : String
   platform_font_family : String
   font_variation_axes : Array[CSSFontVariationAxis]?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend CSSFontFace with Eq::{not_equal, equal}
@@ -1923,13 +1950,14 @@ pub fn CSSFontFace::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct CSSFontVariationAxis {
   tag : String
   name : String
   min_value : Double
   max_value : Double
   default_value : Double
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend CSSFontVariationAxis with Eq::{not_equal, equal}
@@ -1979,10 +2007,11 @@ pub fn CSSFontVariationAxis::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct CSSInheritedAnimatedStyleEntry {
   animation_styles : Array[CSSCSSAnimationStyle]?
   transitions_style : CSSCSSStyle?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend CSSInheritedAnimatedStyleEntry with Eq::{not_equal, equal}
@@ -2043,9 +2072,10 @@ pub fn CSSInheritedAnimatedStyleEntry::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct CSSInheritedPseudoElementMatches {
   pseudo_elements : Array[CSSPseudoElementMatches]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend CSSInheritedPseudoElementMatches with Eq::{not_equal, equal}
@@ -2096,10 +2126,11 @@ pub fn CSSInheritedPseudoElementMatches::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct CSSInheritedStyleEntry {
   inline_style : CSSCSSStyle?
   matched_cssrules : Array[CSSRuleMatch]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend CSSInheritedStyleEntry with Eq::{not_equal, equal}
@@ -2153,10 +2184,11 @@ pub fn CSSInheritedStyleEntry::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct CSSMediaQuery {
   expressions : Array[CSSMediaQueryExpression]
   active : Bool
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend CSSMediaQuery with Eq::{not_equal, equal}
@@ -2205,13 +2237,14 @@ pub fn CSSMediaQuery::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct CSSMediaQueryExpression {
   value : Double
   unit : String
   feature : String
   value_range : CSSSourceRange?
   computed_length : Double?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend CSSMediaQueryExpression with Eq::{not_equal, equal}
@@ -2268,12 +2301,13 @@ pub fn CSSMediaQueryExpression::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct CSSPlatformFontUsage {
   family_name : String
   post_script_name : String
   is_custom_font : Bool
   glyph_count : Double
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend CSSPlatformFontUsage with Eq::{not_equal, equal}
@@ -2327,11 +2361,12 @@ pub fn CSSPlatformFontUsage::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct CSSPseudoElementMatches {
   pseudo_type : DOMPseudoType
   pseudo_identifier : String?
   matches : Array[CSSRuleMatch]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend CSSPseudoElementMatches with Eq::{not_equal, equal}
@@ -2386,10 +2421,11 @@ pub fn CSSPseudoElementMatches::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct CSSRuleMatch {
   rule : CSSCSSRule
   matching_selectors : Array[Int32]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend CSSRuleMatch with Eq::{not_equal, equal}
@@ -2442,12 +2478,13 @@ pub fn CSSRuleMatch::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct CSSRuleUsage {
   style_sheet_id : DOMStyleSheetId
   start_offset : Double
   end_offset : Double
   used : Bool
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend CSSRuleUsage with Eq::{not_equal, equal}
@@ -2499,10 +2536,11 @@ pub fn CSSRuleUsage::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct CSSSelectorList {
   selectors : Array[CSSValue]
   text : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend CSSSelectorList with Eq::{not_equal, equal}
@@ -2549,11 +2587,12 @@ pub fn CSSSelectorList::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct CSSShorthandEntry {
   name : String
   value : String
   important : Bool?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend CSSShorthandEntry with Eq::{not_equal, equal}
@@ -2599,12 +2638,13 @@ pub fn CSSShorthandEntry::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct CSSSourceRange {
   start_line : Int32
   start_column : Int32
   end_line : Int32
   end_column : Int32
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend CSSSourceRange with Eq::{not_equal, equal}
@@ -2652,11 +2692,12 @@ pub fn CSSSourceRange::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct CSSSpecificity {
   a : Int32
   b : Int32
   c : Int32
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend CSSSpecificity with Eq::{not_equal, equal}
@@ -2700,11 +2741,12 @@ pub fn CSSSpecificity::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct CSSStyleDeclarationEdit {
   style_sheet_id : DOMStyleSheetId
   range : CSSSourceRange
   text : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend CSSStyleDeclarationEdit with Eq::{not_equal, equal}
@@ -2752,9 +2794,10 @@ pub fn CSSStyleDeclarationEdit::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct CSSStyleSheetOrigin {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend CSSStyleSheetOrigin with Eq::{not_equal, equal}
@@ -2792,11 +2835,12 @@ pub fn CSSStyleSheetOrigin::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct CSSValue {
   text : String
   range : CSSSourceRange?
   specificity : CSSSpecificity?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend CSSValue with Eq::{not_equal, equal}
@@ -2850,12 +2894,13 @@ pub fn CSSValue::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct CSSAddRuleParams {
   style_sheet_id : DOMStyleSheetId
   rule_text : String
   location : CSSSourceRange
   node_for_property_syntax_validation : DOMNodeId?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend CSSAddRuleParams with Eq::{not_equal, equal}
@@ -2885,9 +2930,10 @@ pub fn CSSAddRuleParams::to_json(self : CSSAddRuleParams) -> Json {
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct CSSAddRuleResult {
   rule : CSSCSSRule
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend CSSAddRuleResult with Eq::{not_equal, equal}
@@ -2950,9 +2996,10 @@ pub fn css_add_rule_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct CSSCollectClassNamesParams {
   style_sheet_id : DOMStyleSheetId
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend CSSCollectClassNamesParams with Eq::{not_equal, equal}
@@ -2981,9 +3028,10 @@ pub fn CSSCollectClassNamesParams::to_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct CSSCollectClassNamesResult {
   class_names : Array[String]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend CSSCollectClassNamesResult with Eq::{not_equal, equal}
@@ -3055,10 +3103,11 @@ pub fn css_collect_class_names_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct CSSCreateStyleSheetParams {
   frame_id : PageFrameId
   force : Bool?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend CSSCreateStyleSheetParams with Eq::{not_equal, equal}
@@ -3090,9 +3139,10 @@ pub fn CSSCreateStyleSheetParams::to_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct CSSCreateStyleSheetResult {
   style_sheet_id : DOMStyleSheetId
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend CSSCreateStyleSheetResult with Eq::{not_equal, equal}
@@ -3193,10 +3243,11 @@ pub fn css_enable_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct CSSForcePseudoStateParams {
   node_id : DOMNodeId
   forced_pseudo_classes : Array[String]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend CSSForcePseudoStateParams with Eq::{not_equal, equal}
@@ -3252,10 +3303,11 @@ pub fn css_force_pseudo_state_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct CSSForceStartingStyleParams {
   node_id : DOMNodeId
   forced : Bool
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend CSSForceStartingStyleParams with Eq::{not_equal, equal}
@@ -3309,9 +3361,10 @@ pub fn css_force_starting_style_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct CSSGetAnimatedStylesForNodeParams {
   node_id : DOMNodeId
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend CSSGetAnimatedStylesForNodeParams with Eq::{not_equal, equal}
@@ -3340,11 +3393,12 @@ pub fn CSSGetAnimatedStylesForNodeParams::to_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct CSSGetAnimatedStylesForNodeResult {
   animation_styles : Array[CSSCSSAnimationStyle]?
   transitions_style : CSSCSSStyle?
   inherited : Array[CSSInheritedAnimatedStyleEntry]?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend CSSGetAnimatedStylesForNodeResult with Eq::{not_equal, equal}
@@ -3434,9 +3488,10 @@ pub fn css_get_animated_styles_for_node_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct CSSGetBackgroundColorsParams {
   node_id : DOMNodeId
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend CSSGetBackgroundColorsParams with Eq::{not_equal, equal}
@@ -3465,11 +3520,12 @@ pub fn CSSGetBackgroundColorsParams::to_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct CSSGetBackgroundColorsResult {
   background_colors : Array[String]?
   computed_font_size : String?
   computed_font_weight : String?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend CSSGetBackgroundColorsResult with Eq::{not_equal, equal}
@@ -3551,9 +3607,10 @@ pub fn css_get_background_colors_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct CSSGetComputedStyleForNodeParams {
   node_id : DOMNodeId
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend CSSGetComputedStyleForNodeParams with Eq::{not_equal, equal}
@@ -3582,10 +3639,11 @@ pub fn CSSGetComputedStyleForNodeParams::to_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct CSSGetComputedStyleForNodeResult {
   computed_style : Array[CSSCSSComputedStyleProperty]
   extra_fields : CSSComputedStyleExtraFields
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend CSSGetComputedStyleForNodeResult with Eq::{not_equal, equal}
@@ -3660,9 +3718,10 @@ pub fn css_get_computed_style_for_node_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct CSSGetEnvironmentVariablesResult {
   environment_variables : Json
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend CSSGetEnvironmentVariablesResult with Eq::{not_equal, equal}
@@ -3725,9 +3784,10 @@ pub fn css_get_environment_variables_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct CSSGetInlineStylesForNodeParams {
   node_id : DOMNodeId
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend CSSGetInlineStylesForNodeParams with Eq::{not_equal, equal}
@@ -3756,10 +3816,11 @@ pub fn CSSGetInlineStylesForNodeParams::to_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct CSSGetInlineStylesForNodeResult {
   inline_style : CSSCSSStyle?
   attributes_style : CSSCSSStyle?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend CSSGetInlineStylesForNodeResult with Eq::{not_equal, equal}
@@ -3834,9 +3895,10 @@ pub fn css_get_inline_styles_for_node_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct CSSGetLayersForNodeParams {
   node_id : DOMNodeId
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend CSSGetLayersForNodeParams with Eq::{not_equal, equal}
@@ -3865,9 +3927,10 @@ pub fn CSSGetLayersForNodeParams::to_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct CSSGetLayersForNodeResult {
   root_layer : CSSCSSLayerData
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend CSSGetLayersForNodeResult with Eq::{not_equal, equal}
@@ -3932,10 +3995,11 @@ pub fn css_get_layers_for_node_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct CSSGetLocationForSelectorParams {
   style_sheet_id : DOMStyleSheetId
   selector_text : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend CSSGetLocationForSelectorParams with Eq::{not_equal, equal}
@@ -3965,9 +4029,10 @@ pub fn CSSGetLocationForSelectorParams::to_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct CSSGetLocationForSelectorResult {
   ranges : Array[CSSSourceRange]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend CSSGetLocationForSelectorResult with Eq::{not_equal, equal}
@@ -4039,10 +4104,11 @@ pub fn css_get_location_for_selector_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct CSSGetLonghandPropertiesParams {
   shorthand_name : String
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend CSSGetLonghandPropertiesParams with Eq::{not_equal, equal}
@@ -4072,9 +4138,10 @@ pub fn CSSGetLonghandPropertiesParams::to_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct CSSGetLonghandPropertiesResult {
   longhand_properties : Array[CSSCSSProperty]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend CSSGetLonghandPropertiesResult with Eq::{not_equal, equal}
@@ -4142,9 +4209,10 @@ pub fn css_get_longhand_properties_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct CSSGetMatchedStylesForNodeParams {
   node_id : DOMNodeId
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend CSSGetMatchedStylesForNodeParams with Eq::{not_equal, equal}
@@ -4173,6 +4241,7 @@ pub fn CSSGetMatchedStylesForNodeParams::to_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct CSSGetMatchedStylesForNodeResult {
   inline_style : CSSCSSStyle?
   attributes_style : CSSCSSStyle?
@@ -4188,7 +4257,7 @@ pub(all) struct CSSGetMatchedStylesForNodeResult {
   css_at_rules : Array[CSSCSSAtRule]?
   parent_layout_node_id : DOMNodeId?
   css_function_rules : Array[CSSCSSFunctionRule]?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend CSSGetMatchedStylesForNodeResult with Eq::{not_equal, equal}
@@ -4369,9 +4438,10 @@ pub fn css_get_matched_styles_for_node_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct CSSGetMediaQueriesResult {
   medias : Array[CSSCSSMedia]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend CSSGetMediaQueriesResult with Eq::{not_equal, equal}
@@ -4437,9 +4507,10 @@ pub fn css_get_media_queries_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct CSSGetPlatformFontsForNodeParams {
   node_id : DOMNodeId
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend CSSGetPlatformFontsForNodeParams with Eq::{not_equal, equal}
@@ -4468,9 +4539,10 @@ pub fn CSSGetPlatformFontsForNodeParams::to_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct CSSGetPlatformFontsForNodeResult {
   fonts : Array[CSSPlatformFontUsage]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend CSSGetPlatformFontsForNodeResult with Eq::{not_equal, equal}
@@ -4542,9 +4614,10 @@ pub fn css_get_platform_fonts_for_node_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct CSSGetStyleSheetTextParams {
   style_sheet_id : DOMStyleSheetId
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend CSSGetStyleSheetTextParams with Eq::{not_equal, equal}
@@ -4573,9 +4646,10 @@ pub fn CSSGetStyleSheetTextParams::to_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct CSSGetStyleSheetTextResult {
   text : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend CSSGetStyleSheetTextResult with Eq::{not_equal, equal}
@@ -4636,13 +4710,14 @@ pub fn css_get_style_sheet_text_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct CSSResolveValuesParams {
   values : Array[String]
   node_id : DOMNodeId
   property_name : String?
   pseudo_type : DOMPseudoType?
   pseudo_identifier : String?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend CSSResolveValuesParams with Eq::{not_equal, equal}
@@ -4677,9 +4752,10 @@ pub fn CSSResolveValuesParams::to_json(self : CSSResolveValuesParams) -> Json {
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct CSSResolveValuesResult {
   results : Array[String]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend CSSResolveValuesResult with Eq::{not_equal, equal}
@@ -4747,11 +4823,12 @@ pub fn css_resolve_values_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct CSSSetContainerQueryTextParams {
   style_sheet_id : DOMStyleSheetId
   range : CSSSourceRange
   text : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend CSSSetContainerQueryTextParams with Eq::{not_equal, equal}
@@ -4782,9 +4859,10 @@ pub fn CSSSetContainerQueryTextParams::to_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct CSSSetContainerQueryTextResult {
   container_query : CSSCSSContainerQuery
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend CSSSetContainerQueryTextResult with Eq::{not_equal, equal}
@@ -4853,11 +4931,12 @@ pub fn css_set_container_query_text_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct CSSSetEffectivePropertyValueForNodeParams {
   node_id : DOMNodeId
   property_name : String
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend CSSSetEffectivePropertyValueForNodeParams with Eq::{not_equal, equal}
@@ -4916,11 +4995,12 @@ pub fn css_set_effective_property_value_for_node_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct CSSSetKeyframeKeyParams {
   style_sheet_id : DOMStyleSheetId
   range : CSSSourceRange
   key_text : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend CSSSetKeyframeKeyParams with Eq::{not_equal, equal}
@@ -4947,9 +5027,10 @@ pub fn CSSSetKeyframeKeyParams::to_json(self : CSSSetKeyframeKeyParams) -> Json 
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct CSSSetKeyframeKeyResult {
   key_text : CSSValue
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend CSSSetKeyframeKeyResult with Eq::{not_equal, equal}
@@ -5012,9 +5093,10 @@ pub fn css_set_keyframe_key_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct CSSSetLocalFontsEnabledParams {
   enabled : Bool
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend CSSSetLocalFontsEnabledParams with Eq::{not_equal, equal}
@@ -5067,11 +5149,12 @@ pub fn css_set_local_fonts_enabled_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct CSSSetMediaTextParams {
   style_sheet_id : DOMStyleSheetId
   range : CSSSourceRange
   text : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend CSSSetMediaTextParams with Eq::{not_equal, equal}
@@ -5098,9 +5181,10 @@ pub fn CSSSetMediaTextParams::to_json(self : CSSSetMediaTextParams) -> Json {
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct CSSSetMediaTextResult {
   media : CSSCSSMedia
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend CSSSetMediaTextResult with Eq::{not_equal, equal}
@@ -5163,11 +5247,12 @@ pub fn css_set_media_text_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct CSSSetPropertyRulePropertyNameParams {
   style_sheet_id : DOMStyleSheetId
   range : CSSSourceRange
   property_name : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend CSSSetPropertyRulePropertyNameParams with Eq::{not_equal, equal}
@@ -5198,9 +5283,10 @@ pub fn CSSSetPropertyRulePropertyNameParams::to_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct CSSSetPropertyRulePropertyNameResult {
   property_name : CSSValue
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend CSSSetPropertyRulePropertyNameResult with Eq::{not_equal, equal}
@@ -5269,11 +5355,12 @@ pub fn css_set_property_rule_property_name_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct CSSSetRuleSelectorParams {
   style_sheet_id : DOMStyleSheetId
   range : CSSSourceRange
   selector : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend CSSSetRuleSelectorParams with Eq::{not_equal, equal}
@@ -5304,9 +5391,10 @@ pub fn CSSSetRuleSelectorParams::to_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct CSSSetRuleSelectorResult {
   selector_list : CSSSelectorList
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend CSSSetRuleSelectorResult with Eq::{not_equal, equal}
@@ -5371,11 +5459,12 @@ pub fn css_set_rule_selector_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct CSSSetScopeTextParams {
   style_sheet_id : DOMStyleSheetId
   range : CSSSourceRange
   text : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend CSSSetScopeTextParams with Eq::{not_equal, equal}
@@ -5402,9 +5491,10 @@ pub fn CSSSetScopeTextParams::to_json(self : CSSSetScopeTextParams) -> Json {
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct CSSSetScopeTextResult {
   scope : CSSCSSScope
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend CSSSetScopeTextResult with Eq::{not_equal, equal}
@@ -5467,10 +5557,11 @@ pub fn css_set_scope_text_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct CSSSetStyleSheetTextParams {
   style_sheet_id : DOMStyleSheetId
   text : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend CSSSetStyleSheetTextParams with Eq::{not_equal, equal}
@@ -5500,9 +5591,10 @@ pub fn CSSSetStyleSheetTextParams::to_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct CSSSetStyleSheetTextResult {
   source_map_url : String?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend CSSSetStyleSheetTextResult with Eq::{not_equal, equal}
@@ -5567,10 +5659,11 @@ pub fn css_set_style_sheet_text_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct CSSSetStyleTextsParams {
   edits : Array[CSSStyleDeclarationEdit]
   node_for_property_syntax_validation : DOMNodeId?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend CSSSetStyleTextsParams with Eq::{not_equal, equal}
@@ -5598,9 +5691,10 @@ pub fn CSSSetStyleTextsParams::to_json(self : CSSSetStyleTextsParams) -> Json {
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct CSSSetStyleTextsResult {
   styles : Array[CSSCSSStyle]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend CSSSetStyleTextsResult with Eq::{not_equal, equal}
@@ -5666,11 +5760,12 @@ pub fn css_set_style_texts_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct CSSSetSupportsTextParams {
   style_sheet_id : DOMStyleSheetId
   range : CSSSourceRange
   text : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend CSSSetSupportsTextParams with Eq::{not_equal, equal}
@@ -5701,9 +5796,10 @@ pub fn CSSSetSupportsTextParams::to_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct CSSSetSupportsTextResult {
   supports : CSSCSSSupports
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend CSSSetSupportsTextResult with Eq::{not_equal, equal}
@@ -5790,9 +5886,10 @@ pub fn css_start_rule_usage_tracking_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct CSSStopRuleUsageTrackingResult {
   rule_usage : Array[CSSRuleUsage]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend CSSStopRuleUsageTrackingResult with Eq::{not_equal, equal}
@@ -5858,9 +5955,10 @@ pub fn css_stop_rule_usage_tracking_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct CSSTakeComputedStyleUpdatesResult {
   node_ids : Array[DOMNodeId]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend CSSTakeComputedStyleUpdatesResult with Eq::{not_equal, equal}
@@ -5926,10 +6024,11 @@ pub fn css_take_computed_style_updates_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct CSSTakeCoverageDeltaResult {
   coverage : Array[CSSRuleUsage]
   timestamp : Double
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend CSSTakeCoverageDeltaResult with Eq::{not_equal, equal}
@@ -5998,9 +6097,10 @@ pub fn css_take_coverage_delta_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct CSSTrackComputedStyleUpdatesParams {
   properties_to_track : Array[CSSCSSComputedStyleProperty]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend CSSTrackComputedStyleUpdatesParams with Eq::{not_equal, equal}
@@ -6059,9 +6159,10 @@ pub fn css_track_computed_style_updates_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct CSSTrackComputedStyleUpdatesForNodeParams {
   node_id : DOMNodeId?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend CSSTrackComputedStyleUpdatesForNodeParams with Eq::{not_equal, equal}
@@ -6120,9 +6221,10 @@ pub fn css_track_computed_style_updates_for_node_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct CSSComputedStyleUpdatedEventParams {
   node_id : DOMNodeId
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend CSSComputedStyleUpdatedEventParams with Eq::{not_equal, equal}
@@ -6192,9 +6294,10 @@ pub fn css_computed_style_updated_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct CSSFontsUpdatedEventParams {
   font : CSSFontFace?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend CSSFontsUpdatedEventParams with Eq::{not_equal, equal}
@@ -6286,9 +6389,10 @@ pub fn css_media_query_result_changed_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct CSSStyleSheetAddedEventParams {
   header : CSSCSSStyleSheetHeader
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend CSSStyleSheetAddedEventParams with Eq::{not_equal, equal}
@@ -6358,9 +6462,10 @@ pub fn css_style_sheet_added_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct CSSStyleSheetChangedEventParams {
   style_sheet_id : DOMStyleSheetId
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend CSSStyleSheetChangedEventParams with Eq::{not_equal, equal}
@@ -6430,9 +6535,10 @@ pub fn css_style_sheet_changed_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct CSSStyleSheetRemovedEventParams {
   style_sheet_id : DOMStyleSheetId
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend CSSStyleSheetRemovedEventParams with Eq::{not_equal, equal}

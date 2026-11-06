@@ -8,12 +8,13 @@ let sha256_hex_length : Int32 = 64
 
 ///|
 /// One platform's full-artifact update.
+#derive(Eq, Debug)
 pub struct PlatformUpdate {
   url : String
   size : Int64
   sha256_hex : String
   signature_hex : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PlatformUpdate with Eq::{not_equal, equal}

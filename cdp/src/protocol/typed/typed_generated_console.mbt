@@ -7,6 +7,7 @@
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct ConsoleConsoleMessage {
   source : String
   level : String
@@ -14,7 +15,7 @@ pub(all) struct ConsoleConsoleMessage {
   url : String?
   line : Int32?
   column : Int32?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend ConsoleConsoleMessage with Eq::{not_equal, equal}
@@ -128,9 +129,10 @@ pub fn console_enable_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct ConsoleMessageAddedEventParams {
   message : ConsoleConsoleMessage
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend ConsoleMessageAddedEventParams with Eq::{not_equal, equal}

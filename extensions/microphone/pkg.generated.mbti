@@ -13,7 +13,8 @@ pub fn capability() -> @extension.RendererCapability
 pub fn register_commands(@command.CommandRegistrar) -> Unit raise
 
 // Errors
-type MicrophoneError derive(Eq, @debug.Debug)
+#derive(Eq, @debug.Debug)
+type MicrophoneError
 pub fn MicrophoneError::equal(Self, Self) -> Bool
 pub fn MicrophoneError::not_equal(Self, Self) -> Bool
 pub fn MicrophoneError::output(Self, &Logger) -> Unit

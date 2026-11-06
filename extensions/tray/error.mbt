@@ -1,5 +1,6 @@
 ///|
 /// Failures while validating or operating the native tray icon.
+#derive(Debug, Eq)
 suberror TrayError {
   MissingField(field~ : String)
   EmptyField(field~ : String)
@@ -11,7 +12,7 @@ suberror TrayError {
   ShowFailed(detail~ : String)
   HideFailed(detail~ : String)
   SetTooltipFailed(detail~ : String)
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend TrayError with Eq::{not_equal, equal}

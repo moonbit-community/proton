@@ -1,9 +1,10 @@
 ///|
+#derive(ToJson, FromJson)
 struct SetLimitRequest {
   kind : String
   width : Int32
   height : Int32
-} derive(ToJson, FromJson)
+}
 
 ///|
 pub extend SetLimitRequest with ToJson::{to_json}
@@ -12,12 +13,13 @@ pub extend SetLimitRequest with ToJson::{to_json}
 pub extend SetLimitRequest with FromJson::{from_json}
 
 ///|
+#derive(ToJson, FromJson)
 struct SetLimitReply {
   applied : Bool
   minimum : String
   maximum : String
   message : String
-} derive(ToJson, FromJson)
+}
 
 ///|
 pub extend SetLimitReply with ToJson::{to_json}

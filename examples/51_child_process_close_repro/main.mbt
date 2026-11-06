@@ -1,5 +1,6 @@
 ///|
-struct HoldRequest {} derive(ToJson, FromJson)
+#derive(ToJson, FromJson)
+struct HoldRequest {}
 
 ///|
 pub extend HoldRequest with ToJson::{to_json}
@@ -8,9 +9,10 @@ pub extend HoldRequest with ToJson::{to_json}
 pub extend HoldRequest with FromJson::{from_json}
 
 ///|
+#derive(ToJson, FromJson)
 struct HoldResult {
   pid : Int32
-} derive(ToJson, FromJson)
+}
 
 ///|
 pub extend HoldResult with ToJson::{to_json}

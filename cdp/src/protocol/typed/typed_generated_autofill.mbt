@@ -7,9 +7,10 @@
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct AutofillAddress {
   fields : Array[AutofillAddressField]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AutofillAddress with Eq::{not_equal, equal}
@@ -54,10 +55,11 @@ pub fn AutofillAddress::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct AutofillAddressField {
   name : String
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AutofillAddressField with Eq::{not_equal, equal}
@@ -99,9 +101,10 @@ pub fn AutofillAddressField::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct AutofillAddressFields {
   fields : Array[AutofillAddressField]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AutofillAddressFields with Eq::{not_equal, equal}
@@ -146,9 +149,10 @@ pub fn AutofillAddressFields::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct AutofillAddressUI {
   address_fields : Array[AutofillAddressFields]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AutofillAddressUI with Eq::{not_equal, equal}
@@ -195,13 +199,14 @@ pub fn AutofillAddressUI::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct AutofillCreditCard {
   number : String
   name : String
   expiry_month : String
   expiry_year : String
   cvc : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AutofillCreditCard with Eq::{not_equal, equal}
@@ -253,6 +258,7 @@ pub fn AutofillCreditCard::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct AutofillFilledField {
   html_type : String
   id : String
@@ -262,7 +268,7 @@ pub(all) struct AutofillFilledField {
   filling_strategy : AutofillFillingStrategy
   frame_id : PageFrameId
   field_id : DOMBackendNodeId
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AutofillFilledField with Eq::{not_equal, equal}
@@ -324,9 +330,10 @@ pub fn AutofillFilledField::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct AutofillFillingStrategy {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AutofillFillingStrategy with Eq::{not_equal, equal}
@@ -400,9 +407,10 @@ pub fn autofill_enable_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct AutofillSetAddressesParams {
   addresses : Array[AutofillAddress]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AutofillSetAddressesParams with Eq::{not_equal, equal}
@@ -455,12 +463,13 @@ pub fn autofill_set_addresses_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct AutofillTriggerParams {
   field_id : DOMBackendNodeId
   frame_id : PageFrameId?
   card : AutofillCreditCard?
   address : AutofillAddress?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AutofillTriggerParams with Eq::{not_equal, equal}
@@ -518,10 +527,11 @@ pub fn autofill_trigger_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct AutofillAddressFormFilledEventParams {
   filled_fields : Array[AutofillFilledField]
   address_ui : AutofillAddressUI
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AutofillAddressFormFilledEventParams with Eq::{not_equal, equal}

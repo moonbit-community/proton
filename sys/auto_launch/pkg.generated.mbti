@@ -27,6 +27,7 @@ pub fn AutoLaunch::path(Self) -> String
 
 type AutoLaunchConfig
 
+#derive(Eq, @debug.Debug)
 pub enum AutoLaunchError {
   EmptyName
   EmptyExecutablePath
@@ -37,7 +38,7 @@ pub enum AutoLaunchError {
   UnsupportedExecutablePath(String)
   UnsupportedPlatform(Platform)
   NativeFailure(action~ : String, message~ : String)
-} derive(Eq, @debug.Debug)
+}
 pub fn AutoLaunchError::equal(Self, Self) -> Bool
 pub fn AutoLaunchError::not_equal(Self, Self) -> Bool
 pub fn AutoLaunchError::output(Self, &Logger) -> Unit
@@ -45,22 +46,25 @@ pub fn AutoLaunchError::to_repr(Self) -> @debug.Repr
 pub fn AutoLaunchError::to_string(Self) -> String
 pub impl Show for AutoLaunchError
 
-type BackendKind derive(Eq, @debug.Debug)
+#derive(Eq, @debug.Debug)
+type BackendKind
 pub fn BackendKind::equal(Self, Self) -> Bool
 pub fn BackendKind::not_equal(Self, Self) -> Bool
 pub fn BackendKind::to_repr(Self) -> @debug.Repr
 
-type FileEntry derive(Eq, @debug.Debug)
+#derive(Eq, @debug.Debug)
+type FileEntry
 pub fn FileEntry::equal(Self, Self) -> Bool
 pub fn FileEntry::not_equal(Self, Self) -> Bool
 pub fn FileEntry::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug)
 pub enum Platform {
   Windows
   Macos
   Linux
   Unsupported
-} derive(Eq, @debug.Debug)
+}
 pub fn Platform::equal(Self, Self) -> Bool
 pub fn Platform::not_equal(Self, Self) -> Bool
 pub fn Platform::output(Self, &Logger) -> Unit

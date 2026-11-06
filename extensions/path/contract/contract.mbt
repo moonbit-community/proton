@@ -1,7 +1,8 @@
 ///|
+#derive(ToJson, FromJson, Debug, Eq)
 pub(all) struct PathRequest {
   path : String
-} derive(ToJson, FromJson, Debug, Eq)
+}
 
 ///|
 pub extend PathRequest with Eq::{not_equal, equal}
@@ -16,10 +17,11 @@ pub extend PathRequest with ToJson::{to_json}
 pub extend PathRequest with FromJson::{from_json}
 
 ///|
+#derive(ToJson, FromJson, Debug, Eq)
 pub(all) struct BasenameRequest {
   path : String
   suffix : String?
-} derive(ToJson, FromJson, Debug, Eq)
+}
 
 ///|
 pub extend BasenameRequest with Eq::{not_equal, equal}
@@ -34,10 +36,11 @@ pub extend BasenameRequest with ToJson::{to_json}
 pub extend BasenameRequest with FromJson::{from_json}
 
 ///|
+#derive(ToJson, FromJson, Debug, Eq)
 pub(all) struct JoinRequest {
   left : String
   right : String
-} derive(ToJson, FromJson, Debug, Eq)
+}
 
 ///|
 pub extend JoinRequest with Eq::{not_equal, equal}
@@ -52,9 +55,10 @@ pub extend JoinRequest with ToJson::{to_json}
 pub extend JoinRequest with FromJson::{from_json}
 
 ///|
+#derive(ToJson, FromJson, Debug, Eq)
 pub(all) struct PathsRequest {
   paths : Array[String]
-} derive(ToJson, FromJson, Debug, Eq)
+}
 
 ///|
 pub extend PathsRequest with Eq::{not_equal, equal}
@@ -69,10 +73,11 @@ pub extend PathsRequest with ToJson::{to_json}
 pub extend PathsRequest with FromJson::{from_json}
 
 ///|
+#derive(ToJson, FromJson, Debug, Eq)
 pub(all) struct RelativeRequest {
   path : String
   base : String
-} derive(ToJson, FromJson, Debug, Eq)
+}
 
 ///|
 pub extend RelativeRequest with Eq::{not_equal, equal}
@@ -87,9 +92,10 @@ pub extend RelativeRequest with ToJson::{to_json}
 pub extend RelativeRequest with FromJson::{from_json}
 
 ///|
+#derive(ToJson, FromJson, Debug, Eq)
 pub(all) struct PathReply {
   path : String
-} derive(ToJson, FromJson, Debug, Eq)
+}
 
 ///|
 pub extend PathReply with Eq::{not_equal, equal}
@@ -104,9 +110,10 @@ pub extend PathReply with ToJson::{to_json}
 pub extend PathReply with FromJson::{from_json}
 
 ///|
+#derive(ToJson, FromJson, Debug, Eq)
 pub(all) struct BasenameReply {
   name : String
-} derive(ToJson, FromJson, Debug, Eq)
+}
 
 ///|
 pub extend BasenameReply with Eq::{not_equal, equal}
@@ -121,9 +128,10 @@ pub extend BasenameReply with ToJson::{to_json}
 pub extend BasenameReply with FromJson::{from_json}
 
 ///|
+#derive(ToJson, FromJson, Debug, Eq)
 pub(all) struct ExtnameReply {
   ext : String
-} derive(ToJson, FromJson, Debug, Eq)
+}
 
 ///|
 pub extend ExtnameReply with Eq::{not_equal, equal}
@@ -138,9 +146,10 @@ pub extend ExtnameReply with ToJson::{to_json}
 pub extend ExtnameReply with FromJson::{from_json}
 
 ///|
+#derive(ToJson, FromJson, Debug, Eq)
 pub(all) struct IsAbsoluteReply {
   is_absolute : Bool
-} derive(ToJson, FromJson, Debug, Eq)
+}
 
 ///|
 pub extend IsAbsoluteReply with Eq::{not_equal, equal}

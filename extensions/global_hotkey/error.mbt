@@ -1,11 +1,12 @@
 ///|
 /// Failures while managing operating-system global hotkeys.
+#derive(Debug, Eq)
 suberror GlobalHotkeyError {
   Unsupported(detail~ : String)
   ManagerInitializationFailed(detail~ : String)
   RegistrationFailed(accelerator~ : String, detail~ : String)
   UnregistrationFailed(accelerator~ : String, detail~ : String)
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend GlobalHotkeyError with Eq::{not_equal, equal}

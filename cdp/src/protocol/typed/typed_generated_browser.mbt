@@ -7,13 +7,14 @@
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct BrowserBounds {
   left : Int32?
   top : Int32?
   width : Int32?
   height : Int32?
   window_state : BrowserWindowState?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend BrowserBounds with Eq::{not_equal, equal}
@@ -74,9 +75,10 @@ pub fn BrowserBounds::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct BrowserBrowserCommandId {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend BrowserBrowserCommandId with Eq::{not_equal, equal}
@@ -114,9 +116,10 @@ pub fn BrowserBrowserCommandId::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct BrowserBrowserContextID {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend BrowserBrowserContextID with Eq::{not_equal, equal}
@@ -154,11 +157,12 @@ pub fn BrowserBrowserContextID::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct BrowserBucket {
   low : Int32
   high : Int32
   count : Int32
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend BrowserBucket with Eq::{not_equal, equal}
@@ -202,12 +206,13 @@ pub fn BrowserBucket::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct BrowserHistogram {
   name : String
   sum : Int32
   count : Int32
   buckets : Array[BrowserBucket]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend BrowserHistogram with Eq::{not_equal, equal}
@@ -258,6 +263,7 @@ pub fn BrowserHistogram::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct BrowserPermissionDescriptor {
   name : String
   sysex : Bool?
@@ -265,7 +271,7 @@ pub(all) struct BrowserPermissionDescriptor {
   allow_without_sanitization : Bool?
   allow_without_gesture : Bool?
   pan_tilt_zoom : Bool?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend BrowserPermissionDescriptor with Eq::{not_equal, equal}
@@ -337,9 +343,10 @@ pub fn BrowserPermissionDescriptor::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct BrowserPermissionSetting {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend BrowserPermissionSetting with Eq::{not_equal, equal}
@@ -381,9 +388,10 @@ pub fn BrowserPermissionSetting::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct BrowserPermissionType {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend BrowserPermissionType with Eq::{not_equal, equal}
@@ -421,9 +429,10 @@ pub fn BrowserPermissionType::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct BrowserPrivacySandboxAPI {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend BrowserPrivacySandboxAPI with Eq::{not_equal, equal}
@@ -465,9 +474,10 @@ pub fn BrowserPrivacySandboxAPI::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct BrowserWindowID {
   value : Int32
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend BrowserWindowID with Eq::{not_equal, equal}
@@ -512,9 +522,10 @@ pub fn BrowserWindowID::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct BrowserWindowState {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend BrowserWindowState with Eq::{not_equal, equal}
@@ -552,12 +563,13 @@ pub fn BrowserWindowState::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct BrowserAddPrivacySandboxCoordinatorKeyConfigParams {
   api : BrowserPrivacySandboxAPI
   coordinator_origin : String
   key_config : String
   browser_context_id : BrowserBrowserContextID?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend BrowserAddPrivacySandboxCoordinatorKeyConfigParams with Eq::{
@@ -622,9 +634,10 @@ pub fn browser_add_privacy_sandbox_coordinator_key_config_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct BrowserAddPrivacySandboxEnrollmentOverrideParams {
   url : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend BrowserAddPrivacySandboxEnrollmentOverrideParams with Eq::{
@@ -684,10 +697,11 @@ pub fn browser_add_privacy_sandbox_enrollment_override_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct BrowserCancelDownloadParams {
   guid : String
   browser_context_id : BrowserBrowserContextID?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend BrowserCancelDownloadParams with Eq::{not_equal, equal}
@@ -801,9 +815,10 @@ pub fn browser_crash_gpu_process_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct BrowserExecuteBrowserCommandParams {
   command_id : BrowserBrowserCommandId
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend BrowserExecuteBrowserCommandParams with Eq::{not_equal, equal}
@@ -860,9 +875,10 @@ pub fn browser_execute_browser_command_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct BrowserGetBrowserCommandLineResult {
   arguments : Array[String]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend BrowserGetBrowserCommandLineResult with Eq::{not_equal, equal}
@@ -930,10 +946,11 @@ pub fn browser_get_browser_command_line_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct BrowserGetHistogramParams {
   name : String
   delta : Bool?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend BrowserGetHistogramParams with Eq::{not_equal, equal}
@@ -965,9 +982,10 @@ pub fn BrowserGetHistogramParams::to_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct BrowserGetHistogramResult {
   histogram : BrowserHistogram
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend BrowserGetHistogramResult with Eq::{not_equal, equal}
@@ -1032,10 +1050,11 @@ pub fn browser_get_histogram_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct BrowserGetHistogramsParams {
   query : String?
   delta : Bool?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend BrowserGetHistogramsParams with Eq::{not_equal, equal}
@@ -1069,9 +1088,10 @@ pub fn BrowserGetHistogramsParams::to_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct BrowserGetHistogramsResult {
   histograms : Array[BrowserHistogram]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend BrowserGetHistogramsResult with Eq::{not_equal, equal}
@@ -1139,13 +1159,14 @@ pub fn browser_get_histograms_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct BrowserGetVersionResult {
   protocol_version : String
   product : String
   revision : String
   user_agent : String
   js_version : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend BrowserGetVersionResult with Eq::{not_equal, equal}
@@ -1218,9 +1239,10 @@ pub fn browser_get_version_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct BrowserGetWindowBoundsParams {
   window_id : BrowserWindowID
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend BrowserGetWindowBoundsParams with Eq::{not_equal, equal}
@@ -1249,9 +1271,10 @@ pub fn BrowserGetWindowBoundsParams::to_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct BrowserGetWindowBoundsResult {
   bounds : BrowserBounds
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend BrowserGetWindowBoundsResult with Eq::{not_equal, equal}
@@ -1316,9 +1339,10 @@ pub fn browser_get_window_bounds_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct BrowserGetWindowForTargetParams {
   target_id : TargetTargetID?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend BrowserGetWindowForTargetParams with Eq::{not_equal, equal}
@@ -1349,10 +1373,11 @@ pub fn BrowserGetWindowForTargetParams::to_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct BrowserGetWindowForTargetResult {
   window_id : BrowserWindowID
   bounds : BrowserBounds
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend BrowserGetWindowForTargetResult with Eq::{not_equal, equal}
@@ -1424,11 +1449,12 @@ pub fn browser_get_window_for_target_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct BrowserGrantPermissionsParams {
   permissions : Array[BrowserPermissionType]
   origin : String?
   browser_context_id : BrowserBrowserContextID?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend BrowserGrantPermissionsParams with Eq::{not_equal, equal}
@@ -1489,9 +1515,10 @@ pub fn browser_grant_permissions_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct BrowserResetPermissionsParams {
   browser_context_id : BrowserBrowserContextID?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend BrowserResetPermissionsParams with Eq::{not_equal, equal}
@@ -1546,11 +1573,12 @@ pub fn browser_reset_permissions_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct BrowserSetContentsSizeParams {
   window_id : BrowserWindowID
   width : Int32?
   height : Int32?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend BrowserSetContentsSizeParams with Eq::{not_equal, equal}
@@ -1609,10 +1637,11 @@ pub fn browser_set_contents_size_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct BrowserSetDockTileParams {
   badge_label : String?
   image : String?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend BrowserSetDockTileParams with Eq::{not_equal, equal}
@@ -1670,12 +1699,13 @@ pub fn browser_set_dock_tile_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct BrowserSetDownloadBehaviorParams {
   behavior : String
   browser_context_id : BrowserBrowserContextID?
   download_path : String?
   events_enabled : Bool?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend BrowserSetDownloadBehaviorParams with Eq::{not_equal, equal}
@@ -1741,13 +1771,14 @@ pub fn browser_set_download_behavior_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct BrowserSetPermissionParams {
   permission : BrowserPermissionDescriptor
   setting : BrowserPermissionSetting
   origin : String?
   embedded_origin : String?
   browser_context_id : BrowserBrowserContextID?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend BrowserSetPermissionParams with Eq::{not_equal, equal}
@@ -1810,10 +1841,11 @@ pub fn browser_set_permission_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct BrowserSetWindowBoundsParams {
   window_id : BrowserWindowID
   bounds : BrowserBounds
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend BrowserSetWindowBoundsParams with Eq::{not_equal, equal}
@@ -1867,13 +1899,14 @@ pub fn browser_set_window_bounds_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct BrowserDownloadProgressEventParams {
   guid : String
   total_bytes : Double
   received_bytes : Double
   state : String
   file_path : String?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend BrowserDownloadProgressEventParams with Eq::{not_equal, equal}
@@ -1955,12 +1988,13 @@ pub fn browser_download_progress_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct BrowserDownloadWillBeginEventParams {
   frame_id : PageFrameId
   guid : String
   url : String
   suggested_filename : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend BrowserDownloadWillBeginEventParams with Eq::{not_equal, equal}

@@ -7,11 +7,12 @@
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct ProfilerCoverageRange {
   start_offset : Int32
   end_offset : Int32
   count : Int32
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend ProfilerCoverageRange with Eq::{not_equal, equal}
@@ -57,11 +58,12 @@ pub fn ProfilerCoverageRange::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct ProfilerFunctionCoverage {
   function_name : String
   ranges : Array[ProfilerCoverageRange]
   is_block_coverage : Bool
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend ProfilerFunctionCoverage with Eq::{not_equal, equal}
@@ -118,10 +120,11 @@ pub fn ProfilerFunctionCoverage::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct ProfilerPositionTickInfo {
   line : Int32
   ticks : Int32
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend ProfilerPositionTickInfo with Eq::{not_equal, equal}
@@ -167,13 +170,14 @@ pub fn ProfilerPositionTickInfo::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct ProfilerProfile {
   nodes : Array[ProfilerProfileNode]
   start_time : Double
   end_time : Double
   samples : Array[Int32]?
   time_deltas : Array[Int32]?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend ProfilerProfile with Eq::{not_equal, equal}
@@ -254,6 +258,7 @@ pub fn ProfilerProfile::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct ProfilerProfileNode {
   id : Int32
   call_frame : RuntimeCallFrame
@@ -261,7 +266,7 @@ pub(all) struct ProfilerProfileNode {
   children : Array[Int32]?
   deopt_reason : String?
   position_ticks : Array[ProfilerPositionTickInfo]?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend ProfilerProfileNode with Eq::{not_equal, equal}
@@ -342,11 +347,12 @@ pub fn ProfilerProfileNode::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct ProfilerScriptCoverage {
   script_id : RuntimeScriptId
   url : String
   functions : Array[ProfilerFunctionCoverage]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend ProfilerScriptCoverage with Eq::{not_equal, equal}
@@ -433,9 +439,10 @@ pub fn profiler_enable_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct ProfilerGetBestEffortCoverageResult {
   result : Array[ProfilerScriptCoverage]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend ProfilerGetBestEffortCoverageResult with Eq::{not_equal, equal}
@@ -501,9 +508,10 @@ pub fn profiler_get_best_effort_coverage_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct ProfilerSetSamplingIntervalParams {
   interval : Int32
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend ProfilerSetSamplingIntervalParams with Eq::{not_equal, equal}
@@ -578,11 +586,12 @@ pub fn profiler_start_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct ProfilerStartPreciseCoverageParams {
   call_count : Bool?
   detailed : Bool?
   allow_triggered_updates : Bool?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend ProfilerStartPreciseCoverageParams with Eq::{not_equal, equal}
@@ -619,9 +628,10 @@ pub fn ProfilerStartPreciseCoverageParams::to_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct ProfilerStartPreciseCoverageResult {
   timestamp : Double
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend ProfilerStartPreciseCoverageResult with Eq::{not_equal, equal}
@@ -690,9 +700,10 @@ pub fn profiler_start_precise_coverage_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct ProfilerStopResult {
   profile : ProfilerProfile
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend ProfilerStopResult with Eq::{not_equal, equal}
@@ -771,10 +782,11 @@ pub fn profiler_stop_precise_coverage_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct ProfilerTakePreciseCoverageResult {
   result : Array[ProfilerScriptCoverage]
   timestamp : Double
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend ProfilerTakePreciseCoverageResult with Eq::{not_equal, equal}
@@ -843,12 +855,13 @@ pub fn profiler_take_precise_coverage_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct ProfilerConsoleProfileFinishedEventParams {
   id : String
   location : DebuggerLocation
   profile : ProfilerProfile
   title : String?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend ProfilerConsoleProfileFinishedEventParams with Eq::{not_equal, equal}
@@ -928,11 +941,12 @@ pub fn profiler_console_profile_finished_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct ProfilerConsoleProfileStartedEventParams {
   id : String
   location : DebuggerLocation
   title : String?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend ProfilerConsoleProfileStartedEventParams with Eq::{not_equal, equal}
@@ -1008,11 +1022,12 @@ pub fn profiler_console_profile_started_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct ProfilerPreciseCoverageDeltaUpdateEventParams {
   timestamp : Double
   occasion : String
   result : Array[ProfilerScriptCoverage]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend ProfilerPreciseCoverageDeltaUpdateEventParams with Eq::{

@@ -5,9 +5,10 @@ let cli_current_version : String = "0.7.0"
 let cli_manifest_url : String = "https://mooncakes.io/api/v0/manifest/moonbit-community/proton_cli"
 
 ///|
+#derive(FromJson)
 priv struct CliManifest {
   latest_version : String
-} derive(FromJson)
+}
 
 ///|
 fn env_flag_is_enabled(value : String) -> Bool {

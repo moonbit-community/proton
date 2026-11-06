@@ -14,10 +14,11 @@ pub let default_reason : String
 pub async fn[T] with_keepawake(async () -> T, reason? : String, scope? : Scope) -> T
 
 // Errors
+#derive(Eq)
 pub(all) suberror KeepAwakeError {
   BackendUnavailable(detail~ : String)
   OperationFailed(operation~ : String, detail~ : String)
-} derive(Eq)
+}
 pub fn KeepAwakeError::equal(Self, Self) -> Bool
 pub fn KeepAwakeError::not_equal(Self, Self) -> Bool
 pub fn KeepAwakeError::output(Self, &Logger) -> Unit
@@ -32,11 +33,12 @@ pub fn Guard::active(Self) -> Bool
 pub async fn Guard::release(Self) -> Unit raise KeepAwakeError + nocancel
 pub fn Guard::scope(Self) -> Scope
 
+#derive(Eq, @debug.Debug)
 pub(all) enum Scope {
   PreventSystemSleep
   PreventDisplaySleep
   PreventSystemAndDisplaySleep
-} derive(Eq, @debug.Debug)
+}
 pub fn Scope::equal(Self, Self) -> Bool
 pub fn Scope::not_equal(Self, Self) -> Bool
 pub fn Scope::output(Self, &Logger) -> Unit

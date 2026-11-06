@@ -7,9 +7,10 @@
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PageAdFrameExplanation {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PageAdFrameExplanation with Eq::{not_equal, equal}
@@ -47,10 +48,11 @@ pub fn PageAdFrameExplanation::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PageAdFrameStatus {
   ad_frame_type : PageAdFrameType
   explanations : Array[PageAdFrameExplanation]?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PageAdFrameStatus with Eq::{not_equal, equal}
@@ -104,9 +106,10 @@ pub fn PageAdFrameStatus::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PageAdFrameType {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PageAdFrameType with Eq::{not_equal, equal}
@@ -144,10 +147,11 @@ pub fn PageAdFrameType::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PageAdScriptAncestry {
   ancestry_chain : Array[PageAdScriptId]
   root_script_filterlist_rule : String?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PageAdScriptAncestry with Eq::{not_equal, equal}
@@ -200,10 +204,11 @@ pub fn PageAdScriptAncestry::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PageAdScriptId {
   script_id : RuntimeScriptId
   debugger_id : RuntimeUniqueDebuggerId
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PageAdScriptId with Eq::{not_equal, equal}
@@ -249,12 +254,13 @@ pub fn PageAdScriptId::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PageAppManifestError {
   message : String
   critical : Int32
   line : Int32
   column : Int32
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PageAppManifestError with Eq::{not_equal, equal}
@@ -300,9 +306,10 @@ pub fn PageAppManifestError::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PageAppManifestParsedProperties {
   scope : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PageAppManifestParsedProperties with Eq::{not_equal, equal}
@@ -344,12 +351,13 @@ pub fn PageAppManifestParsedProperties::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PageBackForwardCacheBlockingDetails {
   url : String?
   function : String?
   line_number : Int32
   column_number : Int32
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PageBackForwardCacheBlockingDetails with Eq::{not_equal, equal}
@@ -407,12 +415,13 @@ pub fn PageBackForwardCacheBlockingDetails::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PageBackForwardCacheNotRestoredExplanation {
   type_ : PageBackForwardCacheNotRestoredReasonType
   reason : PageBackForwardCacheNotRestoredReason
   context : String?
   details : Array[PageBackForwardCacheBlockingDetails]?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PageBackForwardCacheNotRestoredExplanation with Eq::{
@@ -481,11 +490,12 @@ pub fn PageBackForwardCacheNotRestoredExplanation::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PageBackForwardCacheNotRestoredExplanationTree {
   url : String
   explanations : Array[PageBackForwardCacheNotRestoredExplanation]
   children : Array[PageBackForwardCacheNotRestoredExplanationTree]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PageBackForwardCacheNotRestoredExplanationTree with Eq::{
@@ -550,9 +560,10 @@ pub fn PageBackForwardCacheNotRestoredExplanationTree::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PageBackForwardCacheNotRestoredReason {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PageBackForwardCacheNotRestoredReason with Eq::{not_equal, equal}
@@ -594,9 +605,10 @@ pub fn PageBackForwardCacheNotRestoredReason::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PageBackForwardCacheNotRestoredReasonType {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PageBackForwardCacheNotRestoredReasonType with Eq::{not_equal, equal}
@@ -638,9 +650,10 @@ pub fn PageBackForwardCacheNotRestoredReasonType::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PageClientNavigationDisposition {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PageClientNavigationDisposition with Eq::{not_equal, equal}
@@ -682,9 +695,10 @@ pub fn PageClientNavigationDisposition::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PageClientNavigationReason {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PageClientNavigationReason with Eq::{not_equal, equal}
@@ -726,10 +740,11 @@ pub fn PageClientNavigationReason::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PageCompilationCacheParams {
   url : String
   eager : Bool?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PageCompilationCacheParams with Eq::{not_equal, equal}
@@ -777,9 +792,10 @@ pub fn PageCompilationCacheParams::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PageCrossOriginIsolatedContextType {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PageCrossOriginIsolatedContextType with Eq::{not_equal, equal}
@@ -821,9 +837,10 @@ pub fn PageCrossOriginIsolatedContextType::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PageDialogType {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PageDialogType with Eq::{not_equal, equal}
@@ -861,10 +878,11 @@ pub fn PageDialogType::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PageFileFilter {
   name : String?
   accepts : Array[String]?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PageFileFilter with Eq::{not_equal, equal}
@@ -919,13 +937,14 @@ pub fn PageFileFilter::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PageFileHandler {
   action : String
   name : String
   icons : Array[PageImageResource]?
   accepts : Array[PageFileFilter]?
   launch_type : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PageFileHandler with Eq::{not_equal, equal}
@@ -997,6 +1016,7 @@ pub fn PageFileHandler::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PageFontFamilies {
   standard : String?
   fixed : String?
@@ -1005,7 +1025,7 @@ pub(all) struct PageFontFamilies {
   cursive : String?
   fantasy : String?
   math : String?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PageFontFamilies with Eq::{not_equal, equal}
@@ -1073,10 +1093,11 @@ pub fn PageFontFamilies::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PageFontSizes {
   standard : Int32?
   fixed : Int32?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PageFontSizes with Eq::{not_equal, equal}
@@ -1122,6 +1143,7 @@ pub fn PageFontSizes::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PageFrame {
   id : PageFrameId
   parent_id : PageFrameId?
@@ -1138,7 +1160,7 @@ pub(all) struct PageFrame {
   secure_context_type : PageSecureContextType
   cross_origin_isolated_context_type : PageCrossOriginIsolatedContextType
   gated_apifeatures : Array[PageGatedAPIFeatures]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PageFrame with Eq::{not_equal, equal}
@@ -1249,9 +1271,10 @@ pub fn PageFrame::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PageFrameId {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PageFrameId with Eq::{not_equal, equal}
@@ -1289,6 +1312,7 @@ pub fn PageFrameId::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PageFrameResource {
   url : String
   type_ : NetworkResourceType
@@ -1297,7 +1321,7 @@ pub(all) struct PageFrameResource {
   content_size : Double?
   failed : Bool?
   canceled : Bool?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PageFrameResource with Eq::{not_equal, equal}
@@ -1364,11 +1388,12 @@ pub fn PageFrameResource::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PageFrameResourceTree {
   frame : PageFrame
   child_frames : Array[PageFrameResourceTree]?
   resources : Array[PageFrameResource]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PageFrameResourceTree with Eq::{not_equal, equal}
@@ -1429,10 +1454,11 @@ pub fn PageFrameResourceTree::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PageFrameTree {
   frame : PageFrame
   child_frames : Array[PageFrameTree]?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PageFrameTree with Eq::{not_equal, equal}
@@ -1486,9 +1512,10 @@ pub fn PageFrameTree::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PageGatedAPIFeatures {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PageGatedAPIFeatures with Eq::{not_equal, equal}
@@ -1526,11 +1553,12 @@ pub fn PageGatedAPIFeatures::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PageImageResource {
   url : String
   sizes : String?
   type_ : String?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PageImageResource with Eq::{not_equal, equal}
@@ -1578,10 +1606,11 @@ pub fn PageImageResource::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PageInstallabilityError {
   error_id : String
   error_arguments : Array[PageInstallabilityErrorArgument]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PageInstallabilityError with Eq::{not_equal, equal}
@@ -1630,10 +1659,11 @@ pub fn PageInstallabilityError::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PageInstallabilityErrorArgument {
   name : String
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PageInstallabilityErrorArgument with Eq::{not_equal, equal}
@@ -1679,9 +1709,10 @@ pub fn PageInstallabilityErrorArgument::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PageLaunchHandler {
   client_mode : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PageLaunchHandler with Eq::{not_equal, equal}
@@ -1723,12 +1754,13 @@ pub fn PageLaunchHandler::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PageLayoutViewport {
   page_x : Int32
   page_y : Int32
   client_width : Int32
   client_height : Int32
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PageLayoutViewport with Eq::{not_equal, equal}
@@ -1778,13 +1810,14 @@ pub fn PageLayoutViewport::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PageNavigationEntry {
   id : Int32
   url : String
   user_typed_url : String
   title : String
   transition_type : PageTransitionType
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PageNavigationEntry with Eq::{not_equal, equal}
@@ -1836,9 +1869,10 @@ pub fn PageNavigationEntry::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PageNavigationType {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PageNavigationType with Eq::{not_equal, equal}
@@ -1876,11 +1910,12 @@ pub fn PageNavigationType::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PageOriginTrial {
   trial_name : String
   status : PageOriginTrialStatus
   tokens_with_status : Array[PageOriginTrialTokenWithStatus]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PageOriginTrial with Eq::{not_equal, equal}
@@ -1935,9 +1970,10 @@ pub fn PageOriginTrial::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PageOriginTrialStatus {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PageOriginTrialStatus with Eq::{not_equal, equal}
@@ -1975,6 +2011,7 @@ pub fn PageOriginTrialStatus::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PageOriginTrialToken {
   origin : String
   match_sub_domains : Bool
@@ -1982,7 +2019,7 @@ pub(all) struct PageOriginTrialToken {
   expiry_time : NetworkTimeSinceEpoch
   is_third_party : Bool
   usage_restriction : PageOriginTrialUsageRestriction
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PageOriginTrialToken with Eq::{not_equal, equal}
@@ -2042,9 +2079,10 @@ pub fn PageOriginTrialToken::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PageOriginTrialTokenStatus {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PageOriginTrialTokenStatus with Eq::{not_equal, equal}
@@ -2086,11 +2124,12 @@ pub fn PageOriginTrialTokenStatus::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PageOriginTrialTokenWithStatus {
   raw_token_text : String
   parsed_token : PageOriginTrialToken?
   status : PageOriginTrialTokenStatus
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PageOriginTrialTokenWithStatus with Eq::{not_equal, equal}
@@ -2147,9 +2186,10 @@ pub fn PageOriginTrialTokenWithStatus::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PageOriginTrialUsageRestriction {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PageOriginTrialUsageRestriction with Eq::{not_equal, equal}
@@ -2191,10 +2231,11 @@ pub fn PageOriginTrialUsageRestriction::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PagePermissionsPolicyBlockLocator {
   frame_id : PageFrameId
   block_reason : PagePermissionsPolicyBlockReason
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PagePermissionsPolicyBlockLocator with Eq::{not_equal, equal}
@@ -2244,9 +2285,10 @@ pub fn PagePermissionsPolicyBlockLocator::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PagePermissionsPolicyBlockReason {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PagePermissionsPolicyBlockReason with Eq::{not_equal, equal}
@@ -2288,9 +2330,10 @@ pub fn PagePermissionsPolicyBlockReason::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PagePermissionsPolicyFeature {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PagePermissionsPolicyFeature with Eq::{not_equal, equal}
@@ -2332,11 +2375,12 @@ pub fn PagePermissionsPolicyFeature::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PagePermissionsPolicyFeatureState {
   feature : PagePermissionsPolicyFeature
   allowed : Bool
   locator : PagePermissionsPolicyBlockLocator?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PagePermissionsPolicyFeatureState with Eq::{not_equal, equal}
@@ -2391,10 +2435,11 @@ pub fn PagePermissionsPolicyFeatureState::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PageProtocolHandler {
   protocol : String
   url : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PageProtocolHandler with Eq::{not_equal, equal}
@@ -2436,9 +2481,10 @@ pub fn PageProtocolHandler::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PageReferrerPolicy {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PageReferrerPolicy with Eq::{not_equal, equal}
@@ -2476,10 +2522,11 @@ pub fn PageReferrerPolicy::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PageRelatedApplication {
   id : String?
   url : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PageRelatedApplication with Eq::{not_equal, equal}
@@ -2523,10 +2570,11 @@ pub fn PageRelatedApplication::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PageScopeExtension {
   origin : String
   has_origin_wildcard : Bool
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PageScopeExtension with Eq::{not_equal, equal}
@@ -2570,6 +2618,7 @@ pub fn PageScopeExtension::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PageScreencastFrameMetadata {
   offset_top : Double
   page_scale_factor : Double
@@ -2578,7 +2627,7 @@ pub(all) struct PageScreencastFrameMetadata {
   scroll_offset_x : Double
   scroll_offset_y : Double
   timestamp : NetworkTimeSinceEpoch?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PageScreencastFrameMetadata with Eq::{not_equal, equal}
@@ -2651,11 +2700,12 @@ pub fn PageScreencastFrameMetadata::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PageScreenshot {
   image : PageImageResource
   form_factor : String
   label : String?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PageScreenshot with Eq::{not_equal, equal}
@@ -2705,10 +2755,11 @@ pub fn PageScreenshot::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PageScriptFontFamilies {
   script : String
   font_families : PageFontFamilies
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PageScriptFontFamilies with Eq::{not_equal, equal}
@@ -2752,9 +2803,10 @@ pub fn PageScriptFontFamilies::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PageScriptIdentifier {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PageScriptIdentifier with Eq::{not_equal, equal}
@@ -2792,9 +2844,10 @@ pub fn PageScriptIdentifier::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PageSecureContextType {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PageSecureContextType with Eq::{not_equal, equal}
@@ -2832,9 +2885,10 @@ pub fn PageSecureContextType::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PageSecurityOriginDetails {
   is_localhost : Bool
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PageSecurityOriginDetails with Eq::{not_equal, equal}
@@ -2880,6 +2934,7 @@ pub fn PageSecurityOriginDetails::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PageShareTarget {
   action : String
   method_ : String
@@ -2888,7 +2943,7 @@ pub(all) struct PageShareTarget {
   text : String?
   url : String?
   files : Array[PageFileFilter]?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PageShareTarget with Eq::{not_equal, equal}
@@ -2957,10 +3012,11 @@ pub fn PageShareTarget::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PageShortcut {
   name : String
   url : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PageShortcut with Eq::{not_equal, equal}
@@ -3002,9 +3058,10 @@ pub fn PageShortcut::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PageTransitionType {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PageTransitionType with Eq::{not_equal, equal}
@@ -3042,13 +3099,14 @@ pub fn PageTransitionType::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PageViewport {
   x : Double
   y : Double
   width : Double
   height : Double
   scale : Double
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PageViewport with Eq::{not_equal, equal}
@@ -3096,6 +3154,7 @@ pub fn PageViewport::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PageVisualViewport {
   offset_x : Double
   offset_y : Double
@@ -3105,7 +3164,7 @@ pub(all) struct PageVisualViewport {
   client_height : Double
   scale : Double
   zoom : Double?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PageVisualViewport with Eq::{not_equal, equal}
@@ -3165,6 +3224,7 @@ pub fn PageVisualViewport::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PageWebAppManifest {
   background_color : String?
   description : String?
@@ -3189,7 +3249,7 @@ pub(all) struct PageWebAppManifest {
   shortcuts : Array[PageShortcut]?
   start_url : String?
   theme_color : String?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PageWebAppManifest with Eq::{not_equal, equal}
@@ -3412,10 +3472,11 @@ pub fn PageWebAppManifest::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PageAddCompilationCacheParams {
   url : String
   data : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PageAddCompilationCacheParams with Eq::{not_equal, equal}
@@ -3469,9 +3530,10 @@ pub fn page_add_compilation_cache_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PageAddScriptToEvaluateOnLoadParams {
   script_source : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PageAddScriptToEvaluateOnLoadParams with Eq::{not_equal, equal}
@@ -3500,9 +3562,10 @@ pub fn PageAddScriptToEvaluateOnLoadParams::to_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PageAddScriptToEvaluateOnLoadResult {
   identifier : PageScriptIdentifier
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PageAddScriptToEvaluateOnLoadResult with Eq::{not_equal, equal}
@@ -3571,12 +3634,13 @@ pub fn page_add_script_to_evaluate_on_load_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PageAddScriptToEvaluateOnNewDocumentParams {
   source : String
   world_name : String?
   include_command_line_api : Bool?
   run_immediately : Bool?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PageAddScriptToEvaluateOnNewDocumentParams with Eq::{
@@ -3617,9 +3681,10 @@ pub fn PageAddScriptToEvaluateOnNewDocumentParams::to_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PageAddScriptToEvaluateOnNewDocumentResult {
   identifier : PageScriptIdentifier
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PageAddScriptToEvaluateOnNewDocumentResult with Eq::{
@@ -3713,6 +3778,7 @@ pub fn page_bring_to_front_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PageCaptureScreenshotParams {
   format : String?
   quality : Int32?
@@ -3720,7 +3786,7 @@ pub(all) struct PageCaptureScreenshotParams {
   from_surface : Bool?
   capture_beyond_viewport : Bool?
   optimize_for_speed : Bool?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PageCaptureScreenshotParams with Eq::{not_equal, equal}
@@ -3766,9 +3832,10 @@ pub fn PageCaptureScreenshotParams::to_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PageCaptureScreenshotResult {
   data : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PageCaptureScreenshotResult with Eq::{not_equal, equal}
@@ -3829,9 +3896,10 @@ pub fn page_capture_screenshot_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PageCaptureSnapshotParams {
   format : String?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PageCaptureSnapshotParams with Eq::{not_equal, equal}
@@ -3862,9 +3930,10 @@ pub fn PageCaptureSnapshotParams::to_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PageCaptureSnapshotResult {
   data : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PageCaptureSnapshotResult with Eq::{not_equal, equal}
@@ -4052,11 +4121,12 @@ pub fn page_crash_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PageCreateIsolatedWorldParams {
   frame_id : PageFrameId
   world_name : String?
   grant_univeral_access : Bool?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PageCreateIsolatedWorldParams with Eq::{not_equal, equal}
@@ -4091,9 +4161,10 @@ pub fn PageCreateIsolatedWorldParams::to_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PageCreateIsolatedWorldResult {
   execution_context_id : RuntimeExecutionContextId
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PageCreateIsolatedWorldResult with Eq::{not_equal, equal}
@@ -4158,10 +4229,11 @@ pub fn page_create_isolated_world_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PageDeleteCookieParams {
   cookie_name : String
   url : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PageDeleteCookieParams with Eq::{not_equal, equal}
@@ -4229,9 +4301,10 @@ pub fn page_disable_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PageEnableParams {
   enable_file_chooser_opened_event : Bool?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PageEnableParams with Eq::{not_equal, equal}
@@ -4282,10 +4355,11 @@ pub fn page_enable_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PageGenerateTestReportParams {
   message : String
   group : String?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PageGenerateTestReportParams with Eq::{not_equal, equal}
@@ -4341,9 +4415,10 @@ pub fn page_generate_test_report_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PageGetAdScriptAncestryParams {
   frame_id : PageFrameId
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PageGetAdScriptAncestryParams with Eq::{not_equal, equal}
@@ -4372,9 +4447,10 @@ pub fn PageGetAdScriptAncestryParams::to_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PageGetAdScriptAncestryResult {
   ad_script_ancestry : PageAdScriptAncestry?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PageGetAdScriptAncestryResult with Eq::{not_equal, equal}
@@ -4441,9 +4517,10 @@ pub fn page_get_ad_script_ancestry_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PageGetAnnotatedPageContentParams {
   include_actionable_information : Bool?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PageGetAnnotatedPageContentParams with Eq::{not_equal, equal}
@@ -4474,9 +4551,10 @@ pub fn PageGetAnnotatedPageContentParams::to_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PageGetAnnotatedPageContentResult {
   content : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PageGetAnnotatedPageContentResult with Eq::{not_equal, equal}
@@ -4545,10 +4623,11 @@ pub fn page_get_annotated_page_content_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PageGetAppIdResult {
   app_id : String?
   recommended_id : String?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PageGetAppIdResult with Eq::{not_equal, equal}
@@ -4606,9 +4685,10 @@ pub fn page_get_app_id_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PageGetAppManifestParams {
   manifest_id : String?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PageGetAppManifestParams with Eq::{not_equal, equal}
@@ -4639,13 +4719,14 @@ pub fn PageGetAppManifestParams::to_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PageGetAppManifestResult {
   url : String
   errors : Array[PageAppManifestError]
   data : String?
   parsed : PageAppManifestParsedProperties?
   manifest : PageWebAppManifest
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PageGetAppManifestResult with Eq::{not_equal, equal}
@@ -4722,9 +4803,10 @@ pub fn page_get_app_manifest_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PageGetFrameTreeResult {
   frame_tree : PageFrameTree
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PageGetFrameTreeResult with Eq::{not_equal, equal}
@@ -4785,9 +4867,10 @@ pub fn page_get_frame_tree_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PageGetInstallabilityErrorsResult {
   installability_errors : Array[PageInstallabilityError]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PageGetInstallabilityErrorsResult with Eq::{not_equal, equal}
@@ -4853,6 +4936,7 @@ pub fn page_get_installability_errors_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PageGetLayoutMetricsResult {
   layout_viewport : PageLayoutViewport
   visual_viewport : PageVisualViewport
@@ -4860,7 +4944,7 @@ pub(all) struct PageGetLayoutMetricsResult {
   css_layout_viewport : PageLayoutViewport
   css_visual_viewport : PageVisualViewport
   css_content_size : DOMRect
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PageGetLayoutMetricsResult with Eq::{not_equal, equal}
@@ -4938,9 +5022,10 @@ pub fn page_get_layout_metrics_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PageGetManifestIconsResult {
   primary_icon : String?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PageGetManifestIconsResult with Eq::{not_equal, equal}
@@ -5003,10 +5088,11 @@ pub fn page_get_manifest_icons_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PageGetNavigationHistoryResult {
   current_index : Int32
   entries : Array[PageNavigationEntry]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PageGetNavigationHistoryResult with Eq::{not_equal, equal}
@@ -5075,9 +5161,10 @@ pub fn page_get_navigation_history_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PageGetOriginTrialsParams {
   frame_id : PageFrameId
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PageGetOriginTrialsParams with Eq::{not_equal, equal}
@@ -5106,9 +5193,10 @@ pub fn PageGetOriginTrialsParams::to_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PageGetOriginTrialsResult {
   origin_trials : Array[PageOriginTrial]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PageGetOriginTrialsResult with Eq::{not_equal, equal}
@@ -5176,9 +5264,10 @@ pub fn page_get_origin_trials_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PageGetPermissionsPolicyStateParams {
   frame_id : PageFrameId
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PageGetPermissionsPolicyStateParams with Eq::{not_equal, equal}
@@ -5207,9 +5296,10 @@ pub fn PageGetPermissionsPolicyStateParams::to_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PageGetPermissionsPolicyStateResult {
   states : Array[PagePermissionsPolicyFeatureState]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PageGetPermissionsPolicyStateResult with Eq::{not_equal, equal}
@@ -5281,10 +5371,11 @@ pub fn page_get_permissions_policy_state_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PageGetResourceContentParams {
   frame_id : PageFrameId
   url : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PageGetResourceContentParams with Eq::{not_equal, equal}
@@ -5314,10 +5405,11 @@ pub fn PageGetResourceContentParams::to_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PageGetResourceContentResult {
   content : String
   base64_encoded : Bool
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PageGetResourceContentResult with Eq::{not_equal, equal}
@@ -5385,9 +5477,10 @@ pub fn page_get_resource_content_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PageGetResourceTreeResult {
   frame_tree : PageFrameResourceTree
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PageGetResourceTreeResult with Eq::{not_equal, equal}
@@ -5450,10 +5543,11 @@ pub fn page_get_resource_tree_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PageHandleJavaScriptDialogParams {
   accept : Bool
   prompt_text : String?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PageHandleJavaScriptDialogParams with Eq::{not_equal, equal}
@@ -5513,13 +5607,14 @@ pub fn page_handle_java_script_dialog_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PageNavigateParams {
   url : String
   referrer : String?
   transition_type : PageTransitionType?
   frame_id : PageFrameId?
   referrer_policy : PageReferrerPolicy?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PageNavigateParams with Eq::{not_equal, equal}
@@ -5556,12 +5651,13 @@ pub fn PageNavigateParams::to_json(self : PageNavigateParams) -> Json {
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PageNavigateResult {
   frame_id : PageFrameId
   loader_id : NetworkLoaderId?
   error_text : String?
   is_download : Bool?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PageNavigateResult with Eq::{not_equal, equal}
@@ -5634,9 +5730,10 @@ pub fn page_navigate_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PageNavigateToHistoryEntryParams {
   entry_id : Int32
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PageNavigateToHistoryEntryParams with Eq::{not_equal, equal}
@@ -5693,6 +5790,7 @@ pub fn page_navigate_to_history_entry_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PagePrintToPDFParams {
   landscape : Bool?
   display_header_footer : Bool?
@@ -5711,7 +5809,7 @@ pub(all) struct PagePrintToPDFParams {
   transfer_mode : String?
   generate_tagged_pdf : Bool?
   generate_document_outline : Bool?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PagePrintToPDFParams with Eq::{not_equal, equal}
@@ -5786,10 +5884,11 @@ pub fn PagePrintToPDFParams::to_json(self : PagePrintToPDFParams) -> Json {
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PagePrintToPDFResult {
   data : String
   stream : IOStreamHandle?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PagePrintToPDFResult with Eq::{not_equal, equal}
@@ -5854,9 +5953,10 @@ pub fn page_print_to_pdf_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PageProduceCompilationCacheParams {
   scripts : Array[PageCompilationCacheParams]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PageProduceCompilationCacheParams with Eq::{not_equal, equal}
@@ -5913,11 +6013,12 @@ pub fn page_produce_compilation_cache_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PageReloadParams {
   ignore_cache : Bool?
   script_to_evaluate_on_load : String?
   loader_id : NetworkLoaderId?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PageReloadParams with Eq::{not_equal, equal}
@@ -5974,9 +6075,10 @@ pub fn page_reload_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PageRemoveScriptToEvaluateOnLoadParams {
   identifier : PageScriptIdentifier
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PageRemoveScriptToEvaluateOnLoadParams with Eq::{not_equal, equal}
@@ -6033,9 +6135,10 @@ pub fn page_remove_script_to_evaluate_on_load_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PageRemoveScriptToEvaluateOnNewDocumentParams {
   identifier : PageScriptIdentifier
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PageRemoveScriptToEvaluateOnNewDocumentParams with Eq::{
@@ -6117,9 +6220,10 @@ pub fn page_reset_navigation_history_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PageScreencastFrameAckParams {
   session_id : Int32
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PageScreencastFrameAckParams with Eq::{not_equal, equal}
@@ -6172,13 +6276,14 @@ pub fn page_screencast_frame_ack_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PageSearchInResourceParams {
   frame_id : PageFrameId
   url : String
   query : String
   case_sensitive : Bool?
   is_regex : Bool?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PageSearchInResourceParams with Eq::{not_equal, equal}
@@ -6215,9 +6320,10 @@ pub fn PageSearchInResourceParams::to_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PageSearchInResourceResult {
   result : Array[DebuggerSearchMatch]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PageSearchInResourceResult with Eq::{not_equal, equal}
@@ -6285,9 +6391,10 @@ pub fn page_search_in_resource_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PageSetAdBlockingEnabledParams {
   enabled : Bool
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PageSetAdBlockingEnabledParams with Eq::{not_equal, equal}
@@ -6344,9 +6451,10 @@ pub fn page_set_ad_blocking_enabled_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PageSetBypassCSPParams {
   enabled : Bool
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PageSetBypassCSPParams with Eq::{not_equal, equal}
@@ -6395,6 +6503,7 @@ pub fn page_set_bypass_csp_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PageSetDeviceMetricsOverrideParams {
   width : Int32
   height : Int32
@@ -6408,7 +6517,7 @@ pub(all) struct PageSetDeviceMetricsOverrideParams {
   dont_set_visible_size : Bool?
   screen_orientation : EmulationScreenOrientation?
   viewport : PageViewport?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PageSetDeviceMetricsOverrideParams with Eq::{not_equal, equal}
@@ -6492,11 +6601,12 @@ pub fn page_set_device_metrics_override_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PageSetDeviceOrientationOverrideParams {
   alpha : Double
   beta : Double
   gamma : Double
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PageSetDeviceOrientationOverrideParams with Eq::{not_equal, equal}
@@ -6555,10 +6665,11 @@ pub fn page_set_device_orientation_override_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PageSetDocumentContentParams {
   frame_id : PageFrameId
   html : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PageSetDocumentContentParams with Eq::{not_equal, equal}
@@ -6612,10 +6723,11 @@ pub fn page_set_document_content_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PageSetDownloadBehaviorParams {
   behavior : String
   download_path : String?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PageSetDownloadBehaviorParams with Eq::{not_equal, equal}
@@ -6671,10 +6783,11 @@ pub fn page_set_download_behavior_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PageSetFontFamiliesParams {
   font_families : PageFontFamilies
   for_scripts : Array[PageScriptFontFamilies]?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PageSetFontFamiliesParams with Eq::{not_equal, equal}
@@ -6730,9 +6843,10 @@ pub fn page_set_font_families_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PageSetFontSizesParams {
   font_sizes : PageFontSizes
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PageSetFontSizesParams with Eq::{not_equal, equal}
@@ -6781,11 +6895,12 @@ pub fn page_set_font_sizes_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PageSetGeolocationOverrideParams {
   latitude : Double?
   longitude : Double?
   accuracy : Double?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PageSetGeolocationOverrideParams with Eq::{not_equal, equal}
@@ -6850,10 +6965,11 @@ pub fn page_set_geolocation_override_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PageSetInterceptFileChooserDialogParams {
   enabled : Bool
   cancel : Bool?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PageSetInterceptFileChooserDialogParams with Eq::{not_equal, equal}
@@ -6913,9 +7029,10 @@ pub fn page_set_intercept_file_chooser_dialog_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PageSetLifecycleEventsEnabledParams {
   enabled : Bool
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PageSetLifecycleEventsEnabledParams with Eq::{not_equal, equal}
@@ -6972,9 +7089,10 @@ pub fn page_set_lifecycle_events_enabled_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PageSetPrerenderingAllowedParams {
   is_allowed : Bool
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PageSetPrerenderingAllowedParams with Eq::{not_equal, equal}
@@ -7031,9 +7149,10 @@ pub fn page_set_prerendering_allowed_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PageSetRPHRegistrationModeParams {
   mode : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PageSetRPHRegistrationModeParams with Eq::{not_equal, equal}
@@ -7090,9 +7209,10 @@ pub fn page_set_rphregistration_mode_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PageSetSPCTransactionModeParams {
   mode : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PageSetSPCTransactionModeParams with Eq::{not_equal, equal}
@@ -7149,10 +7269,11 @@ pub fn page_set_spctransaction_mode_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PageSetTouchEmulationEnabledParams {
   enabled : Bool
   configuration : String?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PageSetTouchEmulationEnabledParams with Eq::{not_equal, equal}
@@ -7212,9 +7333,10 @@ pub fn page_set_touch_emulation_enabled_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PageSetWebLifecycleStateParams {
   state : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PageSetWebLifecycleStateParams with Eq::{not_equal, equal}
@@ -7271,13 +7393,14 @@ pub fn page_set_web_lifecycle_state_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PageStartScreencastParams {
   format : String?
   quality : Int32?
   max_width : Int32?
   max_height : Int32?
   every_nth_frame : Int32?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PageStartScreencastParams with Eq::{not_equal, equal}
@@ -7406,12 +7529,13 @@ pub fn page_wait_for_debugger_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PageBackForwardCacheNotUsedEventParams {
   loader_id : NetworkLoaderId
   frame_id : PageFrameId
   not_restored_explanations : Array[PageBackForwardCacheNotRestoredExplanation]
   not_restored_explanations_tree : PageBackForwardCacheNotRestoredExplanationTree?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PageBackForwardCacheNotUsedEventParams with Eq::{not_equal, equal}
@@ -7503,10 +7627,11 @@ pub fn page_back_forward_cache_not_used_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PageCompilationCacheProducedEventParams {
   url : String
   data : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PageCompilationCacheProducedEventParams with Eq::{not_equal, equal}
@@ -7576,9 +7701,10 @@ pub fn page_compilation_cache_produced_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PageDocumentOpenedEventParams {
   frame : PageFrame
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PageDocumentOpenedEventParams with Eq::{not_equal, equal}
@@ -7648,9 +7774,10 @@ pub fn page_document_opened_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PageDomContentEventFiredEventParams {
   timestamp : NetworkMonotonicTime
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PageDomContentEventFiredEventParams with Eq::{not_equal, equal}
@@ -7720,12 +7847,13 @@ pub fn page_dom_content_event_fired_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PageDownloadProgressEventParams {
   guid : String
   total_bytes : Double
   received_bytes : Double
   state : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PageDownloadProgressEventParams with Eq::{not_equal, equal}
@@ -7803,12 +7931,13 @@ pub fn page_download_progress_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PageDownloadWillBeginEventParams {
   frame_id : PageFrameId
   guid : String
   url : String
   suggested_filename : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PageDownloadWillBeginEventParams with Eq::{not_equal, equal}
@@ -7886,11 +8015,12 @@ pub fn page_download_will_begin_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PageFileChooserOpenedEventParams {
   frame_id : PageFrameId
   mode : String
   backend_node_id : DOMBackendNodeId?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PageFileChooserOpenedEventParams with Eq::{not_equal, equal}
@@ -7969,11 +8099,12 @@ pub fn page_file_chooser_opened_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PageFrameAttachedEventParams {
   frame_id : PageFrameId
   parent_frame_id : PageFrameId
   stack : RuntimeStackTrace?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PageFrameAttachedEventParams with Eq::{not_equal, equal}
@@ -8054,9 +8185,10 @@ pub fn page_frame_attached_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PageFrameClearedScheduledNavigationEventParams {
   frame_id : PageFrameId
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PageFrameClearedScheduledNavigationEventParams with Eq::{
@@ -8132,10 +8264,11 @@ pub fn page_frame_cleared_scheduled_navigation_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PageFrameDetachedEventParams {
   frame_id : PageFrameId
   reason : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PageFrameDetachedEventParams with Eq::{not_equal, equal}
@@ -8207,10 +8340,11 @@ pub fn page_frame_detached_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PageFrameNavigatedEventParams {
   frame : PageFrame
   type_ : PageNavigationType
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PageFrameNavigatedEventParams with Eq::{not_equal, equal}
@@ -8284,12 +8418,13 @@ pub fn page_frame_navigated_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PageFrameRequestedNavigationEventParams {
   frame_id : PageFrameId
   reason : PageClientNavigationReason
   url : String
   disposition : PageClientNavigationDisposition
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PageFrameRequestedNavigationEventParams with Eq::{not_equal, equal}
@@ -8385,12 +8520,13 @@ pub fn page_frame_resized_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PageFrameScheduledNavigationEventParams {
   frame_id : PageFrameId
   delay : Double
   reason : PageClientNavigationReason
   url : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PageFrameScheduledNavigationEventParams with Eq::{not_equal, equal}
@@ -8468,9 +8604,10 @@ pub fn page_frame_scheduled_navigation_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PageFrameStartedLoadingEventParams {
   frame_id : PageFrameId
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PageFrameStartedLoadingEventParams with Eq::{not_equal, equal}
@@ -8540,12 +8677,13 @@ pub fn page_frame_started_loading_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PageFrameStartedNavigatingEventParams {
   frame_id : PageFrameId
   url : String
   loader_id : NetworkLoaderId
   navigation_type : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PageFrameStartedNavigatingEventParams with Eq::{not_equal, equal}
@@ -8625,9 +8763,10 @@ pub fn page_frame_started_navigating_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PageFrameStoppedLoadingEventParams {
   frame_id : PageFrameId
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PageFrameStoppedLoadingEventParams with Eq::{not_equal, equal}
@@ -8697,9 +8836,10 @@ pub fn page_frame_stopped_loading_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PageFrameSubtreeWillBeDetachedEventParams {
   frame_id : PageFrameId
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PageFrameSubtreeWillBeDetachedEventParams with Eq::{not_equal, equal}
@@ -8801,11 +8941,12 @@ pub fn page_interstitial_shown_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PageJavascriptDialogClosedEventParams {
   frame_id : PageFrameId
   result : Bool
   user_input : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PageJavascriptDialogClosedEventParams with Eq::{not_equal, equal}
@@ -8881,6 +9022,7 @@ pub fn page_javascript_dialog_closed_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PageJavascriptDialogOpeningEventParams {
   url : String
   frame_id : PageFrameId
@@ -8888,7 +9030,7 @@ pub(all) struct PageJavascriptDialogOpeningEventParams {
   type_ : PageDialogType
   has_browser_handler : Bool
   default_prompt : String?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PageJavascriptDialogOpeningEventParams with Eq::{not_equal, equal}
@@ -8976,12 +9118,13 @@ pub fn page_javascript_dialog_opening_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PageLifecycleEventEventParams {
   frame_id : PageFrameId
   loader_id : NetworkLoaderId
   name : String
   timestamp : NetworkMonotonicTime
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PageLifecycleEventEventParams with Eq::{not_equal, equal}
@@ -9061,9 +9204,10 @@ pub fn page_lifecycle_event_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PageLoadEventFiredEventParams {
   timestamp : NetworkMonotonicTime
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PageLoadEventFiredEventParams with Eq::{not_equal, equal}
@@ -9133,11 +9277,12 @@ pub fn page_load_event_fired_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PageNavigatedWithinDocumentEventParams {
   frame_id : PageFrameId
   url : String
   navigation_type : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PageNavigatedWithinDocumentEventParams with Eq::{not_equal, equal}
@@ -9213,11 +9358,12 @@ pub fn page_navigated_within_document_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PageScreencastFrameEventParams {
   data : String
   metadata : PageScreencastFrameMetadata
   session_id : Int32
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PageScreencastFrameEventParams with Eq::{not_equal, equal}
@@ -9291,9 +9437,10 @@ pub fn page_screencast_frame_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PageScreencastVisibilityChangedEventParams {
   visible : Bool
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PageScreencastVisibilityChangedEventParams with Eq::{
@@ -9362,12 +9509,13 @@ pub fn page_screencast_visibility_changed_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PageWindowOpenEventParams {
   url : String
   window_name : String
   window_features : Array[String]
   user_gesture : Bool
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PageWindowOpenEventParams with Eq::{not_equal, equal}

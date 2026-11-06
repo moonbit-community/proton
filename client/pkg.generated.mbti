@@ -10,13 +10,14 @@ import {
 // Values
 pub let desktop : Client
 
-pub async fn[Request : ToJson, Response : @json.FromJson] invoke(@proton_contract.Command[Request, Response], Request) -> Response raise ClientFailure
+pub async fn[Request : @json.ToJson, Response : @json.FromJson] invoke(@proton_contract.Command[Request, Response], Request) -> Response raise ClientFailure
 
-pub fn[Request : ToJson, Response : @json.FromJson] invoke_with_callbacks(@proton_contract.Command[Request, Response], Request, (Response) -> Unit, (ClientFailure) -> Unit) -> () -> Unit
+pub fn[Request : @json.ToJson, Response : @json.FromJson] invoke_with_callbacks(@proton_contract.Command[Request, Response], Request, (Response) -> Unit, (ClientFailure) -> Unit) -> () -> Unit
 
 pub fn[Payload : @json.FromJson] subscribe(@proton_contract.Event[Payload], (Payload) -> Unit, (ClientFailure) -> Unit) -> Subscription raise ClientFailure
 
 // Errors
+#derive(Eq, @debug.Debug)
 pub(all) suberror ClientFailure {
   BridgeUnavailable
   RequestCancelled
@@ -25,7 +26,7 @@ pub(all) suberror ClientFailure {
   TransportFailure(message~ : String)
   ResponseDecode(message~ : String)
   EventDecode(message~ : String)
-} derive(Eq, @debug.Debug)
+}
 pub fn ClientFailure::equal(Self, Self) -> Bool
 pub fn ClientFailure::message(Self) -> String
 pub fn ClientFailure::not_equal(Self, Self) -> Bool
@@ -39,8 +40,8 @@ pub struct Client {
   start_listener : (String, (String) -> Unit) -> (() -> Unit) raise ClientFailure
 }
 pub fn Client::Client(invoke~ : (String, String, (String) -> Unit, (ClientFailure) -> Unit) -> () -> Unit, subscribe~ : (String, (String) -> Unit) -> (() -> Unit) raise ClientFailure) -> Self
-pub async fn[Request : ToJson, Response : @json.FromJson] Client::invoke(Self, @proton_contract.Command[Request, Response], Request) -> Response raise ClientFailure
-pub fn[Request : ToJson, Response : @json.FromJson] Client::invoke_with_callbacks(Self, @proton_contract.Command[Request, Response], Request, (Response) -> Unit, (ClientFailure) -> Unit) -> () -> Unit
+pub async fn[Request : @json.ToJson, Response : @json.FromJson] Client::invoke(Self, @proton_contract.Command[Request, Response], Request) -> Response raise ClientFailure
+pub fn[Request : @json.ToJson, Response : @json.FromJson] Client::invoke_with_callbacks(Self, @proton_contract.Command[Request, Response], Request, (Response) -> Unit, (ClientFailure) -> Unit) -> () -> Unit
 pub fn[Payload : @json.FromJson] Client::subscribe(Self, @proton_contract.Event[Payload], (Payload) -> Unit, (ClientFailure) -> Unit) -> Subscription raise ClientFailure
 
 pub struct Subscription {

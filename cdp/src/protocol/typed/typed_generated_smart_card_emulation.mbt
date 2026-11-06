@@ -7,9 +7,10 @@
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct SmartCardEmulationConnectionState {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend SmartCardEmulationConnectionState with Eq::{not_equal, equal}
@@ -51,9 +52,10 @@ pub fn SmartCardEmulationConnectionState::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct SmartCardEmulationDisposition {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend SmartCardEmulationDisposition with Eq::{not_equal, equal}
@@ -95,9 +97,10 @@ pub fn SmartCardEmulationDisposition::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct SmartCardEmulationProtocol {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend SmartCardEmulationProtocol with Eq::{not_equal, equal}
@@ -139,11 +142,12 @@ pub fn SmartCardEmulationProtocol::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct SmartCardEmulationProtocolSet {
   t0 : Bool?
   t1 : Bool?
   raw : Bool?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend SmartCardEmulationProtocolSet with Eq::{not_equal, equal}
@@ -197,6 +201,7 @@ pub fn SmartCardEmulationProtocolSet::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct SmartCardEmulationReaderStateFlags {
   unaware : Bool?
   ignore : Bool?
@@ -209,7 +214,7 @@ pub(all) struct SmartCardEmulationReaderStateFlags {
   inuse : Bool?
   mute : Bool?
   unpowered : Bool?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend SmartCardEmulationReaderStateFlags with Eq::{not_equal, equal}
@@ -297,11 +302,12 @@ pub fn SmartCardEmulationReaderStateFlags::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct SmartCardEmulationReaderStateIn {
   reader : String
   current_state : SmartCardEmulationReaderStateFlags
   current_insertion_count : Int32
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend SmartCardEmulationReaderStateIn with Eq::{not_equal, equal}
@@ -355,12 +361,13 @@ pub fn SmartCardEmulationReaderStateIn::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct SmartCardEmulationReaderStateOut {
   reader : String
   event_state : SmartCardEmulationReaderStateFlags
   event_count : Int32
   atr : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend SmartCardEmulationReaderStateOut with Eq::{not_equal, equal}
@@ -414,9 +421,10 @@ pub fn SmartCardEmulationReaderStateOut::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct SmartCardEmulationResultCode {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend SmartCardEmulationResultCode with Eq::{not_equal, equal}
@@ -458,9 +466,10 @@ pub fn SmartCardEmulationResultCode::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct SmartCardEmulationShareMode {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend SmartCardEmulationShareMode with Eq::{not_equal, equal}
@@ -546,10 +555,11 @@ pub fn smart_card_emulation_enable_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct SmartCardEmulationReportBeginTransactionResultParams {
   request_id : String
   handle : Int32
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend SmartCardEmulationReportBeginTransactionResultParams with Eq::{
@@ -610,11 +620,12 @@ pub fn smart_card_emulation_report_begin_transaction_result_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct SmartCardEmulationReportConnectResultParams {
   request_id : String
   handle : Int32
   active_protocol : SmartCardEmulationProtocol?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend SmartCardEmulationReportConnectResultParams with Eq::{
@@ -678,10 +689,11 @@ pub fn smart_card_emulation_report_connect_result_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct SmartCardEmulationReportDataResultParams {
   request_id : String
   data : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend SmartCardEmulationReportDataResultParams with Eq::{not_equal, equal}
@@ -739,10 +751,11 @@ pub fn smart_card_emulation_report_data_result_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct SmartCardEmulationReportErrorParams {
   request_id : String
   result_code : SmartCardEmulationResultCode
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend SmartCardEmulationReportErrorParams with Eq::{not_equal, equal}
@@ -800,10 +813,11 @@ pub fn smart_card_emulation_report_error_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct SmartCardEmulationReportEstablishContextResultParams {
   request_id : String
   context_id : Int32
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend SmartCardEmulationReportEstablishContextResultParams with Eq::{
@@ -864,10 +878,11 @@ pub fn smart_card_emulation_report_establish_context_result_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct SmartCardEmulationReportGetStatusChangeResultParams {
   request_id : String
   reader_states : Array[SmartCardEmulationReaderStateOut]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend SmartCardEmulationReportGetStatusChangeResultParams with Eq::{
@@ -930,10 +945,11 @@ pub fn smart_card_emulation_report_get_status_change_result_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct SmartCardEmulationReportListReadersResultParams {
   request_id : String
   readers : Array[String]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend SmartCardEmulationReportListReadersResultParams with Eq::{
@@ -994,9 +1010,10 @@ pub fn smart_card_emulation_report_list_readers_result_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct SmartCardEmulationReportPlainResultParams {
   request_id : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend SmartCardEmulationReportPlainResultParams with Eq::{not_equal, equal}
@@ -1053,9 +1070,10 @@ pub fn smart_card_emulation_report_plain_result_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct SmartCardEmulationReportReleaseContextResultParams {
   request_id : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend SmartCardEmulationReportReleaseContextResultParams with Eq::{
@@ -1115,13 +1133,14 @@ pub fn smart_card_emulation_report_release_context_result_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct SmartCardEmulationReportStatusResultParams {
   request_id : String
   reader_name : String
   state : SmartCardEmulationConnectionState
   atr : String
   protocol : SmartCardEmulationProtocol?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend SmartCardEmulationReportStatusResultParams with Eq::{
@@ -1187,10 +1206,11 @@ pub fn smart_card_emulation_report_status_result_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct SmartCardEmulationBeginTransactionRequestedEventParams {
   request_id : String
   handle : Int32
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend SmartCardEmulationBeginTransactionRequestedEventParams with Eq::{
@@ -1268,10 +1288,11 @@ pub fn smart_card_emulation_begin_transaction_requested_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct SmartCardEmulationCancelRequestedEventParams {
   request_id : String
   context_id : Int32
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend SmartCardEmulationCancelRequestedEventParams with Eq::{
@@ -1346,13 +1367,14 @@ pub fn smart_card_emulation_cancel_requested_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct SmartCardEmulationConnectRequestedEventParams {
   request_id : String
   context_id : Int32
   reader : String
   share_mode : SmartCardEmulationShareMode
   preferred_protocols : SmartCardEmulationProtocolSet
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend SmartCardEmulationConnectRequestedEventParams with Eq::{
@@ -1440,12 +1462,13 @@ pub fn smart_card_emulation_connect_requested_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct SmartCardEmulationControlRequestedEventParams {
   request_id : String
   handle : Int32
   control_code : Int32
   data : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend SmartCardEmulationControlRequestedEventParams with Eq::{
@@ -1529,11 +1552,12 @@ pub fn smart_card_emulation_control_requested_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct SmartCardEmulationDisconnectRequestedEventParams {
   request_id : String
   handle : Int32
   disposition : SmartCardEmulationDisposition
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend SmartCardEmulationDisconnectRequestedEventParams with Eq::{
@@ -1615,11 +1639,12 @@ pub fn smart_card_emulation_disconnect_requested_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct SmartCardEmulationEndTransactionRequestedEventParams {
   request_id : String
   handle : Int32
   disposition : SmartCardEmulationDisposition
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend SmartCardEmulationEndTransactionRequestedEventParams with Eq::{
@@ -1701,9 +1726,10 @@ pub fn smart_card_emulation_end_transaction_requested_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct SmartCardEmulationEstablishContextRequestedEventParams {
   request_id : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend SmartCardEmulationEstablishContextRequestedEventParams with Eq::{
@@ -1779,11 +1805,12 @@ pub fn smart_card_emulation_establish_context_requested_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct SmartCardEmulationGetAttribRequestedEventParams {
   request_id : String
   handle : Int32
   attrib_id : Int32
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend SmartCardEmulationGetAttribRequestedEventParams with Eq::{
@@ -1863,12 +1890,13 @@ pub fn smart_card_emulation_get_attrib_requested_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct SmartCardEmulationGetStatusChangeRequestedEventParams {
   request_id : String
   context_id : Int32
   reader_states : Array[SmartCardEmulationReaderStateIn]
   timeout : Int32?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend SmartCardEmulationGetStatusChangeRequestedEventParams with Eq::{
@@ -1959,10 +1987,11 @@ pub fn smart_card_emulation_get_status_change_requested_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct SmartCardEmulationListReadersRequestedEventParams {
   request_id : String
   context_id : Int32
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend SmartCardEmulationListReadersRequestedEventParams with Eq::{
@@ -2040,10 +2069,11 @@ pub fn smart_card_emulation_list_readers_requested_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct SmartCardEmulationReleaseContextRequestedEventParams {
   request_id : String
   context_id : Int32
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend SmartCardEmulationReleaseContextRequestedEventParams with Eq::{
@@ -2121,12 +2151,13 @@ pub fn smart_card_emulation_release_context_requested_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct SmartCardEmulationSetAttribRequestedEventParams {
   request_id : String
   handle : Int32
   attrib_id : Int32
   data : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend SmartCardEmulationSetAttribRequestedEventParams with Eq::{
@@ -2208,10 +2239,11 @@ pub fn smart_card_emulation_set_attrib_requested_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct SmartCardEmulationStatusRequestedEventParams {
   request_id : String
   handle : Int32
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend SmartCardEmulationStatusRequestedEventParams with Eq::{
@@ -2286,12 +2318,13 @@ pub fn smart_card_emulation_status_requested_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct SmartCardEmulationTransmitRequestedEventParams {
   request_id : String
   handle : Int32
   data : String
   protocol : SmartCardEmulationProtocol?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend SmartCardEmulationTransmitRequestedEventParams with Eq::{

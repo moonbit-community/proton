@@ -1,7 +1,8 @@
 ///|
+#derive(Debug, Eq)
 pub(all) suberror SafeStorageError {
   OperationFailed(detail~ : String)
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend SafeStorageError with Debug::{to_repr}

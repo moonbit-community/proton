@@ -7,11 +7,12 @@
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct HeadlessExperimentalScreenshotParams {
   format : String?
   quality : Int32?
   optimize_for_speed : Bool?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend HeadlessExperimentalScreenshotParams with Eq::{not_equal, equal}
@@ -67,12 +68,13 @@ pub fn HeadlessExperimentalScreenshotParams::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct HeadlessExperimentalBeginFrameParams {
   frame_time_ticks : Double?
   interval : Double?
   no_display_updates : Bool?
   screenshot : HeadlessExperimentalScreenshotParams?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend HeadlessExperimentalBeginFrameParams with Eq::{not_equal, equal}
@@ -112,10 +114,11 @@ pub fn HeadlessExperimentalBeginFrameParams::to_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct HeadlessExperimentalBeginFrameResult {
   has_damage : Bool
   screenshot_data : String?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend HeadlessExperimentalBeginFrameResult with Eq::{not_equal, equal}

@@ -21,15 +21,17 @@ pub fn render_js_template(String, Array[TemplateReplacement]) -> String
 pub fn replacement(String, String) -> TemplateReplacement
 
 // Errors
+#derive(Eq, @debug.Debug)
 pub(all) suberror CommandPermissionError {
   Missing(extension_id~ : String)
   Foreign(expected~ : String, actual~ : String)
-} derive(Eq, @debug.Debug)
+}
 pub fn CommandPermissionError::equal(Self, Self) -> Bool
 pub fn CommandPermissionError::message(Self) -> String
 pub fn CommandPermissionError::not_equal(Self, Self) -> Bool
 pub fn CommandPermissionError::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug)
 pub(all) suberror OpDispatchError {
   InvalidPayload(name~ : String, detail~ : String)
   UnknownOp(name~ : String)
@@ -37,7 +39,7 @@ pub(all) suberror OpDispatchError {
   HostClosed
   AsyncHandlerRequiresAsync(name~ : String)
   RequestContextRequired(name~ : String)
-} derive(Eq, @debug.Debug)
+}
 pub fn OpDispatchError::equal(Self, Self) -> Bool
 pub fn OpDispatchError::message(Self) -> String
 pub fn OpDispatchError::not_equal(Self, Self) -> Bool
@@ -45,12 +47,13 @@ pub fn OpDispatchError::output(Self, &Logger) -> Unit
 pub fn OpDispatchError::to_repr(Self) -> @debug.Repr
 pub fn OpDispatchError::to_string(Self) -> String
 
+#derive(Eq, @debug.Debug)
 pub(all) suberror OpRegistrationError {
   EmptyName
   DuplicateName(name~ : String)
   HostClosed
   RegistrationSealed
-} derive(Eq, @debug.Debug)
+}
 pub fn OpRegistrationError::equal(Self, Self) -> Bool
 pub fn OpRegistrationError::message(Self) -> String
 pub fn OpRegistrationError::not_equal(Self, Self) -> Bool
@@ -68,9 +71,9 @@ pub fn AppCommandHost::close(Self) -> Unit
 pub async fn AppCommandHost::dispatch_ipc(Self, @ipc.IpcOpRequest) -> @ipc.IpcOpResponse
 #alias(dispatch_async_with_context)
 pub async fn AppCommandHost::dispatch_ipc_with_context(Self, AppCommandRequestContext, @ipc.IpcOpRequest) -> @ipc.IpcOpResponse
-pub fn[Payload : @json.FromJson, Reply : ToJson] AppCommandHost::op(Self, String, (Payload) -> Reply raise?) -> Unit raise OpRegistrationError
-pub fn[Payload : @json.FromJson, Reply : ToJson] AppCommandHost::op_async(Self, String, async (Payload) -> Reply) -> Unit raise OpRegistrationError
-pub fn[Payload : @json.FromJson, Reply : ToJson] AppCommandHost::op_async_with_context(Self, String, async (AppCommandRequestContext, Payload) -> Reply) -> Unit raise OpRegistrationError
+pub fn[Payload : @json.FromJson, Reply : @json.ToJson] AppCommandHost::op(Self, String, (Payload) -> Reply raise?) -> Unit raise OpRegistrationError
+pub fn[Payload : @json.FromJson, Reply : @json.ToJson] AppCommandHost::op_async(Self, String, async (Payload) -> Reply) -> Unit raise OpRegistrationError
+pub fn[Payload : @json.FromJson, Reply : @json.ToJson] AppCommandHost::op_async_with_context(Self, String, async (AppCommandRequestContext, Payload) -> Reply) -> Unit raise OpRegistrationError
 pub fn AppCommandHost::registered_ops(Self) -> Array[String]
 pub fn AppCommandHost::seal_registrations(Self) -> Unit
 
@@ -80,18 +83,18 @@ pub struct AppCommandRequestContext {
   source_origin : String
   page_instance : String?
   permission_extension : String?
-  permission_scope_value : Json?
+  permission_scope_value : @json.Json?
   tasks : @async.TaskGroup[Unit]
   wake_signal : RuntimeWakeSignal
-  emit_event : async (@proton_contract.ContractRoute, String, Json) -> Unit noraise
+  emit_event : async (@proton_contract.ContractRoute, String, @json.Json) -> Unit noraise
   locale_preferences : @locale.LocalePreferences
 }
-pub fn AppCommandRequestContext::AppCommandRequestContext(@async.TaskGroup[Unit], @locale.LocalePreferences, window? : CommandWindow, window_id? : String, source_origin? : String, page_instance? : String?, permission_extension? : String, permission_scope? : Json, wake_signal? : RuntimeWakeSignal, emit_event? : async (@proton_contract.ContractRoute, String, Json) -> Unit noraise) -> Self
+pub fn AppCommandRequestContext::AppCommandRequestContext(@async.TaskGroup[Unit], @locale.LocalePreferences, window? : CommandWindow, window_id? : String, source_origin? : String, page_instance? : String?, permission_extension? : String, permission_scope? : @json.Json, wake_signal? : RuntimeWakeSignal, emit_event? : async (@proton_contract.ContractRoute, String, @json.Json) -> Unit noraise) -> Self
 #alias(emit)
-pub async fn[Payload : ToJson] AppCommandRequestContext::emit_to_caller(Self, @proton_contract.Event[Payload], Payload) -> Unit
+pub async fn[Payload : @json.ToJson] AppCommandRequestContext::emit_to_caller(Self, @proton_contract.Event[Payload], Payload) -> Unit
 pub fn AppCommandRequestContext::locale(Self) -> @locale.Locale
 pub fn AppCommandRequestContext::page_instance(Self) -> String?
-pub fn AppCommandRequestContext::permission_scope(Self, String) -> Json raise CommandPermissionError
+pub fn AppCommandRequestContext::permission_scope(Self, String) -> @json.Json raise CommandPermissionError
 pub fn AppCommandRequestContext::preferred_languages(Self) -> Array[@locale.Locale]
 pub fn AppCommandRequestContext::source_origin(Self) -> String
 pub fn AppCommandRequestContext::task_group(Self) -> @async.TaskGroup[Unit]
@@ -107,9 +110,9 @@ pub struct CommandWindow {
   open_file_dialog : async (String?, String?) -> String?
   save_file_dialog : async (String?, String?) -> String?
   choose_directory_dialog : async (String?, String?) -> String?
-  get_titlebar_area : () -> Json raise
+  get_titlebar_area : () -> @json.Json raise
 }
-pub fn CommandWindow::CommandWindow(async (String?, String, String) -> Unit, async (String?, String, String) -> Bool, async (String?, String?) -> String?, async (String?, String?) -> String?, async (String?, String?) -> String?, get_titlebar_area? : () -> Json raise) -> Self
+pub fn CommandWindow::CommandWindow(async (String?, String, String) -> Unit, async (String?, String, String) -> Bool, async (String?, String?) -> String?, async (String?, String?) -> String?, async (String?, String?) -> String?, get_titlebar_area? : () -> @json.Json raise) -> Self
 pub async fn CommandWindow::choose_directory(Self, String?, String?) -> String?
 pub async fn CommandWindow::confirm(Self, String?, String, String) -> Bool
 pub async fn CommandWindow::open_file(Self, String?, String?) -> String?

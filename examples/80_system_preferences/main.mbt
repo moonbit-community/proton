@@ -1,5 +1,6 @@
 ///|
-struct ReadRequest {} derive(ToJson, FromJson)
+#derive(ToJson, FromJson)
+struct ReadRequest {}
 
 ///|
 pub extend ReadRequest with ToJson::{to_json}
@@ -8,9 +9,10 @@ pub extend ReadRequest with ToJson::{to_json}
 pub extend ReadRequest with FromJson::{from_json}
 
 ///|
+#derive(ToJson, FromJson)
 struct TrustRequest {
   prompt : Bool
-} derive(ToJson, FromJson)
+}
 
 ///|
 pub extend TrustRequest with ToJson::{to_json}
@@ -22,6 +24,7 @@ pub extend TrustRequest with FromJson::{from_json}
 /// One readback of every system preference query. A query that the platform
 /// does not answer keeps its value empty and reports the error instead, so the
 /// page can show the platform matrix without a second round trip.
+#derive(ToJson, FromJson)
 struct Snapshot {
   accent_color : String
   accent_error : String
@@ -33,7 +36,7 @@ struct Snapshot {
   camera : String
   screen : String
   media_error : String
-} derive(ToJson, FromJson)
+}
 
 ///|
 pub extend Snapshot with ToJson::{to_json}
@@ -42,10 +45,11 @@ pub extend Snapshot with ToJson::{to_json}
 pub extend Snapshot with FromJson::{from_json}
 
 ///|
+#derive(ToJson, FromJson)
 struct TrustReply {
   trusted : Bool
   error : String
-} derive(ToJson, FromJson)
+}
 
 ///|
 pub extend TrustReply with ToJson::{to_json}

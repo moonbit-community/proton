@@ -13,7 +13,8 @@ pub fn capability() -> @extension.RendererCapability
 pub fn register_commands(@command.CommandRegistrar) -> Unit raise
 
 // Errors
-type UpdaterError derive(@debug.Debug)
+#derive(@debug.Debug)
+type UpdaterError
 pub fn UpdaterError::output(Self, &Logger) -> Unit
 pub fn UpdaterError::to_repr(Self) -> @debug.Repr
 pub fn UpdaterError::to_string(Self) -> String

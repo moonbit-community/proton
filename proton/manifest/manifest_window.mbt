@@ -1,11 +1,12 @@
 ///|
 /// Declarative sizing hint used by manifest windows.
+#derive(Debug, Eq)
 pub(all) enum WindowSizeHint {
   None
   Fixed
   Min
   Max
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend WindowSizeHint with Eq::{not_equal, equal}
@@ -28,6 +29,7 @@ pub impl Show for WindowSizeHint with fn output(self, logger) {
 
 ///|
 /// Declarative window settings consumed by runtime manifests.
+#derive(Debug, Eq)
 pub struct WindowManifest {
   title : String
   width : Int32
@@ -36,7 +38,7 @@ pub struct WindowManifest {
   titlebar_style : TitlebarStyle
   theme_preference : WindowThemePreference
   traffic_light_position : (Int32, Int32)?
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend WindowManifest with Eq::{not_equal, equal}
@@ -74,11 +76,12 @@ pub impl Show for WindowManifest with fn output(self, logger) {
 
 ///|
 /// Declarative secondary window entry consumed by runtime manifests.
+#derive(Debug, Eq)
 pub struct AppWindowManifest {
   id : String
   window : WindowManifest
   entry : AppEntry
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend AppWindowManifest with Eq::{not_equal, equal}

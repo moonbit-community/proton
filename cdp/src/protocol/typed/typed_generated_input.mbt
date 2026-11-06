@@ -7,11 +7,12 @@
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct InputDragData {
   items : Array[InputDragDataItem]
   files : Array[String]?
   drag_operations_mask : Int32
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend InputDragData with Eq::{not_equal, equal}
@@ -74,12 +75,13 @@ pub fn InputDragData::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct InputDragDataItem {
   mime_type : String
   data : String
   title : String?
   base_url : String?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend InputDragDataItem with Eq::{not_equal, equal}
@@ -129,9 +131,10 @@ pub fn InputDragDataItem::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct InputGestureSourceType {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend InputGestureSourceType with Eq::{not_equal, equal}
@@ -169,9 +172,10 @@ pub fn InputGestureSourceType::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct InputMouseButton {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend InputMouseButton with Eq::{not_equal, equal}
@@ -209,9 +213,10 @@ pub fn InputMouseButton::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct InputTimeSinceEpoch {
   value : Double
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend InputTimeSinceEpoch with Eq::{not_equal, equal}
@@ -249,6 +254,7 @@ pub fn InputTimeSinceEpoch::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct InputTouchPoint {
   x : Double
   y : Double
@@ -261,7 +267,7 @@ pub(all) struct InputTouchPoint {
   tilt_y : Double?
   twist : Int32?
   id : Double?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend InputTouchPoint with Eq::{not_equal, equal}
@@ -365,13 +371,14 @@ pub fn input_cancel_dragging_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct InputDispatchDragEventParams {
   type_ : String
   x : Double
   y : Double
   data : InputDragData
   modifiers : Int32?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend InputDispatchDragEventParams with Eq::{not_equal, equal}
@@ -430,6 +437,7 @@ pub fn input_dispatch_drag_event_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct InputDispatchKeyEventParams {
   type_ : String
   modifiers : Int32?
@@ -446,7 +454,7 @@ pub(all) struct InputDispatchKeyEventParams {
   is_system_key : Bool?
   location : Int32?
   commands : Array[String]?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend InputDispatchKeyEventParams with Eq::{not_equal, equal}
@@ -541,6 +549,7 @@ pub fn input_dispatch_key_event_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct InputDispatchMouseEventParams {
   type_ : String
   x : Double
@@ -558,7 +567,7 @@ pub(all) struct InputDispatchMouseEventParams {
   delta_x : Double?
   delta_y : Double?
   pointer_type : String?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend InputDispatchMouseEventParams with Eq::{not_equal, equal}
@@ -652,12 +661,13 @@ pub fn input_dispatch_mouse_event_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct InputDispatchTouchEventParams {
   type_ : String
   touch_points : Array[InputTouchPoint]
   modifiers : Int32?
   timestamp : InputTimeSinceEpoch?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend InputDispatchTouchEventParams with Eq::{not_equal, equal}
@@ -719,6 +729,7 @@ pub fn input_dispatch_touch_event_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct InputEmulateTouchFromMouseEventParams {
   type_ : String
   x : Int32
@@ -729,7 +740,7 @@ pub(all) struct InputEmulateTouchFromMouseEventParams {
   delta_y : Double?
   modifiers : Int32?
   click_count : Int32?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend InputEmulateTouchFromMouseEventParams with Eq::{not_equal, equal}
@@ -804,13 +815,14 @@ pub fn input_emulate_touch_from_mouse_event_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct InputImeSetCompositionParams {
   text : String
   selection_start : Int32
   selection_end : Int32
   replacement_start : Int32?
   replacement_end : Int32?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend InputImeSetCompositionParams with Eq::{not_equal, equal}
@@ -871,9 +883,10 @@ pub fn input_ime_set_composition_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct InputInsertTextParams {
   text : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend InputInsertTextParams with Eq::{not_equal, equal}
@@ -922,9 +935,10 @@ pub fn input_insert_text_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct InputSetIgnoreInputEventsParams {
   ignore : Bool
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend InputSetIgnoreInputEventsParams with Eq::{not_equal, equal}
@@ -981,9 +995,10 @@ pub fn input_set_ignore_input_events_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct InputSetInterceptDragsParams {
   enabled : Bool
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend InputSetInterceptDragsParams with Eq::{not_equal, equal}
@@ -1036,13 +1051,14 @@ pub fn input_set_intercept_drags_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct InputSynthesizePinchGestureParams {
   x : Double
   y : Double
   scale_factor : Double
   relative_speed : Int32?
   gesture_source_type : InputGestureSourceType?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend InputSynthesizePinchGestureParams with Eq::{not_equal, equal}
@@ -1107,6 +1123,7 @@ pub fn input_synthesize_pinch_gesture_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct InputSynthesizeScrollGestureParams {
   x : Double
   y : Double
@@ -1120,7 +1137,7 @@ pub(all) struct InputSynthesizeScrollGestureParams {
   repeat_count : Int32?
   repeat_delay_ms : Int32?
   interaction_marker_name : String?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend InputSynthesizeScrollGestureParams with Eq::{not_equal, equal}
@@ -1208,13 +1225,14 @@ pub fn input_synthesize_scroll_gesture_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct InputSynthesizeTapGestureParams {
   x : Double
   y : Double
   duration : Int32?
   tap_count : Int32?
   gesture_source_type : InputGestureSourceType?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend InputSynthesizeTapGestureParams with Eq::{not_equal, equal}
@@ -1281,9 +1299,10 @@ pub fn input_synthesize_tap_gesture_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct InputDragInterceptedEventParams {
   data : InputDragData
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend InputDragInterceptedEventParams with Eq::{not_equal, equal}

@@ -10,33 +10,40 @@ import {
 // Errors
 
 // Types and methods
-type AudioPayload derive(ToJson, @json.FromJson)
-pub fn AudioPayload::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
-pub fn AudioPayload::to_json(Self) -> Json
+#derive(@json.FromJson, @json.ToJson)
+type AudioPayload
+pub fn AudioPayload::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn AudioPayload::to_json(Self) -> @json.Json
 
-type AudioReply derive(ToJson, @json.FromJson)
-pub fn AudioReply::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
-pub fn AudioReply::to_json(Self) -> Json
+#derive(@json.FromJson, @json.ToJson)
+type AudioReply
+pub fn AudioReply::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn AudioReply::to_json(Self) -> @json.Json
 
-type NavigatePayload derive(ToJson, @json.FromJson)
-pub fn NavigatePayload::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
-pub fn NavigatePayload::to_json(Self) -> Json
+#derive(@json.FromJson, @json.ToJson)
+type NavigatePayload
+pub fn NavigatePayload::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn NavigatePayload::to_json(Self) -> @json.Json
 
-type NavigateReply derive(ToJson, @json.FromJson)
-pub fn NavigateReply::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
-pub fn NavigateReply::to_json(Self) -> Json
+#derive(@json.FromJson, @json.ToJson)
+type NavigateReply
+pub fn NavigateReply::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn NavigateReply::to_json(Self) -> @json.Json
 
-type SimpleReply derive(ToJson, @json.FromJson)
-pub fn SimpleReply::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
-pub fn SimpleReply::to_json(Self) -> Json
+#derive(@json.FromJson, @json.ToJson)
+type SimpleReply
+pub fn SimpleReply::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn SimpleReply::to_json(Self) -> @json.Json
 
-type ZoomPayload derive(ToJson, @json.FromJson)
-pub fn ZoomPayload::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
-pub fn ZoomPayload::to_json(Self) -> Json
+#derive(@json.FromJson, @json.ToJson)
+type ZoomPayload
+pub fn ZoomPayload::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn ZoomPayload::to_json(Self) -> @json.Json
 
-type ZoomReply derive(ToJson, @json.FromJson)
-pub fn ZoomReply::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
-pub fn ZoomReply::to_json(Self) -> Json
+#derive(@json.FromJson, @json.ToJson)
+type ZoomReply
+pub fn ZoomReply::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn ZoomReply::to_json(Self) -> @json.Json
 
 // Type aliases
 

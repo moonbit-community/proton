@@ -1,12 +1,13 @@
 ///|
 /// Failures while decoding or validating Proton IPC protocol values.
+#derive(Debug, Eq)
 pub(all) suberror IpcError {
   MalformedJson(detail~ : String)
   InvalidPayload(kind~ : String, detail~ : String)
   UnsupportedVersion(scope~ : String, actual~ : Int32, supported~ : Int32)
   EmptyField(path~ : String)
   InvalidErrorResponseBody
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend IpcError with Eq::{not_equal, equal}

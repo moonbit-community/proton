@@ -7,11 +7,12 @@
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct IndexedDBDatabaseWithObjectStores {
   name : String
   version : Double
   object_stores : Array[IndexedDBObjectStore]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend IndexedDBDatabaseWithObjectStores with Eq::{not_equal, equal}
@@ -66,11 +67,12 @@ pub fn IndexedDBDatabaseWithObjectStores::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct IndexedDBDataEntry {
   key : RuntimeRemoteObject
   primary_key : RuntimeRemoteObject
   value : RuntimeRemoteObject
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend IndexedDBDataEntry with Eq::{not_equal, equal}
@@ -120,13 +122,14 @@ pub fn IndexedDBDataEntry::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct IndexedDBKey {
   type_ : String
   number : Double?
   string : String?
   date : Double?
   array : Array[IndexedDBKey]?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend IndexedDBKey with Eq::{not_equal, equal}
@@ -190,11 +193,12 @@ pub fn IndexedDBKey::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct IndexedDBKeyPath {
   type_ : String
   string : String?
   array : Array[String]?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend IndexedDBKeyPath with Eq::{not_equal, equal}
@@ -250,12 +254,13 @@ pub fn IndexedDBKeyPath::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct IndexedDBKeyRange {
   lower : IndexedDBKey?
   upper : IndexedDBKey?
   lower_open : Bool
   upper_open : Bool
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend IndexedDBKeyRange with Eq::{not_equal, equal}
@@ -311,12 +316,13 @@ pub fn IndexedDBKeyRange::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct IndexedDBObjectStore {
   name : String
   key_path : IndexedDBKeyPath
   auto_increment : Bool
   indexes : Array[IndexedDBObjectStoreIndex]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend IndexedDBObjectStore with Eq::{not_equal, equal}
@@ -371,12 +377,13 @@ pub fn IndexedDBObjectStore::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct IndexedDBObjectStoreIndex {
   name : String
   key_path : IndexedDBKeyPath
   unique : Bool
   multi_entry : Bool
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend IndexedDBObjectStoreIndex with Eq::{not_equal, equal}
@@ -430,13 +437,14 @@ pub fn IndexedDBObjectStoreIndex::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct IndexedDBClearObjectStoreParams {
   security_origin : String?
   storage_key : String?
   storage_bucket : StorageStorageBucket?
   database_name : String
   object_store_name : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend IndexedDBClearObjectStoreParams with Eq::{not_equal, equal}
@@ -503,12 +511,13 @@ pub fn indexed_db_clear_object_store_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct IndexedDBDeleteDatabaseParams {
   security_origin : String?
   storage_key : String?
   storage_bucket : StorageStorageBucket?
   database_name : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend IndexedDBDeleteDatabaseParams with Eq::{not_equal, equal}
@@ -570,6 +579,7 @@ pub fn indexed_db_delete_database_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct IndexedDBDeleteObjectStoreEntriesParams {
   security_origin : String?
   storage_key : String?
@@ -577,7 +587,7 @@ pub(all) struct IndexedDBDeleteObjectStoreEntriesParams {
   database_name : String
   object_store_name : String
   key_range : IndexedDBKeyRange
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend IndexedDBDeleteObjectStoreEntriesParams with Eq::{not_equal, equal}
@@ -685,13 +695,14 @@ pub fn indexed_db_enable_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct IndexedDBGetMetadataParams {
   security_origin : String?
   storage_key : String?
   storage_bucket : StorageStorageBucket?
   database_name : String
   object_store_name : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend IndexedDBGetMetadataParams with Eq::{not_equal, equal}
@@ -730,10 +741,11 @@ pub fn IndexedDBGetMetadataParams::to_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct IndexedDBGetMetadataResult {
   entries_count : Double
   key_generator_value : Double
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend IndexedDBGetMetadataResult with Eq::{not_equal, equal}
@@ -801,6 +813,7 @@ pub fn indexed_db_get_metadata_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct IndexedDBRequestDataParams {
   security_origin : String?
   storage_key : String?
@@ -811,7 +824,7 @@ pub(all) struct IndexedDBRequestDataParams {
   skip_count : Int32
   page_size : Int32
   key_range : IndexedDBKeyRange?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend IndexedDBRequestDataParams with Eq::{not_equal, equal}
@@ -858,10 +871,11 @@ pub fn IndexedDBRequestDataParams::to_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct IndexedDBRequestDataResult {
   object_store_data_entries : Array[IndexedDBDataEntry]
   has_more : Bool
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend IndexedDBRequestDataResult with Eq::{not_equal, equal}
@@ -932,12 +946,13 @@ pub fn indexed_db_request_data_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct IndexedDBRequestDatabaseParams {
   security_origin : String?
   storage_key : String?
   storage_bucket : StorageStorageBucket?
   database_name : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend IndexedDBRequestDatabaseParams with Eq::{not_equal, equal}
@@ -975,9 +990,10 @@ pub fn IndexedDBRequestDatabaseParams::to_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct IndexedDBRequestDatabaseResult {
   database_with_object_stores : IndexedDBDatabaseWithObjectStores
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend IndexedDBRequestDatabaseResult with Eq::{not_equal, equal}
@@ -1044,11 +1060,12 @@ pub fn indexed_db_request_database_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct IndexedDBRequestDatabaseNamesParams {
   security_origin : String?
   storage_key : String?
   storage_bucket : StorageStorageBucket?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend IndexedDBRequestDatabaseNamesParams with Eq::{not_equal, equal}
@@ -1085,9 +1102,10 @@ pub fn IndexedDBRequestDatabaseNamesParams::to_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct IndexedDBRequestDatabaseNamesResult {
   database_names : Array[String]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend IndexedDBRequestDatabaseNamesResult with Eq::{not_equal, equal}

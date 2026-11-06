@@ -14,6 +14,7 @@ let ready_poll_interval_ms = 100
 let ready_probe_timeout_ms = 1000
 
 ///|
+#derive(Debug, Eq)
 struct RawDevOptions {
   app_package : String?
   config_path : String?
@@ -25,7 +26,7 @@ struct RawDevOptions {
   ready_path : String?
   start_frontend : Bool
   app_args : Array[String]
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend RawDevOptions with Eq::{not_equal, equal}
@@ -34,11 +35,12 @@ pub extend RawDevOptions with Eq::{not_equal, equal}
 pub extend RawDevOptions with Debug::{to_repr}
 
 ///|
+#derive(Debug, Eq)
 struct DevRuntime {
   root : String
   bin_dir : String
   platform : String
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend DevRuntime with Eq::{not_equal, equal}
@@ -47,11 +49,12 @@ pub extend DevRuntime with Eq::{not_equal, equal}
 pub extend DevRuntime with Debug::{to_repr}
 
 ///|
+#derive(Debug, Eq)
 struct DevUrlEndpoint {
   url : String
   host : String
   port : Int32
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend DevUrlEndpoint with Eq::{not_equal, equal}

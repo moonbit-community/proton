@@ -1,10 +1,11 @@
 ///|
 /// Failures while launching targets through the operating-system shell.
+#derive(Debug, Eq)
 suberror ShellError {
   UnsupportedPlatform
   EmptyTarget(field~ : String)
   LaunchFailed(operation~ : String, target~ : String)
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend ShellError with Eq::{not_equal, equal}

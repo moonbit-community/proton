@@ -1,9 +1,10 @@
 ///|
 /// Controls whether web content stays below or extends beneath the titlebar.
+#derive(Debug, Eq)
 pub(all) enum TitlebarStyle {
   Default
   Overlay
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend TitlebarStyle with Eq::{not_equal, equal}
@@ -13,11 +14,12 @@ pub extend TitlebarStyle with Debug::{to_repr}
 
 ///|
 /// Controls how Proton chooses the native window chrome theme.
+#derive(Debug, Eq)
 pub(all) enum WindowThemePreference {
   System
   Light
   Dark
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend WindowThemePreference with Eq::{not_equal, equal}
@@ -27,12 +29,13 @@ pub extend WindowThemePreference with Debug::{to_repr}
 
 ///|
 /// Controls how configured window dimensions constrain native resizing.
+#derive(Debug, Eq)
 pub(all) enum WindowSizeHint {
   Unconstrained
   Fixed
   Min
   Max
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend WindowSizeHint with Eq::{not_equal, equal}
@@ -44,6 +47,7 @@ pub extend WindowSizeHint with Debug::{to_repr}
 /// Explicit progress states for `WindowHandle::set_progress_bar`, mirroring
 /// Electron's `mode` option. Only Windows renders the explicit states; macOS
 /// and Linux derive the indicator from the progress value alone.
+#derive(Debug, Eq)
 pub(all) enum ProgressBarMode {
   /// Derives the state from the value: a negative value clears the indicator,
   /// `0.0` through `1.0` is determinate, and values above `1.0` are
@@ -55,7 +59,7 @@ pub(all) enum ProgressBarMode {
   Paused
   /// Removes the indicator without changing the last reported value.
   Cleared
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend ProgressBarMode with Eq::{not_equal, equal}
@@ -66,13 +70,14 @@ pub extend ProgressBarMode with Debug::{to_repr}
 ///|
 /// Taskbar thumbnail-toolbar button flags, mirroring Electron's `flags` array.
 /// A button is enabled unless `Disabled` or `NonInteractive` is present.
+#derive(Debug, Eq)
 pub(all) enum ThumbarButtonFlag {
   Disabled
   DismissOnClick
   NoBackground
   Hidden
   NonInteractive
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend ThumbarButtonFlag with Eq::{not_equal, equal}
@@ -82,6 +87,7 @@ pub extend ThumbarButtonFlag with Debug::{to_repr}
 
 ///|
 /// The kind of a jump list item, mirroring Electron's `type` property.
+#derive(Debug, Eq)
 pub(all) enum JumpListItemKind {
   /// Launches `path` with `arguments`, shown as `title`.
   Task
@@ -90,7 +96,7 @@ pub(all) enum JumpListItemKind {
   Separator
   /// Opens `path` with the application that registered that file type.
   File
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend JumpListItemKind with Eq::{not_equal, equal}
@@ -100,6 +106,7 @@ pub extend JumpListItemKind with Debug::{to_repr}
 
 ///|
 /// The kind of a jump list category, mirroring Electron's `type` property.
+#derive(Debug, Eq)
 pub(all) enum JumpListCategoryKind {
   /// The standard Tasks category, always shown at the bottom.
   Tasks
@@ -109,7 +116,7 @@ pub(all) enum JumpListCategoryKind {
   Recent
   /// The Windows-managed frequently used category.
   Frequent
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend JumpListCategoryKind with Eq::{not_equal, equal}
@@ -149,6 +156,7 @@ pub(all) struct JumpListCategory {
 ///|
 /// The result of a jump list update, mirroring the strings Electron returns
 /// from `setJumpList`.
+#derive(Debug, Eq)
 pub(all) enum JumpListResult {
   /// Nothing went wrong.
   Ok
@@ -163,7 +171,7 @@ pub(all) enum JumpListResult {
   /// The platform has no jump list. Proton reports this instead of Electron's
   /// undefined method on macOS and Linux.
   Unsupported
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend JumpListResult with Eq::{not_equal, equal}
@@ -173,6 +181,7 @@ pub extend JumpListResult with Debug::{to_repr}
 
 ///|
 /// A standard top-level application menu role.
+#derive(Debug, Eq)
 pub(all) enum MenuRole {
   Application
   File
@@ -180,7 +189,7 @@ pub(all) enum MenuRole {
   View
   Window
   Help
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend MenuRole with Eq::{not_equal, equal}
@@ -190,6 +199,7 @@ pub extend MenuRole with Debug::{to_repr}
 
 ///|
 /// A standard native menu action.
+#derive(Debug, Eq)
 pub(all) enum MenuItemRole {
   Quit
   Hide
@@ -204,7 +214,7 @@ pub(all) enum MenuItemRole {
   Copy
   Paste
   SelectAll
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend MenuItemRole with Eq::{not_equal, equal}
@@ -214,12 +224,13 @@ pub extend MenuItemRole with Debug::{to_repr}
 
 ///|
 /// SameSite policy for a browser cookie.
+#derive(Debug, Eq)
 pub(all) enum CookieSameSite {
   Unspecified
   NoRestriction
   Lax
   Strict
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend CookieSameSite with Eq::{not_equal, equal}
@@ -229,10 +240,11 @@ pub extend CookieSameSite with Debug::{to_repr}
 
 ///|
 /// Controls when Proton enables the browser accessibility tree.
+#derive(Eq, Debug)
 pub(all) enum AccessibilityMode {
   Automatic
   AlwaysEnabled
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AccessibilityMode with Eq::{not_equal, equal}

@@ -1,14 +1,10 @@
 ///|
 /// The MoonBit backend that `proton_cli` builds and launches.
+#derive(Eq, Debug, ToJson(fields(app_package(rename="package"))), FromJson(fields(app_package(rename="package"))))
 pub(all) struct BackendConfig {
   path : String
   app_package : String
-} derive (
-  Eq,
-  Debug,
-  ToJson(fields(app_package(rename="package"))),
-  FromJson(fields(app_package(rename="package"))),
-)
+}
 
 ///|
 pub extend BackendConfig with Eq::{not_equal, equal}
@@ -26,13 +22,14 @@ pub fn BackendConfig::BackendConfig(
 
 ///|
 /// Frontend commands and paths needed before the application can run.
+#derive(Eq, Debug, ToJson, FromJson)
 pub(all) struct FrontendConfig {
   dev_url : String?
   dist : String?
   before_dev : String?
   before_build : String?
   path : String?
-} derive(Eq, Debug, ToJson, FromJson)
+}
 
 ///|
 pub extend FrontendConfig with Eq::{not_equal, equal}
@@ -52,9 +49,10 @@ pub fn FrontendConfig::FrontendConfig(
 }
 
 ///|
+#derive(Eq, Debug, ToJson, FromJson)
 pub(all) struct SignConfig {
   binaries : Array[String]
-} derive(Eq, Debug, ToJson, FromJson)
+}
 
 ///|
 pub extend SignConfig with Eq::{not_equal, equal}
@@ -68,11 +66,12 @@ pub fn SignConfig::SignConfig(binaries~ : Array[String] = []) -> SignConfig {
 }
 
 ///|
+#derive(Eq, Debug, ToJson, FromJson)
 pub(all) struct DocumentType {
   name : String
   extensions : Array[String]
   role : String
-} derive(Eq, Debug, ToJson, FromJson)
+}
 
 ///|
 pub extend DocumentType with Eq::{not_equal, equal}
@@ -92,6 +91,7 @@ pub fn DocumentType::DocumentType(
 ///|
 /// Package metadata, input preparation, and payloads consumed by
 /// `proton_cli package`.
+#derive(Eq, Debug, ToJson, FromJson)
 pub(all) struct PackageConfig {
   product_name : String
   version : String
@@ -105,7 +105,7 @@ pub(all) struct PackageConfig {
   output : String
   minimum_system_version : String?
   nsis_install_mode : String?
-} derive(Eq, Debug, ToJson, FromJson)
+}
 
 ///|
 pub extend PackageConfig with Eq::{not_equal, equal}
@@ -147,12 +147,13 @@ pub fn PackageConfig::PackageConfig(
 ///|
 /// Effective host-platform configuration shared by tooling and applications.
 /// Loading resolves root platform overrides; relative paths remain unchanged.
+#derive(Eq, Debug)
 pub(all) struct AppConfig {
   identifier : String
   backend : BackendConfig?
   frontend : FrontendConfig?
   package_config : PackageConfig?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AppConfig with Eq::{not_equal, equal}

@@ -1,9 +1,10 @@
 ///|
+#derive(FromJson, Eq, Debug)
 struct MultiWindowResponseProbe {
   label : String
   page_instance : String
   window : String
-} derive(FromJson, Eq, Debug)
+}
 
 ///|
 pub extend MultiWindowResponseProbe with Eq::{not_equal, equal}
@@ -15,13 +16,14 @@ pub extend MultiWindowResponseProbe with Debug::{to_repr}
 pub extend MultiWindowResponseProbe with FromJson::{from_json}
 
 ///|
+#derive(FromJson, Eq, Debug)
 struct MultiWindowPageProbe {
   url : String
   title : String
   label : String
   has_bridge : Bool
   response : MultiWindowResponseProbe
-} derive(FromJson, Eq, Debug)
+}
 
 ///|
 pub extend MultiWindowPageProbe with Eq::{not_equal, equal}
@@ -33,10 +35,11 @@ pub extend MultiWindowPageProbe with Debug::{to_repr}
 pub extend MultiWindowPageProbe with FromJson::{from_json}
 
 ///|
+#derive(FromJson, Eq, Debug)
 struct MultiWindowProbe {
   a : MultiWindowPageProbe
   b : MultiWindowPageProbe
-} derive(FromJson, Eq, Debug)
+}
 
 ///|
 pub extend MultiWindowProbe with Eq::{not_equal, equal}

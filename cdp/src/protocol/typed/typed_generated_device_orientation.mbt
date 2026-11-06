@@ -32,11 +32,12 @@ pub fn device_orientation_clear_device_orientation_override_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DeviceOrientationSetDeviceOrientationOverrideParams {
   alpha : Double
   beta : Double
   gamma : Double
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DeviceOrientationSetDeviceOrientationOverrideParams with Eq::{

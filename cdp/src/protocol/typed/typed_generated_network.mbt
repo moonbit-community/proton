@@ -7,9 +7,10 @@
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkAlternateProtocolUsage {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkAlternateProtocolUsage with Eq::{not_equal, equal}
@@ -51,11 +52,12 @@ pub fn NetworkAlternateProtocolUsage::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkAssociatedCookie {
   cookie : NetworkCookie
   blocked_reasons : Array[NetworkCookieBlockedReason]
   exemption_reason : NetworkCookieExemptionReason?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkAssociatedCookie with Eq::{not_equal, equal}
@@ -113,12 +115,13 @@ pub fn NetworkAssociatedCookie::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkAuthChallenge {
   source : String?
   origin : String
   scheme : String
   realm : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkAuthChallenge with Eq::{not_equal, equal}
@@ -166,11 +169,12 @@ pub fn NetworkAuthChallenge::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkAuthChallengeResponse {
   response : String
   username : String?
   password : String?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkAuthChallengeResponse with Eq::{not_equal, equal}
@@ -222,9 +226,10 @@ pub fn NetworkAuthChallengeResponse::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkBlockedReason {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkBlockedReason with Eq::{not_equal, equal}
@@ -262,11 +267,12 @@ pub fn NetworkBlockedReason::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkBlockedSetCookieWithReason {
   blocked_reasons : Array[NetworkSetCookieBlockedReason]
   cookie_line : String
   cookie : NetworkCookie?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkBlockedSetCookieWithReason with Eq::{not_equal, equal}
@@ -328,10 +334,11 @@ pub fn NetworkBlockedSetCookieWithReason::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkBlockPattern {
   url_pattern : String
   block : Bool
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkBlockPattern with Eq::{not_equal, equal}
@@ -375,12 +382,13 @@ pub fn NetworkBlockPattern::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkCachedResource {
   url : String
   type_ : NetworkResourceType
   response : NetworkResponse?
   body_size : Double
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkCachedResource with Eq::{not_equal, equal}
@@ -433,9 +441,10 @@ pub fn NetworkCachedResource::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkCertificateTransparencyCompliance {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkCertificateTransparencyCompliance with Eq::{not_equal, equal}
@@ -477,10 +486,11 @@ pub fn NetworkCertificateTransparencyCompliance::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkChallengeEventDetails {
   challenge_result : String
   challenge : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkChallengeEventDetails with Eq::{not_equal, equal}
@@ -528,11 +538,12 @@ pub fn NetworkChallengeEventDetails::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkClientSecurityState {
   initiator_is_secure_context : Bool
   initiator_ipaddress_space : NetworkIPAddressSpace
   local_network_access_request_policy : NetworkLocalNetworkAccessRequestPolicy
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkClientSecurityState with Eq::{not_equal, equal}
@@ -590,9 +601,10 @@ pub fn NetworkClientSecurityState::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkConnectionType {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkConnectionType with Eq::{not_equal, equal}
@@ -630,9 +642,10 @@ pub fn NetworkConnectionType::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkConnectTiming {
   request_time : Double
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkConnectTiming with Eq::{not_equal, equal}
@@ -674,9 +687,10 @@ pub fn NetworkConnectTiming::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkContentEncoding {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkContentEncoding with Eq::{not_equal, equal}
@@ -714,9 +728,10 @@ pub fn NetworkContentEncoding::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkContentSecurityPolicySource {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkContentSecurityPolicySource with Eq::{not_equal, equal}
@@ -758,11 +773,12 @@ pub fn NetworkContentSecurityPolicySource::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkContentSecurityPolicyStatus {
   effective_directives : String
   is_enforced : Bool
   source : NetworkContentSecurityPolicySource
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkContentSecurityPolicyStatus with Eq::{not_equal, equal}
@@ -816,6 +832,7 @@ pub fn NetworkContentSecurityPolicyStatus::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkCookie {
   name : String
   value : String
@@ -832,7 +849,7 @@ pub(all) struct NetworkCookie {
   source_port : Int32
   partition_key : NetworkCookiePartitionKey?
   partition_key_opaque : Bool?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkCookie with Eq::{not_equal, equal}
@@ -920,9 +937,10 @@ pub fn NetworkCookie::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkCookieBlockedReason {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkCookieBlockedReason with Eq::{not_equal, equal}
@@ -964,9 +982,10 @@ pub fn NetworkCookieBlockedReason::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkCookieExemptionReason {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkCookieExemptionReason with Eq::{not_equal, equal}
@@ -1008,6 +1027,7 @@ pub fn NetworkCookieExemptionReason::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkCookieParam {
   name : String
   value : String
@@ -1022,7 +1042,7 @@ pub(all) struct NetworkCookieParam {
   source_scheme : NetworkCookieSourceScheme?
   source_port : Int32?
   partition_key : NetworkCookiePartitionKey?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkCookieParam with Eq::{not_equal, equal}
@@ -1125,10 +1145,11 @@ pub fn NetworkCookieParam::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkCookiePartitionKey {
   top_level_site : String
   has_cross_site_ancestor : Bool
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkCookiePartitionKey with Eq::{not_equal, equal}
@@ -1178,9 +1199,10 @@ pub fn NetworkCookiePartitionKey::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkCookiePriority {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkCookiePriority with Eq::{not_equal, equal}
@@ -1218,9 +1240,10 @@ pub fn NetworkCookiePriority::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkCookieSameSite {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkCookieSameSite with Eq::{not_equal, equal}
@@ -1258,9 +1281,10 @@ pub fn NetworkCookieSameSite::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkCookieSourceScheme {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkCookieSourceScheme with Eq::{not_equal, equal}
@@ -1302,9 +1326,10 @@ pub fn NetworkCookieSourceScheme::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkCorsError {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkCorsError with Eq::{not_equal, equal}
@@ -1342,10 +1367,11 @@ pub fn NetworkCorsError::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkCorsErrorStatus {
   cors_error : NetworkCorsError
   failed_parameter : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkCorsErrorStatus with Eq::{not_equal, equal}
@@ -1391,11 +1417,12 @@ pub fn NetworkCorsErrorStatus::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkCreationEventDetails {
   fetch_result : NetworkDeviceBoundSessionFetchResult
   new_session : NetworkDeviceBoundSession?
   failed_request : NetworkDeviceBoundSessionFailedRequest?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkCreationEventDetails with Eq::{not_equal, equal}
@@ -1456,12 +1483,13 @@ pub fn NetworkCreationEventDetails::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkCrossOriginEmbedderPolicyStatus {
   value : NetworkCrossOriginEmbedderPolicyValue
   report_only_value : NetworkCrossOriginEmbedderPolicyValue
   reporting_endpoint : String?
   report_only_reporting_endpoint : String?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkCrossOriginEmbedderPolicyStatus with Eq::{not_equal, equal}
@@ -1523,9 +1551,10 @@ pub fn NetworkCrossOriginEmbedderPolicyStatus::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkCrossOriginEmbedderPolicyValue {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkCrossOriginEmbedderPolicyValue with Eq::{not_equal, equal}
@@ -1567,12 +1596,13 @@ pub fn NetworkCrossOriginEmbedderPolicyValue::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkCrossOriginOpenerPolicyStatus {
   value : NetworkCrossOriginOpenerPolicyValue
   report_only_value : NetworkCrossOriginOpenerPolicyValue
   reporting_endpoint : String?
   report_only_reporting_endpoint : String?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkCrossOriginOpenerPolicyStatus with Eq::{not_equal, equal}
@@ -1634,9 +1664,10 @@ pub fn NetworkCrossOriginOpenerPolicyStatus::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkCrossOriginOpenerPolicyValue {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkCrossOriginOpenerPolicyValue with Eq::{not_equal, equal}
@@ -1678,6 +1709,7 @@ pub fn NetworkCrossOriginOpenerPolicyValue::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkDeviceBoundSession {
   key : NetworkDeviceBoundSessionKey
   refresh_url : String
@@ -1686,7 +1718,7 @@ pub(all) struct NetworkDeviceBoundSession {
   expiry_date : NetworkTimeSinceEpoch
   cached_challenge : String?
   allowed_refresh_initiators : Array[String]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkDeviceBoundSession with Eq::{not_equal, equal}
@@ -1772,6 +1804,7 @@ pub fn NetworkDeviceBoundSession::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkDeviceBoundSessionCookieCraving {
   name : String
   domain : String
@@ -1779,7 +1812,7 @@ pub(all) struct NetworkDeviceBoundSessionCookieCraving {
   secure : Bool
   http_only : Bool
   same_site : NetworkCookieSameSite?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkDeviceBoundSessionCookieCraving with Eq::{not_equal, equal}
@@ -1838,9 +1871,10 @@ pub fn NetworkDeviceBoundSessionCookieCraving::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkDeviceBoundSessionEventId {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkDeviceBoundSessionEventId with Eq::{not_equal, equal}
@@ -1882,12 +1916,13 @@ pub fn NetworkDeviceBoundSessionEventId::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkDeviceBoundSessionFailedRequest {
   request_url : String
   net_error : String?
   response_error : Int32?
   response_error_body : String?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkDeviceBoundSessionFailedRequest with Eq::{not_equal, equal}
@@ -1949,9 +1984,10 @@ pub fn NetworkDeviceBoundSessionFailedRequest::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkDeviceBoundSessionFetchResult {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkDeviceBoundSessionFetchResult with Eq::{not_equal, equal}
@@ -1993,11 +2029,12 @@ pub fn NetworkDeviceBoundSessionFetchResult::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkDeviceBoundSessionInclusionRules {
   origin : String
   include_site : Bool
   url_rules : Array[NetworkDeviceBoundSessionUrlRule]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkDeviceBoundSessionInclusionRules with Eq::{not_equal, equal}
@@ -2052,10 +2089,11 @@ pub fn NetworkDeviceBoundSessionInclusionRules::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkDeviceBoundSessionKey {
   site : String
   id : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkDeviceBoundSessionKey with Eq::{not_equal, equal}
@@ -2101,11 +2139,12 @@ pub fn NetworkDeviceBoundSessionKey::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkDeviceBoundSessionUrlRule {
   rule_type : String
   host_pattern : String
   path_prefix : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkDeviceBoundSessionUrlRule with Eq::{not_equal, equal}
@@ -2157,10 +2196,11 @@ pub fn NetworkDeviceBoundSessionUrlRule::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkDeviceBoundSessionWithUsage {
   session_key : NetworkDeviceBoundSessionKey
   usage : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkDeviceBoundSessionWithUsage with Eq::{not_equal, equal}
@@ -2208,9 +2248,10 @@ pub fn NetworkDeviceBoundSessionWithUsage::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkDirectSocketDnsQueryType {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkDirectSocketDnsQueryType with Eq::{not_equal, equal}
@@ -2252,13 +2293,14 @@ pub fn NetworkDirectSocketDnsQueryType::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkDirectTCPSocketOptions {
   no_delay : Bool
   keep_alive_delay : Double?
   send_buffer_size : Double?
   receive_buffer_size : Double?
   dns_query_type : NetworkDirectSocketDnsQueryType?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkDirectTCPSocketOptions with Eq::{not_equal, equal}
@@ -2327,11 +2369,12 @@ pub fn NetworkDirectTCPSocketOptions::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkDirectUDPMessage {
   data : String
   remote_addr : String?
   remote_port : Int32?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkDirectUDPMessage with Eq::{not_equal, equal}
@@ -2383,6 +2426,7 @@ pub fn NetworkDirectUDPMessage::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkDirectUDPSocketOptions {
   remote_addr : String?
   remote_port : Int32?
@@ -2394,7 +2438,7 @@ pub(all) struct NetworkDirectUDPSocketOptions {
   multicast_loopback : Bool?
   multicast_time_to_live : Int32?
   multicast_allow_address_sharing : Bool?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkDirectUDPSocketOptions with Eq::{not_equal, equal}
@@ -2495,9 +2539,10 @@ pub fn NetworkDirectUDPSocketOptions::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkErrorReason {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkErrorReason with Eq::{not_equal, equal}
@@ -2535,11 +2580,12 @@ pub fn NetworkErrorReason::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkExemptedSetCookieWithReason {
   exemption_reason : NetworkCookieExemptionReason
   cookie_line : String
   cookie : NetworkCookie
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkExemptedSetCookieWithReason with Eq::{not_equal, equal}
@@ -2593,9 +2639,10 @@ pub fn NetworkExemptedSetCookieWithReason::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkHeaders {
   value : Json
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkHeaders with Eq::{not_equal, equal}
@@ -2627,6 +2674,7 @@ pub fn NetworkHeaders::from_json(value : Json) -> NetworkHeaders {
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkInitiator {
   type_ : String
   stack : RuntimeStackTrace?
@@ -2634,7 +2682,7 @@ pub(all) struct NetworkInitiator {
   line_number : Double?
   column_number : Double?
   request_id : NetworkRequestId?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkInitiator with Eq::{not_equal, equal}
@@ -2704,9 +2752,10 @@ pub fn NetworkInitiator::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkInterceptionId {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkInterceptionId with Eq::{not_equal, equal}
@@ -2744,9 +2793,10 @@ pub fn NetworkInterceptionId::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkInterceptionStage {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkInterceptionStage with Eq::{not_equal, equal}
@@ -2788,9 +2838,10 @@ pub fn NetworkInterceptionStage::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkIPAddressSpace {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkIPAddressSpace with Eq::{not_equal, equal}
@@ -2828,9 +2879,10 @@ pub fn NetworkIPAddressSpace::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkLoaderId {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkLoaderId with Eq::{not_equal, equal}
@@ -2868,10 +2920,11 @@ pub fn NetworkLoaderId::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkLoadNetworkResourceOptions {
   disable_cache : Bool
   include_credentials : Bool
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkLoadNetworkResourceOptions with Eq::{not_equal, equal}
@@ -2921,6 +2974,7 @@ pub fn NetworkLoadNetworkResourceOptions::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkLoadNetworkResourcePageResult {
   success : Bool
   net_error : Double?
@@ -2928,7 +2982,7 @@ pub(all) struct NetworkLoadNetworkResourcePageResult {
   http_status_code : Double?
   stream : IOStreamHandle?
   headers : NetworkHeaders?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkLoadNetworkResourcePageResult with Eq::{not_equal, equal}
@@ -3002,9 +3056,10 @@ pub fn NetworkLoadNetworkResourcePageResult::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkLocalNetworkAccessRequestPolicy {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkLocalNetworkAccessRequestPolicy with Eq::{not_equal, equal}
@@ -3046,9 +3101,10 @@ pub fn NetworkLocalNetworkAccessRequestPolicy::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkMonotonicTime {
   value : Double
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkMonotonicTime with Eq::{not_equal, equal}
@@ -3086,6 +3142,7 @@ pub fn NetworkMonotonicTime::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkNetworkConditions {
   url_pattern : String
   latency : Double
@@ -3095,7 +3152,7 @@ pub(all) struct NetworkNetworkConditions {
   packet_loss : Double?
   packet_queue_length : Int32?
   packet_reordering : Bool?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkNetworkConditions with Eq::{not_equal, equal}
@@ -3176,9 +3233,10 @@ pub fn NetworkNetworkConditions::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkPostDataEntry {
   bytes : String?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkPostDataEntry with Eq::{not_equal, equal}
@@ -3218,13 +3276,14 @@ pub fn NetworkPostDataEntry::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkRefreshEventDetails {
   refresh_result : String
   fetch_result : NetworkDeviceBoundSessionFetchResult?
   new_session : NetworkDeviceBoundSession?
   was_fully_proactive_refresh : Bool
   failed_request : NetworkDeviceBoundSessionFailedRequest?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkRefreshEventDetails with Eq::{not_equal, equal}
@@ -3299,9 +3358,10 @@ pub fn NetworkRefreshEventDetails::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkRenderBlockingBehavior {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkRenderBlockingBehavior with Eq::{not_equal, equal}
@@ -3343,9 +3403,10 @@ pub fn NetworkRenderBlockingBehavior::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkReportId {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkReportId with Eq::{not_equal, equal}
@@ -3383,10 +3444,11 @@ pub fn NetworkReportId::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkReportingApiEndpoint {
   url : String
   group_name : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkReportingApiEndpoint with Eq::{not_equal, equal}
@@ -3434,6 +3496,7 @@ pub fn NetworkReportingApiEndpoint::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkReportingApiReport {
   id : NetworkReportId
   initiator_url : String
@@ -3444,7 +3507,7 @@ pub(all) struct NetworkReportingApiReport {
   completed_attempts : Int32
   body : Json
   status : NetworkReportStatus
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkReportingApiReport with Eq::{not_equal, equal}
@@ -3518,9 +3581,10 @@ pub fn NetworkReportingApiReport::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkReportStatus {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkReportStatus with Eq::{not_equal, equal}
@@ -3558,6 +3622,7 @@ pub fn NetworkReportStatus::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkRequest {
   url : String
   url_fragment : String?
@@ -3573,7 +3638,7 @@ pub(all) struct NetworkRequest {
   trust_token_params : NetworkTrustTokenParams?
   is_same_site : Bool?
   is_ad_related : Bool?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkRequest with Eq::{not_equal, equal}
@@ -3687,9 +3752,10 @@ pub fn NetworkRequest::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkRequestId {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkRequestId with Eq::{not_equal, equal}
@@ -3727,11 +3793,12 @@ pub fn NetworkRequestId::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkRequestPattern {
   url_pattern : String?
   resource_type : NetworkResourceType?
   interception_stage : NetworkInterceptionStage?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkRequestPattern with Eq::{not_equal, equal}
@@ -3789,9 +3856,10 @@ pub fn NetworkRequestPattern::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkResourcePriority {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkResourcePriority with Eq::{not_equal, equal}
@@ -3829,6 +3897,7 @@ pub fn NetworkResourcePriority::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkResourceTiming {
   request_time : Double
   proxy_start : Double
@@ -3851,7 +3920,7 @@ pub(all) struct NetworkResourceTiming {
   push_end : Double
   receive_headers_start : Double
   receive_headers_end : Double
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkResourceTiming with Eq::{not_equal, equal}
@@ -3965,9 +4034,10 @@ pub fn NetworkResourceTiming::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkResourceType {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkResourceType with Eq::{not_equal, equal}
@@ -4005,6 +4075,7 @@ pub fn NetworkResourceType::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkResponse {
   url : String
   status : Int32
@@ -4033,7 +4104,7 @@ pub(all) struct NetworkResponse {
   alternate_protocol_usage : NetworkAlternateProtocolUsage?
   security_state : SecuritySecurityState
   security_details : NetworkSecurityDetails?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkResponse with Eq::{not_equal, equal}
@@ -4213,6 +4284,7 @@ pub fn NetworkResponse::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkSecurityDetails {
   protocol : String
   key_exchange : String
@@ -4229,7 +4301,7 @@ pub(all) struct NetworkSecurityDetails {
   certificate_transparency_compliance : NetworkCertificateTransparencyCompliance
   server_signature_algorithm : Int32?
   encrypted_client_hello : Bool
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkSecurityDetails with Eq::{not_equal, equal}
@@ -4337,11 +4409,12 @@ pub fn NetworkSecurityDetails::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkSecurityIsolationStatus {
   coop : NetworkCrossOriginOpenerPolicyStatus?
   coep : NetworkCrossOriginEmbedderPolicyStatus?
   csp : Array[NetworkContentSecurityPolicyStatus]?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkSecurityIsolationStatus with Eq::{not_equal, equal}
@@ -4411,9 +4484,10 @@ pub fn NetworkSecurityIsolationStatus::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkServiceWorkerResponseSource {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkServiceWorkerResponseSource with Eq::{not_equal, equal}
@@ -4455,11 +4529,12 @@ pub fn NetworkServiceWorkerResponseSource::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkServiceWorkerRouterInfo {
   rule_id_matched : Int32?
   matched_source_type : NetworkServiceWorkerRouterSource?
   actual_source_type : NetworkServiceWorkerRouterSource?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkServiceWorkerRouterInfo with Eq::{not_equal, equal}
@@ -4522,9 +4597,10 @@ pub fn NetworkServiceWorkerRouterInfo::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkServiceWorkerRouterSource {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkServiceWorkerRouterSource with Eq::{not_equal, equal}
@@ -4566,9 +4642,10 @@ pub fn NetworkServiceWorkerRouterSource::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkSetCookieBlockedReason {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkSetCookieBlockedReason with Eq::{not_equal, equal}
@@ -4610,6 +4687,7 @@ pub fn NetworkSetCookieBlockedReason::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkSignedCertificateTimestamp {
   status : String
   origin : String
@@ -4619,7 +4697,7 @@ pub(all) struct NetworkSignedCertificateTimestamp {
   hash_algorithm : String
   signature_algorithm : String
   signature_data : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkSignedCertificateTimestamp with Eq::{not_equal, equal}
@@ -4685,11 +4763,12 @@ pub fn NetworkSignedCertificateTimestamp::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkSignedExchangeError {
   message : String
   signature_index : Int32?
   error_field : NetworkSignedExchangeErrorField?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkSignedExchangeError with Eq::{not_equal, equal}
@@ -4746,9 +4825,10 @@ pub fn NetworkSignedExchangeError::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkSignedExchangeErrorField {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkSignedExchangeErrorField with Eq::{not_equal, equal}
@@ -4790,13 +4870,14 @@ pub fn NetworkSignedExchangeErrorField::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkSignedExchangeHeader {
   request_url : String
   response_code : Int32
   response_headers : NetworkHeaders
   signatures : Array[NetworkSignedExchangeSignature]
   header_integrity : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkSignedExchangeHeader with Eq::{not_equal, equal}
@@ -4863,13 +4944,14 @@ pub fn NetworkSignedExchangeHeader::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkSignedExchangeInfo {
   outer_response : NetworkResponse
   has_extra_info : Bool
   header : NetworkSignedExchangeHeader?
   security_details : NetworkSecurityDetails?
   errors : Array[NetworkSignedExchangeError]?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkSignedExchangeInfo with Eq::{not_equal, equal}
@@ -4945,6 +5027,7 @@ pub fn NetworkSignedExchangeInfo::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkSignedExchangeSignature {
   label : String
   signature : String
@@ -4955,7 +5038,7 @@ pub(all) struct NetworkSignedExchangeSignature {
   date : Int32
   expires : Int32
   certificates : Array[String]?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkSignedExchangeSignature with Eq::{not_equal, equal}
@@ -5036,9 +5119,10 @@ pub fn NetworkSignedExchangeSignature::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkTerminationEventDetails {
   deletion_reason : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkTerminationEventDetails with Eq::{not_equal, equal}
@@ -5084,9 +5168,10 @@ pub fn NetworkTerminationEventDetails::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkTimeSinceEpoch {
   value : Double
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkTimeSinceEpoch with Eq::{not_equal, equal}
@@ -5124,9 +5209,10 @@ pub fn NetworkTimeSinceEpoch::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkTrustTokenOperationType {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkTrustTokenOperationType with Eq::{not_equal, equal}
@@ -5168,11 +5254,12 @@ pub fn NetworkTrustTokenOperationType::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkTrustTokenParams {
   operation : NetworkTrustTokenOperationType
   refresh_policy : String
   issuers : Array[String]?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkTrustTokenParams with Eq::{not_equal, equal}
@@ -5231,11 +5318,12 @@ pub fn NetworkTrustTokenParams::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkWebSocketFrame {
   opcode : Double
   mask : Bool
   payload_data : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkWebSocketFrame with Eq::{not_equal, equal}
@@ -5281,9 +5369,10 @@ pub fn NetworkWebSocketFrame::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkWebSocketRequest {
   headers : NetworkHeaders
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkWebSocketRequest with Eq::{not_equal, equal}
@@ -5325,6 +5414,7 @@ pub fn NetworkWebSocketRequest::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkWebSocketResponse {
   status : Int32
   status_text : String
@@ -5332,7 +5422,7 @@ pub(all) struct NetworkWebSocketResponse {
   headers_text : String?
   request_headers : NetworkHeaders?
   request_headers_text : String?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkWebSocketResponse with Eq::{not_equal, equal}
@@ -5403,9 +5493,10 @@ pub fn NetworkWebSocketResponse::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkCanClearBrowserCacheResult {
   result : Bool
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkCanClearBrowserCacheResult with Eq::{not_equal, equal}
@@ -5466,9 +5557,10 @@ pub fn network_can_clear_browser_cache_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkCanClearBrowserCookiesResult {
   result : Bool
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkCanClearBrowserCookiesResult with Eq::{not_equal, equal}
@@ -5529,9 +5621,10 @@ pub fn network_can_clear_browser_cookies_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkCanEmulateNetworkConditionsResult {
   result : Bool
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkCanEmulateNetworkConditionsResult with Eq::{not_equal, equal}
@@ -5664,10 +5757,11 @@ pub fn network_clear_browser_cookies_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkConfigureDurableMessagesParams {
   max_total_buffer_size : Int32?
   max_resource_buffer_size : Int32?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkConfigureDurableMessagesParams with Eq::{not_equal, equal}
@@ -5729,6 +5823,7 @@ pub fn network_configure_durable_messages_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkContinueInterceptedRequestParams {
   interception_id : NetworkInterceptionId
   error_reason : NetworkErrorReason?
@@ -5738,7 +5833,7 @@ pub(all) struct NetworkContinueInterceptedRequestParams {
   post_data : String?
   headers : NetworkHeaders?
   auth_challenge_response : NetworkAuthChallengeResponse?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkContinueInterceptedRequestParams with Eq::{not_equal, equal}
@@ -5816,13 +5911,14 @@ pub fn network_continue_intercepted_request_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkDeleteCookiesParams {
   name : String
   url : String?
   domain : String?
   path : String?
   partition_key : NetworkCookiePartitionKey?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkDeleteCookiesParams with Eq::{not_equal, equal}
@@ -5905,6 +6001,7 @@ pub fn network_disable_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkEmulateNetworkConditionsParams {
   offline : Bool
   latency : Double
@@ -5914,7 +6011,7 @@ pub(all) struct NetworkEmulateNetworkConditionsParams {
   packet_loss : Double?
   packet_queue_length : Int32?
   packet_reordering : Bool?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkEmulateNetworkConditionsParams with Eq::{not_equal, equal}
@@ -5986,10 +6083,11 @@ pub fn network_emulate_network_conditions_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkEmulateNetworkConditionsByRuleParams {
   offline : Bool
   matched_network_conditions : Array[NetworkNetworkConditions]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkEmulateNetworkConditionsByRuleParams with Eq::{
@@ -6024,9 +6122,10 @@ pub fn NetworkEmulateNetworkConditionsByRuleParams::to_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkEmulateNetworkConditionsByRuleResult {
   rule_ids : Array[String]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkEmulateNetworkConditionsByRuleResult with Eq::{
@@ -6103,13 +6202,14 @@ pub fn network_emulate_network_conditions_by_rule_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkEnableParams {
   max_total_buffer_size : Int32?
   max_resource_buffer_size : Int32?
   max_post_data_size : Int32?
   report_direct_socket_traffic : Bool?
   enable_durable_messages : Bool?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkEnableParams with Eq::{not_equal, equal}
@@ -6172,9 +6272,10 @@ pub fn network_enable_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkEnableDeviceBoundSessionsParams {
   enable : Bool
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkEnableDeviceBoundSessionsParams with Eq::{not_equal, equal}
@@ -6231,9 +6332,10 @@ pub fn network_enable_device_bound_sessions_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkEnableReportingApiParams {
   enable : Bool
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkEnableReportingApiParams with Eq::{not_equal, equal}
@@ -6290,9 +6392,10 @@ pub fn network_enable_reporting_api_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkFetchSchemefulSiteParams {
   origin : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkFetchSchemefulSiteParams with Eq::{not_equal, equal}
@@ -6321,9 +6424,10 @@ pub fn NetworkFetchSchemefulSiteParams::to_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkFetchSchemefulSiteResult {
   schemeful_site : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkFetchSchemefulSiteResult with Eq::{not_equal, equal}
@@ -6392,9 +6496,10 @@ pub fn network_fetch_schemeful_site_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkGetAllCookiesResult {
   cookies : Array[NetworkCookie]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkGetAllCookiesResult with Eq::{not_equal, equal}
@@ -6460,9 +6565,10 @@ pub fn network_get_all_cookies_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkGetCertificateParams {
   origin : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkGetCertificateParams with Eq::{not_equal, equal}
@@ -6491,9 +6597,10 @@ pub fn NetworkGetCertificateParams::to_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkGetCertificateResult {
   table_names : Array[String]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkGetCertificateResult with Eq::{not_equal, equal}
@@ -6565,9 +6672,10 @@ pub fn network_get_certificate_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkGetCookiesParams {
   urls : Array[String]?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkGetCookiesParams with Eq::{not_equal, equal}
@@ -6594,9 +6702,10 @@ pub fn NetworkGetCookiesParams::to_json(self : NetworkGetCookiesParams) -> Json 
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkGetCookiesResult {
   cookies : Array[NetworkCookie]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkGetCookiesResult with Eq::{not_equal, equal}
@@ -6662,9 +6771,10 @@ pub fn network_get_cookies_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkGetRequestPostDataParams {
   request_id : NetworkRequestId
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkGetRequestPostDataParams with Eq::{not_equal, equal}
@@ -6693,10 +6803,11 @@ pub fn NetworkGetRequestPostDataParams::to_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkGetRequestPostDataResult {
   post_data : String
   base64_encoded : Bool
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkGetRequestPostDataResult with Eq::{not_equal, equal}
@@ -6768,9 +6879,10 @@ pub fn network_get_request_post_data_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkGetResponseBodyParams {
   request_id : NetworkRequestId
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkGetResponseBodyParams with Eq::{not_equal, equal}
@@ -6799,10 +6911,11 @@ pub fn NetworkGetResponseBodyParams::to_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkGetResponseBodyResult {
   body : String
   base64_encoded : Bool
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkGetResponseBodyResult with Eq::{not_equal, equal}
@@ -6868,9 +6981,10 @@ pub fn network_get_response_body_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkGetResponseBodyForInterceptionParams {
   interception_id : NetworkInterceptionId
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkGetResponseBodyForInterceptionParams with Eq::{
@@ -6902,10 +7016,11 @@ pub fn NetworkGetResponseBodyForInterceptionParams::to_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkGetResponseBodyForInterceptionResult {
   body : String
   base64_encoded : Bool
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkGetResponseBodyForInterceptionResult with Eq::{
@@ -6978,9 +7093,10 @@ pub fn network_get_response_body_for_interception_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkGetSecurityIsolationStatusParams {
   frame_id : PageFrameId?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkGetSecurityIsolationStatusParams with Eq::{not_equal, equal}
@@ -7011,9 +7127,10 @@ pub fn NetworkGetSecurityIsolationStatusParams::to_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkGetSecurityIsolationStatusResult {
   status : NetworkSecurityIsolationStatus
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkGetSecurityIsolationStatusResult with Eq::{not_equal, equal}
@@ -7082,11 +7199,12 @@ pub fn network_get_security_isolation_status_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkLoadNetworkResourceParams {
   frame_id : PageFrameId?
   url : String
   options : NetworkLoadNetworkResourceOptions
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkLoadNetworkResourceParams with Eq::{not_equal, equal}
@@ -7119,9 +7237,10 @@ pub fn NetworkLoadNetworkResourceParams::to_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkLoadNetworkResourceResult {
   resource : NetworkLoadNetworkResourcePageResult
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkLoadNetworkResourceResult with Eq::{not_equal, equal}
@@ -7190,13 +7309,14 @@ pub fn network_load_network_resource_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkOverrideNetworkStateParams {
   offline : Bool
   latency : Double
   download_throughput : Double
   upload_throughput : Double
   connection_type : NetworkConnectionType?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkOverrideNetworkStateParams with Eq::{not_equal, equal}
@@ -7259,9 +7379,10 @@ pub fn network_override_network_state_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkReplayXHRParams {
   request_id : NetworkRequestId
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkReplayXHRParams with Eq::{not_equal, equal}
@@ -7310,12 +7431,13 @@ pub fn network_replay_xhr_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkSearchInResponseBodyParams {
   request_id : NetworkRequestId
   query : String
   case_sensitive : Bool?
   is_regex : Bool?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkSearchInResponseBodyParams with Eq::{not_equal, equal}
@@ -7351,9 +7473,10 @@ pub fn NetworkSearchInResponseBodyParams::to_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkSearchInResponseBodyResult {
   result : Array[DebuggerSearchMatch]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkSearchInResponseBodyResult with Eq::{not_equal, equal}
@@ -7425,9 +7548,10 @@ pub fn network_search_in_response_body_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkSetAcceptedEncodingsParams {
   encodings : Array[NetworkContentEncoding]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkSetAcceptedEncodingsParams with Eq::{not_equal, equal}
@@ -7484,9 +7608,10 @@ pub fn network_set_accepted_encodings_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkSetAttachDebugStackParams {
   enabled : Bool
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkSetAttachDebugStackParams with Eq::{not_equal, equal}
@@ -7543,10 +7668,11 @@ pub fn network_set_attach_debug_stack_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkSetBlockedURLsParams {
   url_patterns : Array[NetworkBlockPattern]?
   urls : Array[String]?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkSetBlockedURLsParams with Eq::{not_equal, equal}
@@ -7604,9 +7730,10 @@ pub fn network_set_blocked_urls_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkSetBypassServiceWorkerParams {
   bypass : Bool
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkSetBypassServiceWorkerParams with Eq::{not_equal, equal}
@@ -7663,9 +7790,10 @@ pub fn network_set_bypass_service_worker_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkSetCacheDisabledParams {
   cache_disabled : Bool
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkSetCacheDisabledParams with Eq::{not_equal, equal}
@@ -7718,6 +7846,7 @@ pub fn network_set_cache_disabled_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkSetCookieParams {
   name : String
   value : String
@@ -7732,7 +7861,7 @@ pub(all) struct NetworkSetCookieParams {
   source_scheme : NetworkCookieSourceScheme?
   source_port : Int32?
   partition_key : NetworkCookiePartitionKey?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkSetCookieParams with Eq::{not_equal, equal}
@@ -7791,9 +7920,10 @@ pub fn NetworkSetCookieParams::to_json(self : NetworkSetCookieParams) -> Json {
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkSetCookieResult {
   success : Bool
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkSetCookieResult with Eq::{not_equal, equal}
@@ -7856,11 +7986,12 @@ pub fn network_set_cookie_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkSetCookieControlsParams {
   enable_third_party_cookie_restriction : Bool
   disable_third_party_cookie_metadata : Bool
   disable_third_party_cookie_heuristics : Bool
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkSetCookieControlsParams with Eq::{not_equal, equal}
@@ -7921,9 +8052,10 @@ pub fn network_set_cookie_controls_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkSetCookiesParams {
   cookies : Array[NetworkCookieParam]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkSetCookiesParams with Eq::{not_equal, equal}
@@ -7972,9 +8104,10 @@ pub fn network_set_cookies_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkSetExtraHTTPHeadersParams {
   headers : NetworkHeaders
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkSetExtraHTTPHeadersParams with Eq::{not_equal, equal}
@@ -8031,9 +8164,10 @@ pub fn network_set_extra_httpheaders_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkSetRequestInterceptionParams {
   patterns : Array[NetworkRequestPattern]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkSetRequestInterceptionParams with Eq::{not_equal, equal}
@@ -8090,12 +8224,13 @@ pub fn network_set_request_interception_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkSetUserAgentOverrideParams {
   user_agent : String
   accept_language : String?
   platform : String?
   user_agent_metadata : EmulationUserAgentMetadata?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkSetUserAgentOverrideParams with Eq::{not_equal, equal}
@@ -8161,9 +8296,10 @@ pub fn network_set_user_agent_override_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkStreamResourceContentParams {
   request_id : NetworkRequestId
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkStreamResourceContentParams with Eq::{not_equal, equal}
@@ -8192,9 +8328,10 @@ pub fn NetworkStreamResourceContentParams::to_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkStreamResourceContentResult {
   buffered_data : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkStreamResourceContentResult with Eq::{not_equal, equal}
@@ -8263,9 +8400,10 @@ pub fn network_stream_resource_content_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkTakeResponseBodyForInterceptionAsStreamParams {
   interception_id : NetworkInterceptionId
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkTakeResponseBodyForInterceptionAsStreamParams with Eq::{
@@ -8297,9 +8435,10 @@ pub fn NetworkTakeResponseBodyForInterceptionAsStreamParams::to_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkTakeResponseBodyForInterceptionAsStreamResult {
   stream : IOStreamHandle
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkTakeResponseBodyForInterceptionAsStreamResult with Eq::{
@@ -8371,13 +8510,14 @@ pub fn network_take_response_body_for_interception_as_stream_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkDataReceivedEventParams {
   request_id : NetworkRequestId
   timestamp : NetworkMonotonicTime
   data_length : Int32
   encoded_data_length : Int32
   data : String?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkDataReceivedEventParams with Eq::{not_equal, equal}
@@ -8465,6 +8605,7 @@ pub fn network_data_received_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkDeviceBoundSessionEventOccurredEventParams {
   event_id : NetworkDeviceBoundSessionEventId
   site : String
@@ -8474,7 +8615,7 @@ pub(all) struct NetworkDeviceBoundSessionEventOccurredEventParams {
   refresh_event_details : NetworkRefreshEventDetails?
   termination_event_details : NetworkTerminationEventDetails?
   challenge_event_details : NetworkChallengeEventDetails?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkDeviceBoundSessionEventOccurredEventParams with Eq::{
@@ -8592,9 +8733,10 @@ pub fn network_device_bound_session_event_occurred_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkDeviceBoundSessionsAddedEventParams {
   sessions : Array[NetworkDeviceBoundSession]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkDeviceBoundSessionsAddedEventParams with Eq::{
@@ -8670,11 +8812,12 @@ pub fn network_device_bound_sessions_added_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkDirectTCPSocketAbortedEventParams {
   identifier : NetworkRequestId
   error_message : String
   timestamp : NetworkMonotonicTime
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkDirectTCPSocketAbortedEventParams with Eq::{not_equal, equal}
@@ -8752,11 +8895,12 @@ pub fn network_direct_tcpsocket_aborted_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkDirectTCPSocketChunkReceivedEventParams {
   identifier : NetworkRequestId
   data : String
   timestamp : NetworkMonotonicTime
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkDirectTCPSocketChunkReceivedEventParams with Eq::{
@@ -8838,11 +8982,12 @@ pub fn network_direct_tcpsocket_chunk_received_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkDirectTCPSocketChunkSentEventParams {
   identifier : NetworkRequestId
   data : String
   timestamp : NetworkMonotonicTime
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkDirectTCPSocketChunkSentEventParams with Eq::{
@@ -8921,10 +9066,11 @@ pub fn network_direct_tcpsocket_chunk_sent_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkDirectTCPSocketClosedEventParams {
   identifier : NetworkRequestId
   timestamp : NetworkMonotonicTime
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkDirectTCPSocketClosedEventParams with Eq::{not_equal, equal}
@@ -8998,6 +9144,7 @@ pub fn network_direct_tcpsocket_closed_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkDirectTCPSocketCreatedEventParams {
   identifier : NetworkRequestId
   remote_addr : String
@@ -9005,7 +9152,7 @@ pub(all) struct NetworkDirectTCPSocketCreatedEventParams {
   options : NetworkDirectTCPSocketOptions
   timestamp : NetworkMonotonicTime
   initiator : NetworkInitiator?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkDirectTCPSocketCreatedEventParams with Eq::{not_equal, equal}
@@ -9098,6 +9245,7 @@ pub fn network_direct_tcpsocket_created_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkDirectTCPSocketOpenedEventParams {
   identifier : NetworkRequestId
   remote_addr : String
@@ -9105,7 +9253,7 @@ pub(all) struct NetworkDirectTCPSocketOpenedEventParams {
   timestamp : NetworkMonotonicTime
   local_addr : String?
   local_port : Int32?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkDirectTCPSocketOpenedEventParams with Eq::{not_equal, equal}
@@ -9197,11 +9345,12 @@ pub fn network_direct_tcpsocket_opened_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkDirectUDPSocketAbortedEventParams {
   identifier : NetworkRequestId
   error_message : String
   timestamp : NetworkMonotonicTime
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkDirectUDPSocketAbortedEventParams with Eq::{not_equal, equal}
@@ -9279,11 +9428,12 @@ pub fn network_direct_udpsocket_aborted_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkDirectUDPSocketChunkReceivedEventParams {
   identifier : NetworkRequestId
   message : NetworkDirectUDPMessage
   timestamp : NetworkMonotonicTime
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkDirectUDPSocketChunkReceivedEventParams with Eq::{
@@ -9367,11 +9517,12 @@ pub fn network_direct_udpsocket_chunk_received_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkDirectUDPSocketChunkSentEventParams {
   identifier : NetworkRequestId
   message : NetworkDirectUDPMessage
   timestamp : NetworkMonotonicTime
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkDirectUDPSocketChunkSentEventParams with Eq::{
@@ -9452,10 +9603,11 @@ pub fn network_direct_udpsocket_chunk_sent_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkDirectUDPSocketClosedEventParams {
   identifier : NetworkRequestId
   timestamp : NetworkMonotonicTime
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkDirectUDPSocketClosedEventParams with Eq::{not_equal, equal}
@@ -9529,12 +9681,13 @@ pub fn network_direct_udpsocket_closed_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkDirectUDPSocketCreatedEventParams {
   identifier : NetworkRequestId
   options : NetworkDirectUDPSocketOptions
   timestamp : NetworkMonotonicTime
   initiator : NetworkInitiator?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkDirectUDPSocketCreatedEventParams with Eq::{not_equal, equal}
@@ -9619,10 +9772,11 @@ pub fn network_direct_udpsocket_created_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkDirectUDPSocketJoinedMulticastGroupEventParams {
   identifier : NetworkRequestId
   ipaddress : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkDirectUDPSocketJoinedMulticastGroupEventParams with Eq::{
@@ -9700,10 +9854,11 @@ pub fn network_direct_udpsocket_joined_multicast_group_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkDirectUDPSocketLeftMulticastGroupEventParams {
   identifier : NetworkRequestId
   ipaddress : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkDirectUDPSocketLeftMulticastGroupEventParams with Eq::{
@@ -9781,6 +9936,7 @@ pub fn network_direct_udpsocket_left_multicast_group_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkDirectUDPSocketOpenedEventParams {
   identifier : NetworkRequestId
   local_addr : String
@@ -9788,7 +9944,7 @@ pub(all) struct NetworkDirectUDPSocketOpenedEventParams {
   timestamp : NetworkMonotonicTime
   remote_addr : String?
   remote_port : Int32?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkDirectUDPSocketOpenedEventParams with Eq::{not_equal, equal}
@@ -9880,13 +10036,14 @@ pub fn network_direct_udpsocket_opened_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkEventSourceMessageReceivedEventParams {
   request_id : NetworkRequestId
   timestamp : NetworkMonotonicTime
   event_name : String
   event_id : String
   data : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkEventSourceMessageReceivedEventParams with Eq::{
@@ -9971,6 +10128,7 @@ pub fn network_event_source_message_received_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkLoadingFailedEventParams {
   request_id : NetworkRequestId
   timestamp : NetworkMonotonicTime
@@ -9979,7 +10137,7 @@ pub(all) struct NetworkLoadingFailedEventParams {
   canceled : Bool?
   blocked_reason : NetworkBlockedReason?
   cors_error_status : NetworkCorsErrorStatus?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkLoadingFailedEventParams with Eq::{not_equal, equal}
@@ -10079,11 +10237,12 @@ pub fn network_loading_failed_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkLoadingFinishedEventParams {
   request_id : NetworkRequestId
   timestamp : NetworkMonotonicTime
   encoded_data_length : Double
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkLoadingFinishedEventParams with Eq::{not_equal, equal}
@@ -10177,10 +10336,11 @@ pub fn network_policy_updated_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkReportingApiEndpointsChangedForOriginEventParams {
   origin : String
   endpoints : Array[NetworkReportingApiEndpoint]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkReportingApiEndpointsChangedForOriginEventParams with Eq::{
@@ -10261,9 +10421,10 @@ pub fn network_reporting_api_endpoints_changed_for_origin_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkReportingApiReportAddedEventParams {
   report : NetworkReportingApiReport
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkReportingApiReportAddedEventParams with Eq::{not_equal, equal}
@@ -10333,9 +10494,10 @@ pub fn network_reporting_api_report_added_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkReportingApiReportUpdatedEventParams {
   report : NetworkReportingApiReport
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkReportingApiReportUpdatedEventParams with Eq::{
@@ -10408,6 +10570,7 @@ pub fn network_reporting_api_report_updated_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkRequestInterceptedEventParams {
   interception_id : NetworkInterceptionId
   request : NetworkRequest
@@ -10421,7 +10584,7 @@ pub(all) struct NetworkRequestInterceptedEventParams {
   response_status_code : Int32?
   response_headers : NetworkHeaders?
   request_id : NetworkRequestId?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkRequestInterceptedEventParams with Eq::{not_equal, equal}
@@ -10554,9 +10717,10 @@ pub fn network_request_intercepted_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkRequestServedFromCacheEventParams {
   request_id : NetworkRequestId
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkRequestServedFromCacheEventParams with Eq::{not_equal, equal}
@@ -10626,6 +10790,7 @@ pub fn network_request_served_from_cache_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkRequestWillBeSentEventParams {
   request_id : NetworkRequestId
   loader_id : NetworkLoaderId
@@ -10640,7 +10805,7 @@ pub(all) struct NetworkRequestWillBeSentEventParams {
   frame_id : PageFrameId?
   has_user_gesture : Bool?
   render_blocking_behavior : NetworkRenderBlockingBehavior?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkRequestWillBeSentEventParams with Eq::{not_equal, equal}
@@ -10773,6 +10938,7 @@ pub fn network_request_will_be_sent_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkRequestWillBeSentExtraInfoEventParams {
   request_id : NetworkRequestId
   associated_cookies : Array[NetworkAssociatedCookie]
@@ -10782,7 +10948,7 @@ pub(all) struct NetworkRequestWillBeSentExtraInfoEventParams {
   client_security_state : NetworkClientSecurityState?
   site_has_cookie_in_other_partition : Bool?
   applied_network_conditions_id : String?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkRequestWillBeSentExtraInfoEventParams with Eq::{
@@ -10910,11 +11076,12 @@ pub fn network_request_will_be_sent_extra_info_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkResourceChangedPriorityEventParams {
   request_id : NetworkRequestId
   new_priority : NetworkResourcePriority
   timestamp : NetworkMonotonicTime
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkResourceChangedPriorityEventParams with Eq::{not_equal, equal}
@@ -10992,6 +11159,7 @@ pub fn network_resource_changed_priority_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkResponseReceivedEventParams {
   request_id : NetworkRequestId
   loader_id : NetworkLoaderId
@@ -11000,7 +11168,7 @@ pub(all) struct NetworkResponseReceivedEventParams {
   response : NetworkResponse
   has_extra_info : Bool
   frame_id : PageFrameId?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkResponseReceivedEventParams with Eq::{not_equal, equal}
@@ -11097,10 +11265,11 @@ pub fn network_response_received_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkResponseReceivedEarlyHintsEventParams {
   request_id : NetworkRequestId
   headers : NetworkHeaders
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkResponseReceivedEarlyHintsEventParams with Eq::{
@@ -11177,6 +11346,7 @@ pub fn network_response_received_early_hints_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkResponseReceivedExtraInfoEventParams {
   request_id : NetworkRequestId
   blocked_cookies : Array[NetworkBlockedSetCookieWithReason]
@@ -11187,7 +11357,7 @@ pub(all) struct NetworkResponseReceivedExtraInfoEventParams {
   cookie_partition_key : NetworkCookiePartitionKey?
   cookie_partition_key_opaque : Bool?
   exempted_cookies : Array[NetworkExemptedSetCookieWithReason]?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkResponseReceivedExtraInfoEventParams with Eq::{
@@ -11313,10 +11483,11 @@ pub fn network_response_received_extra_info_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkSignedExchangeReceivedEventParams {
   request_id : NetworkRequestId
   info : NetworkSignedExchangeInfo
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkSignedExchangeReceivedEventParams with Eq::{not_equal, equal}
@@ -11390,6 +11561,7 @@ pub fn network_signed_exchange_received_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkTrustTokenOperationDoneEventParams {
   status : String
   type_ : NetworkTrustTokenOperationType
@@ -11397,7 +11569,7 @@ pub(all) struct NetworkTrustTokenOperationDoneEventParams {
   top_level_origin : String?
   issuer_origin : String?
   issued_token_count : Int32?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkTrustTokenOperationDoneEventParams with Eq::{not_equal, equal}
@@ -11491,10 +11663,11 @@ pub fn network_trust_token_operation_done_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkWebSocketClosedEventParams {
   request_id : NetworkRequestId
   timestamp : NetworkMonotonicTime
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkWebSocketClosedEventParams with Eq::{not_equal, equal}
@@ -11568,11 +11741,12 @@ pub fn network_web_socket_closed_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkWebSocketCreatedEventParams {
   request_id : NetworkRequestId
   url : String
   initiator : NetworkInitiator?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkWebSocketCreatedEventParams with Eq::{not_equal, equal}
@@ -11651,11 +11825,12 @@ pub fn network_web_socket_created_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkWebSocketFrameErrorEventParams {
   request_id : NetworkRequestId
   timestamp : NetworkMonotonicTime
   error_message : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkWebSocketFrameErrorEventParams with Eq::{not_equal, equal}
@@ -11733,11 +11908,12 @@ pub fn network_web_socket_frame_error_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkWebSocketFrameReceivedEventParams {
   request_id : NetworkRequestId
   timestamp : NetworkMonotonicTime
   response : NetworkWebSocketFrame
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkWebSocketFrameReceivedEventParams with Eq::{not_equal, equal}
@@ -11815,11 +11991,12 @@ pub fn network_web_socket_frame_received_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkWebSocketFrameSentEventParams {
   request_id : NetworkRequestId
   timestamp : NetworkMonotonicTime
   response : NetworkWebSocketFrame
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkWebSocketFrameSentEventParams with Eq::{not_equal, equal}
@@ -11897,11 +12074,12 @@ pub fn network_web_socket_frame_sent_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkWebSocketHandshakeResponseReceivedEventParams {
   request_id : NetworkRequestId
   timestamp : NetworkMonotonicTime
   response : NetworkWebSocketResponse
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkWebSocketHandshakeResponseReceivedEventParams with Eq::{
@@ -11985,12 +12163,13 @@ pub fn network_web_socket_handshake_response_received_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkWebSocketWillSendHandshakeRequestEventParams {
   request_id : NetworkRequestId
   timestamp : NetworkMonotonicTime
   wall_time : NetworkTimeSinceEpoch
   request : NetworkWebSocketRequest
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkWebSocketWillSendHandshakeRequestEventParams with Eq::{
@@ -12078,10 +12257,11 @@ pub fn network_web_socket_will_send_handshake_request_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkWebTransportClosedEventParams {
   transport_id : NetworkRequestId
   timestamp : NetworkMonotonicTime
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkWebTransportClosedEventParams with Eq::{not_equal, equal}
@@ -12155,10 +12335,11 @@ pub fn network_web_transport_closed_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkWebTransportConnectionEstablishedEventParams {
   transport_id : NetworkRequestId
   timestamp : NetworkMonotonicTime
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkWebTransportConnectionEstablishedEventParams with Eq::{
@@ -12238,12 +12419,13 @@ pub fn network_web_transport_connection_established_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct NetworkWebTransportCreatedEventParams {
   transport_id : NetworkRequestId
   url : String
   timestamp : NetworkMonotonicTime
   initiator : NetworkInitiator?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NetworkWebTransportCreatedEventParams with Eq::{not_equal, equal}

@@ -7,12 +7,13 @@
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DebuggerBreakLocation {
   script_id : RuntimeScriptId
   line_number : Int32
   column_number : Int32?
   type_ : String?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DebuggerBreakLocation with Eq::{not_equal, equal}
@@ -68,9 +69,10 @@ pub fn DebuggerBreakLocation::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DebuggerBreakpointId {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DebuggerBreakpointId with Eq::{not_equal, equal}
@@ -108,6 +110,7 @@ pub fn DebuggerBreakpointId::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DebuggerCallFrame {
   call_frame_id : DebuggerCallFrameId
   function_name : String
@@ -118,7 +121,7 @@ pub(all) struct DebuggerCallFrame {
   this : RuntimeRemoteObject
   return_value : RuntimeRemoteObject?
   can_be_restarted : Bool?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DebuggerCallFrame with Eq::{not_equal, equal}
@@ -203,9 +206,10 @@ pub fn DebuggerCallFrame::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DebuggerCallFrameId {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DebuggerCallFrameId with Eq::{not_equal, equal}
@@ -243,10 +247,11 @@ pub fn DebuggerCallFrameId::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DebuggerDebugSymbols {
   type_ : String
   external_url : String?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DebuggerDebugSymbols with Eq::{not_equal, equal}
@@ -292,11 +297,12 @@ pub fn DebuggerDebugSymbols::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DebuggerLocation {
   script_id : RuntimeScriptId
   line_number : Int32
   column_number : Int32?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DebuggerLocation with Eq::{not_equal, equal}
@@ -348,11 +354,12 @@ pub fn DebuggerLocation::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DebuggerLocationRange {
   script_id : RuntimeScriptId
   start : DebuggerScriptPosition
   end : DebuggerScriptPosition
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DebuggerLocationRange with Eq::{not_equal, equal}
@@ -402,10 +409,11 @@ pub fn DebuggerLocationRange::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DebuggerResolvedBreakpoint {
   breakpoint_id : DebuggerBreakpointId
   location : DebuggerLocation
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DebuggerResolvedBreakpoint with Eq::{not_equal, equal}
@@ -455,13 +463,14 @@ pub fn DebuggerResolvedBreakpoint::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DebuggerScope {
   type_ : String
   object : RuntimeRemoteObject
   name : String?
   start_location : DebuggerLocation?
   end_location : DebuggerLocation?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DebuggerScope with Eq::{not_equal, equal}
@@ -523,9 +532,10 @@ pub fn DebuggerScope::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DebuggerScriptLanguage {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DebuggerScriptLanguage with Eq::{not_equal, equal}
@@ -563,10 +573,11 @@ pub fn DebuggerScriptLanguage::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DebuggerScriptPosition {
   line_number : Int32
   column_number : Int32
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DebuggerScriptPosition with Eq::{not_equal, equal}
@@ -612,10 +623,11 @@ pub fn DebuggerScriptPosition::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DebuggerSearchMatch {
   line_number : Double
   line_content : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DebuggerSearchMatch with Eq::{not_equal, equal}
@@ -661,10 +673,11 @@ pub fn DebuggerSearchMatch::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DebuggerWasmDisassemblyChunk {
   lines : Array[String]
   bytecode_offsets : Array[Int32]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DebuggerWasmDisassemblyChunk with Eq::{not_equal, equal}
@@ -726,10 +739,11 @@ pub fn DebuggerWasmDisassemblyChunk::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DebuggerContinueToLocationParams {
   location : DebuggerLocation
   target_call_frames : String?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DebuggerContinueToLocationParams with Eq::{not_equal, equal}
@@ -807,9 +821,10 @@ pub fn debugger_disable_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DebuggerDisassembleWasmModuleParams {
   script_id : RuntimeScriptId
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DebuggerDisassembleWasmModuleParams with Eq::{not_equal, equal}
@@ -838,12 +853,13 @@ pub fn DebuggerDisassembleWasmModuleParams::to_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DebuggerDisassembleWasmModuleResult {
   stream_id : String?
   total_number_of_lines : Int32
   function_body_offsets : Array[Int32]
   chunk : DebuggerWasmDisassemblyChunk
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DebuggerDisassembleWasmModuleResult with Eq::{not_equal, equal}
@@ -928,9 +944,10 @@ pub fn debugger_disassemble_wasm_module_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DebuggerEnableParams {
   max_scripts_cache_size : Double?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DebuggerEnableParams with Eq::{not_equal, equal}
@@ -957,9 +974,10 @@ pub fn DebuggerEnableParams::to_json(self : DebuggerEnableParams) -> Json {
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DebuggerEnableResult {
   debugger_id : RuntimeUniqueDebuggerId
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DebuggerEnableResult with Eq::{not_equal, equal}
@@ -1022,6 +1040,7 @@ pub fn debugger_enable_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DebuggerEvaluateOnCallFrameParams {
   call_frame_id : DebuggerCallFrameId
   expression : String
@@ -1032,7 +1051,7 @@ pub(all) struct DebuggerEvaluateOnCallFrameParams {
   generate_preview : Bool?
   throw_on_side_effect : Bool?
   timeout : RuntimeTimeDelta?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DebuggerEvaluateOnCallFrameParams with Eq::{not_equal, equal}
@@ -1083,10 +1102,11 @@ pub fn DebuggerEvaluateOnCallFrameParams::to_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DebuggerEvaluateOnCallFrameResult {
   result : RuntimeRemoteObject
   exception_details : RuntimeExceptionDetails?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DebuggerEvaluateOnCallFrameResult with Eq::{not_equal, equal}
@@ -1160,11 +1180,12 @@ pub fn debugger_evaluate_on_call_frame_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DebuggerGetPossibleBreakpointsParams {
   start : DebuggerLocation
   end : DebuggerLocation?
   restrict_to_function : Bool?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DebuggerGetPossibleBreakpointsParams with Eq::{not_equal, equal}
@@ -1199,9 +1220,10 @@ pub fn DebuggerGetPossibleBreakpointsParams::to_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DebuggerGetPossibleBreakpointsResult {
   locations : Array[DebuggerBreakLocation]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DebuggerGetPossibleBreakpointsResult with Eq::{not_equal, equal}
@@ -1273,9 +1295,10 @@ pub fn debugger_get_possible_breakpoints_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DebuggerGetScriptSourceParams {
   script_id : RuntimeScriptId
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DebuggerGetScriptSourceParams with Eq::{not_equal, equal}
@@ -1304,10 +1327,11 @@ pub fn DebuggerGetScriptSourceParams::to_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DebuggerGetScriptSourceResult {
   script_source : String
   bytecode : String?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DebuggerGetScriptSourceResult with Eq::{not_equal, equal}
@@ -1375,9 +1399,10 @@ pub fn debugger_get_script_source_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DebuggerGetStackTraceParams {
   stack_trace_id : RuntimeStackTraceId
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DebuggerGetStackTraceParams with Eq::{not_equal, equal}
@@ -1406,9 +1431,10 @@ pub fn DebuggerGetStackTraceParams::to_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DebuggerGetStackTraceResult {
   stack_trace : RuntimeStackTrace
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DebuggerGetStackTraceResult with Eq::{not_equal, equal}
@@ -1473,9 +1499,10 @@ pub fn debugger_get_stack_trace_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DebuggerGetWasmBytecodeParams {
   script_id : RuntimeScriptId
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DebuggerGetWasmBytecodeParams with Eq::{not_equal, equal}
@@ -1504,9 +1531,10 @@ pub fn DebuggerGetWasmBytecodeParams::to_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DebuggerGetWasmBytecodeResult {
   bytecode : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DebuggerGetWasmBytecodeResult with Eq::{not_equal, equal}
@@ -1571,9 +1599,10 @@ pub fn debugger_get_wasm_bytecode_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DebuggerNextWasmDisassemblyChunkParams {
   stream_id : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DebuggerNextWasmDisassemblyChunkParams with Eq::{not_equal, equal}
@@ -1602,9 +1631,10 @@ pub fn DebuggerNextWasmDisassemblyChunkParams::to_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DebuggerNextWasmDisassemblyChunkResult {
   chunk : DebuggerWasmDisassemblyChunk
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DebuggerNextWasmDisassemblyChunkResult with Eq::{not_equal, equal}
@@ -1691,9 +1721,10 @@ pub fn debugger_pause_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DebuggerPauseOnAsyncCallParams {
   parent_stack_trace_id : RuntimeStackTraceId
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DebuggerPauseOnAsyncCallParams with Eq::{not_equal, equal}
@@ -1750,9 +1781,10 @@ pub fn debugger_pause_on_async_call_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DebuggerRemoveBreakpointParams {
   breakpoint_id : DebuggerBreakpointId
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DebuggerRemoveBreakpointParams with Eq::{not_equal, equal}
@@ -1805,10 +1837,11 @@ pub fn debugger_remove_breakpoint_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DebuggerRestartFrameParams {
   call_frame_id : DebuggerCallFrameId
   mode : String?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DebuggerRestartFrameParams with Eq::{not_equal, equal}
@@ -1840,11 +1873,12 @@ pub fn DebuggerRestartFrameParams::to_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DebuggerRestartFrameResult {
   call_frames : Array[DebuggerCallFrame]
   async_stack_trace : RuntimeStackTrace?
   async_stack_trace_id : RuntimeStackTraceId?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DebuggerRestartFrameResult with Eq::{not_equal, equal}
@@ -1922,9 +1956,10 @@ pub fn debugger_restart_frame_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DebuggerResumeParams {
   terminate_on_resume : Bool?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DebuggerResumeParams with Eq::{not_equal, equal}
@@ -1975,12 +2010,13 @@ pub fn debugger_resume_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DebuggerSearchInContentParams {
   script_id : RuntimeScriptId
   query : String
   case_sensitive : Bool?
   is_regex : Bool?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DebuggerSearchInContentParams with Eq::{not_equal, equal}
@@ -2016,9 +2052,10 @@ pub fn DebuggerSearchInContentParams::to_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DebuggerSearchInContentResult {
   result : Array[DebuggerSearchMatch]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DebuggerSearchInContentResult with Eq::{not_equal, equal}
@@ -2086,9 +2123,10 @@ pub fn debugger_search_in_content_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DebuggerSetAsyncCallStackDepthParams {
   max_depth : Int32
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DebuggerSetAsyncCallStackDepthParams with Eq::{not_equal, equal}
@@ -2145,10 +2183,11 @@ pub fn debugger_set_async_call_stack_depth_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DebuggerSetBlackboxedRangesParams {
   script_id : RuntimeScriptId
   positions : Array[DebuggerScriptPosition]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DebuggerSetBlackboxedRangesParams with Eq::{not_equal, equal}
@@ -2206,9 +2245,10 @@ pub fn debugger_set_blackboxed_ranges_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DebuggerSetBlackboxExecutionContextsParams {
   unique_ids : Array[String]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DebuggerSetBlackboxExecutionContextsParams with Eq::{
@@ -2270,10 +2310,11 @@ pub fn debugger_set_blackbox_execution_contexts_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DebuggerSetBlackboxPatternsParams {
   patterns : Array[String]
   skip_anonymous : Bool?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DebuggerSetBlackboxPatternsParams with Eq::{not_equal, equal}
@@ -2335,10 +2376,11 @@ pub fn debugger_set_blackbox_patterns_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DebuggerSetBreakpointParams {
   location : DebuggerLocation
   condition : String?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DebuggerSetBreakpointParams with Eq::{not_equal, equal}
@@ -2370,10 +2412,11 @@ pub fn DebuggerSetBreakpointParams::to_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DebuggerSetBreakpointResult {
   breakpoint_id : DebuggerBreakpointId
   actual_location : DebuggerLocation
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DebuggerSetBreakpointResult with Eq::{not_equal, equal}
@@ -2441,6 +2484,7 @@ pub fn debugger_set_breakpoint_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DebuggerSetBreakpointByUrlParams {
   line_number : Int32
   url : String?
@@ -2448,7 +2492,7 @@ pub(all) struct DebuggerSetBreakpointByUrlParams {
   script_hash : String?
   column_number : Int32?
   condition : String?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DebuggerSetBreakpointByUrlParams with Eq::{not_equal, equal}
@@ -2492,10 +2536,11 @@ pub fn DebuggerSetBreakpointByUrlParams::to_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DebuggerSetBreakpointByUrlResult {
   breakpoint_id : DebuggerBreakpointId
   locations : Array[DebuggerLocation]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DebuggerSetBreakpointByUrlResult with Eq::{not_equal, equal}
@@ -2570,10 +2615,11 @@ pub fn debugger_set_breakpoint_by_url_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DebuggerSetBreakpointOnFunctionCallParams {
   object_id : RuntimeRemoteObjectId
   condition : String?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DebuggerSetBreakpointOnFunctionCallParams with Eq::{not_equal, equal}
@@ -2605,9 +2651,10 @@ pub fn DebuggerSetBreakpointOnFunctionCallParams::to_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DebuggerSetBreakpointOnFunctionCallResult {
   breakpoint_id : DebuggerBreakpointId
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DebuggerSetBreakpointOnFunctionCallResult with Eq::{not_equal, equal}
@@ -2676,9 +2723,10 @@ pub fn debugger_set_breakpoint_on_function_call_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DebuggerSetBreakpointsActiveParams {
   active : Bool
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DebuggerSetBreakpointsActiveParams with Eq::{not_equal, equal}
@@ -2735,9 +2783,10 @@ pub fn debugger_set_breakpoints_active_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DebuggerSetInstrumentationBreakpointParams {
   instrumentation : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DebuggerSetInstrumentationBreakpointParams with Eq::{
@@ -2769,9 +2818,10 @@ pub fn DebuggerSetInstrumentationBreakpointParams::to_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DebuggerSetInstrumentationBreakpointResult {
   breakpoint_id : DebuggerBreakpointId
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DebuggerSetInstrumentationBreakpointResult with Eq::{
@@ -2843,9 +2893,10 @@ pub fn debugger_set_instrumentation_breakpoint_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DebuggerSetPauseOnExceptionsParams {
   state : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DebuggerSetPauseOnExceptionsParams with Eq::{not_equal, equal}
@@ -2902,9 +2953,10 @@ pub fn debugger_set_pause_on_exceptions_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DebuggerSetReturnValueParams {
   new_value : RuntimeCallArgument
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DebuggerSetReturnValueParams with Eq::{not_equal, equal}
@@ -2957,12 +3009,13 @@ pub fn debugger_set_return_value_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DebuggerSetScriptSourceParams {
   script_id : RuntimeScriptId
   script_source : String
   dry_run : Bool?
   allow_top_frame_editing : Bool?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DebuggerSetScriptSourceParams with Eq::{not_equal, equal}
@@ -2998,6 +3051,7 @@ pub fn DebuggerSetScriptSourceParams::to_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DebuggerSetScriptSourceResult {
   call_frames : Array[DebuggerCallFrame]?
   stack_changed : Bool?
@@ -3005,7 +3059,7 @@ pub(all) struct DebuggerSetScriptSourceResult {
   async_stack_trace_id : RuntimeStackTraceId?
   status : String
   exception_details : RuntimeExceptionDetails?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DebuggerSetScriptSourceResult with Eq::{not_equal, equal}
@@ -3097,9 +3151,10 @@ pub fn debugger_set_script_source_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DebuggerSetSkipAllPausesParams {
   skip : Bool
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DebuggerSetSkipAllPausesParams with Eq::{not_equal, equal}
@@ -3156,12 +3211,13 @@ pub fn debugger_set_skip_all_pauses_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DebuggerSetVariableValueParams {
   scope_number : Int32
   variable_name : String
   new_value : RuntimeCallArgument
   call_frame_id : DebuggerCallFrameId
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DebuggerSetVariableValueParams with Eq::{not_equal, equal}
@@ -3217,10 +3273,11 @@ pub fn debugger_set_variable_value_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DebuggerStepIntoParams {
   break_on_async_call : Bool?
   skip_list : Array[DebuggerLocationRange]?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DebuggerStepIntoParams with Eq::{not_equal, equal}
@@ -3292,9 +3349,10 @@ pub fn debugger_step_out_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DebuggerStepOverParams {
   skip_list : Array[DebuggerLocationRange]?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DebuggerStepOverParams with Eq::{not_equal, equal}
@@ -3345,10 +3403,11 @@ pub fn debugger_step_over_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DebuggerBreakpointResolvedEventParams {
   breakpoint_id : DebuggerBreakpointId
   location : DebuggerLocation
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DebuggerBreakpointResolvedEventParams with Eq::{not_equal, equal}
@@ -3422,6 +3481,7 @@ pub fn debugger_breakpoint_resolved_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DebuggerPausedEventParams {
   call_frames : Array[DebuggerCallFrame]
   reason : String
@@ -3430,7 +3490,7 @@ pub(all) struct DebuggerPausedEventParams {
   async_stack_trace : RuntimeStackTrace?
   async_stack_trace_id : RuntimeStackTraceId?
   async_call_stack_trace_id : RuntimeStackTraceId?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DebuggerPausedEventParams with Eq::{not_equal, equal}
@@ -3568,6 +3628,7 @@ pub fn debugger_resumed_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DebuggerScriptFailedToParseEventParams {
   script_id : RuntimeScriptId
   url : String
@@ -3587,7 +3648,7 @@ pub(all) struct DebuggerScriptFailedToParseEventParams {
   code_offset : Int32?
   script_language : DebuggerScriptLanguage?
   embedder_name : String?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DebuggerScriptFailedToParseEventParams with Eq::{not_equal, equal}
@@ -3729,6 +3790,7 @@ pub fn debugger_script_failed_to_parse_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DebuggerScriptParsedEventParams {
   script_id : RuntimeScriptId
   url : String
@@ -3751,7 +3813,7 @@ pub(all) struct DebuggerScriptParsedEventParams {
   debug_symbols : Array[DebuggerDebugSymbols]?
   embedder_name : String?
   resolved_breakpoints : Array[DebuggerResolvedBreakpoint]?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DebuggerScriptParsedEventParams with Eq::{not_equal, equal}

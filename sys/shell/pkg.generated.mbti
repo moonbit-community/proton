@@ -19,9 +19,10 @@ pub async fn reveal_item(String) -> Unit raise ShellError
 pub async fn trash_item(String) -> Unit raise ShellError
 
 // Errors
+#derive(@debug.Debug)
 pub suberror ShellError {
   ShellError(operation~ : String, target~ : String, reason~ : String)
-} derive(@debug.Debug)
+}
 pub fn ShellError::output(Self, &Logger) -> Unit
 pub fn ShellError::to_repr(Self) -> @debug.Repr
 pub fn ShellError::to_string(Self) -> String

@@ -1,12 +1,13 @@
 ///|
 /// A rectangle in physical pixel coordinates with the top-left origin shared
 /// across the facade.
+#derive(Debug, Eq)
 pub struct Rect {
   x : Int32
   y : Int32
   width : Int32
   height : Int32
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend Rect with Eq::{not_equal, equal}
@@ -16,13 +17,14 @@ pub extend Rect with Debug::{to_repr}
 
 ///|
 /// A display geometry snapshot mirroring Electron's `Display`.
+#derive(Debug, Eq)
 pub struct DisplayInfo {
   id : Int32
   bounds : Rect
   work_area : Rect
   scale_factor : Double
   is_primary : Bool
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend DisplayInfo with Eq::{not_equal, equal}
@@ -32,10 +34,11 @@ pub extend DisplayInfo with Debug::{to_repr}
 
 ///|
 /// A point in the root (physical pixel) coordinate space.
+#derive(Debug, Eq)
 pub struct Point {
   x : Int32
   y : Int32
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend Point with Eq::{not_equal, equal}
@@ -46,11 +49,12 @@ pub extend Point with Debug::{to_repr}
 ///|
 /// Display topology events delivered by the watch backend, mirroring
 /// Electron's `screen` module events.
+#derive(Debug, Eq)
 pub enum ScreenMonitorEvent {
   DisplayAdded(DisplayInfo)
   DisplayRemoved(DisplayInfo)
   DisplayMetricsChanged(DisplayInfo)
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend ScreenMonitorEvent with Eq::{not_equal, equal}
@@ -65,14 +69,16 @@ pub struct ScreenMonitor {
 
 ///|
 /// Wire shapes produced by the native backend's JSON payloads.
+#derive(FromJson)
 struct DisplaysWire {
   displays : Array[DisplayWire]
-} derive(FromJson)
+}
 
 ///|
 pub extend DisplaysWire with @json.FromJson::{from_json}
 
 ///|
+#derive(FromJson)
 struct DisplayWire {
   id : Int32
   x : Int32
@@ -85,16 +91,17 @@ struct DisplayWire {
   work_height : Int32
   scale_factor_percent : Int32
   is_primary : Bool
-} derive(FromJson)
+}
 
 ///|
 pub extend DisplayWire with @json.FromJson::{from_json}
 
 ///|
+#derive(FromJson)
 struct PointWire {
   x : Int32
   y : Int32
-} derive(FromJson)
+}
 
 ///|
 pub extend PointWire with @json.FromJson::{from_json}

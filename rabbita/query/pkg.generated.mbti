@@ -10,7 +10,7 @@ import {
 }
 
 // Values
-pub fn[I : Eq + ToJson, V : Eq + @json.FromJson] create(@proton_contract.Command[I, V], initial~ : I, invalidated_by? : &Invalidation, client? : @proton_client.Client) -> Query[I, V]
+pub fn[I : Eq + @json.ToJson, V : Eq + @json.FromJson] create(@proton_contract.Command[I, V], initial~ : I, invalidated_by? : &Invalidation, client? : @proton_client.Client) -> Query[I, V]
 
 // Errors
 
@@ -21,11 +21,12 @@ pub struct Query[Input, Value] {
   refresh : @cmd.Cmd
 }
 
+#derive(Eq)
 pub(all) enum State[Input, Value] {
   Loading(input~ : Input, previous~ : (Input, Value)?)
   Ready(input~ : Input, value~ : Value)
   Failed(input~ : Input, error~ : @proton_client.ClientFailure, previous~ : (Input, Value)?)
-} derive(Eq)
+}
 pub fn[I, V] State::data(Self[I, V]) -> (I, V)?
 pub fn[Input : Eq, Value : Eq] State::equal(Self[Input, Value], Self[Input, Value]) -> Bool
 pub fn[I, V] State::input(Self[I, V]) -> I

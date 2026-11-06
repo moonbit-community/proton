@@ -5,11 +5,12 @@
 /// whether a method exists in the CDP schema or whether params/results match a
 /// domain-specific command; use the schema helpers in `schema_command.mbt` for
 /// that layer.
+#derive(Eq, ToJson, Debug)
 pub(all) suberror ProtocolDecodeError {
   ExpectedObject
   MissingField(String)
   InvalidField(String)
-} derive(Eq, ToJson, Debug)
+}
 
 ///|
 pub extend ProtocolDecodeError with Eq::{not_equal, equal}
@@ -29,12 +30,13 @@ pub extend ProtocolDecodeError with ToJson::{to_json}
 ///
 /// `params = None` omits the `params` field from the wire JSON. Use an empty
 /// JSON object when the caller needs to send an explicit empty params object.
+#derive(Eq, ToJson, Debug)
 pub(all) struct CdpCommandMessage {
   id : Int32
   method_name : String
   params : Json?
   session_id : String?
-} derive(Eq, ToJson, Debug)
+}
 
 ///|
 pub extend CdpCommandMessage with Eq::{not_equal, equal}
@@ -50,11 +52,12 @@ pub extend CdpCommandMessage with ToJson::{to_json}
 ///
 /// `code` and `message` are required by CDP. `data` is browser/domain-specific
 /// and is preserved without interpretation.
+#derive(Eq, ToJson, Debug)
 pub(all) struct CdpError {
   code : Int32
   message : String
   data : Json?
-} derive(Eq, ToJson, Debug)
+}
 
 ///|
 pub extend CdpError with Eq::{not_equal, equal}
@@ -74,12 +77,13 @@ pub extend CdpError with ToJson::{to_json}
 /// Successful commands usually contain `result`, but commands with no modeled
 /// return fields may omit it. Error responses keep the browser-provided
 /// `CdpError` and may omit `result`.
+#derive(Eq, ToJson, Debug)
 pub(all) struct CdpResponseMessage {
   id : Int32
   result : Json?
   error : CdpError?
   session_id : String?
-} derive(Eq, ToJson, Debug)
+}
 
 ///|
 pub extend CdpResponseMessage with Eq::{not_equal, equal}
@@ -95,11 +99,12 @@ pub extend CdpResponseMessage with ToJson::{to_json}
 ///
 /// Events do not carry a command id. Target session events include `session_id`.
 /// `params` is optional because some CDP events have no payload.
+#derive(Eq, ToJson, Debug)
 pub(all) struct CdpEventMessage {
   method_name : String
   params : Json?
   session_id : String?
-} derive(Eq, ToJson, Debug)
+}
 
 ///|
 pub extend CdpEventMessage with Eq::{not_equal, equal}
@@ -116,10 +121,11 @@ pub extend CdpEventMessage with ToJson::{to_json}
 /// CDP distinguishes responses and events by the presence of an `id` field.
 /// This enum keeps that split explicit for clients that multiplex command waits
 /// and event reads on the same WebSocket.
+#derive(Eq, ToJson, Debug)
 pub(all) enum CdpIncomingMessage {
   Response(CdpResponseMessage)
   Event(CdpEventMessage)
-} derive(Eq, ToJson, Debug)
+}
 
 ///|
 pub extend CdpIncomingMessage with Eq::{not_equal, equal}

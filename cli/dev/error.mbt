@@ -1,8 +1,9 @@
 ///|
 /// Invalid `proton dev` command-line input.
+#derive(Debug, Eq)
 pub(all) suberror DevUsageError {
   InvalidNonNegativeInteger(option~ : String, value~ : String)
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend DevUsageError with Eq::{not_equal, equal}
@@ -15,6 +16,7 @@ pub extend DevUsageError with Show::{to_string, output}
 
 ///|
 /// Invalid project configuration used by `proton dev`.
+#derive(Debug, Eq)
 pub(all) suberror DevConfigError {
   NotFound(path~ : String)
   Invalid(path~ : String, error~ : @proton_config.AppConfigError)
@@ -23,7 +25,7 @@ pub(all) suberror DevConfigError {
   FrontendDirectoryNotDirectory(path~ : String)
   BackendDirectoryMissing(path~ : String)
   BackendDirectoryNotDirectory(path~ : String)
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend DevConfigError with Eq::{not_equal, equal}
@@ -36,9 +38,10 @@ pub extend DevConfigError with Show::{to_string, output}
 
 ///|
 /// Failures while locating and validating the native development installation.
+#derive(Debug, Eq)
 pub(all) suberror DevInstallationError {
   DirectoryMissing(label~ : String, path~ : String)
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend DevInstallationError with Eq::{not_equal, equal}
@@ -51,6 +54,7 @@ pub extend DevInstallationError with Show::{to_string, output}
 
 ///|
 /// Invalid frontend URLs and readiness failures.
+#derive(Debug, Eq)
 pub(all) suberror DevServerError {
   MissingScheme(url~ : String)
   UnsupportedScheme(url~ : String)
@@ -63,7 +67,7 @@ pub(all) suberror DevServerError {
   FrontendUrlInUse(url~ : String)
   FrontendExited(code~ : Int32)
   Timeout(url~ : String)
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend DevServerError with Eq::{not_equal, equal}
@@ -76,10 +80,11 @@ pub extend DevServerError with Show::{to_string, output}
 
 ///|
 /// Failures while starting or running child processes owned by `proton dev`.
+#derive(Debug, Eq)
 pub(all) suberror DevProcessError {
   Start(role~ : String, detail~ : String)
   Exit(role~ : String, code~ : Int32)
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend DevProcessError with Eq::{not_equal, equal}

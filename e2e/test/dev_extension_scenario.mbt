@@ -1,10 +1,11 @@
 ///|
+#derive(FromJson, Eq, Debug)
 struct DevTickReplyProbe {
   run_id : Int32
   index : Int32
   total : Int32
   remaining : Int32
-} derive(FromJson, Eq, Debug)
+}
 
 ///|
 pub extend DevTickReplyProbe with Eq::{not_equal, equal}
@@ -16,10 +17,11 @@ pub extend DevTickReplyProbe with Debug::{to_repr}
 pub extend DevTickReplyProbe with FromJson::{from_json}
 
 ///|
+#derive(FromJson, Eq, Debug)
 struct DevDoneReplyProbe {
   run_id : Int32
   total : Int32
-} derive(FromJson, Eq, Debug)
+}
 
 ///|
 pub extend DevDoneReplyProbe with Eq::{not_equal, equal}
@@ -31,10 +33,11 @@ pub extend DevDoneReplyProbe with Debug::{to_repr}
 pub extend DevDoneReplyProbe with FromJson::{from_json}
 
 ///|
+#derive(FromJson, Eq, Debug)
 struct DevTickerReplyProbe {
   ticks : Array[DevTickReplyProbe]
   done : DevDoneReplyProbe
-} derive(FromJson, Eq, Debug)
+}
 
 ///|
 pub extend DevTickerReplyProbe with Eq::{not_equal, equal}
@@ -46,12 +49,13 @@ pub extend DevTickerReplyProbe with Debug::{to_repr}
 pub extend DevTickerReplyProbe with FromJson::{from_json}
 
 ///|
+#derive(FromJson, Eq, Debug)
 struct DevEventProbe {
   kind : String
   run_id : Int32
   index : Int32?
   total : Int32
-} derive(FromJson, Eq, Debug)
+}
 
 ///|
 pub extend DevEventProbe with Eq::{not_equal, equal}
@@ -63,6 +67,7 @@ pub extend DevEventProbe with Debug::{to_repr}
 pub extend DevEventProbe with FromJson::{from_json}
 
 ///|
+#derive(FromJson, Eq, Debug)
 struct DevExtensionProbe {
   url : String
   origin : String
@@ -74,7 +79,7 @@ struct DevExtensionProbe {
   has_event_proxy : Bool
   reply : DevTickerReplyProbe
   events : Array[DevEventProbe]
-} derive(FromJson, Eq, Debug)
+}
 
 ///|
 pub extend DevExtensionProbe with Eq::{not_equal, equal}
@@ -86,6 +91,7 @@ pub extend DevExtensionProbe with Debug::{to_repr}
 pub extend DevExtensionProbe with FromJson::{from_json}
 
 ///|
+#derive(FromJson, Eq, Debug)
 struct DevExtensionReloadProbe {
   url : String
   origin : String
@@ -96,7 +102,7 @@ struct DevExtensionReloadProbe {
   navigation_type : String
   reply : DevTickerReplyProbe
   events : Array[DevEventProbe]
-} derive(FromJson, Eq, Debug)
+}
 
 ///|
 pub extend DevExtensionReloadProbe with Eq::{not_equal, equal}

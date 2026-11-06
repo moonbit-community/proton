@@ -1,7 +1,8 @@
 ///|
+#derive(ToJson, FromJson)
 struct CenterRequest {
   action : String
-} derive(ToJson, FromJson)
+}
 
 ///|
 pub extend CenterRequest with ToJson::{to_json}
@@ -10,6 +11,7 @@ pub extend CenterRequest with ToJson::{to_json}
 pub extend CenterRequest with FromJson::{from_json}
 
 ///|
+#derive(ToJson, FromJson)
 struct CenterReply {
   applied : Bool
   x : Int32
@@ -25,7 +27,7 @@ struct CenterReply {
   work_width : Int32
   work_height : Int32
   message : String
-} derive(ToJson, FromJson)
+}
 
 ///|
 pub extend CenterReply with ToJson::{to_json}

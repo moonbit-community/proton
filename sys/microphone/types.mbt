@@ -5,12 +5,13 @@
 /// application is ready to begin capture, `Recording` means audio frames are
 /// actively being collected, and `Muted` means capture is intentionally
 /// suppressed while the device remains selected.
+#derive(Debug, Eq)
 pub(all) enum CaptureState {
   Idle
   Armed
   Recording
   Muted
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend CaptureState with Eq::{not_equal, equal}
@@ -28,11 +29,12 @@ pub extend CaptureState with Show::{to_string, output}
 /// APIs. `F32` is the preferred normalized floating-point representation for
 /// processing pipelines because each sample is four bytes and typically maps
 /// to the `[-1.0, 1.0]` audio range.
+#derive(Debug, Eq)
 pub(all) enum SampleFormat {
   I16
   U16
   F32
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend SampleFormat with Eq::{not_equal, equal}
@@ -51,13 +53,14 @@ pub extend SampleFormat with Show::{to_string, output}
 /// advisory voice-processing flags; support depends on the actual host audio
 /// stack, but keeping them in the config makes intent explicit at API
 /// boundaries.
+#derive(Debug, Eq)
 pub(all) struct CaptureConfig {
   channels : Int32
   sample_rate_hz : Int32
   sample_format : SampleFormat
   echo_cancellation : Bool
   noise_suppression : Bool
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend CaptureConfig with Eq::{not_equal, equal}
@@ -76,13 +79,14 @@ pub extend CaptureConfig with Show::{to_string, output}
 /// `default_config` is safe for low-latency voice capture, and
 /// `monitor_supported` reports whether this package recognized the entry as a
 /// monitor/source-loopback device.
+#derive(Debug, Eq)
 pub(all) struct MicrophoneDevice {
   id : String
   name : String
   state : CaptureState
   default_config : CaptureConfig
   monitor_supported : Bool
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend MicrophoneDevice with Eq::{not_equal, equal}

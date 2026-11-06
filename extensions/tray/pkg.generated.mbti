@@ -13,7 +13,8 @@ pub fn capability() -> @extension.RendererCapability
 pub fn register_commands(@command.CommandRegistrar) -> Unit raise
 
 // Errors
-type TrayError derive(Eq, @debug.Debug)
+#derive(Eq, @debug.Debug)
+type TrayError
 pub fn TrayError::equal(Self, Self) -> Bool
 pub fn TrayError::not_equal(Self, Self) -> Bool
 pub fn TrayError::output(Self, &Logger) -> Unit

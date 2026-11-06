@@ -7,9 +7,10 @@
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMStorageItem {
   value : Array[String]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMStorageItem with Eq::{not_equal, equal}
@@ -48,9 +49,10 @@ pub fn DOMStorageItem::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMStorageSerializedStorageKey {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMStorageSerializedStorageKey with Eq::{not_equal, equal}
@@ -92,11 +94,12 @@ pub fn DOMStorageSerializedStorageKey::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMStorageStorageId {
   security_origin : String?
   storage_key : DOMStorageSerializedStorageKey?
   is_local_storage : Bool
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMStorageStorageId with Eq::{not_equal, equal}
@@ -151,9 +154,10 @@ pub fn DOMStorageStorageId::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMStorageClearParams {
   storage_id : DOMStorageStorageId
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMStorageClearParams with Eq::{not_equal, equal}
@@ -246,9 +250,10 @@ pub fn domstorage_enable_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMStorageGetDOMStorageItemsParams {
   storage_id : DOMStorageStorageId
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMStorageGetDOMStorageItemsParams with Eq::{not_equal, equal}
@@ -277,9 +282,10 @@ pub fn DOMStorageGetDOMStorageItemsParams::to_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMStorageGetDOMStorageItemsResult {
   entries : Array[DOMStorageItem]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMStorageGetDOMStorageItemsResult with Eq::{not_equal, equal}
@@ -351,10 +357,11 @@ pub fn domstorage_get_domstorage_items_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMStorageRemoveDOMStorageItemParams {
   storage_id : DOMStorageStorageId
   key : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMStorageRemoveDOMStorageItemParams with Eq::{not_equal, equal}
@@ -412,11 +419,12 @@ pub fn domstorage_remove_domstorage_item_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMStorageSetDOMStorageItemParams {
   storage_id : DOMStorageStorageId
   key : String
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMStorageSetDOMStorageItemParams with Eq::{not_equal, equal}
@@ -475,11 +483,12 @@ pub fn domstorage_set_domstorage_item_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMStorageDomStorageItemAddedEventParams {
   storage_id : DOMStorageStorageId
   key : String
   new_value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMStorageDomStorageItemAddedEventParams with Eq::{not_equal, equal}
@@ -553,10 +562,11 @@ pub fn domstorage_dom_storage_item_added_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMStorageDomStorageItemRemovedEventParams {
   storage_id : DOMStorageStorageId
   key : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMStorageDomStorageItemRemovedEventParams with Eq::{
@@ -631,9 +641,10 @@ pub fn domstorage_dom_storage_item_removed_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMStorageDomStorageItemsClearedEventParams {
   storage_id : DOMStorageStorageId
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMStorageDomStorageItemsClearedEventParams with Eq::{
@@ -706,12 +717,13 @@ pub fn domstorage_dom_storage_items_cleared_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMStorageDomStorageItemUpdatedEventParams {
   storage_id : DOMStorageStorageId
   key : String
   old_value : String
   new_value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMStorageDomStorageItemUpdatedEventParams with Eq::{

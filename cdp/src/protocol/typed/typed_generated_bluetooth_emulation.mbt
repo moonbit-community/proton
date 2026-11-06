@@ -7,9 +7,10 @@
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct BluetoothEmulationCentralState {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend BluetoothEmulationCentralState with Eq::{not_equal, equal}
@@ -51,9 +52,10 @@ pub fn BluetoothEmulationCentralState::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct BluetoothEmulationCharacteristicOperationType {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend BluetoothEmulationCharacteristicOperationType with Eq::{
@@ -98,6 +100,7 @@ pub fn BluetoothEmulationCharacteristicOperationType::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct BluetoothEmulationCharacteristicProperties {
   broadcast : Bool?
   read : Bool?
@@ -107,7 +110,7 @@ pub(all) struct BluetoothEmulationCharacteristicProperties {
   indicate : Bool?
   authenticated_signed_writes : Bool?
   extended_properties : Bool?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend BluetoothEmulationCharacteristicProperties with Eq::{
@@ -190,9 +193,10 @@ pub fn BluetoothEmulationCharacteristicProperties::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct BluetoothEmulationCharacteristicWriteType {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend BluetoothEmulationCharacteristicWriteType with Eq::{not_equal, equal}
@@ -234,9 +238,10 @@ pub fn BluetoothEmulationCharacteristicWriteType::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct BluetoothEmulationDescriptorOperationType {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend BluetoothEmulationDescriptorOperationType with Eq::{not_equal, equal}
@@ -278,9 +283,10 @@ pub fn BluetoothEmulationDescriptorOperationType::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct BluetoothEmulationGATTOperationType {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend BluetoothEmulationGATTOperationType with Eq::{not_equal, equal}
@@ -322,10 +328,11 @@ pub fn BluetoothEmulationGATTOperationType::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct BluetoothEmulationManufacturerData {
   key : Int32
   data : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend BluetoothEmulationManufacturerData with Eq::{not_equal, equal}
@@ -371,11 +378,12 @@ pub fn BluetoothEmulationManufacturerData::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct BluetoothEmulationScanEntry {
   device_address : String
   rssi : Int32
   scan_record : BluetoothEmulationScanRecord
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend BluetoothEmulationScanEntry with Eq::{not_equal, equal}
@@ -427,13 +435,14 @@ pub fn BluetoothEmulationScanEntry::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct BluetoothEmulationScanRecord {
   name : String?
   uuids : Array[String]?
   appearance : Int32?
   tx_power : Int32?
   manufacturer_data : Array[BluetoothEmulationManufacturerData]?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend BluetoothEmulationScanRecord with Eq::{not_equal, equal}
@@ -511,11 +520,12 @@ pub fn BluetoothEmulationScanRecord::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct BluetoothEmulationAddCharacteristicParams {
   service_id : String
   characteristic_uuid : String
   properties : BluetoothEmulationCharacteristicProperties
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend BluetoothEmulationAddCharacteristicParams with Eq::{not_equal, equal}
@@ -546,9 +556,10 @@ pub fn BluetoothEmulationAddCharacteristicParams::to_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct BluetoothEmulationAddCharacteristicResult {
   characteristic_id : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend BluetoothEmulationAddCharacteristicResult with Eq::{not_equal, equal}
@@ -617,10 +628,11 @@ pub fn bluetooth_emulation_add_characteristic_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct BluetoothEmulationAddDescriptorParams {
   characteristic_id : String
   descriptor_uuid : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend BluetoothEmulationAddDescriptorParams with Eq::{not_equal, equal}
@@ -650,9 +662,10 @@ pub fn BluetoothEmulationAddDescriptorParams::to_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct BluetoothEmulationAddDescriptorResult {
   descriptor_id : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend BluetoothEmulationAddDescriptorResult with Eq::{not_equal, equal}
@@ -721,10 +734,11 @@ pub fn bluetooth_emulation_add_descriptor_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct BluetoothEmulationAddServiceParams {
   address : String
   service_uuid : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend BluetoothEmulationAddServiceParams with Eq::{not_equal, equal}
@@ -754,9 +768,10 @@ pub fn BluetoothEmulationAddServiceParams::to_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct BluetoothEmulationAddServiceResult {
   service_id : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend BluetoothEmulationAddServiceResult with Eq::{not_equal, equal}
@@ -847,10 +862,11 @@ pub fn bluetooth_emulation_disable_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct BluetoothEmulationEnableParams {
   state : BluetoothEmulationCentralState
   le_supported : Bool
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend BluetoothEmulationEnableParams with Eq::{not_equal, equal}
@@ -904,9 +920,10 @@ pub fn bluetooth_emulation_enable_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct BluetoothEmulationRemoveCharacteristicParams {
   characteristic_id : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend BluetoothEmulationRemoveCharacteristicParams with Eq::{
@@ -966,9 +983,10 @@ pub fn bluetooth_emulation_remove_characteristic_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct BluetoothEmulationRemoveDescriptorParams {
   descriptor_id : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend BluetoothEmulationRemoveDescriptorParams with Eq::{not_equal, equal}
@@ -1025,9 +1043,10 @@ pub fn bluetooth_emulation_remove_descriptor_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct BluetoothEmulationRemoveServiceParams {
   service_id : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend BluetoothEmulationRemoveServiceParams with Eq::{not_equal, equal}
@@ -1084,9 +1103,10 @@ pub fn bluetooth_emulation_remove_service_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct BluetoothEmulationSetSimulatedCentralStateParams {
   state : BluetoothEmulationCentralState
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend BluetoothEmulationSetSimulatedCentralStateParams with Eq::{
@@ -1146,9 +1166,10 @@ pub fn bluetooth_emulation_set_simulated_central_state_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct BluetoothEmulationSimulateAdvertisementParams {
   entry : BluetoothEmulationScanEntry
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend BluetoothEmulationSimulateAdvertisementParams with Eq::{
@@ -1208,12 +1229,13 @@ pub fn bluetooth_emulation_simulate_advertisement_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct BluetoothEmulationSimulateCharacteristicOperationResponseParams {
   characteristic_id : String
   type_ : BluetoothEmulationCharacteristicOperationType
   code : Int32
   data : String?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend BluetoothEmulationSimulateCharacteristicOperationResponseParams with Eq::{
@@ -1278,12 +1300,13 @@ pub fn bluetooth_emulation_simulate_characteristic_operation_response_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct BluetoothEmulationSimulateDescriptorOperationResponseParams {
   descriptor_id : String
   type_ : BluetoothEmulationDescriptorOperationType
   code : Int32
   data : String?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend BluetoothEmulationSimulateDescriptorOperationResponseParams with Eq::{
@@ -1348,9 +1371,10 @@ pub fn bluetooth_emulation_simulate_descriptor_operation_response_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct BluetoothEmulationSimulateGATTDisconnectionParams {
   address : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend BluetoothEmulationSimulateGATTDisconnectionParams with Eq::{
@@ -1410,11 +1434,12 @@ pub fn bluetooth_emulation_simulate_gattdisconnection_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct BluetoothEmulationSimulateGATTOperationResponseParams {
   address : String
   type_ : BluetoothEmulationGATTOperationType
   code : Int32
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend BluetoothEmulationSimulateGATTOperationResponseParams with Eq::{
@@ -1476,12 +1501,13 @@ pub fn bluetooth_emulation_simulate_gattoperation_response_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct BluetoothEmulationSimulatePreconnectedPeripheralParams {
   address : String
   name : String
   manufacturer_data : Array[BluetoothEmulationManufacturerData]
   known_service_uuids : Array[String]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend BluetoothEmulationSimulatePreconnectedPeripheralParams with Eq::{
@@ -1548,12 +1574,13 @@ pub fn bluetooth_emulation_simulate_preconnected_peripheral_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct BluetoothEmulationCharacteristicOperationReceivedEventParams {
   characteristic_id : String
   type_ : BluetoothEmulationCharacteristicOperationType
   data : String?
   write_type : BluetoothEmulationCharacteristicWriteType?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend BluetoothEmulationCharacteristicOperationReceivedEventParams with Eq::{
@@ -1645,11 +1672,12 @@ pub fn bluetooth_emulation_characteristic_operation_received_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct BluetoothEmulationDescriptorOperationReceivedEventParams {
   descriptor_id : String
   type_ : BluetoothEmulationDescriptorOperationType
   data : String?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend BluetoothEmulationDescriptorOperationReceivedEventParams with Eq::{
@@ -1733,10 +1761,11 @@ pub fn bluetooth_emulation_descriptor_operation_received_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct BluetoothEmulationGattOperationReceivedEventParams {
   address : String
   type_ : BluetoothEmulationGATTOperationType
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend BluetoothEmulationGattOperationReceivedEventParams with Eq::{

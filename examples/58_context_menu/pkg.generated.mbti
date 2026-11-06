@@ -10,13 +10,15 @@ import {
 // Errors
 
 // Types and methods
-type ShowContextMenuReply derive(ToJson, @json.FromJson)
-pub fn ShowContextMenuReply::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
-pub fn ShowContextMenuReply::to_json(Self) -> Json
+#derive(@json.FromJson, @json.ToJson)
+type ShowContextMenuReply
+pub fn ShowContextMenuReply::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn ShowContextMenuReply::to_json(Self) -> @json.Json
 
-type ShowContextMenuRequest derive(ToJson, @json.FromJson)
-pub fn ShowContextMenuRequest::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
-pub fn ShowContextMenuRequest::to_json(Self) -> Json
+#derive(@json.FromJson, @json.ToJson)
+type ShowContextMenuRequest
+pub fn ShowContextMenuRequest::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn ShowContextMenuRequest::to_json(Self) -> @json.Json
 
 // Type aliases
 

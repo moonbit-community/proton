@@ -7,9 +7,10 @@
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct WebAuthnAuthenticatorId {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend WebAuthnAuthenticatorId with Eq::{not_equal, equal}
@@ -47,9 +48,10 @@ pub fn WebAuthnAuthenticatorId::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct WebAuthnAuthenticatorProtocol {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend WebAuthnAuthenticatorProtocol with Eq::{not_equal, equal}
@@ -91,9 +93,10 @@ pub fn WebAuthnAuthenticatorProtocol::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct WebAuthnAuthenticatorTransport {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend WebAuthnAuthenticatorTransport with Eq::{not_equal, equal}
@@ -135,6 +138,7 @@ pub fn WebAuthnAuthenticatorTransport::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct WebAuthnCredential {
   credential_id : String
   is_resident_credential : Bool
@@ -147,7 +151,7 @@ pub(all) struct WebAuthnCredential {
   backup_state : Bool?
   user_name : String?
   user_display_name : String?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend WebAuthnCredential with Eq::{not_equal, equal}
@@ -237,9 +241,10 @@ pub fn WebAuthnCredential::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct WebAuthnCtap2Version {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend WebAuthnCtap2Version with Eq::{not_equal, equal}
@@ -277,6 +282,7 @@ pub fn WebAuthnCtap2Version::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct WebAuthnVirtualAuthenticatorOptions {
   protocol : WebAuthnAuthenticatorProtocol
   ctap2_version : WebAuthnCtap2Version?
@@ -291,7 +297,7 @@ pub(all) struct WebAuthnVirtualAuthenticatorOptions {
   is_user_verified : Bool?
   default_backup_eligibility : Bool?
   default_backup_state : Bool?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend WebAuthnVirtualAuthenticatorOptions with Eq::{not_equal, equal}
@@ -406,10 +412,11 @@ pub fn WebAuthnVirtualAuthenticatorOptions::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct WebAuthnAddCredentialParams {
   authenticator_id : WebAuthnAuthenticatorId
   credential : WebAuthnCredential
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend WebAuthnAddCredentialParams with Eq::{not_equal, equal}
@@ -463,9 +470,10 @@ pub fn web_authn_add_credential_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct WebAuthnAddVirtualAuthenticatorParams {
   options : WebAuthnVirtualAuthenticatorOptions
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend WebAuthnAddVirtualAuthenticatorParams with Eq::{not_equal, equal}
@@ -494,9 +502,10 @@ pub fn WebAuthnAddVirtualAuthenticatorParams::to_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct WebAuthnAddVirtualAuthenticatorResult {
   authenticator_id : WebAuthnAuthenticatorId
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend WebAuthnAddVirtualAuthenticatorResult with Eq::{not_equal, equal}
@@ -565,9 +574,10 @@ pub fn web_authn_add_virtual_authenticator_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct WebAuthnClearCredentialsParams {
   authenticator_id : WebAuthnAuthenticatorId
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend WebAuthnClearCredentialsParams with Eq::{not_equal, equal}
@@ -638,9 +648,10 @@ pub fn web_authn_disable_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct WebAuthnEnableParams {
   enable_ui : Bool?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend WebAuthnEnableParams with Eq::{not_equal, equal}
@@ -691,10 +702,11 @@ pub fn web_authn_enable_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct WebAuthnGetCredentialParams {
   authenticator_id : WebAuthnAuthenticatorId
   credential_id : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend WebAuthnGetCredentialParams with Eq::{not_equal, equal}
@@ -724,9 +736,10 @@ pub fn WebAuthnGetCredentialParams::to_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct WebAuthnGetCredentialResult {
   credential : WebAuthnCredential
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend WebAuthnGetCredentialResult with Eq::{not_equal, equal}
@@ -791,9 +804,10 @@ pub fn web_authn_get_credential_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct WebAuthnGetCredentialsParams {
   authenticator_id : WebAuthnAuthenticatorId
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend WebAuthnGetCredentialsParams with Eq::{not_equal, equal}
@@ -822,9 +836,10 @@ pub fn WebAuthnGetCredentialsParams::to_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct WebAuthnGetCredentialsResult {
   credentials : Array[WebAuthnCredential]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend WebAuthnGetCredentialsResult with Eq::{not_equal, equal}
@@ -892,10 +907,11 @@ pub fn web_authn_get_credentials_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct WebAuthnRemoveCredentialParams {
   authenticator_id : WebAuthnAuthenticatorId
   credential_id : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend WebAuthnRemoveCredentialParams with Eq::{not_equal, equal}
@@ -949,9 +965,10 @@ pub fn web_authn_remove_credential_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct WebAuthnRemoveVirtualAuthenticatorParams {
   authenticator_id : WebAuthnAuthenticatorId
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend WebAuthnRemoveVirtualAuthenticatorParams with Eq::{not_equal, equal}
@@ -1008,10 +1025,11 @@ pub fn web_authn_remove_virtual_authenticator_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct WebAuthnSetAutomaticPresenceSimulationParams {
   authenticator_id : WebAuthnAuthenticatorId
   enabled : Bool
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend WebAuthnSetAutomaticPresenceSimulationParams with Eq::{
@@ -1072,12 +1090,13 @@ pub fn web_authn_set_automatic_presence_simulation_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct WebAuthnSetCredentialPropertiesParams {
   authenticator_id : WebAuthnAuthenticatorId
   credential_id : String
   backup_eligibility : Bool?
   backup_state : Bool?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend WebAuthnSetCredentialPropertiesParams with Eq::{not_equal, equal}
@@ -1141,12 +1160,13 @@ pub fn web_authn_set_credential_properties_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct WebAuthnSetResponseOverrideBitsParams {
   authenticator_id : WebAuthnAuthenticatorId
   is_bogus_signature : Bool?
   is_bad_uv : Bool?
   is_bad_up : Bool?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend WebAuthnSetResponseOverrideBitsParams with Eq::{not_equal, equal}
@@ -1212,10 +1232,11 @@ pub fn web_authn_set_response_override_bits_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct WebAuthnSetUserVerifiedParams {
   authenticator_id : WebAuthnAuthenticatorId
   is_user_verified : Bool
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend WebAuthnSetUserVerifiedParams with Eq::{not_equal, equal}
@@ -1269,10 +1290,11 @@ pub fn web_authn_set_user_verified_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct WebAuthnCredentialAddedEventParams {
   authenticator_id : WebAuthnAuthenticatorId
   credential : WebAuthnCredential
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend WebAuthnCredentialAddedEventParams with Eq::{not_equal, equal}
@@ -1346,10 +1368,11 @@ pub fn web_authn_credential_added_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct WebAuthnCredentialAssertedEventParams {
   authenticator_id : WebAuthnAuthenticatorId
   credential : WebAuthnCredential
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend WebAuthnCredentialAssertedEventParams with Eq::{not_equal, equal}
@@ -1423,10 +1446,11 @@ pub fn web_authn_credential_asserted_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct WebAuthnCredentialDeletedEventParams {
   authenticator_id : WebAuthnAuthenticatorId
   credential_id : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend WebAuthnCredentialDeletedEventParams with Eq::{not_equal, equal}
@@ -1500,10 +1524,11 @@ pub fn web_authn_credential_deleted_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct WebAuthnCredentialUpdatedEventParams {
   authenticator_id : WebAuthnAuthenticatorId
   credential : WebAuthnCredential
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend WebAuthnCredentialUpdatedEventParams with Eq::{not_equal, equal}

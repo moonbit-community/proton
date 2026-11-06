@@ -7,12 +7,13 @@
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct StorageAttributionReportingAggregatableDebugReportingConfig {
   budget : Double?
   key_piece : StorageUnsignedInt128AsBase16
   debug_data : Array[StorageAttributionReportingAggregatableDebugReportingData]
   aggregation_coordinator_origin : String?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend StorageAttributionReportingAggregatableDebugReportingConfig with Eq::{
@@ -80,11 +81,12 @@ pub fn StorageAttributionReportingAggregatableDebugReportingConfig::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct StorageAttributionReportingAggregatableDebugReportingData {
   key_piece : StorageUnsignedInt128AsBase16
   value : Double
   types : Array[String]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend StorageAttributionReportingAggregatableDebugReportingData with Eq::{
@@ -144,10 +146,11 @@ pub fn StorageAttributionReportingAggregatableDebugReportingData::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct StorageAttributionReportingAggregatableDedupKey {
   dedup_key : StorageUnsignedInt64AsBase10?
   filters : StorageAttributionReportingFilterPair
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend StorageAttributionReportingAggregatableDedupKey with Eq::{
@@ -203,9 +206,10 @@ pub fn StorageAttributionReportingAggregatableDedupKey::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct StorageAttributionReportingAggregatableResult {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend StorageAttributionReportingAggregatableResult with Eq::{
@@ -250,11 +254,12 @@ pub fn StorageAttributionReportingAggregatableResult::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct StorageAttributionReportingAggregatableTriggerData {
   key_piece : StorageUnsignedInt128AsBase16
   source_keys : Array[String]
   filters : StorageAttributionReportingFilterPair
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend StorageAttributionReportingAggregatableTriggerData with Eq::{
@@ -318,11 +323,12 @@ pub fn StorageAttributionReportingAggregatableTriggerData::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct StorageAttributionReportingAggregatableValueDictEntry {
   key : String
   value : Double
   filtering_id : StorageUnsignedInt64AsBase10
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend StorageAttributionReportingAggregatableValueDictEntry with Eq::{
@@ -375,10 +381,11 @@ pub fn StorageAttributionReportingAggregatableValueDictEntry::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct StorageAttributionReportingAggregatableValueEntry {
   values : Array[StorageAttributionReportingAggregatableValueDictEntry]
   filters : StorageAttributionReportingFilterPair
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend StorageAttributionReportingAggregatableValueEntry with Eq::{
@@ -436,10 +443,11 @@ pub fn StorageAttributionReportingAggregatableValueEntry::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct StorageAttributionReportingAggregationKeysEntry {
   key : String
   value : StorageUnsignedInt128AsBase16
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend StorageAttributionReportingAggregationKeysEntry with Eq::{
@@ -490,9 +498,10 @@ pub fn StorageAttributionReportingAggregationKeysEntry::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct StorageAttributionReportingEventLevelResult {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend StorageAttributionReportingEventLevelResult with Eq::{
@@ -537,10 +546,11 @@ pub fn StorageAttributionReportingEventLevelResult::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct StorageAttributionReportingEventReportWindows {
   start : Int32
   ends : Array[Int32]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend StorageAttributionReportingEventReportWindows with Eq::{
@@ -596,12 +606,13 @@ pub fn StorageAttributionReportingEventReportWindows::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct StorageAttributionReportingEventTriggerData {
   data : StorageUnsignedInt64AsBase10
   priority : StorageSignedInt64AsBase10
   dedup_key : StorageUnsignedInt64AsBase10?
   filters : StorageAttributionReportingFilterPair
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend StorageAttributionReportingEventTriggerData with Eq::{
@@ -665,10 +676,11 @@ pub fn StorageAttributionReportingEventTriggerData::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct StorageAttributionReportingFilterConfig {
   filter_values : Array[StorageAttributionReportingFilterDataEntry]
   lookback_window : Int32?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend StorageAttributionReportingFilterConfig with Eq::{not_equal, equal}
@@ -725,10 +737,11 @@ pub fn StorageAttributionReportingFilterConfig::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct StorageAttributionReportingFilterDataEntry {
   key : String
   values : Array[String]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend StorageAttributionReportingFilterDataEntry with Eq::{
@@ -784,10 +797,11 @@ pub fn StorageAttributionReportingFilterDataEntry::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct StorageAttributionReportingFilterPair {
   filters : Array[StorageAttributionReportingFilterConfig]
   not_filters : Array[StorageAttributionReportingFilterConfig]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend StorageAttributionReportingFilterPair with Eq::{not_equal, equal}
@@ -845,10 +859,11 @@ pub fn StorageAttributionReportingFilterPair::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct StorageAttributionReportingNamedBudgetCandidate {
   name : String?
   filters : StorageAttributionReportingFilterPair
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend StorageAttributionReportingNamedBudgetCandidate with Eq::{
@@ -901,10 +916,11 @@ pub fn StorageAttributionReportingNamedBudgetCandidate::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct StorageAttributionReportingNamedBudgetDef {
   name : String
   budget : Int32
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend StorageAttributionReportingNamedBudgetDef with Eq::{not_equal, equal}
@@ -950,9 +966,10 @@ pub fn StorageAttributionReportingNamedBudgetDef::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct StorageAttributionReportingReportResult {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend StorageAttributionReportingReportResult with Eq::{not_equal, equal}
@@ -994,6 +1011,7 @@ pub fn StorageAttributionReportingReportResult::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct StorageAttributionReportingSourceRegistration {
   time : NetworkTimeSinceEpoch
   expiry : Int32
@@ -1017,7 +1035,7 @@ pub(all) struct StorageAttributionReportingSourceRegistration {
   named_budgets : Array[StorageAttributionReportingNamedBudgetDef]
   debug_reporting : Bool
   event_level_epsilon : Double
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend StorageAttributionReportingSourceRegistration with Eq::{
@@ -1191,9 +1209,10 @@ pub fn StorageAttributionReportingSourceRegistration::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct StorageAttributionReportingSourceRegistrationResult {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend StorageAttributionReportingSourceRegistrationResult with Eq::{
@@ -1238,9 +1257,10 @@ pub fn StorageAttributionReportingSourceRegistrationResult::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct StorageAttributionReportingSourceRegistrationTimeConfig {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend StorageAttributionReportingSourceRegistrationTimeConfig with Eq::{
@@ -1285,9 +1305,10 @@ pub fn StorageAttributionReportingSourceRegistrationTimeConfig::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct StorageAttributionReportingSourceType {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend StorageAttributionReportingSourceType with Eq::{not_equal, equal}
@@ -1329,9 +1350,10 @@ pub fn StorageAttributionReportingSourceType::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct StorageAttributionReportingTriggerDataMatching {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend StorageAttributionReportingTriggerDataMatching with Eq::{
@@ -1376,6 +1398,7 @@ pub fn StorageAttributionReportingTriggerDataMatching::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct StorageAttributionReportingTriggerRegistration {
   filters : StorageAttributionReportingFilterPair
   debug_key : StorageUnsignedInt64AsBase10?
@@ -1395,7 +1418,7 @@ pub(all) struct StorageAttributionReportingTriggerRegistration {
   aggregatable_debug_reporting_config : StorageAttributionReportingAggregatableDebugReportingConfig
   scopes : Array[String]
   named_budgets : Array[StorageAttributionReportingNamedBudgetCandidate]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend StorageAttributionReportingTriggerRegistration with Eq::{
@@ -1545,11 +1568,12 @@ pub fn StorageAttributionReportingTriggerRegistration::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct StorageAttributionScopesData {
   values : Array[String]
   limit : Double
   max_event_states : Double
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend StorageAttributionScopesData with Eq::{not_equal, equal}
@@ -1606,9 +1630,10 @@ pub fn StorageAttributionScopesData::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct StorageInterestGroupAccessType {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend StorageInterestGroupAccessType with Eq::{not_equal, equal}
@@ -1650,9 +1675,10 @@ pub fn StorageInterestGroupAccessType::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct StorageInterestGroupAuctionEventType {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend StorageInterestGroupAuctionEventType with Eq::{not_equal, equal}
@@ -1694,9 +1720,10 @@ pub fn StorageInterestGroupAuctionEventType::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct StorageInterestGroupAuctionFetchType {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend StorageInterestGroupAuctionFetchType with Eq::{not_equal, equal}
@@ -1738,9 +1765,10 @@ pub fn StorageInterestGroupAuctionFetchType::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct StorageInterestGroupAuctionId {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend StorageInterestGroupAuctionId with Eq::{not_equal, equal}
@@ -1782,11 +1810,12 @@ pub fn StorageInterestGroupAuctionId::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct StorageRelatedWebsiteSet {
   primary_sites : Array[String]
   associated_sites : Array[String]
   service_sites : Array[String]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend StorageRelatedWebsiteSet with Eq::{not_equal, equal}
@@ -1861,9 +1890,10 @@ pub fn StorageRelatedWebsiteSet::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct StorageSerializedStorageKey {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend StorageSerializedStorageKey with Eq::{not_equal, equal}
@@ -1905,9 +1935,10 @@ pub fn StorageSerializedStorageKey::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct StorageSharedStorageAccessMethod {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend StorageSharedStorageAccessMethod with Eq::{not_equal, equal}
@@ -1949,6 +1980,7 @@ pub fn StorageSharedStorageAccessMethod::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct StorageSharedStorageAccessParams {
   script_source_url : String?
   data_origin : String?
@@ -1967,7 +1999,7 @@ pub(all) struct StorageSharedStorageAccessParams {
   with_lock : String?
   batch_update_id : String?
   batch_size : Int32?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend StorageSharedStorageAccessParams with Eq::{not_equal, equal}
@@ -2109,9 +2141,10 @@ pub fn StorageSharedStorageAccessParams::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct StorageSharedStorageAccessScope {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend StorageSharedStorageAccessScope with Eq::{not_equal, equal}
@@ -2153,10 +2186,11 @@ pub fn StorageSharedStorageAccessScope::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct StorageSharedStorageEntry {
   key : String
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend StorageSharedStorageEntry with Eq::{not_equal, equal}
@@ -2202,12 +2236,13 @@ pub fn StorageSharedStorageEntry::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct StorageSharedStorageMetadata {
   creation_time : NetworkTimeSinceEpoch
   length : Int32
   remaining_budget : Double
   bytes_used : Int32
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend StorageSharedStorageMetadata with Eq::{not_equal, equal}
@@ -2261,12 +2296,13 @@ pub fn StorageSharedStorageMetadata::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct StorageSharedStoragePrivateAggregationConfig {
   aggregation_coordinator_origin : String?
   context_id : String?
   filtering_id_max_bytes : Int32
   max_contributions : Int32?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend StorageSharedStoragePrivateAggregationConfig with Eq::{
@@ -2335,10 +2371,11 @@ pub fn StorageSharedStoragePrivateAggregationConfig::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct StorageSharedStorageReportingMetadata {
   event_type : String
   reporting_url : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend StorageSharedStorageReportingMetadata with Eq::{not_equal, equal}
@@ -2388,10 +2425,11 @@ pub fn StorageSharedStorageReportingMetadata::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct StorageSharedStorageUrlWithMetadata {
   url : String
   reporting_metadata : Array[StorageSharedStorageReportingMetadata]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend StorageSharedStorageUrlWithMetadata with Eq::{not_equal, equal}
@@ -2444,9 +2482,10 @@ pub fn StorageSharedStorageUrlWithMetadata::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct StorageSignedInt64AsBase10 {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend StorageSignedInt64AsBase10 with Eq::{not_equal, equal}
@@ -2488,10 +2527,11 @@ pub fn StorageSignedInt64AsBase10::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct StorageStorageBucket {
   storage_key : StorageSerializedStorageKey
   name : String?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend StorageStorageBucket with Eq::{not_equal, equal}
@@ -2537,6 +2577,7 @@ pub fn StorageStorageBucket::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct StorageStorageBucketInfo {
   bucket : StorageStorageBucket
   id : String
@@ -2544,7 +2585,7 @@ pub(all) struct StorageStorageBucketInfo {
   quota : Double
   persistent : Bool
   durability : StorageStorageBucketsDurability
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend StorageStorageBucketInfo with Eq::{not_equal, equal}
@@ -2606,9 +2647,10 @@ pub fn StorageStorageBucketInfo::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct StorageStorageBucketsDurability {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend StorageStorageBucketsDurability with Eq::{not_equal, equal}
@@ -2650,9 +2692,10 @@ pub fn StorageStorageBucketsDurability::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct StorageStorageType {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend StorageStorageType with Eq::{not_equal, equal}
@@ -2690,10 +2733,11 @@ pub fn StorageStorageType::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct StorageTrustTokens {
   issuer_origin : String
   count : Double
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend StorageTrustTokens with Eq::{not_equal, equal}
@@ -2737,9 +2781,10 @@ pub fn StorageTrustTokens::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct StorageUnsignedInt128AsBase16 {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend StorageUnsignedInt128AsBase16 with Eq::{not_equal, equal}
@@ -2781,9 +2826,10 @@ pub fn StorageUnsignedInt128AsBase16::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct StorageUnsignedInt64AsBase10 {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend StorageUnsignedInt64AsBase10 with Eq::{not_equal, equal}
@@ -2825,10 +2871,11 @@ pub fn StorageUnsignedInt64AsBase10::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct StorageUsageForType {
   storage_type : StorageStorageType
   usage : Double
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend StorageUsageForType with Eq::{not_equal, equal}
@@ -2872,9 +2919,10 @@ pub fn StorageUsageForType::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct StorageClearCookiesParams {
   browser_context_id : BrowserBrowserContextID?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend StorageClearCookiesParams with Eq::{not_equal, equal}
@@ -2929,10 +2977,11 @@ pub fn storage_clear_cookies_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct StorageClearDataForOriginParams {
   origin : String
   storage_types : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend StorageClearDataForOriginParams with Eq::{not_equal, equal}
@@ -2990,10 +3039,11 @@ pub fn storage_clear_data_for_origin_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct StorageClearDataForStorageKeyParams {
   storage_key : String
   storage_types : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend StorageClearDataForStorageKeyParams with Eq::{not_equal, equal}
@@ -3051,9 +3101,10 @@ pub fn storage_clear_data_for_storage_key_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct StorageClearSharedStorageEntriesParams {
   owner_origin : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend StorageClearSharedStorageEntriesParams with Eq::{not_equal, equal}
@@ -3110,9 +3161,10 @@ pub fn storage_clear_shared_storage_entries_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct StorageClearTrustTokensParams {
   issuer_origin : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend StorageClearTrustTokensParams with Eq::{not_equal, equal}
@@ -3141,9 +3193,10 @@ pub fn StorageClearTrustTokensParams::to_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct StorageClearTrustTokensResult {
   did_delete_tokens : Bool
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend StorageClearTrustTokensResult with Eq::{not_equal, equal}
@@ -3208,10 +3261,11 @@ pub fn storage_clear_trust_tokens_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct StorageDeleteSharedStorageEntryParams {
   owner_origin : String
   key : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend StorageDeleteSharedStorageEntryParams with Eq::{not_equal, equal}
@@ -3269,9 +3323,10 @@ pub fn storage_delete_shared_storage_entry_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct StorageDeleteStorageBucketParams {
   bucket : StorageStorageBucket
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend StorageDeleteStorageBucketParams with Eq::{not_equal, equal}
@@ -3328,10 +3383,11 @@ pub fn storage_delete_storage_bucket_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct StorageGetAffectedUrlsForThirdPartyCookieMetadataParams {
   first_party_url : String
   third_party_urls : Array[String]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend StorageGetAffectedUrlsForThirdPartyCookieMetadataParams with Eq::{
@@ -3366,9 +3422,10 @@ pub fn StorageGetAffectedUrlsForThirdPartyCookieMetadataParams::to_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct StorageGetAffectedUrlsForThirdPartyCookieMetadataResult {
   matched_urls : Array[String]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend StorageGetAffectedUrlsForThirdPartyCookieMetadataResult with Eq::{
@@ -3447,9 +3504,10 @@ pub fn storage_get_affected_urls_for_third_party_cookie_metadata_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct StorageGetCookiesParams {
   browser_context_id : BrowserBrowserContextID?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend StorageGetCookiesParams with Eq::{not_equal, equal}
@@ -3476,9 +3534,10 @@ pub fn StorageGetCookiesParams::to_json(self : StorageGetCookiesParams) -> Json 
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct StorageGetCookiesResult {
   cookies : Array[NetworkCookie]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend StorageGetCookiesResult with Eq::{not_equal, equal}
@@ -3544,10 +3603,11 @@ pub fn storage_get_cookies_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct StorageGetInterestGroupDetailsParams {
   owner_origin : String
   name : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend StorageGetInterestGroupDetailsParams with Eq::{not_equal, equal}
@@ -3577,9 +3637,10 @@ pub fn StorageGetInterestGroupDetailsParams::to_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct StorageGetInterestGroupDetailsResult {
   details : Json
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend StorageGetInterestGroupDetailsResult with Eq::{not_equal, equal}
@@ -3644,9 +3705,10 @@ pub fn storage_get_interest_group_details_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct StorageGetRelatedWebsiteSetsResult {
   sets : Array[StorageRelatedWebsiteSet]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend StorageGetRelatedWebsiteSetsResult with Eq::{not_equal, equal}
@@ -3712,9 +3774,10 @@ pub fn storage_get_related_website_sets_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct StorageGetSharedStorageEntriesParams {
   owner_origin : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend StorageGetSharedStorageEntriesParams with Eq::{not_equal, equal}
@@ -3743,9 +3806,10 @@ pub fn StorageGetSharedStorageEntriesParams::to_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct StorageGetSharedStorageEntriesResult {
   entries : Array[StorageSharedStorageEntry]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend StorageGetSharedStorageEntriesResult with Eq::{not_equal, equal}
@@ -3817,9 +3881,10 @@ pub fn storage_get_shared_storage_entries_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct StorageGetSharedStorageMetadataParams {
   owner_origin : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend StorageGetSharedStorageMetadataParams with Eq::{not_equal, equal}
@@ -3848,9 +3913,10 @@ pub fn StorageGetSharedStorageMetadataParams::to_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct StorageGetSharedStorageMetadataResult {
   metadata : StorageSharedStorageMetadata
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend StorageGetSharedStorageMetadataResult with Eq::{not_equal, equal}
@@ -3919,9 +3985,10 @@ pub fn storage_get_shared_storage_metadata_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct StorageGetStorageKeyParams {
   frame_id : PageFrameId?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend StorageGetStorageKeyParams with Eq::{not_equal, equal}
@@ -3952,9 +4019,10 @@ pub fn StorageGetStorageKeyParams::to_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct StorageGetStorageKeyResult {
   storage_key : StorageSerializedStorageKey
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend StorageGetStorageKeyResult with Eq::{not_equal, equal}
@@ -4019,9 +4087,10 @@ pub fn storage_get_storage_key_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct StorageGetStorageKeyForFrameParams {
   frame_id : PageFrameId
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend StorageGetStorageKeyForFrameParams with Eq::{not_equal, equal}
@@ -4050,9 +4119,10 @@ pub fn StorageGetStorageKeyForFrameParams::to_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct StorageGetStorageKeyForFrameResult {
   storage_key : StorageSerializedStorageKey
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend StorageGetStorageKeyForFrameResult with Eq::{not_equal, equal}
@@ -4121,9 +4191,10 @@ pub fn storage_get_storage_key_for_frame_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct StorageGetTrustTokensResult {
   tokens : Array[StorageTrustTokens]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend StorageGetTrustTokensResult with Eq::{not_equal, equal}
@@ -4189,9 +4260,10 @@ pub fn storage_get_trust_tokens_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct StorageGetUsageAndQuotaParams {
   origin : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend StorageGetUsageAndQuotaParams with Eq::{not_equal, equal}
@@ -4220,12 +4292,13 @@ pub fn StorageGetUsageAndQuotaParams::to_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct StorageGetUsageAndQuotaResult {
   usage : Double
   quota : Double
   override_active : Bool
   usage_breakdown : Array[StorageUsageForType]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend StorageGetUsageAndQuotaResult with Eq::{not_equal, equal}
@@ -4298,10 +4371,11 @@ pub fn storage_get_usage_and_quota_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct StorageOverrideQuotaForOriginParams {
   origin : String
   quota_size : Double?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend StorageOverrideQuotaForOriginParams with Eq::{not_equal, equal}
@@ -4361,9 +4435,10 @@ pub fn storage_override_quota_for_origin_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct StorageResetSharedStorageBudgetParams {
   owner_origin : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend StorageResetSharedStorageBudgetParams with Eq::{not_equal, equal}
@@ -4420,9 +4495,10 @@ pub fn storage_reset_shared_storage_budget_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct StorageRunBounceTrackingMitigationsResult {
   deleted_sites : Array[String]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend StorageRunBounceTrackingMitigationsResult with Eq::{not_equal, equal}
@@ -4495,9 +4571,10 @@ pub fn storage_run_bounce_tracking_mitigations_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct StorageSendPendingAttributionReportsResult {
   num_sent : Int32
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend StorageSendPendingAttributionReportsResult with Eq::{
@@ -4566,9 +4643,10 @@ pub fn storage_send_pending_attribution_reports_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct StorageSetAttributionReportingLocalTestingModeParams {
   enabled : Bool
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend StorageSetAttributionReportingLocalTestingModeParams with Eq::{
@@ -4628,9 +4706,10 @@ pub fn storage_set_attribution_reporting_local_testing_mode_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct StorageSetAttributionReportingTrackingParams {
   enable : Bool
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend StorageSetAttributionReportingTrackingParams with Eq::{
@@ -4690,10 +4769,11 @@ pub fn storage_set_attribution_reporting_tracking_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct StorageSetCookiesParams {
   cookies : Array[NetworkCookieParam]
   browser_context_id : BrowserBrowserContextID?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend StorageSetCookiesParams with Eq::{not_equal, equal}
@@ -4745,9 +4825,10 @@ pub fn storage_set_cookies_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct StorageSetInterestGroupAuctionTrackingParams {
   enable : Bool
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend StorageSetInterestGroupAuctionTrackingParams with Eq::{
@@ -4807,9 +4888,10 @@ pub fn storage_set_interest_group_auction_tracking_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct StorageSetInterestGroupTrackingParams {
   enable : Bool
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend StorageSetInterestGroupTrackingParams with Eq::{not_equal, equal}
@@ -4866,11 +4948,12 @@ pub fn storage_set_interest_group_tracking_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct StorageSetProtectedAudienceKAnonymityParams {
   owner : String
   name : String
   hashes : Array[String]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend StorageSetProtectedAudienceKAnonymityParams with Eq::{
@@ -4932,12 +5015,13 @@ pub fn storage_set_protected_audience_kanonymity_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct StorageSetSharedStorageEntryParams {
   owner_origin : String
   key : String
   value : String
   ignore_if_present : Bool?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend StorageSetSharedStorageEntryParams with Eq::{not_equal, equal}
@@ -4999,9 +5083,10 @@ pub fn storage_set_shared_storage_entry_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct StorageSetSharedStorageTrackingParams {
   enable : Bool
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend StorageSetSharedStorageTrackingParams with Eq::{not_equal, equal}
@@ -5058,10 +5143,11 @@ pub fn storage_set_shared_storage_tracking_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct StorageSetStorageBucketTrackingParams {
   storage_key : String
   enable : Bool
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend StorageSetStorageBucketTrackingParams with Eq::{not_equal, equal}
@@ -5119,9 +5205,10 @@ pub fn storage_set_storage_bucket_tracking_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct StorageTrackCacheStorageForOriginParams {
   origin : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend StorageTrackCacheStorageForOriginParams with Eq::{not_equal, equal}
@@ -5178,9 +5265,10 @@ pub fn storage_track_cache_storage_for_origin_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct StorageTrackCacheStorageForStorageKeyParams {
   storage_key : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend StorageTrackCacheStorageForStorageKeyParams with Eq::{
@@ -5240,9 +5328,10 @@ pub fn storage_track_cache_storage_for_storage_key_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct StorageTrackIndexedDBForOriginParams {
   origin : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend StorageTrackIndexedDBForOriginParams with Eq::{not_equal, equal}
@@ -5299,9 +5388,10 @@ pub fn storage_track_indexed_dbfor_origin_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct StorageTrackIndexedDBForStorageKeyParams {
   storage_key : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend StorageTrackIndexedDBForStorageKeyParams with Eq::{not_equal, equal}
@@ -5358,9 +5448,10 @@ pub fn storage_track_indexed_dbfor_storage_key_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct StorageUntrackCacheStorageForOriginParams {
   origin : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend StorageUntrackCacheStorageForOriginParams with Eq::{not_equal, equal}
@@ -5417,9 +5508,10 @@ pub fn storage_untrack_cache_storage_for_origin_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct StorageUntrackCacheStorageForStorageKeyParams {
   storage_key : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend StorageUntrackCacheStorageForStorageKeyParams with Eq::{
@@ -5479,9 +5571,10 @@ pub fn storage_untrack_cache_storage_for_storage_key_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct StorageUntrackIndexedDBForOriginParams {
   origin : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend StorageUntrackIndexedDBForOriginParams with Eq::{not_equal, equal}
@@ -5538,9 +5631,10 @@ pub fn storage_untrack_indexed_dbfor_origin_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct StorageUntrackIndexedDBForStorageKeyParams {
   storage_key : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend StorageUntrackIndexedDBForStorageKeyParams with Eq::{
@@ -5600,6 +5694,7 @@ pub fn storage_untrack_indexed_dbfor_storage_key_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct StorageAttributionReportingReportSentEventParams {
   url : String
   body : Json
@@ -5607,7 +5702,7 @@ pub(all) struct StorageAttributionReportingReportSentEventParams {
   net_error : Int32?
   net_error_name : String?
   http_status_code : Int32?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend StorageAttributionReportingReportSentEventParams with Eq::{
@@ -5703,10 +5798,11 @@ pub fn storage_attribution_reporting_report_sent_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct StorageAttributionReportingSourceRegisteredEventParams {
   registration : StorageAttributionReportingSourceRegistration
   result : StorageAttributionReportingSourceRegistrationResult
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend StorageAttributionReportingSourceRegisteredEventParams with Eq::{
@@ -5786,11 +5882,12 @@ pub fn storage_attribution_reporting_source_registered_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct StorageAttributionReportingTriggerRegisteredEventParams {
   registration : StorageAttributionReportingTriggerRegistration
   event_level : StorageAttributionReportingEventLevelResult
   aggregatable : StorageAttributionReportingAggregatableResult
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend StorageAttributionReportingTriggerRegisteredEventParams with Eq::{
@@ -5873,9 +5970,10 @@ pub fn storage_attribution_reporting_trigger_registered_event(
 ///
 /// The protocol schema does not name this item type, so the generator preserves
 /// the original JSON value while still giving callers a stable MoonBit type.
+#derive(Eq, Debug)
 pub(all) struct StorageAttributionReportingVerboseDebugReportSentEventParamsBodyItem {
   value : Json
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend StorageAttributionReportingVerboseDebugReportSentEventParamsBodyItem with Eq::{
@@ -5910,6 +6008,7 @@ pub fn StorageAttributionReportingVerboseDebugReportSentEventParamsBodyItem::fro
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct StorageAttributionReportingVerboseDebugReportSentEventParams {
   url : String
   body : Array[
@@ -5918,7 +6017,7 @@ pub(all) struct StorageAttributionReportingVerboseDebugReportSentEventParams {
   net_error : Int32?
   net_error_name : String?
   http_status_code : Int32?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend StorageAttributionReportingVerboseDebugReportSentEventParams with Eq::{
@@ -6022,12 +6121,13 @@ pub fn storage_attribution_reporting_verbose_debug_report_sent_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct StorageCacheStorageContentUpdatedEventParams {
   origin : String
   storage_key : String
   bucket_id : String
   cache_name : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend StorageCacheStorageContentUpdatedEventParams with Eq::{
@@ -6108,11 +6208,12 @@ pub fn storage_cache_storage_content_updated_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct StorageCacheStorageListUpdatedEventParams {
   origin : String
   storage_key : String
   bucket_id : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend StorageCacheStorageListUpdatedEventParams with Eq::{not_equal, equal}
@@ -6186,13 +6287,14 @@ pub fn storage_cache_storage_list_updated_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct StorageIndexedDBContentUpdatedEventParams {
   origin : String
   storage_key : String
   bucket_id : String
   database_name : String
   object_store_name : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend StorageIndexedDBContentUpdatedEventParams with Eq::{not_equal, equal}
@@ -6274,11 +6376,12 @@ pub fn storage_indexed_dbcontent_updated_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct StorageIndexedDBListUpdatedEventParams {
   origin : String
   storage_key : String
   bucket_id : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend StorageIndexedDBListUpdatedEventParams with Eq::{not_equal, equal}
@@ -6352,6 +6455,7 @@ pub fn storage_indexed_dblist_updated_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct StorageInterestGroupAccessedEventParams {
   access_time : NetworkTimeSinceEpoch
   type_ : StorageInterestGroupAccessType
@@ -6361,7 +6465,7 @@ pub(all) struct StorageInterestGroupAccessedEventParams {
   bid : Double?
   bid_currency : String?
   unique_auction_id : StorageInterestGroupAuctionId?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend StorageInterestGroupAccessedEventParams with Eq::{not_equal, equal}
@@ -6464,13 +6568,14 @@ pub fn storage_interest_group_accessed_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct StorageInterestGroupAuctionEventOccurredEventParams {
   event_time : NetworkTimeSinceEpoch
   type_ : StorageInterestGroupAuctionEventType
   unique_auction_id : StorageInterestGroupAuctionId
   parent_auction_id : StorageInterestGroupAuctionId?
   auction_config : Json?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend StorageInterestGroupAuctionEventOccurredEventParams with Eq::{
@@ -6565,11 +6670,12 @@ pub fn storage_interest_group_auction_event_occurred_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct StorageInterestGroupAuctionNetworkRequestCreatedEventParams {
   type_ : StorageInterestGroupAuctionFetchType
   request_id : NetworkRequestId
   auctions : Array[StorageInterestGroupAuctionId]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend StorageInterestGroupAuctionNetworkRequestCreatedEventParams with Eq::{
@@ -6656,6 +6762,7 @@ pub fn storage_interest_group_auction_network_request_created_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct StorageSharedStorageAccessedEventParams {
   access_time : NetworkTimeSinceEpoch
   scope : StorageSharedStorageAccessScope
@@ -6664,7 +6771,7 @@ pub(all) struct StorageSharedStorageAccessedEventParams {
   owner_origin : String
   owner_site : String
   params : StorageSharedStorageAccessParams
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend StorageSharedStorageAccessedEventParams with Eq::{not_equal, equal}
@@ -6758,6 +6865,7 @@ pub fn storage_shared_storage_accessed_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct StorageSharedStorageWorkletOperationExecutionFinishedEventParams {
   finished_time : NetworkTimeSinceEpoch
   execution_time : Int32
@@ -6766,7 +6874,7 @@ pub(all) struct StorageSharedStorageWorkletOperationExecutionFinishedEventParams
   worklet_target_id : TargetTargetID
   main_frame_id : PageFrameId
   owner_origin : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend StorageSharedStorageWorkletOperationExecutionFinishedEventParams with Eq::{
@@ -6866,9 +6974,10 @@ pub fn storage_shared_storage_worklet_operation_execution_finished_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct StorageStorageBucketCreatedOrUpdatedEventParams {
   bucket_info : StorageStorageBucketInfo
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend StorageStorageBucketCreatedOrUpdatedEventParams with Eq::{
@@ -6944,9 +7053,10 @@ pub fn storage_storage_bucket_created_or_updated_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct StorageStorageBucketDeletedEventParams {
   bucket_id : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend StorageStorageBucketDeletedEventParams with Eq::{not_equal, equal}

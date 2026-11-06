@@ -1,13 +1,14 @@
 ///|
 /// Controls how the Dock tile requests attention, mirroring Electron's
 /// `app.dock.bounce` argument.
+#derive(Debug, Eq)
 pub(all) enum DockBounceType {
   /// Bounces the Dock tile once. The tile does not bounce when the application
   /// is already focused.
   Informational
   /// Bounces the Dock tile repeatedly until the application becomes active.
   Critical
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend DockBounceType with Eq::{not_equal, equal}

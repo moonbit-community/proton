@@ -29,19 +29,22 @@ pub fn GlobalHotkeyManager::unregister(Self, String) -> Result[Bool, String]
 #external
 pub type GlobalHotkeyState
 
-type ParsedGlobalHotkey derive(Eq, @debug.Debug)
+#derive(Eq, @debug.Debug)
+type ParsedGlobalHotkey
 pub fn ParsedGlobalHotkey::equal(Self, Self) -> Bool
 pub fn ParsedGlobalHotkey::not_equal(Self, Self) -> Bool
 pub fn ParsedGlobalHotkey::to_repr(Self) -> @debug.Repr
 
-type RegisterPlan derive(Eq, @debug.Debug)
+#derive(Eq, @debug.Debug)
+type RegisterPlan
 pub fn RegisterPlan::equal(Self, Self) -> Bool
 pub fn RegisterPlan::not_equal(Self, Self) -> Bool
 pub fn RegisterPlan::to_repr(Self) -> @debug.Repr
 
 type RegistrationStore
 
-type UnregisterPlan derive(Eq, @debug.Debug)
+#derive(Eq, @debug.Debug)
+type UnregisterPlan
 pub fn UnregisterPlan::equal(Self, Self) -> Bool
 pub fn UnregisterPlan::not_equal(Self, Self) -> Bool
 pub fn UnregisterPlan::to_repr(Self) -> @debug.Repr

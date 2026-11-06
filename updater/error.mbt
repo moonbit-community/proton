@@ -3,6 +3,7 @@
 ///
 /// Every variant names the field at fault, because a manifest is written by a
 /// release process and read by a client that cannot ask for a correction.
+#derive(Debug, Eq)
 pub(all) suberror ManifestError {
   NotJson
   NotAnObject(path~ : String)
@@ -10,7 +11,7 @@ pub(all) suberror ManifestError {
   UnknownField(path~ : String)
   MissingField(path~ : String)
   InvalidField(path~ : String, expectation~ : String)
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend ManifestError with Eq::{not_equal, equal}

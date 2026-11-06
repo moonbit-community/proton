@@ -7,13 +7,14 @@
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct ExtensionsExtensionInfo {
   id : String
   name : String
   version : String
   path : String
   enabled : Bool
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend ExtensionsExtensionInfo with Eq::{not_equal, equal}
@@ -61,9 +62,10 @@ pub fn ExtensionsExtensionInfo::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct ExtensionsStorageArea {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend ExtensionsStorageArea with Eq::{not_equal, equal}
@@ -101,10 +103,11 @@ pub fn ExtensionsStorageArea::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct ExtensionsClearStorageItemsParams {
   id : String
   storage_area : ExtensionsStorageArea
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend ExtensionsClearStorageItemsParams with Eq::{not_equal, equal}
@@ -162,9 +165,10 @@ pub fn extensions_clear_storage_items_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct ExtensionsGetExtensionsResult {
   extensions : Array[ExtensionsExtensionInfo]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend ExtensionsGetExtensionsResult with Eq::{not_equal, equal}
@@ -230,11 +234,12 @@ pub fn extensions_get_extensions_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct ExtensionsGetStorageItemsParams {
   id : String
   storage_area : ExtensionsStorageArea
   keys : Array[String]?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend ExtensionsGetStorageItemsParams with Eq::{not_equal, equal}
@@ -267,9 +272,10 @@ pub fn ExtensionsGetStorageItemsParams::to_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct ExtensionsGetStorageItemsResult {
   data : Json
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend ExtensionsGetStorageItemsResult with Eq::{not_equal, equal}
@@ -334,10 +340,11 @@ pub fn extensions_get_storage_items_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct ExtensionsLoadUnpackedParams {
   path : String
   enable_in_incognito : Bool?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend ExtensionsLoadUnpackedParams with Eq::{not_equal, equal}
@@ -369,9 +376,10 @@ pub fn ExtensionsLoadUnpackedParams::to_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct ExtensionsLoadUnpackedResult {
   id : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend ExtensionsLoadUnpackedResult with Eq::{not_equal, equal}
@@ -432,11 +440,12 @@ pub fn extensions_load_unpacked_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct ExtensionsRemoveStorageItemsParams {
   id : String
   storage_area : ExtensionsStorageArea
   keys : Array[String]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend ExtensionsRemoveStorageItemsParams with Eq::{not_equal, equal}
@@ -495,11 +504,12 @@ pub fn extensions_remove_storage_items_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct ExtensionsSetStorageItemsParams {
   id : String
   storage_area : ExtensionsStorageArea
   values : Json
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend ExtensionsSetStorageItemsParams with Eq::{not_equal, equal}
@@ -558,10 +568,11 @@ pub fn extensions_set_storage_items_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct ExtensionsTriggerActionParams {
   id : String
   target_id : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend ExtensionsTriggerActionParams with Eq::{not_equal, equal}
@@ -615,9 +626,10 @@ pub fn extensions_trigger_action_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct ExtensionsUninstallParams {
   id : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend ExtensionsUninstallParams with Eq::{not_equal, equal}

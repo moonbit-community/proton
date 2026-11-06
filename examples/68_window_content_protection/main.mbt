@@ -1,7 +1,8 @@
 ///|
+#derive(ToJson, FromJson)
 struct ProtectionRequest {
   enabled : Bool
-} derive(ToJson, FromJson)
+}
 
 ///|
 pub extend ProtectionRequest with ToJson::{to_json}
@@ -10,12 +11,13 @@ pub extend ProtectionRequest with ToJson::{to_json}
 pub extend ProtectionRequest with FromJson::{from_json}
 
 ///|
+#derive(ToJson, FromJson)
 struct ProtectionReply {
   enabled : Bool
   width : Int32
   height : Int32
   message : String
-} derive(ToJson, FromJson)
+}
 
 ///|
 pub extend ProtectionReply with ToJson::{to_json}

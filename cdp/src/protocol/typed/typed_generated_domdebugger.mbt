@@ -7,9 +7,10 @@
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMDebuggerCSPViolationType {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMDebuggerCSPViolationType with Eq::{not_equal, equal}
@@ -51,9 +52,10 @@ pub fn DOMDebuggerCSPViolationType::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMDebuggerDOMBreakpointType {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMDebuggerDOMBreakpointType with Eq::{not_equal, equal}
@@ -95,6 +97,7 @@ pub fn DOMDebuggerDOMBreakpointType::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMDebuggerEventListener {
   type_ : String
   use_capture : Bool
@@ -106,7 +109,7 @@ pub(all) struct DOMDebuggerEventListener {
   handler : RuntimeRemoteObject?
   original_handler : RuntimeRemoteObject?
   backend_node_id : DOMBackendNodeId?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMDebuggerEventListener with Eq::{not_equal, equal}
@@ -191,11 +194,12 @@ pub fn DOMDebuggerEventListener::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMDebuggerGetEventListenersParams {
   object_id : RuntimeRemoteObjectId
   depth : Int32?
   pierce : Bool?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMDebuggerGetEventListenersParams with Eq::{not_equal, equal}
@@ -230,9 +234,10 @@ pub fn DOMDebuggerGetEventListenersParams::to_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMDebuggerGetEventListenersResult {
   listeners : Array[DOMDebuggerEventListener]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMDebuggerGetEventListenersResult with Eq::{not_equal, equal}
@@ -304,10 +309,11 @@ pub fn domdebugger_get_event_listeners_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMDebuggerRemoveDOMBreakpointParams {
   node_id : DOMNodeId
   type_ : DOMDebuggerDOMBreakpointType
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMDebuggerRemoveDOMBreakpointParams with Eq::{not_equal, equal}
@@ -365,10 +371,11 @@ pub fn domdebugger_remove_dombreakpoint_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMDebuggerRemoveEventListenerBreakpointParams {
   event_name : String
   target_name : String?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMDebuggerRemoveEventListenerBreakpointParams with Eq::{
@@ -431,9 +438,10 @@ pub fn domdebugger_remove_event_listener_breakpoint_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMDebuggerRemoveInstrumentationBreakpointParams {
   event_name : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMDebuggerRemoveInstrumentationBreakpointParams with Eq::{
@@ -493,9 +501,10 @@ pub fn domdebugger_remove_instrumentation_breakpoint_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMDebuggerRemoveXHRBreakpointParams {
   url : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMDebuggerRemoveXHRBreakpointParams with Eq::{not_equal, equal}
@@ -552,9 +561,10 @@ pub fn domdebugger_remove_xhrbreakpoint_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMDebuggerSetBreakOnCSPViolationParams {
   violation_types : Array[DOMDebuggerCSPViolationType]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMDebuggerSetBreakOnCSPViolationParams with Eq::{not_equal, equal}
@@ -613,10 +623,11 @@ pub fn domdebugger_set_break_on_cspviolation_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMDebuggerSetDOMBreakpointParams {
   node_id : DOMNodeId
   type_ : DOMDebuggerDOMBreakpointType
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMDebuggerSetDOMBreakpointParams with Eq::{not_equal, equal}
@@ -674,10 +685,11 @@ pub fn domdebugger_set_dombreakpoint_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMDebuggerSetEventListenerBreakpointParams {
   event_name : String
   target_name : String?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMDebuggerSetEventListenerBreakpointParams with Eq::{
@@ -740,9 +752,10 @@ pub fn domdebugger_set_event_listener_breakpoint_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMDebuggerSetInstrumentationBreakpointParams {
   event_name : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMDebuggerSetInstrumentationBreakpointParams with Eq::{
@@ -802,9 +815,10 @@ pub fn domdebugger_set_instrumentation_breakpoint_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMDebuggerSetXHRBreakpointParams {
   url : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMDebuggerSetXHRBreakpointParams with Eq::{not_equal, equal}

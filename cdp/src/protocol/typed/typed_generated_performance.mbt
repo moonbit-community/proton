@@ -7,10 +7,11 @@
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PerformanceMetric {
   name : String
   value : Double
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PerformanceMetric with Eq::{not_equal, equal}
@@ -74,9 +75,10 @@ pub fn performance_disable_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PerformanceEnableParams {
   time_domain : String?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PerformanceEnableParams with Eq::{not_equal, equal}
@@ -127,9 +129,10 @@ pub fn performance_enable_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PerformanceGetMetricsResult {
   metrics : Array[PerformanceMetric]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PerformanceGetMetricsResult with Eq::{not_equal, equal}
@@ -195,9 +198,10 @@ pub fn performance_get_metrics_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PerformanceSetTimeDomainParams {
   time_domain : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PerformanceSetTimeDomainParams with Eq::{not_equal, equal}
@@ -250,10 +254,11 @@ pub fn performance_set_time_domain_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PerformanceMetricsEventParams {
   metrics : Array[PerformanceMetric]
   title : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PerformanceMetricsEventParams with Eq::{not_equal, equal}

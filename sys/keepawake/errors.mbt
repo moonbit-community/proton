@@ -19,10 +19,11 @@
 /// The detail strings are intentionally human-readable, so they can be logged
 /// directly or attached to higher-level application errors without extra
 /// translation.
+#derive(Eq)
 pub(all) suberror KeepAwakeError {
   BackendUnavailable(detail~ : String)
   OperationFailed(operation~ : String, detail~ : String)
-} derive(Eq)
+}
 
 ///|
 pub extend KeepAwakeError with Eq::{not_equal, equal}

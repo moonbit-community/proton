@@ -7,11 +7,12 @@
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct CastSink {
   name : String
   id : String
   session : String?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend CastSink with Eq::{not_equal, equal}
@@ -75,9 +76,10 @@ pub fn cast_disable_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct CastEnableParams {
   presentation_url : String?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend CastEnableParams with Eq::{not_equal, equal}
@@ -128,9 +130,10 @@ pub fn cast_enable_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct CastSetSinkToUseParams {
   sink_name : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend CastSetSinkToUseParams with Eq::{not_equal, equal}
@@ -179,9 +182,10 @@ pub fn cast_set_sink_to_use_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct CastStartDesktopMirroringParams {
   sink_name : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend CastStartDesktopMirroringParams with Eq::{not_equal, equal}
@@ -238,9 +242,10 @@ pub fn cast_start_desktop_mirroring_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct CastStartTabMirroringParams {
   sink_name : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend CastStartTabMirroringParams with Eq::{not_equal, equal}
@@ -293,9 +298,10 @@ pub fn cast_start_tab_mirroring_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct CastStopCastingParams {
   sink_name : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend CastStopCastingParams with Eq::{not_equal, equal}
@@ -344,9 +350,10 @@ pub fn cast_stop_casting_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct CastIssueUpdatedEventParams {
   issue_message : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend CastIssueUpdatedEventParams with Eq::{not_equal, equal}
@@ -416,9 +423,10 @@ pub fn cast_issue_updated_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct CastSinksUpdatedEventParams {
   sinks : Array[CastSink]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend CastSinksUpdatedEventParams with Eq::{not_equal, equal}

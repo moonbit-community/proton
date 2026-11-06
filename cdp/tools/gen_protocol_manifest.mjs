@@ -589,9 +589,10 @@ function emitAnonymousArrayItem(out, name) {
     "the original JSON value while still giving callers a stable MoonBit type.",
   ]);
   out.push(
+    "#derive(Eq, Debug)",
     `pub(all) struct ${name} {`,
     "  value : Json",
-    "} derive(Eq, Debug)",
+    "}",
     `pub extend ${name} with Eq::{not_equal, equal}`,
     `pub extend ${name} with @moonbitlang/core/debug.Debug::{to_repr}`,
     "",
@@ -633,13 +634,13 @@ function emitStruct(out, name, fields, useRefs = false) {
     "are represented with `?`; nested generated types are used when the protocol",
     "gives a referenced type name.",
   ]);
-  out.push(`pub(all) struct ${name} {`);
+  out.push("#derive(Eq, Debug)", `pub(all) struct ${name} {`);
   for (const field of fields) {
     out.push(
       `  ${snake(field.name)} : ${fieldType(field.domain, field, useRefs)}`,
     );
   }
-  out.push("} derive(Eq, Debug)", "");
+  out.push("}", "");
   out.push(`pub extend ${name} with Eq::{not_equal, equal}`);
   out.push(`pub extend ${name} with @moonbitlang/core/debug.Debug::{to_repr}`);
   out.push("");

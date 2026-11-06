@@ -1,8 +1,9 @@
 ///|
+#derive(ToJson, FromJson)
 struct AddReply {
   total : Int32
   waited_ms : Int32
-} derive(ToJson, FromJson)
+}
 
 ///|
 pub extend AddReply with ToJson::{to_json}
@@ -11,9 +12,10 @@ pub extend AddReply with ToJson::{to_json}
 pub extend AddReply with FromJson::{from_json}
 
 ///|
+#derive(ToJson, FromJson)
 struct AddFinished {
   total : Int32
-} derive(ToJson, FromJson)
+}
 
 ///|
 pub extend AddFinished with ToJson::{to_json}
@@ -22,11 +24,12 @@ pub extend AddFinished with ToJson::{to_json}
 pub extend AddFinished with FromJson::{from_json}
 
 ///|
+#derive(ToJson, FromJson)
 struct AddRequest {
   left : Int32
   right : Int32
   delay_ms : Int32?
-} derive(ToJson, FromJson)
+}
 
 ///|
 pub extend AddRequest with ToJson::{to_json}

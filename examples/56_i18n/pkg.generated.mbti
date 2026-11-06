@@ -10,13 +10,15 @@ import {
 // Errors
 
 // Types and methods
-type LocaleRequest derive(ToJson, @json.FromJson)
-pub fn LocaleRequest::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
-pub fn LocaleRequest::to_json(Self) -> Json
+#derive(@json.FromJson, @json.ToJson)
+type LocaleRequest
+pub fn LocaleRequest::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn LocaleRequest::to_json(Self) -> @json.Json
 
-type LocaleSnapshot derive(ToJson, @json.FromJson)
-pub fn LocaleSnapshot::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
-pub fn LocaleSnapshot::to_json(Self) -> Json
+#derive(@json.FromJson, @json.ToJson)
+type LocaleSnapshot
+pub fn LocaleSnapshot::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn LocaleSnapshot::to_json(Self) -> @json.Json
 
 // Type aliases
 

@@ -1,9 +1,10 @@
 ///|
+#derive(ToJson, FromJson, Eq, Debug)
 struct BridgeContractProbe {
   has_api : Bool
   has_invoke_op : Bool
   has_ready_property : Bool
-} derive(ToJson, FromJson, Eq, Debug)
+}
 
 ///|
 pub extend BridgeContractProbe with Eq::{not_equal, equal}
@@ -18,6 +19,7 @@ pub extend BridgeContractProbe with ToJson::{to_json}
 pub extend BridgeContractProbe with FromJson::{from_json}
 
 ///|
+#derive(ToJson, FromJson, Eq, Debug)
 struct AppCommandsProbeResult {
   url : String
   title : String
@@ -36,7 +38,7 @@ struct AppCommandsProbeResult {
   invalid_code : String
   fail_message : String
   large_payload_roundtrip : Bool
-} derive(ToJson, FromJson, Eq, Debug)
+}
 
 ///|
 pub extend AppCommandsProbeResult with Eq::{not_equal, equal}
@@ -51,13 +53,14 @@ pub extend AppCommandsProbeResult with ToJson::{to_json}
 pub extend AppCommandsProbeResult with FromJson::{from_json}
 
 ///|
+#derive(ToJson, FromJson, Eq, Debug)
 struct ReloadProbeResult {
   url : String
   title : String
   has_bridge : Bool
   navigation_type : String
   ping_message : String
-} derive(ToJson, FromJson, Eq, Debug)
+}
 
 ///|
 pub extend ReloadProbeResult with Eq::{not_equal, equal}
@@ -72,12 +75,13 @@ pub extend ReloadProbeResult with ToJson::{to_json}
 pub extend ReloadProbeResult with FromJson::{from_json}
 
 ///|
+#derive(ToJson, FromJson, Eq, Debug)
 struct OriginProbeResult {
   url : String
   title : String
   has_bridge : Bool
   has_native_invoke : Bool
-} derive(ToJson, FromJson, Eq, Debug)
+}
 
 ///|
 pub extend OriginProbeResult with Eq::{not_equal, equal}
@@ -92,11 +96,12 @@ pub extend OriginProbeResult with ToJson::{to_json}
 pub extend OriginProbeResult with FromJson::{from_json}
 
 ///|
+#derive(Eq, Debug)
 struct ScreenshotProbeResult {
   bytes : Int32
   width : Int32
   height : Int32
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend ScreenshotProbeResult with Eq::{not_equal, equal}

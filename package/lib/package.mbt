@@ -1,10 +1,11 @@
 ///|
 /// The desktop platform supported by the current host-native packager.
+#derive(Eq)
 pub(all) enum PackageHost {
   Macos
   Windows
   Linux
-} derive(Eq)
+}
 
 ///|
 pub extend PackageHost with Eq::{not_equal, equal}

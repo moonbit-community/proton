@@ -5,10 +5,11 @@
 /// explicit `browser_path` was provided. `BrowserNotReady(timeout_ms)` means a
 /// browser process was started or an endpoint was polled, but no usable CDP
 /// browser WebSocket URL appeared before the timeout.
+#derive(Eq, ToJson, Debug)
 pub(all) suberror BrowserLaunchError {
   BrowserNotFound
   BrowserNotReady(Int32)
-} derive(Eq, ToJson, Debug)
+}
 
 ///|
 pub extend BrowserLaunchError with Eq::{not_equal, equal}
@@ -42,6 +43,7 @@ pub extend BrowserLaunchError with ToJson::{to_json}
 /// ```mbt nocheck
 /// let options = { ..default_launch_options(), headless: true, port: 9222, }
 /// ```
+#derive(Eq, ToJson, Debug)
 pub(all) struct CdpLaunchOptions {
   browser_path : String?
   port : Int32
@@ -56,7 +58,7 @@ pub(all) struct CdpLaunchOptions {
   ignore_https_errors : Bool
   allow_file_access : Bool
   hide_scrollbars : Bool
-} derive(Eq, ToJson, Debug)
+}
 
 ///|
 pub extend CdpLaunchOptions with Eq::{not_equal, equal}
@@ -78,13 +80,14 @@ pub extend CdpLaunchOptions with ToJson::{to_json}
 /// starts the process as an orphan and does not terminate it automatically.
 /// Callers that need cleanup should close the browser through CDP or manage the
 /// process outside this helper.
+#derive(Eq, ToJson, Debug)
 pub(all) struct CdpLaunchInfo {
   pid : Int32
   port : Int32
   endpoint : String
   web_socket_url : String
   user_data_dir : String
-} derive(Eq, ToJson, Debug)
+}
 
 ///|
 pub extend CdpLaunchInfo with Eq::{not_equal, equal}

@@ -22,19 +22,21 @@ pub struct IsolatedWorld {
 }
 
 ///|
+#derive(Debug)
 pub(all) suberror PageLifecycleError {
   Closed
   ContextLost
-} derive(Debug)
+}
 
 ///|
 pub extend PageLifecycleError with Debug::{to_repr}
 
 ///|
+#derive(Debug)
 pub(all) suberror JavaScriptError {
   Exception(Json)
   MissingValue(Json)
-} derive(Debug)
+}
 
 ///|
 pub extend JavaScriptError with Debug::{to_repr}

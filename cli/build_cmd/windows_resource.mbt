@@ -1,8 +1,9 @@
 ///|
+#derive(ToJson)
 priv struct WindowsAppResource {
   icon : String
   output_dir : String
-} derive(ToJson)
+}
 
 ///|
 fn windows_app_resource(

@@ -1,18 +1,21 @@
 ///|
+#derive(FromJson)
 priv struct ConfigPayload {
   source : String
   destination : String
   location : String?
-} derive(FromJson)
+}
 
 ///|
+#derive(FromJson)
 priv struct ConfigDocumentType {
   name : String
   extensions : Array[String]
   role : String?
-} derive(FromJson)
+}
 
 ///|
+#derive(FromJson, Default)
 priv struct PackageConfig {
   schema_version : Int32
   executable : String?
@@ -29,14 +32,15 @@ priv struct PackageConfig {
   nsis_install_mode : String?
   sign : Bool?
   notarize : Bool?
-} derive(FromJson, Default)
+}
 
 ///|
+#derive(Debug)
 priv suberror PackageCommandError {
   InvalidConfig(path~ : String, detail~ : String)
   UnsupportedSchema(version~ : Int32)
   MissingOption(name~ : String)
-} derive(Debug)
+}
 
 ///|
 impl Show for PackageCommandError with fn output(self, logger) {

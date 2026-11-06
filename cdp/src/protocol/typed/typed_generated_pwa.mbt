@@ -7,9 +7,10 @@
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PWADisplayMode {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PWADisplayMode with Eq::{not_equal, equal}
@@ -47,11 +48,12 @@ pub fn PWADisplayMode::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PWAFileHandler {
   action : String
   accepts : Array[PWAFileHandlerAccept]
   display_name : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PWAFileHandler with Eq::{not_equal, equal}
@@ -102,10 +104,11 @@ pub fn PWAFileHandler::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PWAFileHandlerAccept {
   media_type : String
   file_extensions : Array[String]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PWAFileHandlerAccept with Eq::{not_equal, equal}
@@ -158,11 +161,12 @@ pub fn PWAFileHandlerAccept::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PWAChangeAppUserSettingsParams {
   manifest_id : String
   link_capturing : Bool?
   display_mode : PWADisplayMode?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PWAChangeAppUserSettingsParams with Eq::{not_equal, equal}
@@ -225,9 +229,10 @@ pub fn pwa_change_app_user_settings_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PWAGetOsAppStateParams {
   manifest_id : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PWAGetOsAppStateParams with Eq::{not_equal, equal}
@@ -252,10 +257,11 @@ pub fn PWAGetOsAppStateParams::to_json(self : PWAGetOsAppStateParams) -> Json {
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PWAGetOsAppStateResult {
   badge_count : Int32
   file_handlers : Array[PWAFileHandler]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PWAGetOsAppStateResult with Eq::{not_equal, equal}
@@ -324,10 +330,11 @@ pub fn pwa_get_os_app_state_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PWAInstallParams {
   manifest_id : String
   install_url_or_bundle_url : String?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PWAInstallParams with Eq::{not_equal, equal}
@@ -379,10 +386,11 @@ pub fn pwa_install_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PWALaunchParams {
   manifest_id : String
   url : String?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PWALaunchParams with Eq::{not_equal, equal}
@@ -410,9 +418,10 @@ pub fn PWALaunchParams::to_json(self : PWALaunchParams) -> Json {
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PWALaunchResult {
   target_id : TargetTargetID
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PWALaunchResult with Eq::{not_equal, equal}
@@ -475,10 +484,11 @@ pub fn pwa_launch_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PWALaunchFilesInAppParams {
   manifest_id : String
   files : Array[String]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PWALaunchFilesInAppParams with Eq::{not_equal, equal}
@@ -508,9 +518,10 @@ pub fn PWALaunchFilesInAppParams::to_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PWALaunchFilesInAppResult {
   target_ids : Array[TargetTargetID]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PWALaunchFilesInAppResult with Eq::{not_equal, equal}
@@ -578,9 +589,10 @@ pub fn pwa_launch_files_in_app_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PWAOpenCurrentPageInAppParams {
   manifest_id : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PWAOpenCurrentPageInAppParams with Eq::{not_equal, equal}
@@ -637,9 +649,10 @@ pub fn pwa_open_current_page_in_app_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PWAUninstallParams {
   manifest_id : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PWAUninstallParams with Eq::{not_equal, equal}

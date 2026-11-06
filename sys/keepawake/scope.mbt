@@ -28,11 +28,12 @@
 ///   )
 /// }
 /// ```
+#derive(Debug, Eq)
 pub(all) enum Scope {
   PreventSystemSleep
   PreventDisplaySleep
   PreventSystemAndDisplaySleep
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend Scope with Eq::{not_equal, equal}

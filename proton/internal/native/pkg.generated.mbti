@@ -118,11 +118,12 @@ pub fn web_contents_view_supported() -> Bool
 pub fn window_size_in_screen_coordinates(Int32, Int32, Int32) -> (Int32, Int32)
 
 // Errors
+#derive(Eq, @debug.Debug)
 pub(all) suberror NativeError {
   Status(status~ : Int32, message~ : String)
   InvalidArgument(message~ : String)
   InvalidPayload(context~ : String, message~ : String)
-} derive(Eq, @debug.Debug)
+}
 pub fn NativeError::equal(Self, Self) -> Bool
 pub fn NativeError::is_invalid_state(Self) -> Bool
 pub fn NativeError::is_stale_bridge_response(Self) -> Bool
@@ -141,19 +142,20 @@ pub fn NativeError::to_repr(Self) -> @debug.Repr
 pub fn NativeError::to_string(Self) -> String
 
 // Types and methods
+#derive(Eq, @debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct AppActivation {
   abi_version : Int32
   urls : Array[String]
   files : Array[String]
   reopen : Bool
-} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+}
 pub fn AppActivation::AppActivation(urls? : Array[String], files? : Array[String], reopen? : Bool) -> Self
 pub fn AppActivation::equal(Self, Self) -> Bool
 pub fn AppActivation::files(Self) -> Array[String]
-pub fn AppActivation::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn AppActivation::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
 pub fn AppActivation::not_equal(Self, Self) -> Bool
 pub fn AppActivation::reopen(Self) -> Bool
-pub fn AppActivation::to_json(Self) -> Json
+pub fn AppActivation::to_json(Self) -> @json.Json
 pub fn AppActivation::to_repr(Self) -> @debug.Repr
 pub fn AppActivation::urls(Self) -> Array[String]
 
@@ -169,68 +171,74 @@ pub enum AppInstanceAcquire {
   Forwarded
 }
 
+#derive(Eq, @debug.Debug)
 pub(all) struct BridgeConfig {
   grants : Array[BridgeGrantConfig]
-} derive(Eq, @debug.Debug)
+}
 pub fn BridgeConfig::BridgeConfig(grants~ : Array[BridgeGrantConfig]) -> Self
 pub fn BridgeConfig::equal(Self, Self) -> Bool
 pub fn BridgeConfig::not_equal(Self, Self) -> Bool
 pub fn BridgeConfig::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug)
 pub(all) struct BridgeExtensionConfig {
   js_namespace : String
   apis : Array[String]
-} derive(Eq, @debug.Debug)
+}
 pub fn BridgeExtensionConfig::BridgeExtensionConfig(String, apis~ : Array[String]) -> Self
 pub fn BridgeExtensionConfig::equal(Self, Self) -> Bool
 pub fn BridgeExtensionConfig::not_equal(Self, Self) -> Bool
 pub fn BridgeExtensionConfig::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug)
 pub(all) struct BridgeGrantConfig {
   source_origin : String
   ops : Array[String]
   extensions : Array[BridgeExtensionConfig]
   initialization_units : Array[BridgeInitializationUnit]
-} derive(Eq, @debug.Debug)
+}
 pub fn BridgeGrantConfig::BridgeGrantConfig(String, ops~ : Array[String], extensions? : Array[BridgeExtensionConfig], initialization_units? : Array[BridgeInitializationUnit]) -> Self
 pub fn BridgeGrantConfig::equal(Self, Self) -> Bool
 pub fn BridgeGrantConfig::not_equal(Self, Self) -> Bool
 pub fn BridgeGrantConfig::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug)
 pub(all) struct BridgeInitializationUnit {
   owner : String
   name : String
   source : String
-} derive(Eq, @debug.Debug)
+}
 pub fn BridgeInitializationUnit::BridgeInitializationUnit(String, String, String) -> Self
 pub fn BridgeInitializationUnit::equal(Self, Self) -> Bool
 pub fn BridgeInitializationUnit::not_equal(Self, Self) -> Bool
 pub fn BridgeInitializationUnit::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug)
 pub(all) struct BridgeLifecycleState {
   revision : String
   outcome : String
   page_instance : String
   url : String
   failure_pending : Bool
-} derive(Eq, @debug.Debug)
+}
 pub fn BridgeLifecycleState::equal(Self, Self) -> Bool
 pub fn BridgeLifecycleState::not_equal(Self, Self) -> Bool
 pub fn BridgeLifecycleState::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug)
 pub(all) struct BridgeRequest {
   request_id : Int64
   window : Int64
   op : String
-  payload : Json
+  payload : @json.Json
   page_instance : String?
   source_origin : String
-} derive(Eq, @debug.Debug)
+}
 pub fn BridgeRequest::equal(Self, Self) -> Bool
 pub fn BridgeRequest::not_equal(Self, Self) -> Bool
 pub fn BridgeRequest::op(Self) -> String
 pub fn BridgeRequest::page_instance(Self) -> String?
-pub fn BridgeRequest::payload(Self) -> Json
+pub fn BridgeRequest::payload(Self) -> @json.Json
 pub fn BridgeRequest::request_id(Self) -> Int64
 pub fn BridgeRequest::source_origin(Self) -> String
 pub fn BridgeRequest::to_repr(Self) -> @debug.Repr
@@ -243,12 +251,14 @@ pub(all) enum BridgeRequestAdmission {
   PageUnavailable
 }
 
+#derive(@debug.Debug)
 pub(all) enum BridgeResponse {
-  Ok(request_id~ : Int64, payload~ : Json)
+  Ok(request_id~ : Int64, payload~ : @json.Json)
   Err(request_id~ : Int64, code~ : String, message~ : String, detail~ : String?)
-} derive(@debug.Debug)
+}
 pub fn BridgeResponse::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug)
 pub(all) struct BrowserEventInfo {
   url : String?
   title : String?
@@ -256,11 +266,12 @@ pub(all) struct BrowserEventInfo {
   error_code : Int32?
   error_text : String?
   received_bytes : Int64?
-} derive(Eq, @debug.Debug)
+}
 pub fn BrowserEventInfo::equal(Self, Self) -> Bool
 pub fn BrowserEventInfo::not_equal(Self, Self) -> Bool
 pub fn BrowserEventInfo::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug)
 pub(all) struct BrowserPolicy {
   navigation : BrowserPolicyMode
   new_window : BrowserPolicyMode
@@ -268,17 +279,18 @@ pub(all) struct BrowserPolicy {
   certificate : BrowserPolicyMode
   media : BrowserPolicyMode
   devtools : Bool
-} derive(Eq, @debug.Debug)
+}
 pub fn BrowserPolicy::BrowserPolicy(navigation? : BrowserPolicyMode, new_window? : BrowserPolicyMode, download? : BrowserPolicyMode, certificate? : BrowserPolicyMode, media? : BrowserPolicyMode, devtools? : Bool) -> Self
 pub fn BrowserPolicy::equal(Self, Self) -> Bool
 pub fn BrowserPolicy::not_equal(Self, Self) -> Bool
 pub fn BrowserPolicy::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug)
 pub(all) enum BrowserPolicyMode {
   Allow
   Deny
   Ask
-} derive(Eq, @debug.Debug)
+}
 pub fn BrowserPolicyMode::equal(Self, Self) -> Bool
 pub fn BrowserPolicyMode::not_equal(Self, Self) -> Bool
 pub fn BrowserPolicyMode::to_repr(Self) -> @debug.Repr
@@ -291,29 +303,33 @@ pub fn Contents::cancel_download(Self, Int32) -> Unit raise NativeError
 pub fn Contents::perform(Self, @ffi.BrowserOperation) -> Unit raise NativeError
 pub fn Contents::print_to_pdf(Self, String, PdfPrintSettings) -> Int32 raise NativeError
 
+#derive(Eq, @debug.Debug)
 pub(all) enum DialogLevel {
   Info
   Warning
   Error
-} derive(Eq, @debug.Debug)
+}
 pub fn DialogLevel::equal(Self, Self) -> Bool
 pub fn DialogLevel::not_equal(Self, Self) -> Bool
 pub fn DialogLevel::to_repr(Self) -> @debug.Repr
 
-type Menu derive(Eq, @debug.Debug)
+#derive(Eq, @debug.Debug)
+type Menu
 pub fn Menu::Menu(String, items~ : Array[MenuItem]) -> Self
 pub fn Menu::equal(Self, Self) -> Bool
 pub fn Menu::not_equal(Self, Self) -> Bool
 pub fn Menu::role(@types.MenuRole, label? : String, items? : Array[MenuItem]) -> Self
 pub fn Menu::to_repr(Self) -> @debug.Repr
 
-type MenuBar derive(Eq, @debug.Debug)
+#derive(Eq, @debug.Debug)
+type MenuBar
 pub fn MenuBar::MenuBar(menus~ : Array[Menu]) -> Self
 pub fn MenuBar::equal(Self, Self) -> Bool
 pub fn MenuBar::not_equal(Self, Self) -> Bool
 pub fn MenuBar::to_repr(Self) -> @debug.Repr
 
-type MenuItem derive(Eq, @debug.Debug)
+#derive(Eq, @debug.Debug)
+type MenuItem
 pub fn MenuItem::command(String, String, key? : String, enabled? : Bool, visible? : Bool, checked? : Bool) -> Self
 pub fn MenuItem::equal(Self, Self) -> Bool
 pub fn MenuItem::not_equal(Self, Self) -> Bool
@@ -322,30 +338,34 @@ pub fn MenuItem::separator() -> Self
 pub fn MenuItem::submenu(String, items~ : Array[Self]) -> Self
 pub fn MenuItem::to_repr(Self) -> @debug.Repr
 
-type NativeBrowserEvent derive(Eq, @debug.Debug)
+#derive(Eq, @debug.Debug)
+type NativeBrowserEvent
 pub fn NativeBrowserEvent::equal(Self, Self) -> Bool
 pub fn NativeBrowserEvent::not_equal(Self, Self) -> Bool
 pub fn NativeBrowserEvent::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug)
 pub(all) enum NativeBrowserRequest {
   NewWindow(request_id~ : Int64, url~ : String, user_gesture~ : Bool)
   Download(request_id~ : Int64, download_id~ : Int32, url~ : String, suggested_name~ : String)
   Certificate(request_id~ : Int64, url~ : String, error_code~ : Int32)
   Media(request_id~ : Int64, origin~ : String, permissions~ : Int32)
-} derive(Eq, @debug.Debug)
+}
 pub fn NativeBrowserRequest::equal(Self, Self) -> Bool
 pub fn NativeBrowserRequest::not_equal(Self, Self) -> Bool
 pub fn NativeBrowserRequest::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug)
 pub(all) struct NativeCookieGetCompletion {
   request_id : Int64
   window : Int64
   result : Result[Array[NativeCookieRecord], NativeError]
-} derive(Eq, @debug.Debug)
+}
 pub fn NativeCookieGetCompletion::equal(Self, Self) -> Bool
 pub fn NativeCookieGetCompletion::not_equal(Self, Self) -> Bool
 pub fn NativeCookieGetCompletion::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug)
 pub(all) struct NativeCookieRecord {
   name : String
   value : String
@@ -355,27 +375,29 @@ pub(all) struct NativeCookieRecord {
   http_only : Bool
   same_site : @types.CookieSameSite
   expires : Int64?
-} derive(Eq, @debug.Debug)
+}
 pub fn NativeCookieRecord::equal(Self, Self) -> Bool
 pub fn NativeCookieRecord::not_equal(Self, Self) -> Bool
 pub fn NativeCookieRecord::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug)
 pub(all) struct NativeDialogCompletion {
   dialog : Int64
   window : Int64?
   result : Result[String, NativeError]
-} derive(Eq, @debug.Debug)
+}
 pub fn NativeDialogCompletion::equal(Self, Self) -> Bool
 pub fn NativeDialogCompletion::not_equal(Self, Self) -> Bool
 pub fn NativeDialogCompletion::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug)
 pub(all) struct NativeDownloadUpdate {
   download_id : Int32
   state : String
   received_bytes : Int64
   total_bytes : Int64
   percent : Int32
-} derive(Eq, @debug.Debug)
+}
 pub fn NativeDownloadUpdate::equal(Self, Self) -> Bool
 pub fn NativeDownloadUpdate::not_equal(Self, Self) -> Bool
 pub fn NativeDownloadUpdate::to_repr(Self) -> @debug.Repr
@@ -392,41 +414,46 @@ pub fn NativeImage::to_bitmap(Self, scale_factor? : Double) -> (Bytes, Int32, In
 pub fn NativeImage::to_jpeg(Self, scale_factor? : Double, quality? : Int32) -> (Bytes, Int32, Int32) raise NativeError
 pub fn NativeImage::to_png(Self, scale_factor? : Double, with_transparency? : Bool) -> (Bytes, Int32, Int32) raise NativeError
 
+#derive(Eq, @debug.Debug)
 pub(all) enum NativeNotificationResult {
   Delivered
   Failed(String)
-} derive(Eq, @debug.Debug)
+}
 pub fn NativeNotificationResult::equal(Self, Self) -> Bool
 pub fn NativeNotificationResult::not_equal(Self, Self) -> Bool
 pub fn NativeNotificationResult::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug)
 pub(all) struct NativePdfPrintResult {
   request_id : Int32
   path : String
   success : Bool
-} derive(Eq, @debug.Debug)
+}
 pub fn NativePdfPrintResult::equal(Self, Self) -> Bool
 pub fn NativePdfPrintResult::not_equal(Self, Self) -> Bool
 pub fn NativePdfPrintResult::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug)
 pub(all) struct NativeResourceRequest {
   request_id : Int64
   window : Int64
   view : Int64?
   url : String
-} derive(Eq, @debug.Debug)
+}
 pub fn NativeResourceRequest::equal(Self, Self) -> Bool
 pub fn NativeResourceRequest::not_equal(Self, Self) -> Bool
 pub fn NativeResourceRequest::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug)
 pub(all) struct NativeThemeSnapshot {
   dark_colors : Bool
   high_contrast_colors : Bool
-} derive(Eq, @debug.Debug)
+}
 pub fn NativeThemeSnapshot::equal(Self, Self) -> Bool
 pub fn NativeThemeSnapshot::not_equal(Self, Self) -> Bool
 pub fn NativeThemeSnapshot::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug, @json.FromJson)
 pub(all) struct NavigationEntry {
   url : String
   display_url : String
@@ -436,21 +463,23 @@ pub(all) struct NavigationEntry {
   qualifiers : Int32
   has_post_data : Bool
   http_status_code : Int32
-} derive(Eq, @debug.Debug, @json.FromJson)
+}
 pub fn NavigationEntry::equal(Self, Self) -> Bool
-pub fn NavigationEntry::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn NavigationEntry::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
 pub fn NavigationEntry::not_equal(Self, Self) -> Bool
 pub fn NavigationEntry::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug, @json.FromJson)
 pub(all) struct NavigationHistory {
   entries : Array[NavigationEntry]
   active_index : Int32
-} derive(Eq, @debug.Debug, @json.FromJson)
+}
 pub fn NavigationHistory::equal(Self, Self) -> Bool
-pub fn NavigationHistory::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn NavigationHistory::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
 pub fn NavigationHistory::not_equal(Self, Self) -> Bool
 pub fn NavigationHistory::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug)
 pub(all) struct PdfPrintSettings {
   landscape : Bool
   print_background : Bool
@@ -469,34 +498,37 @@ pub(all) struct PdfPrintSettings {
   footer_template : String
   generate_tagged_pdf : Bool
   generate_document_outline : Bool
-} derive(Eq, @debug.Debug)
+}
 pub fn PdfPrintSettings::equal(Self, Self) -> Bool
 pub fn PdfPrintSettings::not_equal(Self, Self) -> Bool
 pub fn PdfPrintSettings::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug)
 pub(all) enum ProcessResult {
   MainProcess
   SubprocessHandled(Int32)
-} derive(Eq, @debug.Debug)
+}
 pub fn ProcessResult::equal(Self, Self) -> Bool
 pub fn ProcessResult::not_equal(Self, Self) -> Bool
 pub fn ProcessResult::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug)
 pub(all) enum RemoteDebugging {
   Disabled
   Ephemeral
   Fixed(Int32)
-} derive(Eq, @debug.Debug)
+}
 pub fn RemoteDebugging::equal(Self, Self) -> Bool
 pub fn RemoteDebugging::not_equal(Self, Self) -> Bool
 pub fn RemoteDebugging::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug)
 pub(all) struct RendererProcessTerminationInfo {
   url : String
   status : Int32
   error_code : Int32
   detail : String
-} derive(Eq, @debug.Debug)
+}
 pub fn RendererProcessTerminationInfo::equal(Self, Self) -> Bool
 pub fn RendererProcessTerminationInfo::not_equal(Self, Self) -> Bool
 pub fn RendererProcessTerminationInfo::to_repr(Self) -> @debug.Repr
@@ -524,14 +556,16 @@ pub fn Runtime::set_menu(Self, MenuBar) -> Unit raise NativeError
 pub fn Runtime::set_navigation_handler(Self, (Int64, Int64?, String, String, Bool, Bool) -> Bool) -> Unit raise NativeError
 pub fn Runtime::stop_app_activations(Self) -> Unit raise NativeError
 
-type RuntimeConfig derive(Eq, @debug.Debug)
+#derive(Eq, @debug.Debug)
+type RuntimeConfig
 pub fn RuntimeConfig::RuntimeConfig(runtime_root? : String, subprocess_path? : String, resources_dir? : String, locales_dir? : String, cache_dir? : String, locale? : @locale.Locale, accept_languages? : Array[@locale.Locale], proxy_server? : String, proxy_bypass? : String, remote_debugging? : RemoteDebugging, headless? : Bool, accessibility_mode? : @types.AccessibilityMode, persist_session_cookies? : Bool) -> Self
 pub fn RuntimeConfig::bundled(subprocess_path? : String, cache_dir? : String, locale? : @locale.Locale, accept_languages? : Array[@locale.Locale], proxy_server? : String, proxy_bypass? : String, remote_debugging? : RemoteDebugging, headless? : Bool, accessibility_mode? : @types.AccessibilityMode, persist_session_cookies? : Bool) -> Self
 pub fn RuntimeConfig::equal(Self, Self) -> Bool
 pub fn RuntimeConfig::not_equal(Self, Self) -> Bool
 pub fn RuntimeConfig::to_repr(Self) -> @debug.Repr
 
-type RuntimeEvent derive(Eq, @debug.Debug)
+#derive(Eq, @debug.Debug)
+type RuntimeEvent
 pub fn RuntimeEvent::app_activation(Self) -> AppActivation?
 pub fn RuntimeEvent::app_activation_request_id(Self) -> Int64
 pub fn RuntimeEvent::bridge_request(Self) -> BridgeRequest?
@@ -567,18 +601,20 @@ pub fn RuntimeEvent::window_close_request(Self) -> Int64?
 pub fn RuntimeEvent::window_id(Self) -> Int64?
 pub fn RuntimeEvent::window_state_change(Self) -> @types.WindowState?
 
+#derive(Eq, @debug.Debug)
 pub(all) struct RuntimeInfo {
   platform : String
   platform_id : String
   features : Array[String]
-} derive(Eq, @debug.Debug)
+}
 pub fn RuntimeInfo::equal(Self, Self) -> Bool
 pub fn RuntimeInfo::not_equal(Self, Self) -> Bool
 pub fn RuntimeInfo::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug)
 pub(all) struct RuntimeWaitReady {
   mask : Int32
-} derive(Eq, @debug.Debug)
+}
 pub fn RuntimeWaitReady::equal(Self, Self) -> Bool
 pub fn RuntimeWaitReady::has_event(Self) -> Bool
 pub fn RuntimeWaitReady::has_platform(Self) -> Bool
@@ -587,6 +623,7 @@ pub fn RuntimeWaitReady::mask(Self) -> Int32
 pub fn RuntimeWaitReady::not_equal(Self, Self) -> Bool
 pub fn RuntimeWaitReady::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug)
 pub(all) enum SystemPathKind {
   Desktop
   Documents
@@ -595,7 +632,7 @@ pub(all) enum SystemPathKind {
   Pictures
   Videos
   Recent
-} derive(Eq, @debug.Debug)
+}
 pub fn SystemPathKind::equal(Self, Self) -> Bool
 pub fn SystemPathKind::not_equal(Self, Self) -> Bool
 pub fn SystemPathKind::to_repr(Self) -> @debug.Repr
@@ -607,18 +644,20 @@ pub(all) struct ThumbarButton {
   flags : Array[@types.ThumbarButtonFlag]
 }
 
+#derive(@json.ToJson)
 pub(all) struct TitlebarArea {
   x : Double
   y : Double
   width : Double
   height : Double
-} derive(ToJson)
-pub fn TitlebarArea::to_json(Self) -> Json
+}
+pub fn TitlebarArea::to_json(Self) -> @json.Json
 
+#derive(Eq, @debug.Debug)
 pub enum UpdateInstallOutcome {
   Installed
   AlreadyInstalled
-} derive(Eq, @debug.Debug)
+}
 pub fn UpdateInstallOutcome::equal(Self, Self) -> Bool
 pub fn UpdateInstallOutcome::not_equal(Self, Self) -> Bool
 pub fn UpdateInstallOutcome::to_repr(Self) -> @debug.Repr
@@ -655,7 +694,8 @@ pub fn View::state(Self) -> @types.ViewState raise NativeError
 pub fn View::stop_find_in_page(Self, Bool) -> Unit raise NativeError
 pub fn View::zoom_percent(Self) -> Int32 raise NativeError
 
-type ViewConfig derive(Eq, @debug.Debug)
+#derive(Eq, @debug.Debug)
+type ViewConfig
 pub fn ViewConfig::ViewConfig(width~ : Int32, height~ : Int32, x? : Int32, y? : Int32, visible? : Bool, z_order? : Int32, initial_url? : String, background_color? : String, navigation? : BrowserPolicyMode, new_window? : BrowserPolicyMode) -> Self
 pub fn ViewConfig::equal(Self, Self) -> Bool
 pub fn ViewConfig::not_equal(Self, Self) -> Bool
@@ -736,7 +776,8 @@ pub fn Window::state(Self) -> @types.WindowState raise NativeError
 pub fn Window::stop_find_in_page(Self, Bool) -> Unit raise NativeError
 pub fn Window::take_bridge_failure(Self) -> @types.BridgeDiagnostic? raise NativeError
 
-type WindowConfig derive(Eq, @debug.Debug)
+#derive(Eq, @debug.Debug)
+type WindowConfig
 pub fn WindowConfig::WindowConfig(title? : String, width? : Int32, height? : Int32, initial_url? : String, size_hint? : @types.WindowSizeHint, titlebar_style? : @types.TitlebarStyle, traffic_light_position? : (Int32, Int32), theme? : @types.WindowThemePreference, browser? : BrowserPolicy, bridge? : BridgeConfig, web_request_cancel_prefixes? : Array[String], web_request_redirect_prefixes? : Array[(String, String)], web_request_header_prefixes? : Array[(String, String, String)]) -> Self
 pub fn WindowConfig::equal(Self, Self) -> Bool
 pub fn WindowConfig::not_equal(Self, Self) -> Bool

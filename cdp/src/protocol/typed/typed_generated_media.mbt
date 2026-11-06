@@ -7,10 +7,11 @@
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct MediaPlayer {
   player_id : MediaPlayerId
   dom_node_id : DOMBackendNodeId?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend MediaPlayer with Eq::{not_equal, equal}
@@ -59,13 +60,14 @@ pub fn MediaPlayer::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct MediaPlayerError {
   error_type : String
   code : Int32
   stack : Array[MediaPlayerErrorSourceLocation]
   cause : Array[MediaPlayerError]
   data : Json
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend MediaPlayerError with Eq::{not_equal, equal}
@@ -125,10 +127,11 @@ pub fn MediaPlayerError::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct MediaPlayerErrorSourceLocation {
   file : String
   line : Int32
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend MediaPlayerErrorSourceLocation with Eq::{not_equal, equal}
@@ -174,10 +177,11 @@ pub fn MediaPlayerErrorSourceLocation::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct MediaPlayerEvent {
   timestamp : MediaTimestamp
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend MediaPlayerEvent with Eq::{not_equal, equal}
@@ -221,9 +225,10 @@ pub fn MediaPlayerEvent::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct MediaPlayerId {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend MediaPlayerId with Eq::{not_equal, equal}
@@ -261,10 +266,11 @@ pub fn MediaPlayerId::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct MediaPlayerMessage {
   level : String
   message : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend MediaPlayerMessage with Eq::{not_equal, equal}
@@ -306,10 +312,11 @@ pub fn MediaPlayerMessage::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct MediaPlayerProperty {
   name : String
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend MediaPlayerProperty with Eq::{not_equal, equal}
@@ -351,9 +358,10 @@ pub fn MediaPlayerProperty::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct MediaTimestamp {
   value : Double
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend MediaTimestamp with Eq::{not_equal, equal}
@@ -427,9 +435,10 @@ pub fn media_enable_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct MediaPlayerCreatedEventParams {
   player : MediaPlayer
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend MediaPlayerCreatedEventParams with Eq::{not_equal, equal}
@@ -499,10 +508,11 @@ pub fn media_player_created_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct MediaPlayerErrorsRaisedEventParams {
   player_id : MediaPlayerId
   errors : Array[MediaPlayerError]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend MediaPlayerErrorsRaisedEventParams with Eq::{not_equal, equal}
@@ -579,10 +589,11 @@ pub fn media_player_errors_raised_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct MediaPlayerEventsAddedEventParams {
   player_id : MediaPlayerId
   events : Array[MediaPlayerEvent]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend MediaPlayerEventsAddedEventParams with Eq::{not_equal, equal}
@@ -659,10 +670,11 @@ pub fn media_player_events_added_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct MediaPlayerMessagesLoggedEventParams {
   player_id : MediaPlayerId
   messages : Array[MediaPlayerMessage]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend MediaPlayerMessagesLoggedEventParams with Eq::{not_equal, equal}
@@ -739,10 +751,11 @@ pub fn media_player_messages_logged_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct MediaPlayerPropertiesChangedEventParams {
   player_id : MediaPlayerId
   properties : Array[MediaPlayerProperty]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend MediaPlayerPropertiesChangedEventParams with Eq::{not_equal, equal}

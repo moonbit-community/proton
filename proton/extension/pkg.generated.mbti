@@ -7,21 +7,23 @@ import {
   "moonbit-community/proton_ffi",
   "moonbitlang/async",
   "moonbitlang/core/debug",
+  "moonbitlang/core/json",
 }
 
 // Values
-pub fn capability(Extension, scope? : Json) -> RendererCapability
+pub fn capability(Extension, scope? : @json.Json) -> RendererCapability
 
-pub fn[Payload : ToJson] event(@proton_contract.Event[Payload], Payload) -> Event raise @proton_contract.ContractDefinitionError
+pub fn[Payload : @json.ToJson] event(@proton_contract.Event[Payload], Payload) -> Event raise @proton_contract.ContractDefinitionError
 
 pub fn event_source((@proton_ffi.EventWakeup) -> Unit raise, () -> Unit, () -> Array[Event] raise) -> EventSource
 
-pub fn typed(@proton_contract.ExtensionContract, (@command.CommandRegistrar) -> Unit raise, scripts? : Array[String], dependencies? : Array[String], resolve_permission? : (Json, String) -> Json raise @command.PermissionScopeValidationError, event_source? : EventSource, on_start? : (@async.TaskGroup[Unit]) -> Unit raise, on_destroy? : () -> Unit raise) -> Extension
+pub fn typed(@proton_contract.ExtensionContract, (@command.CommandRegistrar) -> Unit raise, scripts? : Array[String], dependencies? : Array[String], resolve_permission? : (@json.Json, String) -> @json.Json raise @command.PermissionScopeValidationError, event_source? : EventSource, on_start? : (@async.TaskGroup[Unit]) -> Unit raise, on_destroy? : () -> Unit raise) -> Extension
 
 // Errors
+#derive(@debug.Debug)
 pub(all) suberror ExtensionAdapterError {
   TypedSpecInvalid(extension_id~ : String, detail~ : String)
-} derive(@debug.Debug)
+}
 pub fn ExtensionAdapterError::message(Self) -> String
 pub fn ExtensionAdapterError::output(Self, &Logger) -> Unit
 pub fn ExtensionAdapterError::to_repr(Self) -> @debug.Repr
@@ -32,7 +34,7 @@ pub struct Event {
   extension_id : String
   extension_namespace : String
   name : String
-  payload : Json
+  payload : @json.Json
 }
 
 pub struct EventSource {
@@ -47,7 +49,7 @@ pub fn Extension::id(Self) -> String
 
 pub struct RendererCapability {
   extension : Extension
-  scope : Json
+  scope : @json.Json
 }
 
 // Type aliases

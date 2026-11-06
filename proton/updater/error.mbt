@@ -4,6 +4,7 @@
 /// Every variant is a refusal. There is no variant meaning "checked and could
 /// not tell": a check that cannot reach a conclusion is a check that failed,
 /// and the caller must treat it as such.
+#derive(Debug, Eq)
 pub(all) suberror UpdateError {
   FetchFailed(url~ : String, detail~ : String)
   ManifestSignatureInvalid
@@ -28,7 +29,7 @@ pub(all) suberror UpdateError {
   /// which is what distinguishes "nothing was touched" from "the replacement
   /// ran and rolled back".
   InstallFailed(step~ : String, detail~ : String)
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend UpdateError with Eq::{not_equal, equal}

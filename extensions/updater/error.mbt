@@ -1,11 +1,12 @@
 ///|
+#derive(Debug)
 suberror UpdaterError {
   /// `download` was called without a check that found something.
   ///
   /// Not an argument error, because there is no argument: the page cannot say
   /// what to install, only whether to install what the host already found.
   NothingOffered
-} derive(Debug)
+}
 
 ///|
 pub extend UpdaterError with Debug::{to_repr}

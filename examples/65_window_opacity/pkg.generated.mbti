@@ -10,13 +10,15 @@ import {
 // Errors
 
 // Types and methods
-type OpacityReply derive(ToJson, @json.FromJson)
-pub fn OpacityReply::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
-pub fn OpacityReply::to_json(Self) -> Json
+#derive(@json.FromJson, @json.ToJson)
+type OpacityReply
+pub fn OpacityReply::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn OpacityReply::to_json(Self) -> @json.Json
 
-type OpacityRequest derive(ToJson, @json.FromJson)
-pub fn OpacityRequest::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
-pub fn OpacityRequest::to_json(Self) -> Json
+#derive(@json.FromJson, @json.ToJson)
+type OpacityRequest
+pub fn OpacityRequest::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn OpacityRequest::to_json(Self) -> @json.Json
 
 // Type aliases
 

@@ -12,10 +12,11 @@ pub fn command() -> @argparse.Command
 pub async fn run(String, @argparse.Matches) -> Unit
 
 // Errors
+#derive(@debug.Debug)
 pub(all) suberror NewProjectError {
   InvalidTemplate(String)
   GeneratorFailed(Int32)
-} derive(@debug.Debug)
+}
 pub fn NewProjectError::output(Self, &Logger) -> Unit
 pub fn NewProjectError::to_repr(Self) -> @debug.Repr
 pub fn NewProjectError::to_string(Self) -> String

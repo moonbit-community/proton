@@ -7,9 +7,10 @@
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct ServiceWorkerRegistrationID {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend ServiceWorkerRegistrationID with Eq::{not_equal, equal}
@@ -51,6 +52,7 @@ pub fn ServiceWorkerRegistrationID::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct ServiceWorkerServiceWorkerErrorMessage {
   error_message : String
   registration_id : ServiceWorkerRegistrationID
@@ -58,7 +60,7 @@ pub(all) struct ServiceWorkerServiceWorkerErrorMessage {
   source_url : String
   line_number : Int32
   column_number : Int32
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend ServiceWorkerServiceWorkerErrorMessage with Eq::{not_equal, equal}
@@ -124,11 +126,12 @@ pub fn ServiceWorkerServiceWorkerErrorMessage::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct ServiceWorkerServiceWorkerRegistration {
   registration_id : ServiceWorkerRegistrationID
   scope_url : String
   is_deleted : Bool
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend ServiceWorkerServiceWorkerRegistration with Eq::{not_equal, equal}
@@ -178,6 +181,7 @@ pub fn ServiceWorkerServiceWorkerRegistration::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct ServiceWorkerServiceWorkerVersion {
   version_id : String
   registration_id : ServiceWorkerRegistrationID
@@ -189,7 +193,7 @@ pub(all) struct ServiceWorkerServiceWorkerVersion {
   controlled_clients : Array[TargetTargetID]?
   target_id : TargetTargetID?
   router_rules : String?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend ServiceWorkerServiceWorkerVersion with Eq::{not_equal, equal}
@@ -288,9 +292,10 @@ pub fn ServiceWorkerServiceWorkerVersion::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct ServiceWorkerServiceWorkerVersionRunningStatus {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend ServiceWorkerServiceWorkerVersionRunningStatus with Eq::{
@@ -335,9 +340,10 @@ pub fn ServiceWorkerServiceWorkerVersionRunningStatus::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct ServiceWorkerServiceWorkerVersionStatus {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend ServiceWorkerServiceWorkerVersionStatus with Eq::{not_equal, equal}
@@ -379,11 +385,12 @@ pub fn ServiceWorkerServiceWorkerVersionStatus::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct ServiceWorkerDeliverPushMessageParams {
   origin : String
   registration_id : ServiceWorkerRegistrationID
   data : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend ServiceWorkerDeliverPushMessageParams with Eq::{not_equal, equal}
@@ -464,11 +471,12 @@ pub fn service_worker_disable_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct ServiceWorkerDispatchPeriodicSyncEventParams {
   origin : String
   registration_id : ServiceWorkerRegistrationID
   tag : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend ServiceWorkerDispatchPeriodicSyncEventParams with Eq::{
@@ -530,12 +538,13 @@ pub fn service_worker_dispatch_periodic_sync_event_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct ServiceWorkerDispatchSyncEventParams {
   origin : String
   registration_id : ServiceWorkerRegistrationID
   tag : String
   last_chance : Bool
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend ServiceWorkerDispatchSyncEventParams with Eq::{not_equal, equal}
@@ -617,9 +626,10 @@ pub fn service_worker_enable_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct ServiceWorkerSetForceUpdateOnPageLoadParams {
   force_update_on_page_load : Bool
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend ServiceWorkerSetForceUpdateOnPageLoadParams with Eq::{
@@ -681,9 +691,10 @@ pub fn service_worker_set_force_update_on_page_load_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct ServiceWorkerSkipWaitingParams {
   scope_url : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend ServiceWorkerSkipWaitingParams with Eq::{not_equal, equal}
@@ -736,9 +747,10 @@ pub fn service_worker_skip_waiting_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct ServiceWorkerStartWorkerParams {
   scope_url : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend ServiceWorkerStartWorkerParams with Eq::{not_equal, equal}
@@ -813,9 +825,10 @@ pub fn service_worker_stop_all_workers_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct ServiceWorkerStopWorkerParams {
   version_id : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend ServiceWorkerStopWorkerParams with Eq::{not_equal, equal}
@@ -868,9 +881,10 @@ pub fn service_worker_stop_worker_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct ServiceWorkerUnregisterParams {
   scope_url : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend ServiceWorkerUnregisterParams with Eq::{not_equal, equal}
@@ -923,9 +937,10 @@ pub fn service_worker_unregister_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct ServiceWorkerUpdateRegistrationParams {
   scope_url : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend ServiceWorkerUpdateRegistrationParams with Eq::{not_equal, equal}
@@ -982,9 +997,10 @@ pub fn service_worker_update_registration_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct ServiceWorkerWorkerErrorReportedEventParams {
   error_message : ServiceWorkerServiceWorkerErrorMessage
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend ServiceWorkerWorkerErrorReportedEventParams with Eq::{
@@ -1057,9 +1073,10 @@ pub fn service_worker_worker_error_reported_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct ServiceWorkerWorkerRegistrationUpdatedEventParams {
   registrations : Array[ServiceWorkerServiceWorkerRegistration]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend ServiceWorkerWorkerRegistrationUpdatedEventParams with Eq::{
@@ -1140,9 +1157,10 @@ pub fn service_worker_worker_registration_updated_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct ServiceWorkerWorkerVersionUpdatedEventParams {
   versions : Array[ServiceWorkerServiceWorkerVersion]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend ServiceWorkerWorkerVersionUpdatedEventParams with Eq::{

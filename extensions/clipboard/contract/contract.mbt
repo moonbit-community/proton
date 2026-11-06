@@ -1,6 +1,7 @@
 ///|
 /// Request to read plain text from the native clipboard.
-pub(all) struct ReadTextRequest {} derive(ToJson, FromJson, Debug, Eq)
+#derive(ToJson, FromJson, Debug, Eq)
+pub(all) struct ReadTextRequest {}
 
 ///|
 pub extend ReadTextRequest with Eq::{not_equal, equal}
@@ -16,9 +17,10 @@ pub extend ReadTextRequest with FromJson::{from_json}
 
 ///|
 /// Request to write plain text to the native clipboard.
+#derive(ToJson, FromJson, Debug, Eq)
 pub(all) struct WriteTextRequest {
   text : String
-} derive(ToJson, FromJson, Debug, Eq)
+}
 
 ///|
 pub extend WriteTextRequest with Eq::{not_equal, equal}
@@ -34,7 +36,8 @@ pub extend WriteTextRequest with FromJson::{from_json}
 
 ///|
 /// Request to clear the native clipboard.
-pub(all) struct ClearRequest {} derive(ToJson, FromJson, Debug, Eq)
+#derive(ToJson, FromJson, Debug, Eq)
+pub(all) struct ClearRequest {}
 
 ///|
 pub extend ClearRequest with Eq::{not_equal, equal}
@@ -50,9 +53,10 @@ pub extend ClearRequest with FromJson::{from_json}
 
 ///|
 /// Current plain-text clipboard contents.
+#derive(ToJson, FromJson, Debug, Eq)
 pub(all) struct ReadTextReply {
   text : String?
-} derive(ToJson, FromJson, Debug, Eq)
+}
 
 ///|
 pub extend ReadTextReply with Eq::{not_equal, equal}
@@ -68,9 +72,10 @@ pub extend ReadTextReply with FromJson::{from_json}
 
 ///|
 /// Result of writing plain text to the clipboard.
+#derive(ToJson, FromJson, Debug, Eq)
 pub(all) struct WriteTextReply {
   written : Bool
-} derive(ToJson, FromJson, Debug, Eq)
+}
 
 ///|
 pub extend WriteTextReply with Eq::{not_equal, equal}
@@ -86,9 +91,10 @@ pub extend WriteTextReply with FromJson::{from_json}
 
 ///|
 /// Result of clearing the clipboard.
+#derive(ToJson, FromJson, Debug, Eq)
 pub(all) struct ClearReply {
   cleared : Bool
-} derive(ToJson, FromJson, Debug, Eq)
+}
 
 ///|
 pub extend ClearReply with Eq::{not_equal, equal}
@@ -104,10 +110,11 @@ pub extend ClearReply with FromJson::{from_json}
 
 ///|
 /// One completed clipboard operation.
+#derive(ToJson, FromJson, Debug, Eq)
 pub(all) struct ClipboardActivity {
   operation : String
   text_length : Int32?
-} derive(ToJson, FromJson, Debug, Eq)
+}
 
 ///|
 pub extend ClipboardActivity with Eq::{not_equal, equal}

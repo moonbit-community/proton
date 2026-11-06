@@ -21,11 +21,12 @@ let event_wakeup : Ref[@proton_extension.EventWakeup?] = Ref(None)
 
 ///|
 /// Event watching is independent of query availability.
+#derive(Debug, Eq)
 pub enum WatchStatus {
   Stopped
   Watching
   Unavailable(String)
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend WatchStatus with Debug::{to_repr}

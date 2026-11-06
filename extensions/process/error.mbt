@@ -1,11 +1,12 @@
 ///|
 /// Failures while managing child processes through the extension layer.
+#derive(Debug, Eq)
 suberror ProcessExtensionError {
   SpawnFailed(detail~ : String)
   WaitFailed(detail~ : String)
   KillFailed(detail~ : String)
   UnknownProcess(process_id~ : Int32)
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend ProcessExtensionError with Eq::{not_equal, equal}

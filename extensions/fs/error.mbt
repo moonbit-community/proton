@@ -1,5 +1,6 @@
 ///|
 /// Failures produced by filesystem command validation and async I/O.
+#derive(Debug, Eq)
 suberror FsError {
   InvalidPermissionScope(String)
   PermissionPathResolutionFailed(path~ : String, detail~ : String)
@@ -17,7 +18,7 @@ suberror FsError {
   RemoveDirectoryFailed(path~ : String, detail~ : String)
   RenameFailed(old_path~ : String, new_path~ : String, detail~ : String)
   RealpathFailed(path~ : String, detail~ : String)
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend FsError with Eq::{not_equal, equal}

@@ -1,12 +1,13 @@
 ///|
 /// A host-native package artifact.
+#derive(Debug, Eq)
 pub(all) enum PackageFormat {
   App
   Zip
   Dmg
   Nsis
   AppImage
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend PackageFormat with Eq::{not_equal, equal}
@@ -41,11 +42,12 @@ pub fn PackageFormat::to_string(self : PackageFormat) -> String {
 
 ///|
 /// The portable destination area for an additional package payload.
+#derive(Debug, Eq)
 pub(all) enum PayloadLocation {
   Resources
   Libraries
   Executables
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend PayloadLocation with Eq::{not_equal, equal}
@@ -67,11 +69,12 @@ pub fn PayloadLocation::parse(
 
 ///|
 /// A file or directory copied into the package.
+#derive(Debug, Eq)
 pub struct Payload {
   source : String
   destination : String
   location : PayloadLocation
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend Payload with Eq::{not_equal, equal}
@@ -90,11 +93,12 @@ pub fn Payload::Payload(
 
 ///|
 /// A file association included in native application metadata.
+#derive(Debug, Eq)
 pub struct DocumentType {
   name : String
   extensions : Array[String]
   role : String
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend DocumentType with Eq::{not_equal, equal}
@@ -242,11 +246,12 @@ pub fn PackageCustomization::PackageCustomization(
 
 ///|
 /// Windows NSIS installation scope. `Both` lets the installer user choose.
+#derive(Debug, Eq)
 pub(all) enum NsisInstallMode {
   CurrentUser
   PerMachine
   Both
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend NsisInstallMode with Eq::{not_equal, equal}
@@ -280,6 +285,7 @@ pub fn NsisInstallMode::to_string(self : NsisInstallMode) -> String {
 /// `macos_minimum_system_version` sets the minimum supported macOS declaration.
 /// Omit it to leave LSMinimumSystemVersion unset. Binary compatibility is not
 /// inferred or validated by the packager.
+#derive(Debug, Eq)
 pub struct PackageSpec {
   executable : String
   product_name : String
@@ -295,7 +301,7 @@ pub struct PackageSpec {
   nsis_install_mode : NsisInstallMode
   sign : Bool
   notarize : Bool
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend PackageSpec with Eq::{not_equal, equal}

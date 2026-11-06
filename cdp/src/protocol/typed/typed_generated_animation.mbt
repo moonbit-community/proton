@@ -7,6 +7,7 @@
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct AnimationAnimation {
   id : String
   name : String
@@ -19,7 +20,7 @@ pub(all) struct AnimationAnimation {
   source : AnimationAnimationEffect?
   css_id : String?
   view_or_scroll_timeline : AnimationViewOrScrollTimeline?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AnimationAnimation with Eq::{not_equal, equal}
@@ -102,6 +103,7 @@ pub fn AnimationAnimation::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct AnimationAnimationEffect {
   delay : Double
   end_delay : Double
@@ -113,7 +115,7 @@ pub(all) struct AnimationAnimationEffect {
   backend_node_id : DOMBackendNodeId?
   keyframes_rule : AnimationKeyframesRule?
   easing : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AnimationAnimationEffect with Eq::{not_equal, equal}
@@ -191,10 +193,11 @@ pub fn AnimationAnimationEffect::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct AnimationKeyframesRule {
   name : String?
   keyframes : Array[AnimationKeyframeStyle]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AnimationKeyframesRule with Eq::{not_equal, equal}
@@ -243,10 +246,11 @@ pub fn AnimationKeyframesRule::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct AnimationKeyframeStyle {
   offset : String
   easing : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AnimationKeyframeStyle with Eq::{not_equal, equal}
@@ -288,13 +292,14 @@ pub fn AnimationKeyframeStyle::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct AnimationViewOrScrollTimeline {
   source_node_id : DOMBackendNodeId?
   start_offset : Double?
   end_offset : Double?
   subject_node_id : DOMBackendNodeId?
   axis : DOMScrollOrientation
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AnimationViewOrScrollTimeline with Eq::{not_equal, equal}
@@ -406,9 +411,10 @@ pub fn animation_enable_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct AnimationGetCurrentTimeParams {
   id : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AnimationGetCurrentTimeParams with Eq::{not_equal, equal}
@@ -437,9 +443,10 @@ pub fn AnimationGetCurrentTimeParams::to_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct AnimationGetCurrentTimeResult {
   current_time : Double
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AnimationGetCurrentTimeResult with Eq::{not_equal, equal}
@@ -504,9 +511,10 @@ pub fn animation_get_current_time_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct AnimationGetPlaybackRateResult {
   playback_rate : Double
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AnimationGetPlaybackRateResult with Eq::{not_equal, equal}
@@ -569,9 +577,10 @@ pub fn animation_get_playback_rate_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct AnimationReleaseAnimationsParams {
   animations : Array[String]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AnimationReleaseAnimationsParams with Eq::{not_equal, equal}
@@ -630,9 +639,10 @@ pub fn animation_release_animations_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct AnimationResolveAnimationParams {
   animation_id : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AnimationResolveAnimationParams with Eq::{not_equal, equal}
@@ -661,9 +671,10 @@ pub fn AnimationResolveAnimationParams::to_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct AnimationResolveAnimationResult {
   remote_object : RuntimeRemoteObject
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AnimationResolveAnimationResult with Eq::{not_equal, equal}
@@ -728,10 +739,11 @@ pub fn animation_resolve_animation_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct AnimationSeekAnimationsParams {
   animations : Array[String]
   current_time : Double
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AnimationSeekAnimationsParams with Eq::{not_equal, equal}
@@ -787,10 +799,11 @@ pub fn animation_seek_animations_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct AnimationSetPausedParams {
   animations : Array[String]
   paused : Bool
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AnimationSetPausedParams with Eq::{not_equal, equal}
@@ -846,9 +859,10 @@ pub fn animation_set_paused_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct AnimationSetPlaybackRateParams {
   playback_rate : Double
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AnimationSetPlaybackRateParams with Eq::{not_equal, equal}
@@ -901,11 +915,12 @@ pub fn animation_set_playback_rate_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct AnimationSetTimingParams {
   animation_id : String
   duration : Double
   delay : Double
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AnimationSetTimingParams with Eq::{not_equal, equal}
@@ -960,9 +975,10 @@ pub fn animation_set_timing_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct AnimationAnimationCanceledEventParams {
   id : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AnimationAnimationCanceledEventParams with Eq::{not_equal, equal}
@@ -1028,9 +1044,10 @@ pub fn animation_animation_canceled_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct AnimationAnimationCreatedEventParams {
   id : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AnimationAnimationCreatedEventParams with Eq::{not_equal, equal}
@@ -1096,9 +1113,10 @@ pub fn animation_animation_created_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct AnimationAnimationStartedEventParams {
   animation : AnimationAnimation
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AnimationAnimationStartedEventParams with Eq::{not_equal, equal}
@@ -1168,9 +1186,10 @@ pub fn animation_animation_started_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct AnimationAnimationUpdatedEventParams {
   animation : AnimationAnimation
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AnimationAnimationUpdatedEventParams with Eq::{not_equal, equal}

@@ -1,9 +1,10 @@
 ///|
+#derive(Debug, Eq)
 pub(all) suberror DoctorError {
   WorkingDirectoryMissing(path~ : String)
   WorkingDirectoryNotDirectory(path~ : String)
   OutputWrite(path~ : String, detail~ : String)
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend DoctorError with Eq::{not_equal, equal}

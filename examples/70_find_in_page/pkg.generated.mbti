@@ -10,17 +10,20 @@ import {
 // Errors
 
 // Types and methods
-type FindRequest derive(ToJson, @json.FromJson)
-pub fn FindRequest::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
-pub fn FindRequest::to_json(Self) -> Json
+#derive(@json.FromJson, @json.ToJson)
+type FindRequest
+pub fn FindRequest::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn FindRequest::to_json(Self) -> @json.Json
 
-type Reply derive(ToJson, @json.FromJson)
-pub fn Reply::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
-pub fn Reply::to_json(Self) -> Json
+#derive(@json.FromJson, @json.ToJson)
+type Reply
+pub fn Reply::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn Reply::to_json(Self) -> @json.Json
 
-type StopRequest derive(ToJson, @json.FromJson)
-pub fn StopRequest::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
-pub fn StopRequest::to_json(Self) -> Json
+#derive(@json.FromJson, @json.ToJson)
+type StopRequest
+pub fn StopRequest::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn StopRequest::to_json(Self) -> @json.Json
 
 // Type aliases
 

@@ -5,12 +5,14 @@ let default_package = "app"
 let default_config_file = "proton.project.json"
 
 ///|
+#derive(Debug, Eq)
 priv struct UpdaterMetadataOptions {
   base_url : String
   published_at : String
-} derive(Debug, Eq)
+}
 
 ///|
+#derive(Debug, Eq)
 struct RawPackageOptions {
   app_package : String?
   config_path : String?
@@ -18,7 +20,7 @@ struct RawPackageOptions {
   updater_metadata : UpdaterMetadataOptions?
   release : Bool
   dry_run : Bool
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend RawPackageOptions with Eq::{not_equal, equal}
@@ -27,6 +29,7 @@ pub extend RawPackageOptions with Eq::{not_equal, equal}
 pub extend RawPackageOptions with Debug::{to_repr}
 
 ///|
+#derive(Debug, Eq)
 struct PackagePlan {
   root : String
   app_package : String
@@ -50,7 +53,7 @@ struct PackagePlan {
   nsis_install_mode : @packager.NsisInstallMode
   sign : Bool
   notarize : Bool
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend PackagePlan with Eq::{not_equal, equal}

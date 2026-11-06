@@ -8,7 +8,8 @@ pub enum ContractScope {
 
 ///|
 /// A request payload with no fields, shared by commands that take no input.
-pub(all) struct EmptyRequest {} derive(ToJson, FromJson, Debug, Eq)
+#derive(ToJson, FromJson, Debug, Eq)
+pub(all) struct EmptyRequest {}
 
 ///|
 pub extend EmptyRequest with Eq::{not_equal, equal}
@@ -24,11 +25,12 @@ pub extend EmptyRequest with FromJson::{from_json}
 
 ///|
 /// Standard platform-support probe result, shared by extension `support` commands.
+#derive(ToJson, FromJson, Debug, Eq)
 pub(all) struct SupportReply {
   supported : Bool
   platform : String
   reason : String?
-} derive(ToJson, FromJson, Debug, Eq)
+}
 
 ///|
 pub extend SupportReply with Eq::{not_equal, equal}
@@ -82,13 +84,14 @@ pub struct ExtensionContract {
 
 ///|
 /// Failures found while validating a contract descriptor before use.
+#derive(Debug, Eq)
 pub(all) suberror ContractDefinitionError {
   EmptyApplicationName
   EmptyExtensionId
   EmptyExtensionNamespace
   EmptyExtensionMember(extension_namespace~ : String)
   ExpectedExtensionEvent(route~ : String)
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend ContractDefinitionError with Eq::{not_equal, equal}

@@ -1,7 +1,8 @@
 ///|
+#derive(ToJson, FromJson, Debug, Eq)
 pub(all) struct EncryptRequest {
   value : String
-} derive(ToJson, FromJson, Debug, Eq)
+}
 
 ///|
 pub extend EncryptRequest with ToJson::{to_json}
@@ -16,9 +17,10 @@ pub extend EncryptRequest with Debug::{to_repr}
 pub extend EncryptRequest with Eq::{not_equal, equal}
 
 ///|
+#derive(ToJson, FromJson, Debug, Eq)
 pub(all) struct EncryptReply {
   encrypted : String
-} derive(ToJson, FromJson, Debug, Eq)
+}
 
 ///|
 pub extend EncryptReply with ToJson::{to_json}
@@ -33,9 +35,10 @@ pub extend EncryptReply with Debug::{to_repr}
 pub extend EncryptReply with Eq::{not_equal, equal}
 
 ///|
+#derive(ToJson, FromJson, Debug, Eq)
 pub(all) struct DecryptRequest {
   encrypted : String
-} derive(ToJson, FromJson, Debug, Eq)
+}
 
 ///|
 pub extend DecryptRequest with ToJson::{to_json}
@@ -50,9 +53,10 @@ pub extend DecryptRequest with Debug::{to_repr}
 pub extend DecryptRequest with Eq::{not_equal, equal}
 
 ///|
+#derive(ToJson, FromJson, Debug, Eq)
 pub(all) struct DecryptReply {
   value : String
-} derive(ToJson, FromJson, Debug, Eq)
+}
 
 ///|
 pub extend DecryptReply with ToJson::{to_json}
@@ -67,9 +71,10 @@ pub extend DecryptReply with Debug::{to_repr}
 pub extend DecryptReply with Eq::{not_equal, equal}
 
 ///|
+#derive(ToJson, FromJson, Debug, Eq)
 pub(all) struct AvailabilityReply {
   available : Bool
-} derive(ToJson, FromJson, Debug, Eq)
+}
 
 ///|
 pub extend AvailabilityReply with ToJson::{to_json}

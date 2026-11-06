@@ -1,7 +1,8 @@
 ///|
+#derive(ToJson, FromJson, Debug, Eq)
 pub(all) struct PathRequest {
   path : String
-} derive(ToJson, FromJson, Debug, Eq)
+}
 
 ///|
 pub extend PathRequest with Eq::{not_equal, equal}
@@ -16,10 +17,11 @@ pub extend PathRequest with ToJson::{to_json}
 pub extend PathRequest with FromJson::{from_json}
 
 ///|
+#derive(ToJson, FromJson, Debug, Eq)
 pub(all) struct ReadFileRequest {
   path : String
   sync_timestamp : Bool?
-} derive(ToJson, FromJson, Debug, Eq)
+}
 
 ///|
 pub extend ReadFileRequest with Eq::{not_equal, equal}
@@ -34,11 +36,12 @@ pub extend ReadFileRequest with ToJson::{to_json}
 pub extend ReadFileRequest with FromJson::{from_json}
 
 ///|
+#derive(ToJson, FromJson, Debug, Eq)
 pub(all) struct ReadFileReply {
   path : String
   content : String
   bytes_read : Int32
-} derive(ToJson, FromJson, Debug, Eq)
+}
 
 ///|
 pub extend ReadFileReply with Eq::{not_equal, equal}
@@ -53,6 +56,7 @@ pub extend ReadFileReply with ToJson::{to_json}
 pub extend ReadFileReply with FromJson::{from_json}
 
 ///|
+#derive(ToJson, FromJson, Debug, Eq)
 pub(all) struct WriteFileRequest {
   path : String
   content : String
@@ -60,7 +64,7 @@ pub(all) struct WriteFileRequest {
   create_mode : String?
   permission : Int32?
   sync : String?
-} derive(ToJson, FromJson, Debug, Eq)
+}
 
 ///|
 pub extend WriteFileRequest with Eq::{not_equal, equal}
@@ -75,10 +79,11 @@ pub extend WriteFileRequest with ToJson::{to_json}
 pub extend WriteFileRequest with FromJson::{from_json}
 
 ///|
+#derive(ToJson, FromJson, Debug, Eq)
 pub(all) struct WriteFileReply {
   path : String
   bytes_written : Int32
-} derive(ToJson, FromJson, Debug, Eq)
+}
 
 ///|
 pub extend WriteFileReply with Eq::{not_equal, equal}
@@ -93,9 +98,10 @@ pub extend WriteFileReply with ToJson::{to_json}
 pub extend WriteFileReply with FromJson::{from_json}
 
 ///|
+#derive(ToJson, FromJson, Debug, Eq)
 pub(all) struct ExistsReply {
   exists : Bool
-} derive(ToJson, FromJson, Debug, Eq)
+}
 
 ///|
 pub extend ExistsReply with Eq::{not_equal, equal}
@@ -110,10 +116,11 @@ pub extend ExistsReply with ToJson::{to_json}
 pub extend ExistsReply with FromJson::{from_json}
 
 ///|
+#derive(ToJson, FromJson, Debug, Eq)
 pub(all) struct KindRequest {
   path : String
   follow_symlink : Bool?
-} derive(ToJson, FromJson, Debug, Eq)
+}
 
 ///|
 pub extend KindRequest with Eq::{not_equal, equal}
@@ -128,10 +135,11 @@ pub extend KindRequest with ToJson::{to_json}
 pub extend KindRequest with FromJson::{from_json}
 
 ///|
+#derive(ToJson, FromJson, Debug, Eq)
 pub(all) struct KindReply {
   path : String
   kind : String
-} derive(ToJson, FromJson, Debug, Eq)
+}
 
 ///|
 pub extend KindReply with Eq::{not_equal, equal}
@@ -146,10 +154,11 @@ pub extend KindReply with ToJson::{to_json}
 pub extend KindReply with FromJson::{from_json}
 
 ///|
+#derive(ToJson, FromJson, Debug, Eq)
 pub(all) struct SizeReply {
   path : String
   size : Int64
-} derive(ToJson, FromJson, Debug, Eq)
+}
 
 ///|
 pub extend SizeReply with Eq::{not_equal, equal}
@@ -164,12 +173,13 @@ pub extend SizeReply with ToJson::{to_json}
 pub extend SizeReply with FromJson::{from_json}
 
 ///|
+#derive(ToJson, FromJson, Debug, Eq)
 pub(all) struct ReaddirRequest {
   path : String
   include_hidden : Bool?
   include_special : Bool?
   sort : Bool?
-} derive(ToJson, FromJson, Debug, Eq)
+}
 
 ///|
 pub extend ReaddirRequest with Eq::{not_equal, equal}
@@ -184,10 +194,11 @@ pub extend ReaddirRequest with ToJson::{to_json}
 pub extend ReaddirRequest with FromJson::{from_json}
 
 ///|
+#derive(ToJson, FromJson, Debug, Eq)
 pub(all) struct ReaddirReply {
   path : String
   entries : Array[String]
-} derive(ToJson, FromJson, Debug, Eq)
+}
 
 ///|
 pub extend ReaddirReply with Eq::{not_equal, equal}
@@ -202,11 +213,12 @@ pub extend ReaddirReply with ToJson::{to_json}
 pub extend ReaddirReply with FromJson::{from_json}
 
 ///|
+#derive(ToJson, FromJson, Debug, Eq)
 pub(all) struct MkdirRequest {
   path : String
   permission : Int32?
   recursive : Bool?
-} derive(ToJson, FromJson, Debug, Eq)
+}
 
 ///|
 pub extend MkdirRequest with Eq::{not_equal, equal}
@@ -221,10 +233,11 @@ pub extend MkdirRequest with ToJson::{to_json}
 pub extend MkdirRequest with FromJson::{from_json}
 
 ///|
+#derive(ToJson, FromJson, Debug, Eq)
 pub(all) struct MkdirReply {
   path : String
   created : Bool
-} derive(ToJson, FromJson, Debug, Eq)
+}
 
 ///|
 pub extend MkdirReply with Eq::{not_equal, equal}
@@ -239,9 +252,10 @@ pub extend MkdirReply with ToJson::{to_json}
 pub extend MkdirReply with FromJson::{from_json}
 
 ///|
+#derive(ToJson, FromJson, Debug, Eq)
 pub(all) struct RemoveFileReply {
   removed : Bool
-} derive(ToJson, FromJson, Debug, Eq)
+}
 
 ///|
 pub extend RemoveFileReply with Eq::{not_equal, equal}
@@ -256,10 +270,11 @@ pub extend RemoveFileReply with ToJson::{to_json}
 pub extend RemoveFileReply with FromJson::{from_json}
 
 ///|
+#derive(ToJson, FromJson, Debug, Eq)
 pub(all) struct RemovePathRequest {
   path : String
   recursive : Bool?
-} derive(ToJson, FromJson, Debug, Eq)
+}
 
 ///|
 pub extend RemovePathRequest with Eq::{not_equal, equal}
@@ -274,10 +289,11 @@ pub extend RemovePathRequest with ToJson::{to_json}
 pub extend RemovePathRequest with FromJson::{from_json}
 
 ///|
+#derive(ToJson, FromJson, Debug, Eq)
 pub(all) struct RemovePathReply {
   path : String
   removed : Bool
-} derive(ToJson, FromJson, Debug, Eq)
+}
 
 ///|
 pub extend RemovePathReply with Eq::{not_equal, equal}
@@ -292,11 +308,12 @@ pub extend RemovePathReply with ToJson::{to_json}
 pub extend RemovePathReply with FromJson::{from_json}
 
 ///|
+#derive(ToJson, FromJson, Debug, Eq)
 pub(all) struct RenameRequest {
   old_path : String
   new_path : String
   replace : Bool?
-} derive(ToJson, FromJson, Debug, Eq)
+}
 
 ///|
 pub extend RenameRequest with Eq::{not_equal, equal}
@@ -311,11 +328,12 @@ pub extend RenameRequest with ToJson::{to_json}
 pub extend RenameRequest with FromJson::{from_json}
 
 ///|
+#derive(ToJson, FromJson, Debug, Eq)
 pub(all) struct RenameReply {
   old_path : String
   new_path : String
   renamed : Bool
-} derive(ToJson, FromJson, Debug, Eq)
+}
 
 ///|
 pub extend RenameReply with Eq::{not_equal, equal}
@@ -330,9 +348,10 @@ pub extend RenameReply with ToJson::{to_json}
 pub extend RenameReply with FromJson::{from_json}
 
 ///|
+#derive(ToJson, FromJson, Debug, Eq)
 pub(all) struct RealpathReply {
   path : String
-} derive(ToJson, FromJson, Debug, Eq)
+}
 
 ///|
 pub extend RealpathReply with Eq::{not_equal, equal}
@@ -347,11 +366,12 @@ pub extend RealpathReply with ToJson::{to_json}
 pub extend RealpathReply with FromJson::{from_json}
 
 ///|
+#derive(ToJson, FromJson, Debug, Eq)
 pub(all) struct FsActivity {
   operation : String
   path : String?
   bytes : Int32?
-} derive(ToJson, FromJson, Debug, Eq)
+}
 
 ///|
 pub extend FsActivity with Eq::{not_equal, equal}

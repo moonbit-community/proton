@@ -1,12 +1,13 @@
 ///|
 /// Schema failures in the `proton.ext.json` identity consumed by command codegen.
+#derive(Debug, Eq)
 pub(all) suberror CodegenMetadataError {
   InvalidRoot
   UnknownField(field~ : String)
   MissingField(field~ : String)
   InvalidType(field~ : String, expected~ : String)
   InvalidPackageName(value~ : String, reason~ : String)
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend CodegenMetadataError with Eq::{not_equal, equal}
@@ -38,11 +39,12 @@ impl Show for CodegenMetadataError with fn output(self, logger) {
 
 ///|
 /// Failures while locating or reading MoonBit sources for command codegen.
+#derive(Debug, Eq)
 pub(all) suberror CodegenInputError {
   SourceParse(path~ : String)
   InputRead(path~ : String, detail~ : String)
   PackageRead(path~ : String, detail~ : String)
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend CodegenInputError with Eq::{not_equal, equal}
@@ -55,11 +57,12 @@ pub extend CodegenInputError with Show::{to_string, output}
 
 ///|
 /// Failures while loading the `proton.ext.json` file associated with command codegen.
+#derive(Debug, Eq)
 pub(all) suberror CodegenMetadataFileError {
   MissingMetadata(path~ : String)
   Syntax(path~ : String, diagnostics~ : String)
   Invalid(path~ : String, error~ : CodegenMetadataError)
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend CodegenMetadataFileError with Eq::{not_equal, equal}
@@ -72,6 +75,7 @@ pub extend CodegenMetadataFileError with Show::{to_string, output}
 
 ///|
 /// Invalid typed command declarations.
+#derive(Debug, Eq)
 pub(all) suberror CommandCodegenError {
   InvalidName(label~ : String, value~ : String, reason~ : String)
   Attribute(kind~ : String, detail~ : String)
@@ -79,7 +83,7 @@ pub(all) suberror CommandCodegenError {
   UnsupportedType(context~ : String)
   Duplicate(kind~ : String, name~ : String)
   MissingCommand
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend CommandCodegenError with Eq::{not_equal, equal}

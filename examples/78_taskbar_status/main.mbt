@@ -1,8 +1,9 @@
 ///|
+#derive(ToJson, FromJson)
 struct ProgressRequest {
   value : Double
   mode : String
-} derive(ToJson, FromJson)
+}
 
 ///|
 pub extend ProgressRequest with ToJson::{to_json}
@@ -11,9 +12,10 @@ pub extend ProgressRequest with ToJson::{to_json}
 pub extend ProgressRequest with FromJson::{from_json}
 
 ///|
+#derive(ToJson, FromJson)
 struct OverlayRequest {
   visible : Bool
-} derive(ToJson, FromJson)
+}
 
 ///|
 pub extend OverlayRequest with ToJson::{to_json}
@@ -22,19 +24,22 @@ pub extend OverlayRequest with ToJson::{to_json}
 pub extend OverlayRequest with FromJson::{from_json}
 
 ///|
+#derive(ToJson, FromJson)
 struct TooltipRequest {
   text : String
-} derive(ToJson, FromJson)
+}
 
 ///|
+#derive(ToJson, FromJson)
 struct ButtonsRequest {
   visible : Bool
-} derive(ToJson, FromJson)
+}
 
 ///|
+#derive(ToJson, FromJson)
 struct JumpListRequest {
   mode : String
-} derive(ToJson, FromJson)
+}
 
 ///|
 pub extend JumpListRequest with ToJson::{to_json}
@@ -55,10 +60,11 @@ pub extend TooltipRequest with ToJson::{to_json}
 pub extend TooltipRequest with FromJson::{from_json}
 
 ///|
+#derive(ToJson, FromJson)
 struct Reply {
   ok : Bool
   message : String
-} derive(ToJson, FromJson)
+}
 
 ///|
 pub extend Reply with ToJson::{to_json}

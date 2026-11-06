@@ -1,9 +1,10 @@
 ///|
+#derive(ToJson, FromJson, Debug, Eq)
 pub(all) struct MessageRequest {
   message : String
   title : String?
   level : String?
-} derive(ToJson, FromJson, Debug, Eq)
+}
 
 ///|
 pub extend MessageRequest with Eq::{not_equal, equal}
@@ -19,10 +20,11 @@ pub extend MessageRequest with FromJson::{from_json}
 
 ///|
 /// Request for Electron's `showErrorBox` convenience dialog.
+#derive(ToJson, FromJson, Debug, Eq)
 pub(all) struct ErrorBoxRequest {
   title : String
   content : String
-} derive(ToJson, FromJson, Debug, Eq)
+}
 
 ///|
 pub extend ErrorBoxRequest with Eq::{not_equal, equal}
@@ -37,10 +39,11 @@ pub extend ErrorBoxRequest with ToJson::{to_json}
 pub extend ErrorBoxRequest with FromJson::{from_json}
 
 ///|
+#derive(ToJson, FromJson, Debug, Eq)
 pub(all) struct FileDialogRequest {
   title : String?
   path : String?
-} derive(ToJson, FromJson, Debug, Eq)
+}
 
 ///|
 pub extend FileDialogRequest with Eq::{not_equal, equal}
@@ -55,9 +58,10 @@ pub extend FileDialogRequest with ToJson::{to_json}
 pub extend FileDialogRequest with FromJson::{from_json}
 
 ///|
+#derive(ToJson, FromJson, Debug, Eq)
 pub(all) struct MessageReply {
   acknowledged : Bool
-} derive(ToJson, FromJson, Debug, Eq)
+}
 
 ///|
 pub extend MessageReply with Eq::{not_equal, equal}
@@ -72,9 +76,10 @@ pub extend MessageReply with ToJson::{to_json}
 pub extend MessageReply with FromJson::{from_json}
 
 ///|
+#derive(ToJson, FromJson, Debug, Eq)
 pub(all) struct ConfirmReply {
   confirmed : Bool
-} derive(ToJson, FromJson, Debug, Eq)
+}
 
 ///|
 pub extend ConfirmReply with Eq::{not_equal, equal}
@@ -89,9 +94,10 @@ pub extend ConfirmReply with ToJson::{to_json}
 pub extend ConfirmReply with FromJson::{from_json}
 
 ///|
+#derive(ToJson, FromJson, Debug, Eq)
 pub(all) struct FileDialogReply {
   path : String?
-} derive(ToJson, FromJson, Debug, Eq)
+}
 
 ///|
 pub extend FileDialogReply with Eq::{not_equal, equal}
@@ -106,11 +112,12 @@ pub extend FileDialogReply with ToJson::{to_json}
 pub extend FileDialogReply with FromJson::{from_json}
 
 ///|
+#derive(ToJson, FromJson, Debug, Eq)
 pub(all) struct DialogActivity {
   operation : String
   path : String?
   level : String?
-} derive(ToJson, FromJson, Debug, Eq)
+}
 
 ///|
 pub extend DialogActivity with Eq::{not_equal, equal}

@@ -7,9 +7,10 @@
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct HeapProfilerHeapSnapshotObjectId {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend HeapProfilerHeapSnapshotObjectId with Eq::{not_equal, equal}
@@ -51,10 +52,11 @@ pub fn HeapProfilerHeapSnapshotObjectId::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct HeapProfilerSamplingHeapProfile {
   head : HeapProfilerSamplingHeapProfileNode
   samples : Array[HeapProfilerSamplingHeapProfileSample]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend HeapProfilerSamplingHeapProfile with Eq::{not_equal, equal}
@@ -107,12 +109,13 @@ pub fn HeapProfilerSamplingHeapProfile::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct HeapProfilerSamplingHeapProfileNode {
   call_frame : RuntimeCallFrame
   self_size : Double
   id : Int32
   children : Array[HeapProfilerSamplingHeapProfileNode]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend HeapProfilerSamplingHeapProfileNode with Eq::{not_equal, equal}
@@ -169,11 +172,12 @@ pub fn HeapProfilerSamplingHeapProfileNode::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct HeapProfilerSamplingHeapProfileSample {
   size : Double
   node_id : Int32
   ordinal : Double
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend HeapProfilerSamplingHeapProfileSample with Eq::{not_equal, equal}
@@ -221,9 +225,10 @@ pub fn HeapProfilerSamplingHeapProfileSample::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct HeapProfilerAddInspectedHeapObjectParams {
   heap_object_id : HeapProfilerHeapSnapshotObjectId
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend HeapProfilerAddInspectedHeapObjectParams with Eq::{not_equal, equal}
@@ -346,9 +351,10 @@ pub fn heap_profiler_enable_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct HeapProfilerGetHeapObjectIdParams {
   object_id : RuntimeRemoteObjectId
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend HeapProfilerGetHeapObjectIdParams with Eq::{not_equal, equal}
@@ -377,9 +383,10 @@ pub fn HeapProfilerGetHeapObjectIdParams::to_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct HeapProfilerGetHeapObjectIdResult {
   heap_snapshot_object_id : HeapProfilerHeapSnapshotObjectId
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend HeapProfilerGetHeapObjectIdResult with Eq::{not_equal, equal}
@@ -448,10 +455,11 @@ pub fn heap_profiler_get_heap_object_id_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct HeapProfilerGetObjectByHeapObjectIdParams {
   object_id : HeapProfilerHeapSnapshotObjectId
   object_group : String?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend HeapProfilerGetObjectByHeapObjectIdParams with Eq::{not_equal, equal}
@@ -483,9 +491,10 @@ pub fn HeapProfilerGetObjectByHeapObjectIdParams::to_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct HeapProfilerGetObjectByHeapObjectIdResult {
   result : RuntimeRemoteObject
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend HeapProfilerGetObjectByHeapObjectIdResult with Eq::{not_equal, equal}
@@ -554,9 +563,10 @@ pub fn heap_profiler_get_object_by_heap_object_id_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct HeapProfilerGetSamplingProfileResult {
   profile : HeapProfilerSamplingHeapProfile
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend HeapProfilerGetSamplingProfileResult with Eq::{not_equal, equal}
@@ -619,12 +629,13 @@ pub fn heap_profiler_get_sampling_profile_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct HeapProfilerStartSamplingParams {
   sampling_interval : Double?
   stack_depth : Double?
   include_objects_collected_by_major_gc : Bool?
   include_objects_collected_by_minor_gc : Bool?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend HeapProfilerStartSamplingParams with Eq::{not_equal, equal}
@@ -692,9 +703,10 @@ pub fn heap_profiler_start_sampling_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct HeapProfilerStartTrackingHeapObjectsParams {
   track_allocations : Bool?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend HeapProfilerStartTrackingHeapObjectsParams with Eq::{
@@ -756,9 +768,10 @@ pub fn heap_profiler_start_tracking_heap_objects_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct HeapProfilerStopSamplingResult {
   profile : HeapProfilerSamplingHeapProfile
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend HeapProfilerStopSamplingResult with Eq::{not_equal, equal}
@@ -821,12 +834,13 @@ pub fn heap_profiler_stop_sampling_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct HeapProfilerStopTrackingHeapObjectsParams {
   report_progress : Bool?
   treat_global_objects_as_roots : Bool?
   capture_numeric_value : Bool?
   expose_internals : Bool?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend HeapProfilerStopTrackingHeapObjectsParams with Eq::{not_equal, equal}
@@ -894,12 +908,13 @@ pub fn heap_profiler_stop_tracking_heap_objects_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct HeapProfilerTakeHeapSnapshotParams {
   report_progress : Bool?
   treat_global_objects_as_roots : Bool?
   capture_numeric_value : Bool?
   expose_internals : Bool?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend HeapProfilerTakeHeapSnapshotParams with Eq::{not_equal, equal}
@@ -967,9 +982,10 @@ pub fn heap_profiler_take_heap_snapshot_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct HeapProfilerAddHeapSnapshotChunkEventParams {
   chunk : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend HeapProfilerAddHeapSnapshotChunkEventParams with Eq::{
@@ -1038,9 +1054,10 @@ pub fn heap_profiler_add_heap_snapshot_chunk_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct HeapProfilerHeapStatsUpdateEventParams {
   stats_update : Array[Int32]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend HeapProfilerHeapStatsUpdateEventParams with Eq::{not_equal, equal}
@@ -1117,10 +1134,11 @@ pub fn heap_profiler_heap_stats_update_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct HeapProfilerLastSeenObjectIdEventParams {
   last_seen_object_id : Int32
   timestamp : Double
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend HeapProfilerLastSeenObjectIdEventParams with Eq::{not_equal, equal}
@@ -1194,11 +1212,12 @@ pub fn heap_profiler_last_seen_object_id_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct HeapProfilerReportHeapSnapshotProgressEventParams {
   done : Int32
   total : Int32
   finished : Bool?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend HeapProfilerReportHeapSnapshotProgressEventParams with Eq::{

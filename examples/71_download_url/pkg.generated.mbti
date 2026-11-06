@@ -10,13 +10,15 @@ import {
 // Errors
 
 // Types and methods
-type Reply derive(ToJson, @json.FromJson)
-pub fn Reply::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
-pub fn Reply::to_json(Self) -> Json
+#derive(@json.FromJson, @json.ToJson)
+type Reply
+pub fn Reply::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn Reply::to_json(Self) -> @json.Json
 
-type StartRequest derive(ToJson, @json.FromJson)
-pub fn StartRequest::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
-pub fn StartRequest::to_json(Self) -> Json
+#derive(@json.FromJson, @json.ToJson)
+type StartRequest
+pub fn StartRequest::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn StartRequest::to_json(Self) -> @json.Json
 
 // Type aliases
 

@@ -10,13 +10,15 @@ import {
 // Errors
 
 // Types and methods
-type CenterReply derive(ToJson, @json.FromJson)
-pub fn CenterReply::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
-pub fn CenterReply::to_json(Self) -> Json
+#derive(@json.FromJson, @json.ToJson)
+type CenterReply
+pub fn CenterReply::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn CenterReply::to_json(Self) -> @json.Json
 
-type CenterRequest derive(ToJson, @json.FromJson)
-pub fn CenterRequest::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
-pub fn CenterRequest::to_json(Self) -> Json
+#derive(@json.FromJson, @json.ToJson)
+type CenterRequest
+pub fn CenterRequest::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn CenterRequest::to_json(Self) -> @json.Json
 
 // Type aliases
 

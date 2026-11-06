@@ -5,9 +5,10 @@ let default_package = "app"
 let default_config_file = "proton.project.json"
 
 ///|
+#derive(Debug, Eq)
 pub(all) suberror BuildUsageError {
   InvalidArguments(message~ : String)
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend BuildUsageError with Eq::{not_equal, equal}
@@ -19,11 +20,12 @@ pub extend BuildUsageError with Debug::{to_repr}
 pub extend BuildUsageError with Show::{to_string, output}
 
 ///|
+#derive(Debug, Eq)
 pub(all) suberror BuildConfigError {
   NotFound(path~ : String?)
   Invalid(path~ : String, error~ : @proton_config.AppConfigError)
   InvalidRelease(message~ : String)
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend BuildConfigError with Eq::{not_equal, equal}
@@ -35,10 +37,11 @@ pub extend BuildConfigError with Debug::{to_repr}
 pub extend BuildConfigError with Show::{to_string, output}
 
 ///|
+#derive(Debug, Eq)
 pub(all) suberror BuildPathError {
   Missing(role~ : String, path~ : String)
   WrongKind(role~ : String, path~ : String, expected~ : String)
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend BuildPathError with Eq::{not_equal, equal}
@@ -50,11 +53,12 @@ pub extend BuildPathError with Debug::{to_repr}
 pub extend BuildPathError with Show::{to_string, output}
 
 ///|
+#derive(Debug, Eq)
 pub(all) suberror BuildProcessError {
   Start(command~ : String, detail~ : String)
   Exit(command~ : String, code~ : Int32)
   InvalidOutput(command~ : String, detail~ : String)
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend BuildProcessError with Eq::{not_equal, equal}
@@ -126,6 +130,7 @@ impl Show for BuildProcessError with fn output(self, logger) {
 }
 
 ///|
+#derive(Debug, Eq)
 struct RawBuildOptions {
   app_package : String?
   config_path : String?
@@ -133,7 +138,7 @@ struct RawBuildOptions {
   icons : Array[String]?
   run_frontend_build : Bool
   moon_args : Array[String]
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend RawBuildOptions with Eq::{not_equal, equal}
@@ -599,9 +604,10 @@ fn moon_build_only_args(app_package : String, release : Bool) -> Array[String] {
 }
 
 ///|
+#derive(FromJson)
 priv struct MoonBuildOutput {
   artifacts_path : Array[String]
-} derive(FromJson)
+}
 
 ///|
 fn artifact_path_from_build_output(

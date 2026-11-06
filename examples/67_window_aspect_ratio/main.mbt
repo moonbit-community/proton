@@ -1,7 +1,8 @@
 ///|
+#derive(ToJson, FromJson)
 struct AspectRequest {
   action : String
-} derive(ToJson, FromJson)
+}
 
 ///|
 pub extend AspectRequest with ToJson::{to_json}
@@ -10,13 +11,14 @@ pub extend AspectRequest with ToJson::{to_json}
 pub extend AspectRequest with FromJson::{from_json}
 
 ///|
+#derive(ToJson, FromJson)
 struct AspectReply {
   applied : Bool
   ratio : Double
   width : Int32
   height : Int32
   message : String
-} derive(ToJson, FromJson)
+}
 
 ///|
 pub extend AspectReply with ToJson::{to_json}

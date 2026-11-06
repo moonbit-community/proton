@@ -1,8 +1,9 @@
 ///|
+#derive(ToJson, FromJson)
 struct ShowContextMenuRequest {
   x : Int32
   y : Int32
-} derive(ToJson, FromJson)
+}
 
 ///|
 pub extend ShowContextMenuRequest with ToJson::{to_json}
@@ -11,10 +12,11 @@ pub extend ShowContextMenuRequest with ToJson::{to_json}
 pub extend ShowContextMenuRequest with FromJson::{from_json}
 
 ///|
+#derive(ToJson, FromJson)
 struct ShowContextMenuReply {
   opened : Bool
   message : String
-} derive(ToJson, FromJson)
+}
 
 ///|
 pub extend ShowContextMenuReply with ToJson::{to_json}

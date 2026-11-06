@@ -1,18 +1,20 @@
 ///|
+#derive(FromJson)
 struct MultiWindowIdentifyPayload {
   label : String
   delay_ms : Int32?
-} derive(FromJson)
+}
 
 ///|
 pub extend MultiWindowIdentifyPayload with FromJson::{from_json}
 
 ///|
+#derive(ToJson)
 struct MultiWindowIdentifyReply {
   label : String
   window : String
   page_instance : String
-} derive(ToJson)
+}
 
 ///|
 pub extend MultiWindowIdentifyReply with ToJson::{to_json}

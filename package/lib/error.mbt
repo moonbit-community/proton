@@ -1,4 +1,5 @@
 ///|
+#derive(Debug, Eq)
 pub(all) suberror PackagePlanError {
   InvalidProductName(reason~ : String)
   InvalidIdentifier(identifier~ : String, reason~ : String)
@@ -12,7 +13,7 @@ pub(all) suberror PackagePlanError {
   MissingInput(path~ : String)
   MissingIcon(path~ : String)
   InvalidPayload(detail~ : String)
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend PackagePlanError with Eq::{not_equal, equal}
@@ -51,6 +52,7 @@ impl Show for PackagePlanError with fn output(self, logger) {
 }
 
 ///|
+#derive(Debug, Eq)
 pub(all) suberror PackageFileSystemError {
   CreateDirectory(path~ : String, detail~ : String)
   Remove(path~ : String, detail~ : String)
@@ -58,7 +60,7 @@ pub(all) suberror PackageFileSystemError {
   Read(path~ : String, detail~ : String)
   Write(path~ : String, detail~ : String)
   InvalidSource(path~ : String)
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend PackageFileSystemError with Eq::{not_equal, equal}
@@ -86,10 +88,11 @@ impl Show for PackageFileSystemError with fn output(self, logger) {
 }
 
 ///|
+#derive(Debug, Eq)
 pub(all) suberror PackageToolError {
   Start(tool~ : String, detail~ : String)
   Exit(tool~ : String, code~ : Int32, detail~ : String)
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend PackageToolError with Eq::{not_equal, equal}
@@ -115,11 +118,12 @@ impl Show for PackageToolError with fn output(self, logger) {
 }
 
 ///|
+#derive(Debug, Eq)
 pub(all) suberror MacosSigningError {
   InvalidConfiguration(detail~ : String)
   ToolFailure(stage~ : String, detail~ : String)
   Verification(detail~ : String)
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend MacosSigningError with Eq::{not_equal, equal}
@@ -142,12 +146,13 @@ impl Show for MacosSigningError with fn output(self, logger) {
 }
 
 ///|
+#derive(Debug, Eq)
 pub(all) suberror WindowsPackagingError {
   InvalidConfiguration(detail~ : String)
   MissingTarget(path~ : String)
   ToolFailure(stage~ : String, detail~ : String)
   Verification(detail~ : String)
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend WindowsPackagingError with Eq::{not_equal, equal}
@@ -171,10 +176,11 @@ impl Show for WindowsPackagingError with fn output(self, logger) {
 }
 
 ///|
+#derive(Debug, Eq)
 pub(all) suberror LinuxPackagingError {
   InvalidConfiguration(detail~ : String)
   ToolFailure(stage~ : String, detail~ : String)
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend LinuxPackagingError with Eq::{not_equal, equal}
