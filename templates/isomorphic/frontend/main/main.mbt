@@ -5,10 +5,11 @@ using @rabbita {type Cmd, type Emit, type Html}
 using @html {button, div, form, h1, input, li, p, span, ul}
 
 ///|
+#derive(Eq)
 struct Model {
   draft : String
   error : String?
-} derive(Eq)
+}
 
 ///|
 enum Msg {
