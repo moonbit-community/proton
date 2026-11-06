@@ -252,6 +252,7 @@ test "EventIntField agrees with the C event contract" {
     DarkColors,
     HighContrastColors,
     ReopenWhenEmpty,
+    Disposition,
   ]
   assert_eq(values.length(), event_contract_count(2))
   for value in values {

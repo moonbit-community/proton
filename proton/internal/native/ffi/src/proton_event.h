@@ -97,7 +97,8 @@ typedef enum proton_event_int64_field {
   X(allowed, Allowed) \
   X(dark_colors, DarkColors) \
   X(high_contrast_colors, HighContrastColors) \
-  X(reopen_when_empty, ReopenWhenEmpty)
+  X(reopen_when_empty, ReopenWhenEmpty) \
+  X(disposition, Disposition)
 
 typedef enum proton_event_int_field {
 #define PROTON_EVENT_FIELD(name, mb_name) PROTON_EVENT_INT_##name,

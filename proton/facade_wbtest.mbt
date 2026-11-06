@@ -1734,6 +1734,15 @@ test "navigation transitions map from Chromium page transition types" {
 }
 
 ///|
+test "new-window dispositions map from the native event codes" {
+  assert_true(NewWindowDisposition::from_code(1) is ForegroundTab)
+  assert_true(NewWindowDisposition::from_code(2) is BackgroundTab)
+  assert_true(NewWindowDisposition::from_code(3) is Window)
+  assert_true(NewWindowDisposition::from_code(4) is Popup)
+  assert_true(NewWindowDisposition::from_code(0) is Other)
+}
+
+///|
 test "navigation qualifiers expand from Chromium transition flags" {
   assert_eq(NavigationTransitionQualifier::from_flags(0), [])
   assert_eq(NavigationTransitionQualifier::from_flags(1 | 4), [

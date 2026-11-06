@@ -295,7 +295,13 @@ pub extend NativeNotificationResult with Debug::{to_repr}
 ///|
 #derive(Debug, Eq)
 pub(all) enum NativeBrowserRequest {
-  NewWindow(request_id~ : Int64, url~ : String, user_gesture~ : Bool)
+  /// `disposition` is the C event ABI code; the facade decodes it.
+  NewWindow(
+    request_id~ : Int64,
+    url~ : String,
+    user_gesture~ : Bool,
+    disposition~ : Int32
+  )
   Download(
     request_id~ : Int64,
     download_id~ : Int32,

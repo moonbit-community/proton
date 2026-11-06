@@ -1,5 +1,16 @@
 # Release Notes
 
+## Unreleased
+
+**New-window disposition (breaking API change)**
+
+`NewWindowRequest.disposition` reports where the click or script asked the new
+browsing context to open: `ForegroundTab`, `BackgroundTab`, `Window`, `Popup`,
+or `Other`. Handlers can now apply different policies to requests for background
+tabs and popup windows. Code that constructs `NewWindowRequest` values, for
+example in tests, must supply the new field. See
+[host callback contracts](../introduction/application-api.md#host-callback-contracts).
+
 ## 0.7.0
 
 0.7.0 simplifies project creation and runtime setup, consolidates platform
