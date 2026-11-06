@@ -109,7 +109,7 @@ async fn[X] Page::initialize_scoped(
   client : @client.CdpClient,
   timeout_ms : Int32,
 ) -> Page {
-  errdefer client.close()
+  errdefer @async.protect_from_cancel(() => client.close())
   let page = Page::initialize(client, timeout_ms)
   tasks.add_defer(() => @async.protect_from_cancel(() => page.close()))
   page

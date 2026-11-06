@@ -110,7 +110,7 @@ async fn verify_windows_executable(path : String) -> Unit {
 async fn create_windows_zip(source : String, destination : String) -> Unit {
   let staging = destination + ".staging.zip"
   remove_tree(staging)
-  errdefer (remove_tree(staging) catch { _ => () })
+  errdefer discard_tree(staging)
   let script =
     #|& {
     #|  $ErrorActionPreference = "Stop"
@@ -155,7 +155,7 @@ async fn package_windows(
   let staging = windows_staging_path(spec)
   remove_tree(staging)
   ensure_dir(staging)
-  errdefer (remove_tree(staging) catch { _ => () })
+  errdefer discard_tree(staging)
   let name = executable_name(spec.product_name) + ".exe"
   let staged_executable = path_join(staging, name)
   copy_file(spec.executable, staged_executable)

@@ -30,7 +30,7 @@ async fn setup_downloaded_cef(
 ) -> Unit {
   let temp_dir = make_temp_dir()
   let archive_path = path_join(temp_dir, name + ".tar.bz2")
-  errdefer (remove_tree(temp_dir) catch { _ => () })
+  errdefer discard_tree(temp_dir)
   download_file(archive_url(base_url, name), archive_path, sha256)
   extract_tar_bz2(archive_path, temp_dir)
   let extracted_root = find_extracted_root(temp_dir, name, platform)

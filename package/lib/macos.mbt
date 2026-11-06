@@ -428,7 +428,7 @@ fn default_macos_entitlements(allow_untrusted_libraries~ : Bool) -> String {
 async fn create_macos_zip(app : String, destination : String) -> Unit {
   let staging = destination + ".staging"
   remove_tree(staging)
-  errdefer (remove_tree(staging) catch { _ => () })
+  errdefer discard_tree(staging)
   run_macos_tool(
     "/usr/bin/ditto",
     ["-c", "-k", "--sequesterRsrc", "--keepParent", app, staging],
@@ -450,12 +450,8 @@ async fn create_macos_dmg(
   remove_tree(staging)
   ensure_dir(root)
   errdefer {
-    remove_tree(root) catch {
-      _ => ()
-    }
-    remove_tree(staging) catch {
-      _ => ()
-    }
+    discard_tree(root)
+    discard_tree(staging)
   }
   copy_tree(app, path_join(root, spec.product_name + ".app"))
   @async_fs.symlink(target="/Applications", path_join(root, "Applications")) catch {
@@ -574,7 +570,7 @@ async fn package_macos(
   let resources = path_join(contents, "Resources")
   let frameworks = path_join(contents, "Frameworks")
   remove_tree(staging_root)
-  errdefer (remove_tree(staging_root) catch { _ => () })
+  errdefer discard_tree(staging_root)
   for directory in [macos, resources, frameworks] {
     ensure_dir(directory)
   }

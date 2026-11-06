@@ -29,7 +29,7 @@ async fn write_cef_fixture(root : String, platform : ProtonPlatform) -> Unit {
 ///|
 async test "CEF SDK preparation validates the extracted archive" {
   let temp = test_cef_fixture_root()
-  defer (remove_tree(temp) catch { _ => () })
+  defer discard_tree(temp)
   let source = path_join(temp, "source")
   let sdk = path_join(temp, "sdk")
   @async_fs.mkdir(source)
@@ -54,7 +54,7 @@ async test "CEF SDK preparation validates the extracted archive" {
 ///|
 async test "CEF SDK preparation copies one validated SDK without markers" {
   let temp = test_cef_fixture_root()
-  defer (remove_tree(temp) catch { _ => () })
+  defer discard_tree(temp)
   let source = path_join(temp, "source")
   let sdk = path_join(temp, "sdk")
   let platform = darwin_arm64_platform()
@@ -74,7 +74,7 @@ async test "CEF SDK preparation copies one validated SDK without markers" {
 ///|
 async test "CEF validation rejects empty artifacts" {
   let temp = test_cef_fixture_root()
-  defer (remove_tree(temp) catch { _ => () })
+  defer discard_tree(temp)
   let platform = darwin_arm64_platform()
   write_cef_fixture(temp, platform)
   let empty = path_join(temp, installed_cef_relative_files(platform)[0])
@@ -85,7 +85,7 @@ async test "CEF validation rejects empty artifacts" {
 ///|
 async test "runtime assembly replaces an incomplete staging layout" {
   let temp = test_cef_fixture_root()
-  defer (remove_tree(temp) catch { _ => () })
+  defer discard_tree(temp)
   let cef_root = path_join(temp, "cef")
   let runtime = path_join(temp, "runtime")
   let platforms = ["darwin-arm64", "linux-x64"]
@@ -117,7 +117,7 @@ async test "runtime assembly replaces an incomplete staging layout" {
 ///|
 async test "one publish replaces an invalid installation" {
   let temp = test_cef_fixture_root()
-  defer (remove_tree(temp) catch { _ => () })
+  defer discard_tree(temp)
   let target = path_join(temp, "target")
   let staging = path_join(temp, "staging")
   @async_fs.mkdir(target)
@@ -140,7 +140,7 @@ async test "one publish replaces an invalid installation" {
 ///|
 async test "installation lock serializes one runtime identity" {
   let temp = test_cef_fixture_root()
-  defer (remove_tree(temp) catch { _ => () })
+  defer discard_tree(temp)
   let target = path_join(temp, "runtime")
   let first = acquire_install_lock(target)
   let first_locked = Ref(true)
@@ -170,7 +170,7 @@ async test "installation lock serializes one runtime identity" {
 ///|
 async test "subprocess validation rejects empty and non-executable installations" {
   let temp = test_cef_fixture_root()
-  defer (remove_tree(temp) catch { _ => () })
+  defer discard_tree(temp)
   let subprocess = path_join(temp, "cef_process")
   assert_false(subprocess_is_valid(subprocess))
   @async_fs.write_file(subprocess, "", create_mode=CreateOrTruncate)
@@ -207,7 +207,7 @@ async test "subprocess validation rejects empty and non-executable installations
 ///|
 async test "setup reuses a complete runtime and subprocess without project state" {
   let temp = test_cef_fixture_root()
-  defer remove_tree(temp)
+  defer @async.protect_from_cancel(() => remove_tree(temp))
   let home_key = if @path.sep == '\\' { "USERPROFILE" } else { "HOME" }
   let previous_home = @env.get_env_var(home_key)
   let previous_store = @env.get_env_var("PROTON_RUNTIME_STORE")

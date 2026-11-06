@@ -555,7 +555,7 @@ async test "download does not require permission to list the parent directory" {
   let root = @fs.tmpdir(prefix="proton-net-download-")
   defer @fs.rmdir(root, recursive=true)
   @fs.chmod(root, 0o300)
-  defer @fs.chmod(root, 0o700)
+  defer @async.protect_from_cancel(() => @fs.chmod(root, 0o700))
   with_download_server(
     connection => {
       ignore(connection.read_until("\r\n\r\n"))
@@ -582,12 +582,12 @@ async test "download preserves Windows extended and junction paths to dotted dir
   let parent = extended + "\\folder."
   @fs.mkdir(parent)
   // Keep backslashes: async's recursive rmdir joins children with '/'.
-  defer {
+  defer @async.protect_from_cancel(() => {
     for name in @fs.readdir(parent) {
       @fs.remove(parent + "\\" + name)
     }
     @fs.rmdir(parent)
-  }
+  })
   let junction = absolute + "\\alias"
   // async creates an NTFS junction for an existing local directory target.
   @fs.symlink(target=parent, junction)

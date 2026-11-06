@@ -428,6 +428,15 @@ async fn remove_tree(path : String) -> Unit {
 }
 
 ///|
+/// Best-effort cleanup for `defer`/`errdefer`: finishes the removal even while
+/// the task is being cancelled, and ignores its failure.
+async fn discard_tree(path : String) -> Unit nocancel {
+  @async.protect_from_cancel(() => remove_tree(path)) catch {
+    _ => ()
+  }
+}
+
+///|
 async fn copy_file(source : String, destination : String) -> Unit {
   guard path_is_file(source) else {
     raise PackagePlanError::MissingInput(path=source)
@@ -548,16 +557,19 @@ async fn promote(source : String, destination : String) -> Unit {
   if had_destination {
     rename_package_path(destination, backup)
   }
+  // Restoring the previous package must finish even under cancellation.
   {
-    errdefer (if had_destination && path_exists(backup) {
-      rename_package_path(backup, destination) catch {
-        rollback_error =>
-          raise PackageFileSystemError::Copy(
-            source~,
-            destination~,
-            detail="package promotion failed and restore failed: " +
-              @debug.render(Repr(rollback_error)),
-          )
+    errdefer @async.protect_from_cancel(() => {
+      if had_destination && path_exists(backup) {
+        rename_package_path(backup, destination) catch {
+          rollback_error =>
+            raise PackageFileSystemError::Copy(
+              source~,
+              destination~,
+              detail="package promotion failed and restore failed: " +
+                @debug.render(Repr(rollback_error)),
+            )
+        }
       }
     })
     rename_package_path(source, destination)

@@ -192,3 +192,12 @@ async fn remove_tree(path : String) -> Unit {
     )
   }
 }
+
+///|
+/// Best-effort cleanup for `defer`/`errdefer`: finishes the removal even while
+/// the task is being cancelled, and ignores its failure.
+async fn discard_tree(path : String) -> Unit nocancel {
+  @async.protect_from_cancel(() => remove_tree(path)) catch {
+    _ => ()
+  }
+}

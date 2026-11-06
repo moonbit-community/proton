@@ -248,7 +248,7 @@ async test "signing scan orders nested bundles inside-out" {
 async test "macOS packaging signs every code object in a resource tree" {
   guard current_package_host() is Macos else { return }
   let root = @async_fs.tmpdir(prefix="proton-package-sign-tree-")
-  defer (remove_tree(root) catch { _ => () })
+  defer discard_tree(root)
   let source = path_join(root, "main.c")
   @async_fs.write_file(source, "int main(void) { return 0; }")
   let executable = path_join(root, "main")

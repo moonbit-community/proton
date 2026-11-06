@@ -64,7 +64,7 @@ async fn[T] run_with_cleanup(
   cleanup : async () -> Unit,
 ) -> T {
   let value = {
-    errdefer (cleanup() catch { _ => () })
+    errdefer (@async.protect_from_cancel(cleanup) catch { _ => () })
     action()
   }
   cleanup()
