@@ -2,13 +2,14 @@
 /// Raised when a system preference query cannot be answered. The query name
 /// identifies the failing read; unsupported platforms and platforms whose
 /// preference source is unavailable both report here instead of a default.
+#derive(Debug, Eq)
 pub(all) suberror SystemPreferencesError {
   SystemPreferencesUnavailable(
     query~ : String,
     status~ : Int32,
     detail~ : String
   )
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend SystemPreferencesError with Eq::{not_equal, equal}

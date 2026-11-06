@@ -10,29 +10,35 @@ import {
 // Errors
 
 // Types and methods
-type ButtonsRequest derive(ToJson, @json.FromJson)
-pub fn ButtonsRequest::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
-pub fn ButtonsRequest::to_json(Self) -> Json
+#derive(@json.FromJson, @json.ToJson)
+type ButtonsRequest
+pub fn ButtonsRequest::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn ButtonsRequest::to_json(Self) -> @json.Json
 
-type JumpListRequest derive(ToJson, @json.FromJson)
-pub fn JumpListRequest::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
-pub fn JumpListRequest::to_json(Self) -> Json
+#derive(@json.FromJson, @json.ToJson)
+type JumpListRequest
+pub fn JumpListRequest::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn JumpListRequest::to_json(Self) -> @json.Json
 
-type OverlayRequest derive(ToJson, @json.FromJson)
-pub fn OverlayRequest::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
-pub fn OverlayRequest::to_json(Self) -> Json
+#derive(@json.FromJson, @json.ToJson)
+type OverlayRequest
+pub fn OverlayRequest::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn OverlayRequest::to_json(Self) -> @json.Json
 
-type ProgressRequest derive(ToJson, @json.FromJson)
-pub fn ProgressRequest::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
-pub fn ProgressRequest::to_json(Self) -> Json
+#derive(@json.FromJson, @json.ToJson)
+type ProgressRequest
+pub fn ProgressRequest::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn ProgressRequest::to_json(Self) -> @json.Json
 
-type Reply derive(ToJson, @json.FromJson)
-pub fn Reply::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
-pub fn Reply::to_json(Self) -> Json
+#derive(@json.FromJson, @json.ToJson)
+type Reply
+pub fn Reply::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn Reply::to_json(Self) -> @json.Json
 
-type TooltipRequest derive(ToJson, @json.FromJson)
-pub fn TooltipRequest::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
-pub fn TooltipRequest::to_json(Self) -> Json
+#derive(@json.FromJson, @json.ToJson)
+type TooltipRequest
+pub fn TooltipRequest::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn TooltipRequest::to_json(Self) -> @json.Json
 
 // Type aliases
 

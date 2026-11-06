@@ -7,6 +7,7 @@
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct LogLogEntry {
   source : String
   level : String
@@ -19,7 +20,7 @@ pub(all) struct LogLogEntry {
   network_request_id : NetworkRequestId?
   worker_id : String?
   args : Array[RuntimeRemoteObject]?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend LogLogEntry with Eq::{not_equal, equal}
@@ -111,10 +112,11 @@ pub fn LogLogEntry::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct LogViolationSetting {
   name : String
   threshold : Double
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend LogViolationSetting with Eq::{not_equal, equal}
@@ -210,9 +212,10 @@ pub fn log_enable_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct LogStartViolationsReportParams {
   config : Array[LogViolationSetting]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend LogStartViolationsReportParams with Eq::{not_equal, equal}
@@ -287,9 +290,10 @@ pub fn log_stop_violations_report_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct LogEntryAddedEventParams {
   entry : LogLogEntry
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend LogEntryAddedEventParams with Eq::{not_equal, equal}

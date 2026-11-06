@@ -1,5 +1,6 @@
 ///|
 /// Geometry and scaling information for the monitor containing a window.
+#derive(Debug, Eq)
 pub(all) struct WindowMonitor {
   x : Int32
   y : Int32
@@ -10,7 +11,7 @@ pub(all) struct WindowMonitor {
   work_width : Int32
   work_height : Int32
   scale_factor_percent : Int32
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend WindowMonitor with Eq::{not_equal, equal}
@@ -20,10 +21,11 @@ pub extend WindowMonitor with Debug::{to_repr}
 
 ///|
 /// Describes the effective native window chrome theme.
+#derive(Debug, Eq)
 pub(all) enum WindowTheme {
   Light
   Dark
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend WindowTheme with Eq::{not_equal, equal}
@@ -36,6 +38,7 @@ pub extend WindowTheme with Debug::{to_repr}
 ///
 /// `theme` is the effective `Light` or `Dark` theme after resolving the
 /// window's configured `WindowThemePreference`.
+#derive(Debug, Eq)
 pub(all) struct WindowState {
   x : Int32
   y : Int32
@@ -50,7 +53,7 @@ pub(all) struct WindowState {
   fullscreen : Bool
   always_on_top : Bool
   theme : WindowTheme
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend WindowState with Eq::{not_equal, equal}
@@ -60,13 +63,14 @@ pub extend WindowState with Debug::{to_repr}
 
 ///|
 /// A point-in-time snapshot of a window's main browser page.
+#derive(Debug, Eq)
 pub(all) struct BrowserState {
   url : String
   title : String
   is_loading : Bool
   can_go_back : Bool
   can_go_forward : Bool
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend BrowserState with Eq::{not_equal, equal}
@@ -76,6 +80,7 @@ pub extend BrowserState with Debug::{to_repr}
 
 ///|
 /// Information about one connected display.
+#derive(Debug, Eq)
 pub(all) struct ScreenInfo {
   id : Int32
   x : Int32
@@ -88,7 +93,7 @@ pub(all) struct ScreenInfo {
   work_height : Int32
   scale_factor_percent : Int32
   is_primary : Bool
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend ScreenInfo with Eq::{not_equal, equal}
@@ -98,6 +103,7 @@ pub extend ScreenInfo with Debug::{to_repr}
 
 ///|
 /// A point-in-time web contents view state snapshot.
+#derive(Debug, Eq)
 pub(all) struct ViewState {
   x : Int32
   y : Int32
@@ -105,7 +111,7 @@ pub(all) struct ViewState {
   height : Int32
   visible : Bool
   z_order : Int32
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend ViewState with Eq::{not_equal, equal}
@@ -115,6 +121,7 @@ pub extend ViewState with Debug::{to_repr}
 
 ///|
 /// Structured information about a bridge bootstrap or runtime failure.
+#derive(Debug, Eq)
 pub(all) struct BridgeDiagnostic {
   stage : String
   code : String
@@ -129,7 +136,7 @@ pub(all) struct BridgeDiagnostic {
   stack : String?
   additional_failure_count : Int32?
   details_truncated : Bool
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend BridgeDiagnostic with Eq::{not_equal, equal}
@@ -140,6 +147,7 @@ pub extend BridgeDiagnostic with Debug::{to_repr}
 ///|
 /// One update from an active page search. The selection rectangle uses the
 /// target web contents coordinate space.
+#derive(Debug, Eq)
 pub(all) struct FindInPageResult {
   request_id : Int32
   active_match_ordinal : Int32
@@ -149,7 +157,7 @@ pub(all) struct FindInPageResult {
   selection_width : Int32
   selection_height : Int32
   final_update : Bool
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend FindInPageResult with Eq::{not_equal, equal}
@@ -159,6 +167,7 @@ pub extend FindInPageResult with Debug::{to_repr}
 
 ///|
 /// The kind of browser task represented by a metric.
+#derive(Debug, Eq)
 pub(all) enum AppTaskType {
   Unknown
   /// The application's own browser process.
@@ -175,7 +184,7 @@ pub(all) enum AppTaskType {
   SandboxHelper
   /// A dedicated, shared, or service worker task.
   Worker
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend AppTaskType with Eq::{not_equal, equal}
@@ -189,6 +198,7 @@ pub extend AppTaskType with Debug::{to_repr}
 /// Multiple tasks can share a process and repeat its full CPU and memory
 /// usage. These values are not per-task usage and must not be summed across
 /// records. The task ID is not a PID; no process grouping key is available.
+#derive(Debug, Eq)
 pub(all) struct AppTaskMetric {
   /// CEF's task identifier, stable for the lifetime of the task; not a PID.
   task_id : Int64
@@ -203,7 +213,7 @@ pub(all) struct AppTaskMetric {
   /// Platform task name, such as `Network Service`; empty when Chromium has
   /// none for the task.
   name : String
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend AppTaskMetric with Eq::{not_equal, equal}

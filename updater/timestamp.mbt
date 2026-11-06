@@ -8,9 +8,10 @@
 ///
 /// Accepting offsets would mean converting before comparing, and a freshness
 /// check that silently mis-converts is a check that quietly stops working.
+#derive(Eq, Debug)
 pub struct Timestamp {
   text : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend Timestamp with Eq::{not_equal, equal}

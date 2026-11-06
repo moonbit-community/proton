@@ -7,9 +7,10 @@
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct EmulationDevicePosture {
   type_ : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend EmulationDevicePosture with Eq::{not_equal, equal}
@@ -47,9 +48,10 @@ pub fn EmulationDevicePosture::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct EmulationDisabledImageType {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend EmulationDisabledImageType with Eq::{not_equal, equal}
@@ -91,11 +93,12 @@ pub fn EmulationDisabledImageType::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct EmulationDisplayFeature {
   orientation : String
   offset : Int32
   mask_length : Int32
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend EmulationDisplayFeature with Eq::{not_equal, equal}
@@ -143,10 +146,11 @@ pub fn EmulationDisplayFeature::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct EmulationMediaFeature {
   name : String
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend EmulationMediaFeature with Eq::{not_equal, equal}
@@ -188,9 +192,10 @@ pub fn EmulationMediaFeature::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct EmulationPressureMetadata {
   available : Bool?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend EmulationPressureMetadata with Eq::{not_equal, equal}
@@ -236,9 +241,10 @@ pub fn EmulationPressureMetadata::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct EmulationPressureSource {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend EmulationPressureSource with Eq::{not_equal, equal}
@@ -276,9 +282,10 @@ pub fn EmulationPressureSource::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct EmulationPressureState {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend EmulationPressureState with Eq::{not_equal, equal}
@@ -316,6 +323,7 @@ pub fn EmulationPressureState::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct EmulationSafeAreaInsets {
   top : Int32?
   top_max : Int32?
@@ -325,7 +333,7 @@ pub(all) struct EmulationSafeAreaInsets {
   bottom_max : Int32?
   right : Int32?
   right_max : Int32?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend EmulationSafeAreaInsets with Eq::{not_equal, equal}
@@ -395,9 +403,10 @@ pub fn EmulationSafeAreaInsets::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct EmulationScreenId {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend EmulationScreenId with Eq::{not_equal, equal}
@@ -435,6 +444,7 @@ pub fn EmulationScreenId::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct EmulationScreenInfo {
   left : Int32
   top : Int32
@@ -452,7 +462,7 @@ pub(all) struct EmulationScreenInfo {
   is_primary : Bool
   label : String
   id : EmulationScreenId
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend EmulationScreenInfo with Eq::{not_equal, equal}
@@ -538,10 +548,11 @@ pub fn EmulationScreenInfo::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct EmulationScreenOrientation {
   type_ : String
   angle : Int32
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend EmulationScreenOrientation with Eq::{not_equal, equal}
@@ -587,11 +598,12 @@ pub fn EmulationScreenOrientation::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct EmulationSensorMetadata {
   available : Bool?
   minimum_frequency : Double?
   maximum_frequency : Double?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend EmulationSensorMetadata with Eq::{not_equal, equal}
@@ -645,11 +657,12 @@ pub fn EmulationSensorMetadata::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct EmulationSensorReading {
   single : EmulationSensorReadingSingle?
   xyz : EmulationSensorReadingXYZ?
   quaternion : EmulationSensorReadingQuaternion?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend EmulationSensorReading with Eq::{not_equal, equal}
@@ -708,12 +721,13 @@ pub fn EmulationSensorReading::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct EmulationSensorReadingQuaternion {
   x : Double
   y : Double
   z : Double
   w : Double
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend EmulationSensorReadingQuaternion with Eq::{not_equal, equal}
@@ -763,9 +777,10 @@ pub fn EmulationSensorReadingQuaternion::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct EmulationSensorReadingSingle {
   value : Double
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend EmulationSensorReadingSingle with Eq::{not_equal, equal}
@@ -807,11 +822,12 @@ pub fn EmulationSensorReadingSingle::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct EmulationSensorReadingXYZ {
   x : Double
   y : Double
   z : Double
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend EmulationSensorReadingXYZ with Eq::{not_equal, equal}
@@ -859,9 +875,10 @@ pub fn EmulationSensorReadingXYZ::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct EmulationSensorType {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend EmulationSensorType with Eq::{not_equal, equal}
@@ -899,10 +916,11 @@ pub fn EmulationSensorType::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct EmulationUserAgentBrandVersion {
   brand : String
   version : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend EmulationUserAgentBrandVersion with Eq::{not_equal, equal}
@@ -948,6 +966,7 @@ pub fn EmulationUserAgentBrandVersion::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct EmulationUserAgentMetadata {
   brands : Array[EmulationUserAgentBrandVersion]?
   full_version_list : Array[EmulationUserAgentBrandVersion]?
@@ -960,7 +979,7 @@ pub(all) struct EmulationUserAgentMetadata {
   bitness : String?
   wow64 : Bool?
   form_factors : Array[String]?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend EmulationUserAgentMetadata with Eq::{not_equal, equal}
@@ -1069,9 +1088,10 @@ pub fn EmulationUserAgentMetadata::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct EmulationVirtualTimePolicy {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend EmulationVirtualTimePolicy with Eq::{not_equal, equal}
@@ -1113,12 +1133,13 @@ pub fn EmulationVirtualTimePolicy::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct EmulationWorkAreaInsets {
   top : Int32?
   left : Int32?
   bottom : Int32?
   right : Int32?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend EmulationWorkAreaInsets with Eq::{not_equal, equal}
@@ -1172,6 +1193,7 @@ pub fn EmulationWorkAreaInsets::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct EmulationAddScreenParams {
   left : Int32
   top : Int32
@@ -1183,7 +1205,7 @@ pub(all) struct EmulationAddScreenParams {
   color_depth : Int32?
   label : String?
   is_internal : Bool?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend EmulationAddScreenParams with Eq::{not_equal, equal}
@@ -1233,9 +1255,10 @@ pub fn EmulationAddScreenParams::to_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct EmulationAddScreenResult {
   screen_info : EmulationScreenInfo
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend EmulationAddScreenResult with Eq::{not_equal, equal}
@@ -1300,9 +1323,10 @@ pub fn emulation_add_screen_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct EmulationCanEmulateResult {
   result : Bool
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend EmulationCanEmulateResult with Eq::{not_equal, equal}
@@ -1485,9 +1509,10 @@ pub fn emulation_clear_idle_override_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct EmulationGetOverriddenSensorInformationParams {
   type_ : EmulationSensorType
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend EmulationGetOverriddenSensorInformationParams with Eq::{
@@ -1519,9 +1544,10 @@ pub fn EmulationGetOverriddenSensorInformationParams::to_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct EmulationGetOverriddenSensorInformationResult {
   requested_sampling_frequency : Double
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend EmulationGetOverriddenSensorInformationResult with Eq::{
@@ -1593,9 +1619,10 @@ pub fn emulation_get_overridden_sensor_information_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct EmulationGetScreenInfosResult {
   screen_infos : Array[EmulationScreenInfo]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend EmulationGetScreenInfosResult with Eq::{not_equal, equal}
@@ -1661,9 +1688,10 @@ pub fn emulation_get_screen_infos_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct EmulationRemoveScreenParams {
   screen_id : EmulationScreenId
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend EmulationRemoveScreenParams with Eq::{not_equal, equal}
@@ -1738,9 +1766,10 @@ pub fn emulation_reset_page_scale_factor_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct EmulationSetAutoDarkModeOverrideParams {
   enabled : Bool?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend EmulationSetAutoDarkModeOverrideParams with Eq::{not_equal, equal}
@@ -1799,9 +1828,10 @@ pub fn emulation_set_auto_dark_mode_override_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct EmulationSetAutomationOverrideParams {
   enabled : Bool
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend EmulationSetAutomationOverrideParams with Eq::{not_equal, equal}
@@ -1858,9 +1888,10 @@ pub fn emulation_set_automation_override_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct EmulationSetCPUThrottlingRateParams {
   rate : Double
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend EmulationSetCPUThrottlingRateParams with Eq::{not_equal, equal}
@@ -1917,9 +1948,10 @@ pub fn emulation_set_cputhrottling_rate_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct EmulationSetDataSaverOverrideParams {
   data_saver_enabled : Bool?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend EmulationSetDataSaverOverrideParams with Eq::{not_equal, equal}
@@ -1978,9 +2010,10 @@ pub fn emulation_set_data_saver_override_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct EmulationSetDefaultBackgroundColorOverrideParams {
   color : DOMRGBA?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend EmulationSetDefaultBackgroundColorOverrideParams with Eq::{
@@ -2042,6 +2075,7 @@ pub fn emulation_set_default_background_color_override_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct EmulationSetDeviceMetricsOverrideParams {
   width : Int32
   height : Int32
@@ -2058,7 +2092,7 @@ pub(all) struct EmulationSetDeviceMetricsOverrideParams {
   display_feature : EmulationDisplayFeature?
   device_posture : EmulationDevicePosture?
   scrollbar_type : String?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend EmulationSetDeviceMetricsOverrideParams with Eq::{not_equal, equal}
@@ -2151,9 +2185,10 @@ pub fn emulation_set_device_metrics_override_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct EmulationSetDevicePostureOverrideParams {
   posture : EmulationDevicePosture
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend EmulationSetDevicePostureOverrideParams with Eq::{not_equal, equal}
@@ -2210,9 +2245,10 @@ pub fn emulation_set_device_posture_override_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct EmulationSetDisabledImageTypesParams {
   image_types : Array[EmulationDisabledImageType]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend EmulationSetDisabledImageTypesParams with Eq::{not_equal, equal}
@@ -2271,9 +2307,10 @@ pub fn emulation_set_disabled_image_types_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct EmulationSetDisplayFeaturesOverrideParams {
   features : Array[EmulationDisplayFeature]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend EmulationSetDisplayFeaturesOverrideParams with Eq::{not_equal, equal}
@@ -2330,9 +2367,10 @@ pub fn emulation_set_display_features_override_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct EmulationSetDocumentCookieDisabledParams {
   disabled : Bool
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend EmulationSetDocumentCookieDisabledParams with Eq::{not_equal, equal}
@@ -2389,10 +2427,11 @@ pub fn emulation_set_document_cookie_disabled_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct EmulationSetEmitTouchEventsForMouseParams {
   enabled : Bool
   configuration : String?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend EmulationSetEmitTouchEventsForMouseParams with Eq::{not_equal, equal}
@@ -2452,10 +2491,11 @@ pub fn emulation_set_emit_touch_events_for_mouse_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct EmulationSetEmulatedMediaParams {
   media : String?
   features : Array[EmulationMediaFeature]?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend EmulationSetEmulatedMediaParams with Eq::{not_equal, equal}
@@ -2517,9 +2557,10 @@ pub fn emulation_set_emulated_media_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct EmulationSetEmulatedOSTextScaleParams {
   scale : Double?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend EmulationSetEmulatedOSTextScaleParams with Eq::{not_equal, equal}
@@ -2578,9 +2619,10 @@ pub fn emulation_set_emulated_ostext_scale_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct EmulationSetEmulatedVisionDeficiencyParams {
   type_ : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend EmulationSetEmulatedVisionDeficiencyParams with Eq::{
@@ -2640,9 +2682,10 @@ pub fn emulation_set_emulated_vision_deficiency_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct EmulationSetFocusEmulationEnabledParams {
   enabled : Bool
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend EmulationSetFocusEmulationEnabledParams with Eq::{not_equal, equal}
@@ -2699,6 +2742,7 @@ pub fn emulation_set_focus_emulation_enabled_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct EmulationSetGeolocationOverrideParams {
   latitude : Double?
   longitude : Double?
@@ -2707,7 +2751,7 @@ pub(all) struct EmulationSetGeolocationOverrideParams {
   altitude_accuracy : Double?
   heading : Double?
   speed : Double?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend EmulationSetGeolocationOverrideParams with Eq::{not_equal, equal}
@@ -2784,9 +2828,10 @@ pub fn emulation_set_geolocation_override_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct EmulationSetHardwareConcurrencyOverrideParams {
   hardware_concurrency : Int32
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend EmulationSetHardwareConcurrencyOverrideParams with Eq::{
@@ -2848,10 +2893,11 @@ pub fn emulation_set_hardware_concurrency_override_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct EmulationSetIdleOverrideParams {
   is_user_active : Bool
   is_screen_unlocked : Bool
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend EmulationSetIdleOverrideParams with Eq::{not_equal, equal}
@@ -2905,9 +2951,10 @@ pub fn emulation_set_idle_override_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct EmulationSetLocaleOverrideParams {
   locale : String?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend EmulationSetLocaleOverrideParams with Eq::{not_equal, equal}
@@ -2966,9 +3013,10 @@ pub fn emulation_set_locale_override_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct EmulationSetNavigatorOverridesParams {
   platform : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend EmulationSetNavigatorOverridesParams with Eq::{not_equal, equal}
@@ -3025,9 +3073,10 @@ pub fn emulation_set_navigator_overrides_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct EmulationSetPageScaleFactorParams {
   page_scale_factor : Double
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend EmulationSetPageScaleFactorParams with Eq::{not_equal, equal}
@@ -3084,11 +3133,12 @@ pub fn emulation_set_page_scale_factor_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct EmulationSetPressureDataOverrideParams {
   source : EmulationPressureSource
   state : EmulationPressureState
   own_contribution_estimate : Double?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend EmulationSetPressureDataOverrideParams with Eq::{not_equal, equal}
@@ -3149,11 +3199,12 @@ pub fn emulation_set_pressure_data_override_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct EmulationSetPressureSourceOverrideEnabledParams {
   enabled : Bool
   source : EmulationPressureSource
   metadata : EmulationPressureMetadata?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend EmulationSetPressureSourceOverrideEnabledParams with Eq::{
@@ -3217,10 +3268,11 @@ pub fn emulation_set_pressure_source_override_enabled_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct EmulationSetPressureStateOverrideParams {
   source : EmulationPressureSource
   state : EmulationPressureState
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend EmulationSetPressureStateOverrideParams with Eq::{not_equal, equal}
@@ -3278,9 +3330,10 @@ pub fn emulation_set_pressure_state_override_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct EmulationSetPrimaryScreenParams {
   screen_id : EmulationScreenId
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend EmulationSetPrimaryScreenParams with Eq::{not_equal, equal}
@@ -3337,9 +3390,10 @@ pub fn emulation_set_primary_screen_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct EmulationSetSafeAreaInsetsOverrideParams {
   insets : EmulationSafeAreaInsets
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend EmulationSetSafeAreaInsetsOverrideParams with Eq::{not_equal, equal}
@@ -3396,9 +3450,10 @@ pub fn emulation_set_safe_area_insets_override_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct EmulationSetScriptExecutionDisabledParams {
   value : Bool
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend EmulationSetScriptExecutionDisabledParams with Eq::{not_equal, equal}
@@ -3455,9 +3510,10 @@ pub fn emulation_set_script_execution_disabled_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct EmulationSetScrollbarsHiddenParams {
   hidden : Bool
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend EmulationSetScrollbarsHiddenParams with Eq::{not_equal, equal}
@@ -3514,11 +3570,12 @@ pub fn emulation_set_scrollbars_hidden_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct EmulationSetSensorOverrideEnabledParams {
   enabled : Bool
   type_ : EmulationSensorType
   metadata : EmulationSensorMetadata?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend EmulationSetSensorOverrideEnabledParams with Eq::{not_equal, equal}
@@ -3579,10 +3636,11 @@ pub fn emulation_set_sensor_override_enabled_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct EmulationSetSensorOverrideReadingsParams {
   type_ : EmulationSensorType
   reading : EmulationSensorReading
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend EmulationSetSensorOverrideReadingsParams with Eq::{not_equal, equal}
@@ -3640,9 +3698,10 @@ pub fn emulation_set_sensor_override_readings_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct EmulationSetSmallViewportHeightDifferenceOverrideParams {
   difference : Int32
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend EmulationSetSmallViewportHeightDifferenceOverrideParams with Eq::{
@@ -3702,9 +3761,10 @@ pub fn emulation_set_small_viewport_height_difference_override_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct EmulationSetTimezoneOverrideParams {
   timezone_id : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend EmulationSetTimezoneOverrideParams with Eq::{not_equal, equal}
@@ -3761,10 +3821,11 @@ pub fn emulation_set_timezone_override_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct EmulationSetTouchEmulationEnabledParams {
   enabled : Bool
   max_touch_points : Int32?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend EmulationSetTouchEmulationEnabledParams with Eq::{not_equal, equal}
@@ -3824,12 +3885,13 @@ pub fn emulation_set_touch_emulation_enabled_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct EmulationSetUserAgentOverrideParams {
   user_agent : String
   accept_language : String?
   platform : String?
   user_agent_metadata : EmulationUserAgentMetadata?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend EmulationSetUserAgentOverrideParams with Eq::{not_equal, equal}
@@ -3895,12 +3957,13 @@ pub fn emulation_set_user_agent_override_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct EmulationSetVirtualTimePolicyParams {
   policy : EmulationVirtualTimePolicy
   budget : Double?
   max_virtual_time_task_starvation_count : Int32?
   initial_virtual_time : NetworkTimeSinceEpoch?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend EmulationSetVirtualTimePolicyParams with Eq::{not_equal, equal}
@@ -3940,9 +4003,10 @@ pub fn EmulationSetVirtualTimePolicyParams::to_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct EmulationSetVirtualTimePolicyResult {
   virtual_time_ticks_base : Double
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend EmulationSetVirtualTimePolicyResult with Eq::{not_equal, equal}
@@ -4011,10 +4075,11 @@ pub fn emulation_set_virtual_time_policy_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct EmulationSetVisibleSizeParams {
   width : Int32
   height : Int32
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend EmulationSetVisibleSizeParams with Eq::{not_equal, equal}

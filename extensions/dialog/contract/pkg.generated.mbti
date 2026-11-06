@@ -25,73 +25,80 @@ pub let save_file : @proton_contract.Command[FileDialogRequest, FileDialogReply]
 // Errors
 
 // Types and methods
+#derive(Eq, @debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct ConfirmReply {
   confirmed : Bool
-} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+}
 pub fn ConfirmReply::equal(Self, Self) -> Bool
-pub fn ConfirmReply::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn ConfirmReply::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
 pub fn ConfirmReply::not_equal(Self, Self) -> Bool
-pub fn ConfirmReply::to_json(Self) -> Json
+pub fn ConfirmReply::to_json(Self) -> @json.Json
 pub fn ConfirmReply::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct DialogActivity {
   operation : String
   path : String?
   level : String?
-} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+}
 pub fn DialogActivity::equal(Self, Self) -> Bool
-pub fn DialogActivity::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn DialogActivity::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
 pub fn DialogActivity::not_equal(Self, Self) -> Bool
-pub fn DialogActivity::to_json(Self) -> Json
+pub fn DialogActivity::to_json(Self) -> @json.Json
 pub fn DialogActivity::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct ErrorBoxRequest {
   title : String
   content : String
-} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+}
 pub fn ErrorBoxRequest::equal(Self, Self) -> Bool
-pub fn ErrorBoxRequest::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn ErrorBoxRequest::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
 pub fn ErrorBoxRequest::not_equal(Self, Self) -> Bool
-pub fn ErrorBoxRequest::to_json(Self) -> Json
+pub fn ErrorBoxRequest::to_json(Self) -> @json.Json
 pub fn ErrorBoxRequest::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct FileDialogReply {
   path : String?
-} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+}
 pub fn FileDialogReply::equal(Self, Self) -> Bool
-pub fn FileDialogReply::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn FileDialogReply::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
 pub fn FileDialogReply::not_equal(Self, Self) -> Bool
-pub fn FileDialogReply::to_json(Self) -> Json
+pub fn FileDialogReply::to_json(Self) -> @json.Json
 pub fn FileDialogReply::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct FileDialogRequest {
   title : String?
   path : String?
-} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+}
 pub fn FileDialogRequest::equal(Self, Self) -> Bool
-pub fn FileDialogRequest::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn FileDialogRequest::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
 pub fn FileDialogRequest::not_equal(Self, Self) -> Bool
-pub fn FileDialogRequest::to_json(Self) -> Json
+pub fn FileDialogRequest::to_json(Self) -> @json.Json
 pub fn FileDialogRequest::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct MessageReply {
   acknowledged : Bool
-} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+}
 pub fn MessageReply::equal(Self, Self) -> Bool
-pub fn MessageReply::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn MessageReply::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
 pub fn MessageReply::not_equal(Self, Self) -> Bool
-pub fn MessageReply::to_json(Self) -> Json
+pub fn MessageReply::to_json(Self) -> @json.Json
 pub fn MessageReply::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct MessageRequest {
   message : String
   title : String?
   level : String?
-} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+}
 pub fn MessageRequest::equal(Self, Self) -> Bool
-pub fn MessageRequest::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn MessageRequest::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
 pub fn MessageRequest::not_equal(Self, Self) -> Bool
-pub fn MessageRequest::to_json(Self) -> Json
+pub fn MessageRequest::to_json(Self) -> @json.Json
 pub fn MessageRequest::to_repr(Self) -> @debug.Repr
 
 // Type aliases

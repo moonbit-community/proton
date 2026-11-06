@@ -5,12 +5,13 @@
 /// string rather than a boolean because the three answers are genuinely
 /// different: an application with no channel configured has not been told
 /// where to look, which is not the same as having looked and found nothing.
+#derive(ToJson, FromJson, Debug, Eq)
 pub(all) struct UpdateStatus {
   state : String
   version : String?
   notes_url : String?
   size : Int64?
-} derive(ToJson, FromJson, Debug, Eq)
+}
 
 ///|
 pub extend UpdateStatus with Eq::{not_equal, equal}
@@ -26,9 +27,10 @@ pub extend UpdateStatus with FromJson::{from_json}
 
 ///|
 /// The authenticated update prepared for application-controlled installation.
+#derive(ToJson, FromJson, Debug, Eq)
 pub(all) struct UpdateDownloaded {
   version : String
-} derive(ToJson, FromJson, Debug, Eq)
+}
 
 ///|
 pub extend UpdateDownloaded with Eq::{not_equal, equal}
@@ -47,10 +49,11 @@ pub extend UpdateDownloaded with FromJson::{from_json}
 ///
 /// `total` comes from the signed manifest rather than from the transfer, so a
 /// server cannot make a download look finished by claiming a smaller size.
+#derive(ToJson, FromJson, Debug, Eq)
 pub(all) struct UpdateProgress {
   received : Int64
   total : Int64
-} derive(ToJson, FromJson, Debug, Eq)
+}
 
 ///|
 pub extend UpdateProgress with Eq::{not_equal, equal}

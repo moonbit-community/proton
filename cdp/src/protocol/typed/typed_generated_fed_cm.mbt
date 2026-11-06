@@ -7,6 +7,7 @@
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct FedCmAccount {
   account_id : String
   email : String
@@ -18,7 +19,7 @@ pub(all) struct FedCmAccount {
   login_state : FedCmLoginState
   terms_of_service_url : String?
   privacy_policy_url : String?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend FedCmAccount with Eq::{not_equal, equal}
@@ -96,9 +97,10 @@ pub fn FedCmAccount::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct FedCmAccountUrlType {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend FedCmAccountUrlType with Eq::{not_equal, equal}
@@ -136,9 +138,10 @@ pub fn FedCmAccountUrlType::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct FedCmDialogButton {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend FedCmDialogButton with Eq::{not_equal, equal}
@@ -176,9 +179,10 @@ pub fn FedCmDialogButton::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct FedCmDialogType {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend FedCmDialogType with Eq::{not_equal, equal}
@@ -216,9 +220,10 @@ pub fn FedCmDialogType::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct FedCmLoginState {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend FedCmLoginState with Eq::{not_equal, equal}
@@ -256,10 +261,11 @@ pub fn FedCmLoginState::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct FedCmClickDialogButtonParams {
   dialog_id : String
   dialog_button : FedCmDialogButton
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend FedCmClickDialogButtonParams with Eq::{not_equal, equal}
@@ -331,10 +337,11 @@ pub fn fed_cm_disable_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct FedCmDismissDialogParams {
   dialog_id : String
   trigger_cooldown : Bool?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend FedCmDismissDialogParams with Eq::{not_equal, equal}
@@ -390,9 +397,10 @@ pub fn fed_cm_dismiss_dialog_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct FedCmEnableParams {
   disable_rejection_delay : Bool?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend FedCmEnableParams with Eq::{not_equal, equal}
@@ -443,11 +451,12 @@ pub fn fed_cm_enable_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct FedCmOpenUrlParams {
   dialog_id : String
   account_index : Int32
   account_url_type : FedCmAccountUrlType
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend FedCmOpenUrlParams with Eq::{not_equal, equal}
@@ -520,10 +529,11 @@ pub fn fed_cm_reset_cooldown_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct FedCmSelectAccountParams {
   dialog_id : String
   account_index : Int32
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend FedCmSelectAccountParams with Eq::{not_equal, equal}
@@ -577,9 +587,10 @@ pub fn fed_cm_select_account_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct FedCmDialogClosedEventParams {
   dialog_id : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend FedCmDialogClosedEventParams with Eq::{not_equal, equal}
@@ -647,13 +658,14 @@ pub fn fed_cm_dialog_closed_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct FedCmDialogShownEventParams {
   dialog_id : String
   dialog_type : FedCmDialogType
   accounts : Array[FedCmAccount]
   title : String
   subtitle : String?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend FedCmDialogShownEventParams with Eq::{not_equal, equal}

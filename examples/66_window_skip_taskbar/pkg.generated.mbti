@@ -10,13 +10,15 @@ import {
 // Errors
 
 // Types and methods
-type SkipTaskbarReply derive(ToJson, @json.FromJson)
-pub fn SkipTaskbarReply::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
-pub fn SkipTaskbarReply::to_json(Self) -> Json
+#derive(@json.FromJson, @json.ToJson)
+type SkipTaskbarReply
+pub fn SkipTaskbarReply::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn SkipTaskbarReply::to_json(Self) -> @json.Json
 
-type SkipTaskbarRequest derive(ToJson, @json.FromJson)
-pub fn SkipTaskbarRequest::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
-pub fn SkipTaskbarRequest::to_json(Self) -> Json
+#derive(@json.FromJson, @json.ToJson)
+type SkipTaskbarRequest
+pub fn SkipTaskbarRequest::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn SkipTaskbarRequest::to_json(Self) -> @json.Json
 
 // Type aliases
 

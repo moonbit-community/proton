@@ -1,11 +1,12 @@
 ///|
+#derive(FromJson, Eq, Debug)
 struct AsyncAddScenarioProbe {
   url : String
   title : String
   has_bridge : Bool
   has_proxy : Bool
   reply : Int32
-} derive(FromJson, Eq, Debug)
+}
 
 ///|
 pub extend AsyncAddScenarioProbe with Eq::{not_equal, equal}
@@ -17,11 +18,12 @@ pub extend AsyncAddScenarioProbe with Debug::{to_repr}
 pub extend AsyncAddScenarioProbe with FromJson::{from_json}
 
 ///|
+#derive(FromJson, Eq, Debug)
 struct SyncDoubleScenarioReply {
   value : Int32
   doubled : Int32
   source : String
-} derive(FromJson, Eq, Debug)
+}
 
 ///|
 pub extend SyncDoubleScenarioReply with Eq::{not_equal, equal}
@@ -33,11 +35,12 @@ pub extend SyncDoubleScenarioReply with Debug::{to_repr}
 pub extend SyncDoubleScenarioReply with FromJson::{from_json}
 
 ///|
+#derive(FromJson, Eq, Debug)
 struct AsyncSumScenarioReply {
   total : Int32
   waited_ms : Int32
   source : String
-} derive(FromJson, Eq, Debug)
+}
 
 ///|
 pub extend AsyncSumScenarioReply with Eq::{not_equal, equal}
@@ -49,6 +52,7 @@ pub extend AsyncSumScenarioReply with Debug::{to_repr}
 pub extend AsyncSumScenarioReply with FromJson::{from_json}
 
 ///|
+#derive(FromJson, Eq, Debug)
 struct SyncAsyncScenarioProbe {
   url : String
   title : String
@@ -57,7 +61,7 @@ struct SyncAsyncScenarioProbe {
   has_add_proxy : Bool
   doubled : SyncDoubleScenarioReply
   added : AsyncSumScenarioReply
-} derive(FromJson, Eq, Debug)
+}
 
 ///|
 pub extend SyncAsyncScenarioProbe with Eq::{not_equal, equal}
@@ -69,11 +73,12 @@ pub extend SyncAsyncScenarioProbe with Debug::{to_repr}
 pub extend SyncAsyncScenarioProbe with FromJson::{from_json}
 
 ///|
+#derive(FromJson, Eq, Debug)
 struct AttributeEventProbe {
   name : String
   extension : String
   total : Int32
-} derive(FromJson, Eq, Debug)
+}
 
 ///|
 pub extend AttributeEventProbe with Eq::{not_equal, equal}
@@ -85,10 +90,11 @@ pub extend AttributeEventProbe with Debug::{to_repr}
 pub extend AttributeEventProbe with FromJson::{from_json}
 
 ///|
+#derive(FromJson, Eq, Debug)
 struct AttributeReplyProbe {
   total : Int32
   waited_ms : Int32
-} derive(FromJson, Eq, Debug)
+}
 
 ///|
 pub extend AttributeReplyProbe with Eq::{not_equal, equal}
@@ -100,6 +106,7 @@ pub extend AttributeReplyProbe with Debug::{to_repr}
 pub extend AttributeReplyProbe with FromJson::{from_json}
 
 ///|
+#derive(FromJson, Eq, Debug)
 struct AttributeScenarioProbe {
   url : String
   title : String
@@ -108,7 +115,7 @@ struct AttributeScenarioProbe {
   has_event_api : Bool
   reply : AttributeReplyProbe
   events : Array[AttributeEventProbe]
-} derive(FromJson, Eq, Debug)
+}
 
 ///|
 pub extend AttributeScenarioProbe with Eq::{not_equal, equal}

@@ -66,7 +66,7 @@ async fn install_requirement(
     ")",
   )
   let staging_root = create_install_staging(runtime.root)
-  defer (remove_tree(staging_root) catch { _ => () })
+  defer discard_tree(staging_root)
   let staging = InstalledRuntime::{
     root: staging_root,
     sdk_root: path_join(staging_root, "sdk"),

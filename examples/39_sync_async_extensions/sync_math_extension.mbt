@@ -1,7 +1,8 @@
 ///|
+#derive(ToJson, FromJson)
 struct DoublePayload {
   value : Int32
-} derive(ToJson, FromJson)
+}
 
 ///|
 pub extend DoublePayload with ToJson::{to_json}
@@ -10,11 +11,12 @@ pub extend DoublePayload with ToJson::{to_json}
 pub extend DoublePayload with FromJson::{from_json}
 
 ///|
+#derive(ToJson, FromJson)
 struct DoubleReply {
   value : Int32
   doubled : Int32
   source : String
-} derive(ToJson, FromJson)
+}
 
 ///|
 pub extend DoubleReply with ToJson::{to_json}

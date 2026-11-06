@@ -1,5 +1,6 @@
 ///|
 /// Failures while resolving framework-owned application paths.
+#derive(Debug, Eq)
 pub(all) suberror AppPathError {
   MissingApplicationIdentifier
   InvalidIdentifier(identifier~ : String)
@@ -10,7 +11,7 @@ pub(all) suberror AppPathError {
   InvalidPathOverride(kind~ : String, path~ : String, reason~ : String)
   SystemPath(kind~ : String, status~ : Int32, detail~ : String)
   PlatformProbe(status~ : Int32, detail~ : String)
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend AppPathError with Eq::{not_equal, equal}
@@ -56,6 +57,7 @@ pub fn AppPathError::message(self : AppPathError) -> String {
 ///|
 /// Standard application paths corresponding to Electron's high-frequency
 /// `app.getPath` names.
+#derive(Debug, Eq)
 pub(all) enum AppPathKind {
   Home
   AppData
@@ -73,7 +75,7 @@ pub(all) enum AppPathKind {
   Pictures
   Videos
   Recent
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend AppPathKind with Eq::{not_equal, equal}

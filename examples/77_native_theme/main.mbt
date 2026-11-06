@@ -1,7 +1,8 @@
 ///|
+#derive(ToJson, FromJson)
 struct SetWindowThemeRequest {
   source : String
-} derive(ToJson, FromJson)
+}
 
 ///|
 pub extend SetWindowThemeRequest with ToJson::{to_json}
@@ -11,12 +12,13 @@ pub extend SetWindowThemeRequest with FromJson::{from_json}
 
 ///|
 /// One appearance snapshot, in the shape the review page renders.
+#derive(ToJson, FromJson)
 struct ThemeState {
   message : String
   dark_colors : Bool
   high_contrast_colors : Bool
   source : String
-} derive(ToJson, FromJson)
+}
 
 ///|
 pub extend ThemeState with ToJson::{to_json}

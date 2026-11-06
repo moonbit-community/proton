@@ -9,11 +9,12 @@
 /// rejected. Ordering suffixed versions correctly is subtle — `1.0.0-rc.1`
 /// precedes `1.0.0`, and `-rc.10` follows `-rc.2` — and a rule that is subtle
 /// in a comparison this important is better left out than approximated.
+#derive(Eq, Debug)
 pub struct Version {
   major : Int32
   minor : Int32
   patch : Int32
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend Version with Eq::{not_equal, equal}

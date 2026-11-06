@@ -7,10 +7,11 @@
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct OverlayBoxStyle {
   fill_color : DOMRGBA?
   hatch_color : DOMRGBA?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend OverlayBoxStyle with Eq::{not_equal, equal}
@@ -62,9 +63,10 @@ pub fn OverlayBoxStyle::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct OverlayColorFormat {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend OverlayColorFormat with Eq::{not_equal, equal}
@@ -102,10 +104,11 @@ pub fn OverlayColorFormat::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct OverlayContainerQueryContainerHighlightConfig {
   container_border : OverlayLineStyle?
   descendant_border : OverlayLineStyle?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend OverlayContainerQueryContainerHighlightConfig with Eq::{
@@ -164,10 +167,11 @@ pub fn OverlayContainerQueryContainerHighlightConfig::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct OverlayContainerQueryHighlightConfig {
   container_query_container_highlight_config : OverlayContainerQueryContainerHighlightConfig
   node_id : DOMNodeId
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend OverlayContainerQueryHighlightConfig with Eq::{not_equal, equal}
@@ -219,9 +223,10 @@ pub fn OverlayContainerQueryHighlightConfig::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct OverlayContrastAlgorithm {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend OverlayContrastAlgorithm with Eq::{not_equal, equal}
@@ -263,6 +268,7 @@ pub fn OverlayContrastAlgorithm::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct OverlayFlexContainerHighlightConfig {
   container_border : OverlayLineStyle?
   line_separator : OverlayLineStyle?
@@ -272,7 +278,7 @@ pub(all) struct OverlayFlexContainerHighlightConfig {
   row_gap_space : OverlayBoxStyle?
   column_gap_space : OverlayBoxStyle?
   cross_alignment : OverlayLineStyle?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend OverlayFlexContainerHighlightConfig with Eq::{not_equal, equal}
@@ -372,11 +378,12 @@ pub fn OverlayFlexContainerHighlightConfig::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct OverlayFlexItemHighlightConfig {
   base_size_box : OverlayBoxStyle?
   base_size_border : OverlayLineStyle?
   flexibility_arrow : OverlayLineStyle?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend OverlayFlexItemHighlightConfig with Eq::{not_equal, equal}
@@ -439,10 +446,11 @@ pub fn OverlayFlexItemHighlightConfig::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct OverlayFlexNodeHighlightConfig {
   flex_container_highlight_config : OverlayFlexContainerHighlightConfig
   node_id : DOMNodeId
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend OverlayFlexNodeHighlightConfig with Eq::{not_equal, equal}
@@ -492,6 +500,7 @@ pub fn OverlayFlexNodeHighlightConfig::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct OverlayGridHighlightConfig {
   show_grid_extension_lines : Bool?
   show_positive_line_numbers : Bool?
@@ -513,7 +522,7 @@ pub(all) struct OverlayGridHighlightConfig {
   column_hatch_color : DOMRGBA?
   area_border_color : DOMRGBA?
   grid_background_color : DOMRGBA?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend OverlayGridHighlightConfig with Eq::{not_equal, equal}
@@ -686,10 +695,11 @@ pub fn OverlayGridHighlightConfig::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct OverlayGridNodeHighlightConfig {
   grid_highlight_config : OverlayGridHighlightConfig
   node_id : DOMNodeId
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend OverlayGridNodeHighlightConfig with Eq::{not_equal, equal}
@@ -739,6 +749,7 @@ pub fn OverlayGridNodeHighlightConfig::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct OverlayHighlightConfig {
   show_info : Bool?
   show_styles : Bool?
@@ -759,7 +770,7 @@ pub(all) struct OverlayHighlightConfig {
   flex_item_highlight_config : OverlayFlexItemHighlightConfig?
   contrast_algorithm : OverlayContrastAlgorithm?
   container_query_container_highlight_config : OverlayContainerQueryContainerHighlightConfig?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend OverlayHighlightConfig with Eq::{not_equal, equal}
@@ -928,11 +939,12 @@ pub fn OverlayHighlightConfig::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct OverlayHingeConfig {
   rect : DOMRect
   content_color : DOMRGBA?
   outline_color : DOMRGBA?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend OverlayHingeConfig with Eq::{not_equal, equal}
@@ -986,10 +998,11 @@ pub fn OverlayHingeConfig::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct OverlayInspectedElementAnchorConfig {
   node_id : DOMNodeId?
   backend_node_id : DOMBackendNodeId?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend OverlayInspectedElementAnchorConfig with Eq::{not_equal, equal}
@@ -1045,9 +1058,10 @@ pub fn OverlayInspectedElementAnchorConfig::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct OverlayInspectMode {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend OverlayInspectMode with Eq::{not_equal, equal}
@@ -1085,10 +1099,11 @@ pub fn OverlayInspectMode::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct OverlayIsolatedElementHighlightConfig {
   isolation_mode_highlight_config : OverlayIsolationModeHighlightConfig
   node_id : DOMNodeId
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend OverlayIsolatedElementHighlightConfig with Eq::{not_equal, equal}
@@ -1138,11 +1153,12 @@ pub fn OverlayIsolatedElementHighlightConfig::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct OverlayIsolationModeHighlightConfig {
   resizer_color : DOMRGBA?
   resizer_handle_color : DOMRGBA?
   mask_color : DOMRGBA?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend OverlayIsolationModeHighlightConfig with Eq::{not_equal, equal}
@@ -1206,10 +1222,11 @@ pub fn OverlayIsolationModeHighlightConfig::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct OverlayLineStyle {
   color : DOMRGBA?
   pattern : String?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend OverlayLineStyle with Eq::{not_equal, equal}
@@ -1258,12 +1275,13 @@ pub fn OverlayLineStyle::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct OverlayScrollSnapContainerHighlightConfig {
   snapport_border : OverlayLineStyle?
   snap_area_border : OverlayLineStyle?
   scroll_margin_color : DOMRGBA?
   scroll_padding_color : DOMRGBA?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend OverlayScrollSnapContainerHighlightConfig with Eq::{not_equal, equal}
@@ -1335,10 +1353,11 @@ pub fn OverlayScrollSnapContainerHighlightConfig::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct OverlayScrollSnapHighlightConfig {
   scroll_snap_container_highlight_config : OverlayScrollSnapContainerHighlightConfig
   node_id : DOMNodeId
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend OverlayScrollSnapHighlightConfig with Eq::{not_equal, equal}
@@ -1390,10 +1409,11 @@ pub fn OverlayScrollSnapHighlightConfig::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct OverlaySourceOrderConfig {
   parent_outline_color : DOMRGBA
   child_outline_color : DOMRGBA
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend OverlaySourceOrderConfig with Eq::{not_equal, equal}
@@ -1443,11 +1463,12 @@ pub fn OverlaySourceOrderConfig::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct OverlayWindowControlsOverlayConfig {
   show_css : Bool
   selected_platform : String
   theme_color : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend OverlayWindowControlsOverlayConfig with Eq::{not_equal, equal}
@@ -1535,9 +1556,10 @@ pub fn overlay_enable_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct OverlayGetGridHighlightObjectsForTestParams {
   node_ids : Array[DOMNodeId]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend OverlayGetGridHighlightObjectsForTestParams with Eq::{
@@ -1569,9 +1591,10 @@ pub fn OverlayGetGridHighlightObjectsForTestParams::to_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct OverlayGetGridHighlightObjectsForTestResult {
   highlights : Json
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend OverlayGetGridHighlightObjectsForTestResult with Eq::{
@@ -1639,13 +1662,14 @@ pub fn overlay_get_grid_highlight_objects_for_test_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct OverlayGetHighlightObjectForTestParams {
   node_id : DOMNodeId
   include_distance : Bool?
   include_style : Bool?
   color_format : OverlayColorFormat?
   show_accessibility_info : Bool?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend OverlayGetHighlightObjectForTestParams with Eq::{not_equal, equal}
@@ -1686,9 +1710,10 @@ pub fn OverlayGetHighlightObjectForTestParams::to_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct OverlayGetHighlightObjectForTestResult {
   highlight : Json
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend OverlayGetHighlightObjectForTestResult with Eq::{not_equal, equal}
@@ -1753,9 +1778,10 @@ pub fn overlay_get_highlight_object_for_test_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct OverlayGetSourceOrderHighlightObjectForTestParams {
   node_id : DOMNodeId
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend OverlayGetSourceOrderHighlightObjectForTestParams with Eq::{
@@ -1787,9 +1813,10 @@ pub fn OverlayGetSourceOrderHighlightObjectForTestParams::to_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct OverlayGetSourceOrderHighlightObjectForTestResult {
   highlight : Json
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend OverlayGetSourceOrderHighlightObjectForTestResult with Eq::{
@@ -1879,11 +1906,12 @@ pub fn overlay_hide_highlight_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct OverlayHighlightFrameParams {
   frame_id : PageFrameId
   content_color : DOMRGBA?
   content_outline_color : DOMRGBA?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend OverlayHighlightFrameParams with Eq::{not_equal, equal}
@@ -1942,13 +1970,14 @@ pub fn overlay_highlight_frame_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct OverlayHighlightNodeParams {
   highlight_config : OverlayHighlightConfig
   node_id : DOMNodeId?
   backend_node_id : DOMBackendNodeId?
   object_id : RuntimeRemoteObjectId?
   selector : String?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend OverlayHighlightNodeParams with Eq::{not_equal, equal}
@@ -2013,11 +2042,12 @@ pub fn overlay_highlight_node_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct OverlayHighlightQuadParams {
   quad : DOMQuad
   color : DOMRGBA?
   outline_color : DOMRGBA?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend OverlayHighlightQuadParams with Eq::{not_equal, equal}
@@ -2076,6 +2106,7 @@ pub fn overlay_highlight_quad_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct OverlayHighlightRectParams {
   x : Int32
   y : Int32
@@ -2083,7 +2114,7 @@ pub(all) struct OverlayHighlightRectParams {
   height : Int32
   color : DOMRGBA?
   outline_color : DOMRGBA?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend OverlayHighlightRectParams with Eq::{not_equal, equal}
@@ -2145,12 +2176,13 @@ pub fn overlay_highlight_rect_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct OverlayHighlightSourceOrderParams {
   source_order_config : OverlaySourceOrderConfig
   node_id : DOMNodeId?
   backend_node_id : DOMBackendNodeId?
   object_id : RuntimeRemoteObjectId?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend OverlayHighlightSourceOrderParams with Eq::{not_equal, equal}
@@ -2216,10 +2248,11 @@ pub fn overlay_highlight_source_order_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct OverlaySetInspectModeParams {
   mode : OverlayInspectMode
   highlight_config : OverlayHighlightConfig?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend OverlaySetInspectModeParams with Eq::{not_equal, equal}
@@ -2275,9 +2308,10 @@ pub fn overlay_set_inspect_mode_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct OverlaySetPausedInDebuggerMessageParams {
   message : String?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend OverlaySetPausedInDebuggerMessageParams with Eq::{not_equal, equal}
@@ -2336,9 +2370,10 @@ pub fn overlay_set_paused_in_debugger_message_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct OverlaySetShowAdHighlightsParams {
   show : Bool
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend OverlaySetShowAdHighlightsParams with Eq::{not_equal, equal}
@@ -2395,11 +2430,12 @@ pub fn overlay_set_show_ad_highlights_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct OverlaySetShowContainerQueryOverlaysParams {
   container_query_highlight_configs : Array[
     OverlayContainerQueryHighlightConfig,
   ]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend OverlaySetShowContainerQueryOverlaysParams with Eq::{
@@ -2461,9 +2497,10 @@ pub fn overlay_set_show_container_query_overlays_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct OverlaySetShowDebugBordersParams {
   show : Bool
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend OverlaySetShowDebugBordersParams with Eq::{not_equal, equal}
@@ -2520,9 +2557,10 @@ pub fn overlay_set_show_debug_borders_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct OverlaySetShowFlexOverlaysParams {
   flex_node_highlight_configs : Array[OverlayFlexNodeHighlightConfig]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend OverlaySetShowFlexOverlaysParams with Eq::{not_equal, equal}
@@ -2581,9 +2619,10 @@ pub fn overlay_set_show_flex_overlays_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct OverlaySetShowFPSCounterParams {
   show : Bool
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend OverlaySetShowFPSCounterParams with Eq::{not_equal, equal}
@@ -2636,9 +2675,10 @@ pub fn overlay_set_show_fpscounter_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct OverlaySetShowGridOverlaysParams {
   grid_node_highlight_configs : Array[OverlayGridNodeHighlightConfig]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend OverlaySetShowGridOverlaysParams with Eq::{not_equal, equal}
@@ -2697,9 +2737,10 @@ pub fn overlay_set_show_grid_overlays_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct OverlaySetShowHingeParams {
   hinge_config : OverlayHingeConfig?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend OverlaySetShowHingeParams with Eq::{not_equal, equal}
@@ -2754,9 +2795,10 @@ pub fn overlay_set_show_hinge_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct OverlaySetShowHitTestBordersParams {
   show : Bool
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend OverlaySetShowHitTestBordersParams with Eq::{not_equal, equal}
@@ -2813,9 +2855,10 @@ pub fn overlay_set_show_hit_test_borders_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct OverlaySetShowInspectedElementAnchorParams {
   inspected_element_anchor_config : OverlayInspectedElementAnchorConfig
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend OverlaySetShowInspectedElementAnchorParams with Eq::{
@@ -2875,11 +2918,12 @@ pub fn overlay_set_show_inspected_element_anchor_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct OverlaySetShowIsolatedElementsParams {
   isolated_element_highlight_configs : Array[
     OverlayIsolatedElementHighlightConfig,
   ]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend OverlaySetShowIsolatedElementsParams with Eq::{not_equal, equal}
@@ -2938,9 +2982,10 @@ pub fn overlay_set_show_isolated_elements_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct OverlaySetShowLayoutShiftRegionsParams {
   result : Bool
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend OverlaySetShowLayoutShiftRegionsParams with Eq::{not_equal, equal}
@@ -2997,9 +3042,10 @@ pub fn overlay_set_show_layout_shift_regions_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct OverlaySetShowPaintRectsParams {
   result : Bool
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend OverlaySetShowPaintRectsParams with Eq::{not_equal, equal}
@@ -3056,9 +3102,10 @@ pub fn overlay_set_show_paint_rects_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct OverlaySetShowScrollBottleneckRectsParams {
   show : Bool
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend OverlaySetShowScrollBottleneckRectsParams with Eq::{not_equal, equal}
@@ -3115,9 +3162,10 @@ pub fn overlay_set_show_scroll_bottleneck_rects_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct OverlaySetShowScrollSnapOverlaysParams {
   scroll_snap_highlight_configs : Array[OverlayScrollSnapHighlightConfig]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend OverlaySetShowScrollSnapOverlaysParams with Eq::{not_equal, equal}
@@ -3176,9 +3224,10 @@ pub fn overlay_set_show_scroll_snap_overlays_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct OverlaySetShowViewportSizeOnResizeParams {
   show : Bool
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend OverlaySetShowViewportSizeOnResizeParams with Eq::{not_equal, equal}
@@ -3235,9 +3284,10 @@ pub fn overlay_set_show_viewport_size_on_resize_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct OverlaySetShowWebVitalsParams {
   show : Bool
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend OverlaySetShowWebVitalsParams with Eq::{not_equal, equal}
@@ -3290,9 +3340,10 @@ pub fn overlay_set_show_web_vitals_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct OverlaySetShowWindowControlsOverlayParams {
   window_controls_overlay_config : OverlayWindowControlsOverlayConfig?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend OverlaySetShowWindowControlsOverlayParams with Eq::{not_equal, equal}
@@ -3351,9 +3402,10 @@ pub fn overlay_set_show_window_controls_overlay_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct OverlayInspectedElementWindowRestoredEventParams {
   backend_node_id : DOMBackendNodeId
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend OverlayInspectedElementWindowRestoredEventParams with Eq::{
@@ -3448,9 +3500,10 @@ pub fn overlay_inspect_mode_canceled_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct OverlayInspectNodeRequestedEventParams {
   backend_node_id : DOMBackendNodeId
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend OverlayInspectNodeRequestedEventParams with Eq::{not_equal, equal}
@@ -3520,9 +3573,10 @@ pub fn overlay_inspect_node_requested_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct OverlayInspectPanelShowRequestedEventParams {
   backend_node_id : DOMBackendNodeId
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend OverlayInspectPanelShowRequestedEventParams with Eq::{
@@ -3595,9 +3649,10 @@ pub fn overlay_inspect_panel_show_requested_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct OverlayNodeHighlightRequestedEventParams {
   node_id : DOMNodeId
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend OverlayNodeHighlightRequestedEventParams with Eq::{not_equal, equal}
@@ -3667,9 +3722,10 @@ pub fn overlay_node_highlight_requested_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct OverlayScreenshotRequestedEventParams {
   viewport : PageViewport
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend OverlayScreenshotRequestedEventParams with Eq::{not_equal, equal}

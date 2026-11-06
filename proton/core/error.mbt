@@ -1,11 +1,12 @@
 ///|
 /// Failures while adding command handlers to an operation registry.
+#derive(Debug, Eq)
 pub(all) suberror OpRegistrationError {
   EmptyName
   DuplicateName(name~ : String)
   HostClosed
   RegistrationSealed
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend OpRegistrationError with Eq::{not_equal, equal}
@@ -33,6 +34,7 @@ impl Show for OpRegistrationError with fn output(self, logger) {
 
 ///|
 /// Failures while decoding and invoking one registered operation.
+#derive(Debug, Eq)
 pub(all) suberror OpDispatchError {
   InvalidPayload(name~ : String, detail~ : String)
   UnknownOp(name~ : String)
@@ -40,7 +42,7 @@ pub(all) suberror OpDispatchError {
   HostClosed
   AsyncHandlerRequiresAsync(name~ : String)
   RequestContextRequired(name~ : String)
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend OpDispatchError with Eq::{not_equal, equal}
@@ -72,10 +74,11 @@ impl Show for OpDispatchError with fn output(self, logger) {
 
 ///|
 /// A command attempted to use a capability outside its request grant.
+#derive(Debug, Eq)
 pub(all) suberror CommandPermissionError {
   Missing(extension_id~ : String)
   Foreign(expected~ : String, actual~ : String)
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend CommandPermissionError with Eq::{not_equal, equal}

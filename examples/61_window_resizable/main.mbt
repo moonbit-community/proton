@@ -1,7 +1,8 @@
 ///|
+#derive(ToJson, FromJson)
 struct SetResizableRequest {
   resizable : Bool
-} derive(ToJson, FromJson)
+}
 
 ///|
 pub extend SetResizableRequest with ToJson::{to_json}
@@ -10,11 +11,12 @@ pub extend SetResizableRequest with ToJson::{to_json}
 pub extend SetResizableRequest with FromJson::{from_json}
 
 ///|
+#derive(ToJson, FromJson)
 struct SetResizableReply {
   applied : Bool
   resizable : Bool
   message : String
-} derive(ToJson, FromJson)
+}
 
 ///|
 pub extend SetResizableReply with ToJson::{to_json}

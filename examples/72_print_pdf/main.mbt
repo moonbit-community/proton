@@ -1,8 +1,9 @@
 ///|
+#derive(ToJson, FromJson)
 struct Request {
   action : String
   profile : String
-} derive(ToJson, FromJson)
+}
 
 ///|
 pub extend Request with ToJson::{to_json}
@@ -11,10 +12,11 @@ pub extend Request with ToJson::{to_json}
 pub extend Request with FromJson::{from_json}
 
 ///|
+#derive(ToJson, FromJson)
 struct Reply {
   ok : Bool
   message : String
-} derive(ToJson, FromJson)
+}
 
 ///|
 pub extend Reply with ToJson::{to_json}

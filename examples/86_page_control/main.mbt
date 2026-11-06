@@ -1,7 +1,8 @@
 ///|
+#derive(ToJson, FromJson)
 struct ControlRequest {
   action : String
-} derive(ToJson, FromJson)
+}
 
 ///|
 pub extend ControlRequest with ToJson::{to_json}
@@ -10,12 +11,13 @@ pub extend ControlRequest with ToJson::{to_json}
 pub extend ControlRequest with FromJson::{from_json}
 
 ///|
+#derive(ToJson, FromJson)
 struct EntryRow {
   title : String
   url : String
   transition : String
   active : Bool
-} derive(ToJson, FromJson)
+}
 
 ///|
 pub extend EntryRow with ToJson::{to_json}
@@ -24,13 +26,14 @@ pub extend EntryRow with ToJson::{to_json}
 pub extend EntryRow with FromJson::{from_json}
 
 ///|
+#derive(ToJson, FromJson)
 struct ControlReply {
   ok : Bool
   message : String
   active_index : Int32
   css_key : Int64
   entries : Array[EntryRow]
-} derive(ToJson, FromJson)
+}
 
 ///|
 pub extend ControlReply with ToJson::{to_json}

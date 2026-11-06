@@ -13,7 +13,8 @@ pub fn capability() -> @extension.RendererCapability
 pub fn register_commands(@command.CommandRegistrar) -> Unit raise
 
 // Errors
-type DialogError derive(Eq, @debug.Debug)
+#derive(Eq, @debug.Debug)
+type DialogError
 pub fn DialogError::equal(Self, Self) -> Bool
 pub fn DialogError::not_equal(Self, Self) -> Bool
 pub fn DialogError::output(Self, &Logger) -> Unit

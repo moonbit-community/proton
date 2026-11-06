@@ -7,9 +7,10 @@
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct SecurityCertificateErrorAction {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend SecurityCertificateErrorAction with Eq::{not_equal, equal}
@@ -51,9 +52,10 @@ pub fn SecurityCertificateErrorAction::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct SecurityCertificateId {
   value : Int32
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend SecurityCertificateId with Eq::{not_equal, equal}
@@ -98,6 +100,7 @@ pub fn SecurityCertificateId::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct SecurityCertificateSecurityState {
   protocol : String
   key_exchange : String
@@ -117,7 +120,7 @@ pub(all) struct SecurityCertificateSecurityState {
   obsolete_ssl_key_exchange : Bool
   obsolete_ssl_cipher : Bool
   obsolete_ssl_signature : Bool
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend SecurityCertificateSecurityState with Eq::{not_equal, equal}
@@ -240,6 +243,7 @@ pub fn SecurityCertificateSecurityState::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct SecurityInsecureContentStatus {
   ran_mixed_content : Bool
   displayed_mixed_content : Bool
@@ -248,7 +252,7 @@ pub(all) struct SecurityInsecureContentStatus {
   displayed_content_with_cert_errors : Bool
   ran_insecure_content_style : SecuritySecurityState
   displayed_insecure_content_style : SecuritySecurityState
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend SecurityInsecureContentStatus with Eq::{not_equal, equal}
@@ -322,9 +326,10 @@ pub fn SecurityInsecureContentStatus::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct SecurityMixedContentType {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend SecurityMixedContentType with Eq::{not_equal, equal}
@@ -366,10 +371,11 @@ pub fn SecurityMixedContentType::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct SecuritySafetyTipInfo {
   safety_tip_status : SecuritySafetyTipStatus
   safe_url : String?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend SecuritySafetyTipInfo with Eq::{not_equal, equal}
@@ -415,9 +421,10 @@ pub fn SecuritySafetyTipInfo::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct SecuritySafetyTipStatus {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend SecuritySafetyTipStatus with Eq::{not_equal, equal}
@@ -455,9 +462,10 @@ pub fn SecuritySafetyTipStatus::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct SecuritySecurityState {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend SecuritySecurityState with Eq::{not_equal, equal}
@@ -495,6 +503,7 @@ pub fn SecuritySecurityState::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct SecuritySecurityStateExplanation {
   security_state : SecuritySecurityState
   title : String
@@ -503,7 +512,7 @@ pub(all) struct SecuritySecurityStateExplanation {
   mixed_content_type : SecurityMixedContentType
   certificate : Array[String]
   recommendations : Array[String]?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend SecuritySecurityStateExplanation with Eq::{not_equal, equal}
@@ -590,12 +599,13 @@ pub fn SecuritySecurityStateExplanation::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct SecurityVisibleSecurityState {
   security_state : SecuritySecurityState
   certificate_security_state : SecurityCertificateSecurityState?
   safety_tip_info : SecuritySafetyTipInfo?
   security_state_issue_ids : Array[String]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend SecurityVisibleSecurityState with Eq::{not_equal, equal}
@@ -705,10 +715,11 @@ pub fn security_enable_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct SecurityHandleCertificateErrorParams {
   event_id : Int32
   action : SecurityCertificateErrorAction
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend SecurityHandleCertificateErrorParams with Eq::{not_equal, equal}
@@ -766,9 +777,10 @@ pub fn security_handle_certificate_error_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct SecuritySetIgnoreCertificateErrorsParams {
   ignore : Bool
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend SecuritySetIgnoreCertificateErrorsParams with Eq::{not_equal, equal}
@@ -825,9 +837,10 @@ pub fn security_set_ignore_certificate_errors_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct SecuritySetOverrideCertificateErrorsParams {
   override_ : Bool
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend SecuritySetOverrideCertificateErrorsParams with Eq::{
@@ -887,11 +900,12 @@ pub fn security_set_override_certificate_errors_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct SecurityCertificateErrorEventParams {
   event_id : Int32
   error_type : String
   request_url : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend SecurityCertificateErrorEventParams with Eq::{not_equal, equal}
@@ -967,13 +981,14 @@ pub fn security_certificate_error_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct SecuritySecurityStateChangedEventParams {
   security_state : SecuritySecurityState
   scheme_is_cryptographic : Bool
   explanations : Array[SecuritySecurityStateExplanation]
   insecure_content_status : SecurityInsecureContentStatus
   summary : String?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend SecuritySecurityStateChangedEventParams with Eq::{not_equal, equal}
@@ -1064,9 +1079,10 @@ pub fn security_security_state_changed_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct SecurityVisibleSecurityStateChangedEventParams {
   visible_security_state : SecurityVisibleSecurityState
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend SecurityVisibleSecurityStateChangedEventParams with Eq::{

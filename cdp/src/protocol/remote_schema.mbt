@@ -4,11 +4,12 @@
 /// The string payload is a schema path such as `protocol`, `domains`, or
 /// `Browser.commands[]`. Paths are intended for diagnostics and tests, not for
 /// JSON Pointer compatibility.
+#derive(Eq, ToJson, Debug)
 pub(all) suberror ProtocolSchemaDiffError {
   ExpectedObject(String)
   MissingField(String)
   InvalidField(String)
-} derive(Eq, ToJson, Debug)
+}
 
 ///|
 pub extend ProtocolSchemaDiffError with Eq::{not_equal, equal}
@@ -25,10 +26,11 @@ pub extend ProtocolSchemaDiffError with ToJson::{to_json}
 /// `name` is the fully qualified command/event/type name. `details` contains
 /// human-readable field differences such as changed flags, parameter lists,
 /// return lists, properties, or enum values.
+#derive(Eq, ToJson, Debug)
 pub(all) struct ProtocolSchemaDiffItem {
   name : String
   details : Array[String]
-} derive(Eq, ToJson, Debug)
+}
 
 ///|
 pub extend ProtocolSchemaDiffItem with Eq::{not_equal, equal}
@@ -45,6 +47,7 @@ pub extend ProtocolSchemaDiffItem with ToJson::{to_json}
 /// This is the lightweight result returned by `protocol_remote_summary`. It is
 /// useful when callers want to log browser protocol shape without comparing it
 /// against the bundled schema.
+#derive(Eq, ToJson, Debug)
 pub(all) struct ProtocolRemoteSummary {
   version : ProtocolVersion
   domain_count : Int32
@@ -52,7 +55,7 @@ pub(all) struct ProtocolRemoteSummary {
   event_count : Int32
   type_count : Int32
   domains : Array[ProtocolDomainSummary]
-} derive(Eq, ToJson, Debug)
+}
 
 ///|
 pub extend ProtocolRemoteSummary with Eq::{not_equal, equal}
@@ -74,6 +77,7 @@ pub extend ProtocolRemoteSummary with ToJson::{to_json}
 /// that the browser does not advertise. Changed entries indicate both sides
 /// contain the item but disagree on modeled flags, fields, return values,
 /// properties, enum values, or type kind.
+#derive(Eq, ToJson, Debug)
 pub(all) struct ProtocolSchemaDiffReport {
   local_version : ProtocolVersion
   remote_version : ProtocolVersion
@@ -97,7 +101,7 @@ pub(all) struct ProtocolSchemaDiffReport {
   local_only_types : Array[String]
   changed_types : Array[ProtocolSchemaDiffItem]
   compatible : Bool
-} derive(Eq, ToJson, Debug)
+}
 
 ///|
 pub extend ProtocolSchemaDiffReport with Eq::{not_equal, equal}

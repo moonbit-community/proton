@@ -11,10 +11,11 @@ pub fn configure(Output) -> Unit raise LoggingError
 pub fn current_process_id() -> Int32
 
 // Errors
+#derive(@debug.Debug)
 pub(all) suberror LoggingError {
   OpenFile(path~ : String)
   WriteFailed
-} derive(@debug.Debug)
+}
 pub fn LoggingError::to_repr(Self) -> @debug.Repr
 
 // Types and methods

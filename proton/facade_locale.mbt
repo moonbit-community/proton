@@ -1,8 +1,9 @@
 ///|
 /// Failures produced while querying the operating system's language order.
+#derive(Debug)
 pub(all) suberror SystemLocaleError {
   NativeQuery(status~ : Int32, detail~ : String)
-} derive(Debug)
+}
 
 ///|
 pub extend SystemLocaleError with Debug::{to_repr}

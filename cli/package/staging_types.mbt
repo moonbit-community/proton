@@ -6,8 +6,9 @@ priv struct MacosHelperSpec {
 }
 
 ///|
+#derive(Eq)
 priv enum StagingHost {
   Macos
   Windows
   Linux
-} derive(Eq)
+}

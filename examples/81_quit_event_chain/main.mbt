@@ -1,7 +1,8 @@
 ///|
+#derive(ToJson, FromJson)
 struct QuitRequest {
   action : String
-} derive(ToJson, FromJson)
+}
 
 ///|
 pub extend QuitRequest with ToJson::{to_json}
@@ -10,13 +11,14 @@ pub extend QuitRequest with ToJson::{to_json}
 pub extend QuitRequest with FromJson::{from_json}
 
 ///|
+#derive(ToJson, FromJson)
 struct QuitReply {
   ok : Bool
   before_quit_blocked : Bool
   will_quit_blocked : Bool
   window_close_blocked : Bool
   message : String
-} derive(ToJson, FromJson)
+}
 
 ///|
 pub extend QuitReply with ToJson::{to_json}

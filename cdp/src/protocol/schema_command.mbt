@@ -5,6 +5,7 @@
 /// name, such as `Runtime.evaluate`. Field variants use the second string for
 /// the parameter or return field name. Type mismatch variants include the
 /// expected compact protocol kind used by the bundled manifest.
+#derive(Eq, ToJson, Debug)
 pub(all) suberror ProtocolSchemaError {
   UnknownCommand(String)
   UnsupportedRemoteCommand(String)
@@ -17,7 +18,7 @@ pub(all) suberror ProtocolSchemaError {
   MissingReturn(String, String)
   UnknownReturn(String, String)
   InvalidReturnType(String, String, String)
-} derive(Eq, ToJson, Debug)
+}
 
 ///|
 pub extend ProtocolSchemaError with Eq::{not_equal, equal}
@@ -34,13 +35,14 @@ pub extend ProtocolSchemaError with ToJson::{to_json}
 /// This struct is useful for CLI output, logs, and tests that should not match
 /// against formatted human text. `path` points at the command, event, params
 /// field, or result field that failed validation.
+#derive(Eq, ToJson, Debug)
 pub(all) struct ProtocolSchemaErrorDiagnostic {
   kind : String
   method_name : String?
   field_name : String?
   path : String
   expected_type : String?
-} derive(Eq, ToJson, Debug)
+}
 
 ///|
 pub extend ProtocolSchemaErrorDiagnostic with Eq::{not_equal, equal}
@@ -172,6 +174,7 @@ pub fn ProtocolSchemaError::expected_type(
 /// `*_registry_count` fields are derived from generated lookup registries.
 /// `complete` is true when every manifest command, event, and type has a
 /// registry entry.
+#derive(Eq, ToJson, Debug)
 pub(all) struct ProtocolCoverage {
   domain_count : Int32
   command_count : Int32
@@ -181,7 +184,7 @@ pub(all) struct ProtocolCoverage {
   event_registry_count : Int32
   type_registry_count : Int32
   complete : Bool
-} derive(Eq, ToJson, Debug)
+}
 
 ///|
 pub extend ProtocolCoverage with Eq::{not_equal, equal}

@@ -7,6 +7,7 @@
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct LayerTreeLayer {
   layer_id : LayerTreeLayerId
   parent_layer_id : LayerTreeLayerId?
@@ -24,7 +25,7 @@ pub(all) struct LayerTreeLayer {
   invisible : Bool?
   scroll_rects : Array[LayerTreeScrollRect]?
   sticky_position_constraint : LayerTreeStickyPositionConstraint?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend LayerTreeLayer with Eq::{not_equal, equal}
@@ -147,9 +148,10 @@ pub fn LayerTreeLayer::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct LayerTreeLayerId {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend LayerTreeLayerId with Eq::{not_equal, equal}
@@ -187,9 +189,10 @@ pub fn LayerTreeLayerId::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct LayerTreePaintProfile {
   value : Array[Double]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend LayerTreePaintProfile with Eq::{not_equal, equal}
@@ -228,11 +231,12 @@ pub fn LayerTreePaintProfile::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct LayerTreePictureTile {
   x : Double
   y : Double
   picture : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend LayerTreePictureTile with Eq::{not_equal, equal}
@@ -276,10 +280,11 @@ pub fn LayerTreePictureTile::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct LayerTreeScrollRect {
   rect : DOMRect
   type_ : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend LayerTreeScrollRect with Eq::{not_equal, equal}
@@ -321,9 +326,10 @@ pub fn LayerTreeScrollRect::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct LayerTreeSnapshotId {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend LayerTreeSnapshotId with Eq::{not_equal, equal}
@@ -361,12 +367,13 @@ pub fn LayerTreeSnapshotId::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct LayerTreeStickyPositionConstraint {
   sticky_box_rect : DOMRect
   containing_block_rect : DOMRect
   nearest_layer_shifting_sticky_box : LayerTreeLayerId?
   nearest_layer_shifting_containing_block : LayerTreeLayerId?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend LayerTreeStickyPositionConstraint with Eq::{not_equal, equal}
@@ -432,9 +439,10 @@ pub fn LayerTreeStickyPositionConstraint::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct LayerTreeCompositingReasonsParams {
   layer_id : LayerTreeLayerId
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend LayerTreeCompositingReasonsParams with Eq::{not_equal, equal}
@@ -463,10 +471,11 @@ pub fn LayerTreeCompositingReasonsParams::to_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct LayerTreeCompositingReasonsResult {
   compositing_reasons : Array[String]
   compositing_reason_ids : Array[String]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend LayerTreeCompositingReasonsResult with Eq::{not_equal, equal}
@@ -592,9 +601,10 @@ pub fn layer_tree_enable_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct LayerTreeLoadSnapshotParams {
   tiles : Array[LayerTreePictureTile]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend LayerTreeLoadSnapshotParams with Eq::{not_equal, equal}
@@ -623,9 +633,10 @@ pub fn LayerTreeLoadSnapshotParams::to_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct LayerTreeLoadSnapshotResult {
   snapshot_id : LayerTreeSnapshotId
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend LayerTreeLoadSnapshotResult with Eq::{not_equal, equal}
@@ -690,9 +701,10 @@ pub fn layer_tree_load_snapshot_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct LayerTreeMakeSnapshotParams {
   layer_id : LayerTreeLayerId
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend LayerTreeMakeSnapshotParams with Eq::{not_equal, equal}
@@ -721,9 +733,10 @@ pub fn LayerTreeMakeSnapshotParams::to_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct LayerTreeMakeSnapshotResult {
   snapshot_id : LayerTreeSnapshotId
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend LayerTreeMakeSnapshotResult with Eq::{not_equal, equal}
@@ -788,12 +801,13 @@ pub fn layer_tree_make_snapshot_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct LayerTreeProfileSnapshotParams {
   snapshot_id : LayerTreeSnapshotId
   min_repeat_count : Int32?
   min_duration : Double?
   clip_rect : DOMRect?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend LayerTreeProfileSnapshotParams with Eq::{not_equal, equal}
@@ -831,9 +845,10 @@ pub fn LayerTreeProfileSnapshotParams::to_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct LayerTreeProfileSnapshotResult {
   timings : Array[LayerTreePaintProfile]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend LayerTreeProfileSnapshotResult with Eq::{not_equal, equal}
@@ -901,9 +916,10 @@ pub fn layer_tree_profile_snapshot_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct LayerTreeReleaseSnapshotParams {
   snapshot_id : LayerTreeSnapshotId
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend LayerTreeReleaseSnapshotParams with Eq::{not_equal, equal}
@@ -956,12 +972,13 @@ pub fn layer_tree_release_snapshot_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct LayerTreeReplaySnapshotParams {
   snapshot_id : LayerTreeSnapshotId
   from_step : Int32?
   to_step : Int32?
   scale : Double?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend LayerTreeReplaySnapshotParams with Eq::{not_equal, equal}
@@ -999,9 +1016,10 @@ pub fn LayerTreeReplaySnapshotParams::to_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct LayerTreeReplaySnapshotResult {
   data_url : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend LayerTreeReplaySnapshotResult with Eq::{not_equal, equal}
@@ -1066,9 +1084,10 @@ pub fn layer_tree_replay_snapshot_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct LayerTreeSnapshotCommandLogParams {
   snapshot_id : LayerTreeSnapshotId
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend LayerTreeSnapshotCommandLogParams with Eq::{not_equal, equal}
@@ -1096,9 +1115,10 @@ pub fn LayerTreeSnapshotCommandLogParams::to_json(
 ///
 /// The protocol schema does not name this item type, so the generator preserves
 /// the original JSON value while still giving callers a stable MoonBit type.
+#derive(Eq, Debug)
 pub(all) struct LayerTreeSnapshotCommandLogResultCommandLogItem {
   value : Json
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend LayerTreeSnapshotCommandLogResultCommandLogItem with Eq::{
@@ -1133,9 +1153,10 @@ pub fn LayerTreeSnapshotCommandLogResultCommandLogItem::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct LayerTreeSnapshotCommandLogResult {
   command_log : Array[LayerTreeSnapshotCommandLogResultCommandLogItem]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend LayerTreeSnapshotCommandLogResult with Eq::{not_equal, equal}
@@ -1209,10 +1230,11 @@ pub fn layer_tree_snapshot_command_log_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct LayerTreeLayerPaintedEventParams {
   layer_id : LayerTreeLayerId
   clip : DOMRect
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend LayerTreeLayerPaintedEventParams with Eq::{not_equal, equal}
@@ -1284,9 +1306,10 @@ pub fn layer_tree_layer_painted_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct LayerTreeLayerTreeDidChangeEventParams {
   layers : Array[LayerTreeLayer]?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend LayerTreeLayerTreeDidChangeEventParams with Eq::{not_equal, equal}

@@ -1,7 +1,8 @@
 ///|
+#derive(ToJson, FromJson)
 struct SetProgressRequest {
   progress : Double
-} derive(ToJson, FromJson)
+}
 
 ///|
 pub extend SetProgressRequest with ToJson::{to_json}
@@ -10,10 +11,11 @@ pub extend SetProgressRequest with ToJson::{to_json}
 pub extend SetProgressRequest with FromJson::{from_json}
 
 ///|
+#derive(ToJson, FromJson)
 struct SetProgressReply {
   applied : Bool
   message : String
-} derive(ToJson, FromJson)
+}
 
 ///|
 pub extend SetProgressReply with ToJson::{to_json}

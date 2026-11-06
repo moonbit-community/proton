@@ -1,8 +1,9 @@
 ///|
+#derive(Eq)
 pub(all) suberror PowerMonitorError {
   BackendUnavailable(detail~ : String)
   OperationFailed(operation~ : String, detail~ : String)
-} derive(Eq)
+}
 
 ///|
 pub extend PowerMonitorError with Eq::{not_equal, equal}

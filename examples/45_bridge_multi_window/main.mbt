@@ -1,8 +1,9 @@
 ///|
+#derive(FromJson, ToJson)
 struct IdentifyPayload {
   label : String
   delay_ms : Int32?
-} derive(FromJson, ToJson)
+}
 
 ///|
 pub extend IdentifyPayload with ToJson::{to_json}
@@ -11,10 +12,11 @@ pub extend IdentifyPayload with ToJson::{to_json}
 pub extend IdentifyPayload with FromJson::{from_json}
 
 ///|
+#derive(FromJson, ToJson)
 struct IdentifyReply {
   label : String
   window : String
-} derive(FromJson, ToJson)
+}
 
 ///|
 pub extend IdentifyReply with ToJson::{to_json}

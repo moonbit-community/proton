@@ -1,9 +1,10 @@
 ///|
+#derive(Eq)
 pub(all) suberror ScreenMonitorError {
   BackendUnavailable(detail~ : String)
   OperationFailed(operation~ : String, detail~ : String)
   Empty
-} derive(Eq)
+}
 
 ///|
 pub extend ScreenMonitorError with Eq::{not_equal, equal}

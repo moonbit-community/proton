@@ -1,8 +1,9 @@
 ///|
+#derive(Debug)
 priv suberror CodegenCliError {
   Invalid(message~ : String)
   WriteFailed(path~ : String, detail~ : String)
-} derive(Debug)
+}
 
 ///|
 fn CodegenCliError::message(self : CodegenCliError) -> String {

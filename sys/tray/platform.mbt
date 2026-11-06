@@ -6,12 +6,13 @@
 /// operating system to a supported variant, which typically also means tray
 /// creation will fail. Use this to branch platform-specific setup or to enrich
 /// diagnostics; the value is derived from `current_platform()`.
+#derive(Debug, Eq, ToJson)
 pub enum Platform {
   Windows
   Linux
   Macos
   Unknown
-} derive(Debug, Eq, ToJson)
+}
 
 ///|
 pub extend Platform with Eq::{not_equal, equal}

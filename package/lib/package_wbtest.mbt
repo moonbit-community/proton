@@ -418,7 +418,7 @@ let package_test_png : Bytes = b"\x89\x50\x4e\x47\x0d\x0a\x1a\x0a\x00\x00\x00\x0
 ///|
 async test "competing package builds serialize preparation and release the lock after failure" {
   let root = @async_fs.tmpdir(prefix="proton-package-lock-")
-  defer (remove_tree(root) catch { _ => () })
+  defer discard_tree(root)
   let executable = path_join(root, "fixture")
   @async_fs.write_file(executable, "fixture", create_mode=CreateOrTruncate)
   let icon = path_join(root, "icon.png")
@@ -487,7 +487,7 @@ async test "competing package builds serialize preparation and release the lock 
 async test "macOS packaging preserves declared minimum and leaves resources opaque" {
   guard current_package_host() is Macos else { return }
   let root = @async_fs.tmpdir(prefix="proton-package-minimum-")
-  defer (remove_tree(root) catch { _ => () })
+  defer discard_tree(root)
   let source = path_join(root, "main.c")
   @async_fs.write_file(source, "int main(void) { return 0; }")
   let executable = path_join(root, "main")
@@ -541,7 +541,7 @@ async test "macOS packaging preserves declared minimum and leaves resources opaq
 async test "AppImage staging keeps a single-file executable payload executable" {
   guard current_package_host() is Linux else { return }
   let root = @async_fs.tmpdir(prefix="proton-package-mode-")
-  defer (remove_tree(root) catch { _ => () })
+  defer discard_tree(root)
   let executable = path_join(root, "fixture")
   @async_fs.write_file(executable, "fixture", create_mode=CreateOrTruncate)
   // Stands in for the CEF subprocess executable, which Proton stages as its own payload.
@@ -582,7 +582,7 @@ priv suberror PackagePreparationTestError
 async test "cancelled package builds release the output lock" {
   @async.with_timeout(5000, () => {
     let root = @async_fs.tmpdir(prefix="proton-package-cancel-")
-    defer (remove_tree(root) catch { _ => () })
+    defer discard_tree(root)
     let executable = path_join(root, "fixture")
     @async_fs.write_file(executable, "fixture", create_mode=CreateOrTruncate)
     let icon = path_join(root, "icon.png")
@@ -657,10 +657,10 @@ test "macOS minimum rejects malformed versions" {
 async test "file copies accept leading-dash source and destination paths" {
   guard current_package_host() != Windows else { return }
   let seed = @async_fs.tmpdir(prefix="proton-package-copy-file-")
-  defer (remove_tree(seed) catch { _ => () })
+  defer discard_tree(seed)
   let root = "-" + @path.Path(seed).basename().to_owned()
   @async_fs.mkdir(root)
-  defer (remove_tree(root) catch { _ => () })
+  defer discard_tree(root)
   let source = path_join(root, "-v")
   @async_fs.write_file(source, "executable payload")
   @async_fs.chmod(source, 0o755)
@@ -686,10 +686,10 @@ async test "file copies accept leading-dash source and destination paths" {
 async test "directory copies accept leading-dash source and destination paths" {
   guard current_package_host() != Windows else { return }
   let seed = @async_fs.tmpdir(prefix="proton-package-copy-tree-")
-  defer (remove_tree(seed) catch { _ => () })
+  defer discard_tree(seed)
   let root = "-" + @path.Path(seed).basename().to_owned()
   @async_fs.mkdir(root)
-  defer (remove_tree(root) catch { _ => () })
+  defer discard_tree(root)
   let source = path_join(root, "-directory")
   ensure_dir(path_join(source, "nested"))
   @async_fs.write_file(path_join(source, "nested/payload"), "directory payload")

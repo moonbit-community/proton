@@ -9,11 +9,12 @@ import {
 // Values
 
 // Errors
+#derive(Eq)
 pub(all) suberror ScreenMonitorError {
   BackendUnavailable(detail~ : String)
   OperationFailed(operation~ : String, detail~ : String)
   Empty
-} derive(Eq)
+}
 pub fn ScreenMonitorError::equal(Self, Self) -> Bool
 pub fn ScreenMonitorError::not_equal(Self, Self) -> Bool
 pub fn ScreenMonitorError::output(Self, &Logger) -> Unit
@@ -21,40 +22,46 @@ pub fn ScreenMonitorError::to_string(Self) -> String
 pub impl Show for ScreenMonitorError
 
 // Types and methods
+#derive(Eq, @debug.Debug)
 pub struct DisplayInfo {
   id : Int32
   bounds : Rect
   work_area : Rect
   scale_factor : Double
   is_primary : Bool
-} derive(Eq, @debug.Debug)
+}
 pub fn DisplayInfo::equal(Self, Self) -> Bool
 pub fn DisplayInfo::not_equal(Self, Self) -> Bool
 pub fn DisplayInfo::to_repr(Self) -> @debug.Repr
 
-type DisplayWire derive(@json.FromJson)
-pub fn DisplayWire::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+#derive(@json.FromJson)
+type DisplayWire
+pub fn DisplayWire::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
 
-type DisplaysWire derive(@json.FromJson)
-pub fn DisplaysWire::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+#derive(@json.FromJson)
+type DisplaysWire
+pub fn DisplaysWire::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
 
+#derive(Eq, @debug.Debug)
 pub struct Point {
   x : Int32
   y : Int32
-} derive(Eq, @debug.Debug)
+}
 pub fn Point::equal(Self, Self) -> Bool
 pub fn Point::not_equal(Self, Self) -> Bool
 pub fn Point::to_repr(Self) -> @debug.Repr
 
-type PointWire derive(@json.FromJson)
-pub fn PointWire::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+#derive(@json.FromJson)
+type PointWire
+pub fn PointWire::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
 
+#derive(Eq, @debug.Debug)
 pub struct Rect {
   x : Int32
   y : Int32
   width : Int32
   height : Int32
-} derive(Eq, @debug.Debug)
+}
 pub fn Rect::equal(Self, Self) -> Bool
 pub fn Rect::not_equal(Self, Self) -> Bool
 pub fn Rect::to_repr(Self) -> @debug.Repr
@@ -74,11 +81,12 @@ pub fn ScreenMonitor::start_watching(Self) -> Unit raise ScreenMonitorError
 pub fn ScreenMonitor::stop_watching(Self) -> Unit raise ScreenMonitorError
 pub fn ScreenMonitor::window_sources_json(Self, Int32, Int32) -> Bytes
 
+#derive(Eq, @debug.Debug)
 pub enum ScreenMonitorEvent {
   DisplayAdded(DisplayInfo)
   DisplayRemoved(DisplayInfo)
   DisplayMetricsChanged(DisplayInfo)
-} derive(Eq, @debug.Debug)
+}
 pub fn ScreenMonitorEvent::equal(Self, Self) -> Bool
 pub fn ScreenMonitorEvent::not_equal(Self, Self) -> Bool
 pub fn ScreenMonitorEvent::to_repr(Self) -> @debug.Repr

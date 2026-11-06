@@ -1,4 +1,5 @@
 ///|
+#derive(ToJson, FromJson)
 struct Request {
   minimizable : Bool
   maximizable : Bool
@@ -11,7 +12,7 @@ struct Request {
   kiosk : Bool
   visible_on_all_workspaces : Bool
   enabled : Bool
-} derive(ToJson, FromJson)
+}
 
 ///|
 pub extend Request with ToJson::{to_json}
@@ -20,6 +21,7 @@ pub extend Request with ToJson::{to_json}
 pub extend Request with FromJson::{from_json}
 
 ///|
+#derive(ToJson, FromJson)
 struct Reply {
   minimizable : Bool
   maximizable : Bool
@@ -33,7 +35,7 @@ struct Reply {
   visible_on_all_workspaces : Bool
   enabled : Bool
   message : String
-} derive(ToJson, FromJson)
+}
 
 ///|
 pub extend Reply with ToJson::{to_json}
@@ -56,10 +58,11 @@ let close_command : @proton_contract.Command[Unit, Unit] = contract.command(
 )
 
 ///|
+#derive(ToJson, FromJson)
 struct AdvancedRequest {
   action : String
   path : String
-} derive(ToJson, FromJson)
+}
 
 ///|
 pub extend AdvancedRequest with ToJson::{to_json}
@@ -68,9 +71,10 @@ pub extend AdvancedRequest with ToJson::{to_json}
 pub extend AdvancedRequest with FromJson::{from_json}
 
 ///|
+#derive(ToJson, FromJson)
 struct AdvancedReply {
   message : String
-} derive(ToJson, FromJson)
+}
 
 ///|
 pub extend AdvancedReply with ToJson::{to_json}

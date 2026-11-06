@@ -6,17 +6,19 @@
 
 ```mbt check
 ///|
+#derive(ToJson)
 struct PingRequest {
   value : String
-} derive(ToJson)
+}
 
 ///|
 pub extend PingRequest with ToJson::{to_json}
 
 ///|
+#derive(FromJson)
 struct PingReply {
   value : String
-} derive(FromJson)
+}
 
 ///|
 pub extend PingReply with FromJson::{from_json}

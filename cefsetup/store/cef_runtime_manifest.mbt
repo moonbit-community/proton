@@ -2,6 +2,7 @@
 let runtime_manifest_name = "manifest.json"
 
 ///|
+#derive(ToJson, FromJson, Eq)
 priv struct RuntimeManifest {
   schema_version : Int32
   platform : String
@@ -10,7 +11,7 @@ priv struct RuntimeManifest {
   layout_version : Int32
   sdk : String
   runtime : String
-} derive(ToJson, FromJson, Eq)
+}
 
 ///|
 extend RuntimeManifest with ToJson::{to_json}

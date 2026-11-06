@@ -5,9 +5,10 @@
 // as the embedded browser. View lifecycle events keep the sidebar in sync.
 
 ///|
+#derive(ToJson, FromJson)
 struct NavigatePayload {
   url : String
-} derive(ToJson, FromJson)
+}
 
 ///|
 pub extend NavigatePayload with ToJson::{to_json}
@@ -16,10 +17,11 @@ pub extend NavigatePayload with ToJson::{to_json}
 pub extend NavigatePayload with FromJson::{from_json}
 
 ///|
+#derive(ToJson, FromJson)
 struct NavigateReply {
   ok : Bool
   url : String
-} derive(ToJson, FromJson)
+}
 
 ///|
 pub extend NavigateReply with ToJson::{to_json}
@@ -28,9 +30,10 @@ pub extend NavigateReply with ToJson::{to_json}
 pub extend NavigateReply with FromJson::{from_json}
 
 ///|
+#derive(ToJson, FromJson)
 struct SimpleReply {
   ok : Bool
-} derive(ToJson, FromJson)
+}
 
 ///|
 pub extend SimpleReply with ToJson::{to_json}
@@ -39,9 +42,10 @@ pub extend SimpleReply with ToJson::{to_json}
 pub extend SimpleReply with FromJson::{from_json}
 
 ///|
+#derive(ToJson, FromJson)
 struct ZoomPayload {
   percent : Int32
-} derive(ToJson, FromJson)
+}
 
 ///|
 pub extend ZoomPayload with ToJson::{to_json}
@@ -50,10 +54,11 @@ pub extend ZoomPayload with ToJson::{to_json}
 pub extend ZoomPayload with FromJson::{from_json}
 
 ///|
+#derive(ToJson, FromJson)
 struct ZoomReply {
   ok : Bool
   percent : Int32
-} derive(ToJson, FromJson)
+}
 
 ///|
 pub extend ZoomReply with ToJson::{to_json}
@@ -62,10 +67,11 @@ pub extend ZoomReply with ToJson::{to_json}
 pub extend ZoomReply with FromJson::{from_json}
 
 ///|
+#derive(ToJson, FromJson)
 struct AudioPayload {
   target : String
   muted : Bool
-} derive(ToJson, FromJson)
+}
 
 ///|
 pub extend AudioPayload with ToJson::{to_json}
@@ -74,11 +80,12 @@ pub extend AudioPayload with ToJson::{to_json}
 pub extend AudioPayload with FromJson::{from_json}
 
 ///|
+#derive(ToJson, FromJson)
 struct AudioReply {
   ok : Bool
   target : String
   muted : Bool
-} derive(ToJson, FromJson)
+}
 
 ///|
 pub extend AudioReply with ToJson::{to_json}

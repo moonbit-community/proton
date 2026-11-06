@@ -7,9 +7,10 @@
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMSnapshotArrayOfStrings {
   value : Array[DOMSnapshotStringIndex]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMSnapshotArrayOfStrings with Eq::{not_equal, equal}
@@ -53,9 +54,10 @@ pub fn DOMSnapshotArrayOfStrings::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMSnapshotComputedStyle {
   properties : Array[DOMSnapshotNameValue]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMSnapshotComputedStyle with Eq::{not_equal, equal}
@@ -106,6 +108,7 @@ pub fn DOMSnapshotComputedStyle::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMSnapshotDocumentSnapshot {
   document_url : DOMSnapshotStringIndex
   title : DOMSnapshotStringIndex
@@ -122,7 +125,7 @@ pub(all) struct DOMSnapshotDocumentSnapshot {
   scroll_offset_y : Double?
   content_width : Double?
   content_height : Double?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMSnapshotDocumentSnapshot with Eq::{not_equal, equal}
@@ -232,6 +235,7 @@ pub fn DOMSnapshotDocumentSnapshot::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMSnapshotDOMNode {
   node_type : Int32
   node_name : String
@@ -261,7 +265,7 @@ pub(all) struct DOMSnapshotDOMNode {
   origin_url : String?
   scroll_offset_x : Double?
   scroll_offset_y : Double?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMSnapshotDOMNode with Eq::{not_equal, equal}
@@ -489,11 +493,12 @@ pub fn DOMSnapshotDOMNode::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMSnapshotInlineTextBox {
   bounding_box : DOMRect
   start_character_index : Int32
   num_characters : Int32
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMSnapshotInlineTextBox with Eq::{not_equal, equal}
@@ -549,6 +554,7 @@ pub fn DOMSnapshotInlineTextBox::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMSnapshotLayoutTreeNode {
   dom_node_index : Int32
   bounding_box : DOMRect
@@ -557,7 +563,7 @@ pub(all) struct DOMSnapshotLayoutTreeNode {
   style_index : Int32?
   paint_order : Int32?
   is_stacking_context : Bool?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMSnapshotLayoutTreeNode with Eq::{not_equal, equal}
@@ -643,6 +649,7 @@ pub fn DOMSnapshotLayoutTreeNode::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMSnapshotLayoutTreeSnapshot {
   node_index : Array[Int32]
   styles : Array[DOMSnapshotArrayOfStrings]
@@ -655,7 +662,7 @@ pub(all) struct DOMSnapshotLayoutTreeSnapshot {
   client_rects : Array[DOMSnapshotRectangle]?
   blended_background_colors : Array[DOMSnapshotStringIndex]?
   text_color_opacities : Array[Double]?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMSnapshotLayoutTreeSnapshot with Eq::{not_equal, equal}
@@ -820,10 +827,11 @@ pub fn DOMSnapshotLayoutTreeSnapshot::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMSnapshotNameValue {
   name : String
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMSnapshotNameValue with Eq::{not_equal, equal}
@@ -865,6 +873,7 @@ pub fn DOMSnapshotNameValue::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMSnapshotNodeTreeSnapshot {
   parent_index : Array[Int32]?
   node_type : Array[Int32]?
@@ -883,7 +892,7 @@ pub(all) struct DOMSnapshotNodeTreeSnapshot {
   is_clickable : DOMSnapshotRareBooleanData?
   current_source_url : DOMSnapshotRareStringData?
   origin_url : DOMSnapshotRareStringData?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMSnapshotNodeTreeSnapshot with Eq::{not_equal, equal}
@@ -1083,9 +1092,10 @@ pub fn DOMSnapshotNodeTreeSnapshot::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMSnapshotRareBooleanData {
   index : Array[Int32]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMSnapshotRareBooleanData with Eq::{not_equal, equal}
@@ -1136,10 +1146,11 @@ pub fn DOMSnapshotRareBooleanData::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMSnapshotRareIntegerData {
   index : Array[Int32]
   value : Array[Int32]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMSnapshotRareIntegerData with Eq::{not_equal, equal}
@@ -1199,10 +1210,11 @@ pub fn DOMSnapshotRareIntegerData::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMSnapshotRareStringData {
   index : Array[Int32]
   value : Array[DOMSnapshotStringIndex]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMSnapshotRareStringData with Eq::{not_equal, equal}
@@ -1260,9 +1272,10 @@ pub fn DOMSnapshotRareStringData::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMSnapshotRectangle {
   value : Array[Double]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMSnapshotRectangle with Eq::{not_equal, equal}
@@ -1301,9 +1314,10 @@ pub fn DOMSnapshotRectangle::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMSnapshotStringIndex {
   value : Int32
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMSnapshotStringIndex with Eq::{not_equal, equal}
@@ -1348,12 +1362,13 @@ pub fn DOMSnapshotStringIndex::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMSnapshotTextBoxSnapshot {
   layout_index : Array[Int32]
   bounds : Array[DOMSnapshotRectangle]
   start : Array[Int32]
   length : Array[Int32]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMSnapshotTextBoxSnapshot with Eq::{not_equal, equal}
@@ -1431,13 +1446,14 @@ pub fn DOMSnapshotTextBoxSnapshot::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMSnapshotCaptureSnapshotParams {
   computed_styles : Array[String]
   include_paint_order : Bool?
   include_domrects : Bool?
   include_blended_background_colors : Bool?
   include_text_color_opacities : Bool?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMSnapshotCaptureSnapshotParams with Eq::{not_equal, equal}
@@ -1480,10 +1496,11 @@ pub fn DOMSnapshotCaptureSnapshotParams::to_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMSnapshotCaptureSnapshotResult {
   documents : Array[DOMSnapshotDocumentSnapshot]
   strings : Array[String]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMSnapshotCaptureSnapshotResult with Eq::{not_equal, equal}
@@ -1607,12 +1624,13 @@ pub fn domsnapshot_enable_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMSnapshotGetSnapshotParams {
   computed_style_whitelist : Array[String]
   include_event_listeners : Bool?
   include_paint_order : Bool?
   include_user_agent_shadow_tree : Bool?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMSnapshotGetSnapshotParams with Eq::{not_equal, equal}
@@ -1652,11 +1670,12 @@ pub fn DOMSnapshotGetSnapshotParams::to_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DOMSnapshotGetSnapshotResult {
   dom_nodes : Array[DOMSnapshotDOMNode]
   layout_tree_nodes : Array[DOMSnapshotLayoutTreeNode]
   computed_styles : Array[DOMSnapshotComputedStyle]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DOMSnapshotGetSnapshotResult with Eq::{not_equal, equal}

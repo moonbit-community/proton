@@ -7,10 +7,11 @@
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct MemoryDOMCounter {
   name : String
   count : Int32
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend MemoryDOMCounter with Eq::{not_equal, equal}
@@ -52,12 +53,13 @@ pub fn MemoryDOMCounter::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct MemoryModule {
   name : String
   uuid : String
   base_address : String
   size : Double
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend MemoryModule with Eq::{not_equal, equal}
@@ -105,9 +107,10 @@ pub fn MemoryModule::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct MemoryPressureLevel {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend MemoryPressureLevel with Eq::{not_equal, equal}
@@ -145,10 +148,11 @@ pub fn MemoryPressureLevel::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct MemorySamplingProfile {
   samples : Array[MemorySamplingProfileNode]
   modules : Array[MemoryModule]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend MemorySamplingProfile with Eq::{not_equal, equal}
@@ -200,11 +204,12 @@ pub fn MemorySamplingProfile::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct MemorySamplingProfileNode {
   size : Double
   total : Double
   stack : Array[String]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend MemorySamplingProfileNode with Eq::{not_equal, equal}
@@ -284,9 +289,10 @@ pub fn memory_forcibly_purge_java_script_memory_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct MemoryGetAllTimeSamplingProfileResult {
   profile : MemorySamplingProfile
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend MemoryGetAllTimeSamplingProfileResult with Eq::{not_equal, equal}
@@ -352,9 +358,10 @@ pub fn memory_get_all_time_sampling_profile_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct MemoryGetBrowserSamplingProfileResult {
   profile : MemorySamplingProfile
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend MemoryGetBrowserSamplingProfileResult with Eq::{not_equal, equal}
@@ -417,11 +424,12 @@ pub fn memory_get_browser_sampling_profile_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct MemoryGetDOMCountersResult {
   documents : Int32
   nodes : Int32
   js_event_listeners : Int32
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend MemoryGetDOMCountersResult with Eq::{not_equal, equal}
@@ -488,9 +496,10 @@ pub fn memory_get_domcounters_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct MemoryGetDOMCountersForLeakDetectionResult {
   counters : Array[MemoryDOMCounter]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend MemoryGetDOMCountersForLeakDetectionResult with Eq::{
@@ -562,9 +571,10 @@ pub fn memory_get_domcounters_for_leak_detection_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct MemoryGetSamplingProfileResult {
   profile : MemorySamplingProfile
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend MemoryGetSamplingProfileResult with Eq::{not_equal, equal}
@@ -649,9 +659,10 @@ pub fn memory_prepare_for_leak_detection_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct MemorySetPressureNotificationsSuppressedParams {
   suppressed : Bool
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend MemorySetPressureNotificationsSuppressedParams with Eq::{
@@ -711,9 +722,10 @@ pub fn memory_set_pressure_notifications_suppressed_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct MemorySimulatePressureNotificationParams {
   level : MemoryPressureLevel
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend MemorySimulatePressureNotificationParams with Eq::{not_equal, equal}
@@ -770,10 +782,11 @@ pub fn memory_simulate_pressure_notification_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct MemoryStartSamplingParams {
   sampling_interval : Int32?
   suppress_randomness : Bool?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend MemoryStartSamplingParams with Eq::{not_equal, equal}

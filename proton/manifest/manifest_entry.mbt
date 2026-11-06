@@ -1,11 +1,12 @@
 ///|
 /// Declarative entry content loaded into a Proton application window.
+#derive(Debug, Eq)
 pub(all) enum AppEntry {
   Html(String)
   Url(String)
   File(String)
   Asset(String)
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend AppEntry with Eq::{not_equal, equal}

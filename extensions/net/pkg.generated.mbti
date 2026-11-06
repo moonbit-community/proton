@@ -15,6 +15,7 @@ pub async fn download(String, String, headers? : Map[String, String], overwrite?
 pub fn register_commands(@command.CommandRegistrar) -> Unit raise
 
 // Errors
+#derive(@debug.Debug)
 pub(all) suberror DownloadError {
   InvalidRequest(detail~ : String)
   HttpStatus(status~ : Int32)
@@ -22,10 +23,11 @@ pub(all) suberror DownloadError {
   NetworkFailed(detail~ : String)
   FileFailed(detail~ : String)
   CleanupFailed(primary~ : DownloadError?, path~ : String, detail~ : String)
-} derive(@debug.Debug)
+}
 pub fn DownloadError::to_repr(Self) -> @debug.Repr
 
-type NetError derive(Eq, @debug.Debug)
+#derive(Eq, @debug.Debug)
+type NetError
 pub fn NetError::equal(Self, Self) -> Bool
 pub fn NetError::not_equal(Self, Self) -> Bool
 pub fn NetError::output(Self, &Logger) -> Unit
@@ -33,10 +35,11 @@ pub fn NetError::to_repr(Self) -> @debug.Repr
 pub fn NetError::to_string(Self) -> String
 
 // Types and methods
+#derive(Eq, @debug.Debug)
 pub(all) struct DownloadProgress {
   received_bytes : Int64
   total_bytes : Int64?
-} derive(Eq, @debug.Debug)
+}
 pub fn DownloadProgress::equal(Self, Self) -> Bool
 pub fn DownloadProgress::not_equal(Self, Self) -> Bool
 pub fn DownloadProgress::to_repr(Self) -> @debug.Repr

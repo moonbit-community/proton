@@ -1,7 +1,8 @@
 ///|
+#derive(ToJson, FromJson, Debug, Eq)
 pub(all) struct GlobalHotkeyRequest {
   accelerator : String
-} derive(ToJson, FromJson, Debug, Eq)
+}
 
 ///|
 pub extend GlobalHotkeyRequest with Eq::{not_equal, equal}
@@ -16,9 +17,10 @@ pub extend GlobalHotkeyRequest with ToJson::{to_json}
 pub extend GlobalHotkeyRequest with FromJson::{from_json}
 
 ///|
+#derive(ToJson, FromJson, Debug, Eq)
 pub(all) struct GlobalHotkeyReply {
   registered : Bool
-} derive(ToJson, FromJson, Debug, Eq)
+}
 
 ///|
 pub extend GlobalHotkeyReply with Eq::{not_equal, equal}
@@ -33,9 +35,10 @@ pub extend GlobalHotkeyReply with ToJson::{to_json}
 pub extend GlobalHotkeyReply with FromJson::{from_json}
 
 ///|
+#derive(ToJson, FromJson, Debug, Eq)
 pub(all) struct UnregisterAllReply {
   count : Int32
-} derive(ToJson, FromJson, Debug, Eq)
+}
 
 ///|
 pub extend UnregisterAllReply with Eq::{not_equal, equal}
@@ -50,9 +53,10 @@ pub extend UnregisterAllReply with ToJson::{to_json}
 pub extend UnregisterAllReply with FromJson::{from_json}
 
 ///|
+#derive(ToJson, FromJson, Debug, Eq)
 pub(all) struct GlobalHotkeyListReply {
   accelerators : Array[String]
-} derive(ToJson, FromJson, Debug, Eq)
+}
 
 ///|
 pub extend GlobalHotkeyListReply with Eq::{not_equal, equal}
@@ -67,10 +71,11 @@ pub extend GlobalHotkeyListReply with ToJson::{to_json}
 pub extend GlobalHotkeyListReply with FromJson::{from_json}
 
 ///|
+#derive(ToJson, FromJson, Debug, Eq)
 pub(all) struct GlobalHotkeyActivity {
   operation : String
   accelerator : String
-} derive(ToJson, FromJson, Debug, Eq)
+}
 
 ///|
 pub extend GlobalHotkeyActivity with Eq::{not_equal, equal}
@@ -85,9 +90,10 @@ pub extend GlobalHotkeyActivity with ToJson::{to_json}
 pub extend GlobalHotkeyActivity with FromJson::{from_json}
 
 ///|
+#derive(ToJson, FromJson, Debug, Eq)
 pub(all) struct GlobalHotkeyTriggered {
   accelerator : String
-} derive(ToJson, FromJson, Debug, Eq)
+}
 
 ///|
 pub extend GlobalHotkeyTriggered with Eq::{not_equal, equal}

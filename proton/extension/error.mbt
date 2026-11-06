@@ -1,8 +1,9 @@
 ///|
 /// Failures while adapting a framework extension to the app command runtime.
+#derive(Debug)
 pub(all) suberror ExtensionAdapterError {
   TypedSpecInvalid(extension_id~ : String, detail~ : String)
-} derive(Debug)
+}
 
 ///|
 pub extend ExtensionAdapterError with Debug::{to_repr}

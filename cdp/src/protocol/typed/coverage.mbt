@@ -10,6 +10,7 @@
 /// let report = protocol_typed_coverage_report()
 /// assert_true(report.complete)
 /// ```
+#derive(Eq, ToJson, Debug)
 pub(all) struct ProtocolTypedCoverageReport {
   domain_count : Int32
   source_count : Int32
@@ -42,7 +43,7 @@ pub(all) struct ProtocolTypedCoverageReport {
   typed_domain_type_count : Int32
   typed_domain_type_missing_count : Int32
   complete : Bool
-} derive(Eq, ToJson, Debug)
+}
 
 ///|
 pub extend ProtocolTypedCoverageReport with Eq::{not_equal, equal}

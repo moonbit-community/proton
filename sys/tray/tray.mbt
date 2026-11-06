@@ -20,12 +20,13 @@ pub struct Tray {
 
 ///|
 /// Kind of context-menu item supported by tray v1.
+#derive(Debug, Eq)
 pub(all) enum TrayMenuItemKind {
   Normal
   Separator
   Checkbox
   Submenu
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend TrayMenuItemKind with Eq::{not_equal, equal}
@@ -40,12 +41,13 @@ pub extend TrayMenuItemKind with Debug::{to_repr}
 /// `TrayMenuItem::checkbox` to build clickable items. Use
 /// `TrayMenuItem::submenu` to group nested items. Clickable item ids must be
 /// unique across the whole menu tree.
+#derive(Debug, Eq)
 pub(all) enum TrayMenuItem {
   Normal(id~ : String, label~ : String, enabled~ : Bool)
   Separator
   Checkbox(id~ : String, label~ : String, checked~ : Bool, enabled~ : Bool)
   Submenu(label~ : String, items~ : Array[TrayMenuItem], enabled~ : Bool)
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend TrayMenuItem with Eq::{not_equal, equal}
@@ -55,12 +57,13 @@ pub extend TrayMenuItem with Debug::{to_repr}
 
 ///|
 /// Event emitted by the native tray backend.
+#derive(Debug, Eq)
 pub(all) enum TrayEvent {
   Click
   RightClick
   DoubleClick
   MenuItemClick(String)
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend TrayEvent with Eq::{not_equal, equal}

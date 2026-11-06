@@ -7,11 +7,12 @@
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct FileSystemBucketFileSystemLocator {
   storage_key : StorageSerializedStorageKey
   bucket_name : String?
   path_components : Array[String]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend FileSystemBucketFileSystemLocator with Eq::{not_equal, equal}
@@ -74,11 +75,12 @@ pub fn FileSystemBucketFileSystemLocator::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct FileSystemDirectory {
   name : String
   nested_directories : Array[String]
   nested_files : Array[FileSystemFile]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend FileSystemDirectory with Eq::{not_equal, equal}
@@ -140,12 +142,13 @@ pub fn FileSystemDirectory::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct FileSystemFile {
   name : String
   last_modified : NetworkTimeSinceEpoch
   size : Double
   type_ : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend FileSystemFile with Eq::{not_equal, equal}
@@ -193,9 +196,10 @@ pub fn FileSystemFile::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct FileSystemGetDirectoryParams {
   bucket_file_system_locator : FileSystemBucketFileSystemLocator
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend FileSystemGetDirectoryParams with Eq::{not_equal, equal}
@@ -224,9 +228,10 @@ pub fn FileSystemGetDirectoryParams::to_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct FileSystemGetDirectoryResult {
   directory : FileSystemDirectory
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend FileSystemGetDirectoryResult with Eq::{not_equal, equal}

@@ -48,9 +48,10 @@ pub fn set_jump_list(
 
 ///|
 /// Failures while querying connected displays.
+#derive(Debug)
 pub(all) suberror ScreenQueryError {
   QueryFailed(status~ : Int32, detail~ : String)
-} derive(Debug)
+}
 
 ///|
 pub extend ScreenQueryError with Debug::{to_repr}
@@ -65,17 +66,19 @@ pub fn screens() -> Array[ScreenInfo] raise ScreenQueryError {
 
 ///|
 /// The light or dark color scheme reported by the operating system.
+#derive(Eq, Debug)
 pub(all) enum ColorScheme {
   Light
   Dark
-} derive(Eq, Debug)
+}
 
 ///|
 /// A read-only snapshot of system appearance, independent of window preferences.
+#derive(Eq, Debug)
 pub(all) struct SystemAppearance {
   color_scheme : ColorScheme
   high_contrast : Bool
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend ColorScheme with Eq::{not_equal, equal}
@@ -377,10 +380,11 @@ fn MenuBar::to_native(self : MenuBar) -> @native.MenuBar {
 
 ///|
 /// Top-left position of the native button group, in window-local logical pixels.
+#derive(Debug, Eq)
 pub(all) struct WindowButtonPosition {
   x : Int32
   y : Int32
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend WindowButtonPosition with Eq::{equal, not_equal}

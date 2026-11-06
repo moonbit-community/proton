@@ -11,6 +11,7 @@
 ///
 /// This enum derives `Eq` and implements `Show`, which makes it convenient to
 /// inspect in tests and to print in user-facing diagnostics.
+#derive(Debug, Eq)
 pub enum AutoLaunchError {
   EmptyName
   EmptyExecutablePath
@@ -22,7 +23,7 @@ pub enum AutoLaunchError {
   UnsupportedExecutablePath(String)
   UnsupportedPlatform(Platform)
   NativeFailure(action~ : String, message~ : String)
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend AutoLaunchError with Eq::{not_equal, equal}

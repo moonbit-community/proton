@@ -1,9 +1,10 @@
 ///|
+#derive(ToJson, FromJson, Debug, Eq)
 pub(all) struct SpawnRequest {
   command : String
   args : Array[String]
   cwd : String?
-} derive(ToJson, FromJson, Debug, Eq)
+}
 
 ///|
 pub extend SpawnRequest with Eq::{not_equal, equal}
@@ -18,10 +19,11 @@ pub extend SpawnRequest with ToJson::{to_json}
 pub extend SpawnRequest with FromJson::{from_json}
 
 ///|
+#derive(ToJson, FromJson, Debug, Eq)
 pub(all) struct SpawnReply {
   process_id : Int32
   pid : Int32
-} derive(ToJson, FromJson, Debug, Eq)
+}
 
 ///|
 pub extend SpawnReply with Eq::{not_equal, equal}
@@ -36,9 +38,10 @@ pub extend SpawnReply with ToJson::{to_json}
 pub extend SpawnReply with FromJson::{from_json}
 
 ///|
+#derive(ToJson, FromJson, Debug, Eq)
 pub(all) struct WaitRequest {
   process_id : Int32
-} derive(ToJson, FromJson, Debug, Eq)
+}
 
 ///|
 pub extend WaitRequest with Eq::{not_equal, equal}
@@ -53,9 +56,10 @@ pub extend WaitRequest with ToJson::{to_json}
 pub extend WaitRequest with FromJson::{from_json}
 
 ///|
+#derive(ToJson, FromJson, Debug, Eq)
 pub(all) struct WaitReply {
   exit_code : Int32
-} derive(ToJson, FromJson, Debug, Eq)
+}
 
 ///|
 pub extend WaitReply with Eq::{not_equal, equal}
@@ -70,9 +74,10 @@ pub extend WaitReply with ToJson::{to_json}
 pub extend WaitReply with FromJson::{from_json}
 
 ///|
+#derive(ToJson, FromJson, Debug, Eq)
 pub(all) struct KillRequest {
   process_id : Int32
-} derive(ToJson, FromJson, Debug, Eq)
+}
 
 ///|
 pub extend KillRequest with Eq::{not_equal, equal}
@@ -87,9 +92,10 @@ pub extend KillRequest with ToJson::{to_json}
 pub extend KillRequest with FromJson::{from_json}
 
 ///|
+#derive(ToJson, FromJson, Debug, Eq)
 pub(all) struct KillReply {
   killed : Bool
-} derive(ToJson, FromJson, Debug, Eq)
+}
 
 ///|
 pub extend KillReply with Eq::{not_equal, equal}
@@ -104,10 +110,11 @@ pub extend KillReply with ToJson::{to_json}
 pub extend KillReply with FromJson::{from_json}
 
 ///|
+#derive(ToJson, FromJson, Debug, Eq)
 pub(all) struct ProcessActivity {
   operation : String
   process_id : Int32
-} derive(ToJson, FromJson, Debug, Eq)
+}
 
 ///|
 pub extend ProcessActivity with Eq::{not_equal, equal}

@@ -1,5 +1,6 @@
 ///|
 /// Failures raised by the typed frontend client.
+#derive(Debug, Eq)
 pub(all) suberror ClientFailure {
   BridgeUnavailable
   RequestCancelled
@@ -8,7 +9,7 @@ pub(all) suberror ClientFailure {
   TransportFailure(message~ : String)
   ResponseDecode(message~ : String)
   EventDecode(message~ : String)
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend ClientFailure with Eq::{not_equal, equal}
@@ -52,11 +53,12 @@ impl Show for ClientFailure with fn output(self, logger) {
 }
 
 ///|
+#derive(FromJson)
 priv struct BridgeFailureWire {
   code : String
   message : String
   detail : String?
-} derive(FromJson)
+}
 
 ///|
 fn decode_bridge_failure(raw : String) -> ClientFailure {

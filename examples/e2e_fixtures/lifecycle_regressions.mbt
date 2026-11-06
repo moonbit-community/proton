@@ -895,10 +895,11 @@ fn describe_history(history : @proton.NavigationHistory) -> String {
 
 ///|
 /// One report the page sends while the case inspects an inserted stylesheet.
+#derive(ToJson, FromJson)
 struct PageControlReport {
   kind : String
   value : String
-} derive(ToJson, FromJson)
+}
 
 ///|
 pub extend PageControlReport with ToJson::{to_json}

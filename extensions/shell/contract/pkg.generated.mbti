@@ -23,58 +23,64 @@ pub let trash_item : @proton_contract.Command[TrashItemRequest, ShellReply]
 // Errors
 
 // Types and methods
+#derive(Eq, @debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct BeepRequest {
-} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+}
 pub fn BeepRequest::equal(Self, Self) -> Bool
-pub fn BeepRequest::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn BeepRequest::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
 pub fn BeepRequest::not_equal(Self, Self) -> Bool
-pub fn BeepRequest::to_json(Self) -> Json
+pub fn BeepRequest::to_json(Self) -> @json.Json
 pub fn BeepRequest::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct OpenRequest {
   target : String
-} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+}
 pub fn OpenRequest::equal(Self, Self) -> Bool
-pub fn OpenRequest::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn OpenRequest::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
 pub fn OpenRequest::not_equal(Self, Self) -> Bool
-pub fn OpenRequest::to_json(Self) -> Json
+pub fn OpenRequest::to_json(Self) -> @json.Json
 pub fn OpenRequest::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct RevealItemRequest {
   path : String
-} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+}
 pub fn RevealItemRequest::equal(Self, Self) -> Bool
-pub fn RevealItemRequest::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn RevealItemRequest::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
 pub fn RevealItemRequest::not_equal(Self, Self) -> Bool
-pub fn RevealItemRequest::to_json(Self) -> Json
+pub fn RevealItemRequest::to_json(Self) -> @json.Json
 pub fn RevealItemRequest::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct ShellActivity {
   operation : String
   target : String
-} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+}
 pub fn ShellActivity::equal(Self, Self) -> Bool
-pub fn ShellActivity::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn ShellActivity::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
 pub fn ShellActivity::not_equal(Self, Self) -> Bool
-pub fn ShellActivity::to_json(Self) -> Json
+pub fn ShellActivity::to_json(Self) -> @json.Json
 pub fn ShellActivity::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct ShellReply {
   launched : Bool
-} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+}
 pub fn ShellReply::equal(Self, Self) -> Bool
-pub fn ShellReply::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn ShellReply::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
 pub fn ShellReply::not_equal(Self, Self) -> Bool
-pub fn ShellReply::to_json(Self) -> Json
+pub fn ShellReply::to_json(Self) -> @json.Json
 pub fn ShellReply::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct TrashItemRequest {
   path : String
-} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+}
 pub fn TrashItemRequest::equal(Self, Self) -> Bool
-pub fn TrashItemRequest::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn TrashItemRequest::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
 pub fn TrashItemRequest::not_equal(Self, Self) -> Bool
-pub fn TrashItemRequest::to_json(Self) -> Json
+pub fn TrashItemRequest::to_json(Self) -> @json.Json
 pub fn TrashItemRequest::to_repr(Self) -> @debug.Repr
 
 // Type aliases

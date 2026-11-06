@@ -10,17 +10,20 @@ import {
 // Errors
 
 // Types and methods
-type MetricRow derive(ToJson, @json.FromJson)
-pub fn MetricRow::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
-pub fn MetricRow::to_json(Self) -> Json
+#derive(@json.FromJson, @json.ToJson)
+type MetricRow
+pub fn MetricRow::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn MetricRow::to_json(Self) -> @json.Json
 
-type SampleReply derive(ToJson, @json.FromJson)
-pub fn SampleReply::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
-pub fn SampleReply::to_json(Self) -> Json
+#derive(@json.FromJson, @json.ToJson)
+type SampleReply
+pub fn SampleReply::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn SampleReply::to_json(Self) -> @json.Json
 
-type SampleRequest derive(ToJson, @json.FromJson)
-pub fn SampleRequest::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
-pub fn SampleRequest::to_json(Self) -> Json
+#derive(@json.FromJson, @json.ToJson)
+type SampleRequest
+pub fn SampleRequest::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn SampleRequest::to_json(Self) -> @json.Json
 
 // Type aliases
 

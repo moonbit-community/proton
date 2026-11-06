@@ -15,17 +15,20 @@ pub fn register_commands(@command.CommandRegistrar) -> Unit raise
 // Errors
 
 // Types and methods
-type AddFinished derive(ToJson, @json.FromJson)
-pub fn AddFinished::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
-pub fn AddFinished::to_json(Self) -> Json
+#derive(@json.FromJson, @json.ToJson)
+type AddFinished
+pub fn AddFinished::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn AddFinished::to_json(Self) -> @json.Json
 
-type AddReply derive(ToJson, @json.FromJson)
-pub fn AddReply::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
-pub fn AddReply::to_json(Self) -> Json
+#derive(@json.FromJson, @json.ToJson)
+type AddReply
+pub fn AddReply::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn AddReply::to_json(Self) -> @json.Json
 
-type AddRequest derive(ToJson, @json.FromJson)
-pub fn AddRequest::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
-pub fn AddRequest::to_json(Self) -> Json
+#derive(@json.FromJson, @json.ToJson)
+type AddRequest
+pub fn AddRequest::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn AddRequest::to_json(Self) -> @json.Json
 
 // Type aliases
 

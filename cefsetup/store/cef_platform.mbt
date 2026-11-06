@@ -17,6 +17,7 @@ priv struct RuntimeRequirement {
 }
 
 ///|
+#derive(ToJson)
 priv struct RuntimeRequirementInfo {
   proton_version : String
   base_url : String
@@ -24,7 +25,7 @@ priv struct RuntimeRequirementInfo {
   cef_archive : String
   cef_sha256 : String
   layout_version : Int32
-} derive(ToJson)
+}
 
 ///|
 fn runtime_requirement(platform : ProtonPlatform) -> RuntimeRequirement {

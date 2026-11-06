@@ -1,6 +1,7 @@
 ///|
 /// Command-line package metadata shared by `proton_package` and higher-level
 /// packaging frontends.
+#derive(Debug, Eq)
 pub(all) struct PackageArguments {
   product_name : String?
   identifier : String?
@@ -13,7 +14,7 @@ pub(all) struct PackageArguments {
   nsis_install_mode : @package.NsisInstallMode?
   sign : Bool
   notarize : Bool
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend PackageArguments with Eq::{not_equal, equal}

@@ -1,8 +1,9 @@
 ///|
+#derive(ToJson, FromJson)
 struct StartRequest {
   url : String
   show_dialog : Bool
-} derive(ToJson, FromJson)
+}
 
 ///|
 pub extend StartRequest with ToJson::{to_json}
@@ -11,10 +12,11 @@ pub extend StartRequest with ToJson::{to_json}
 pub extend StartRequest with FromJson::{from_json}
 
 ///|
+#derive(ToJson, FromJson)
 struct Reply {
   ok : Bool
   message : String
-} derive(ToJson, FromJson)
+}
 
 ///|
 pub extend Reply with ToJson::{to_json}

@@ -29,9 +29,10 @@ pub fn event_breakpoints_disable_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct EventBreakpointsRemoveInstrumentationBreakpointParams {
   event_name : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend EventBreakpointsRemoveInstrumentationBreakpointParams with Eq::{
@@ -91,9 +92,10 @@ pub fn event_breakpoints_remove_instrumentation_breakpoint_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct EventBreakpointsSetInstrumentationBreakpointParams {
   event_name : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend EventBreakpointsSetInstrumentationBreakpointParams with Eq::{

@@ -4,12 +4,13 @@
 /// The value is derived from the active native backend rather than from
 /// build-time configuration alone, so it reflects the platform that the
 /// current executable is actually running on.
+#derive(Debug, Eq)
 pub enum Platform {
   Windows
   Macos
   Linux
   Unsupported
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend Platform with Eq::{not_equal, equal}
@@ -34,12 +35,13 @@ pub impl Show for Platform with fn output(self : Platform, logger) {
 
 ///|
 /// Internal backend categories for supported startup mechanisms.
+#derive(Debug, Eq)
 enum BackendKind {
   WindowsRegistry
   MacLaunchAgent
   LinuxDesktopEntry
   UnsupportedBackend
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend BackendKind with Eq::{not_equal, equal}

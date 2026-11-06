@@ -1,11 +1,12 @@
 ///|
 /// Failures while validating or delivering native notifications.
+#derive(Debug, Eq)
 suberror NotificationError {
   EmptyBody
   InvalidBadgeCount(Int32)
   UnsupportedPlatform
   NativeOperation(detail~ : String)
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend NotificationError with Eq::{not_equal, equal}

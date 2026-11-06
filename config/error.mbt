@@ -1,5 +1,6 @@
 ///|
 /// Failures produced while loading and validating `proton.project.json`.
+#derive(Debug, Eq)
 pub(all) suberror AppConfigError {
   FileRead(path~ : String, detail~ : String)
   Syntax(name~ : String, diagnostics~ : String)
@@ -10,7 +11,7 @@ pub(all) suberror AppConfigError {
   UnknownField(path~ : String)
   InvalidField(path~ : String, expectation~ : String)
   UnsupportedValue(path~ : String, value~ : String)
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend AppConfigError with Eq::{not_equal, equal}

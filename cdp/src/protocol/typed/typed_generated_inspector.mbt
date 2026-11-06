@@ -47,9 +47,10 @@ pub fn inspector_enable_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct InspectorDetachedEventParams {
   reason : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend InspectorDetachedEventParams with Eq::{not_equal, equal}

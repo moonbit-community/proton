@@ -6,12 +6,13 @@ let process_shutdown_timeout_ms : Int32 = if @path.sep == '\\' {
 }
 
 ///|
+#derive(Eq, Debug)
 struct ProcessRow {
   pid : Int32
   parent_pid : Int32
   created_at : Int32
   command : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend ProcessRow with Eq::{not_equal, equal}
@@ -20,12 +21,13 @@ pub extend ProcessRow with Eq::{not_equal, equal}
 pub extend ProcessRow with Debug::{to_repr}
 
 ///|
+#derive(FromJson, Eq, Debug)
 struct ProcessRowJson {
   pid : Int32
   parent_pid : Int32
   created_at : Int32
   command : String
-} derive(FromJson, Eq, Debug)
+}
 
 ///|
 pub extend ProcessRowJson with Eq::{not_equal, equal}
@@ -46,9 +48,10 @@ struct ProcessSnapshot {
 }
 
 ///|
+#derive(Eq, Debug)
 struct ShutdownProbeResult {
   subprocess_count : Int32
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend ShutdownProbeResult with Eq::{not_equal, equal}

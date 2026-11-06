@@ -1,11 +1,12 @@
 ///|
+#derive(ToJson, FromJson, Debug, Eq)
 pub(all) struct TrayMenuItem {
   id : String?
   label : String?
   kind : String?
   enabled : Bool?
   checked : Bool?
-} derive(ToJson, FromJson, Debug, Eq)
+}
 
 ///|
 pub extend TrayMenuItem with Eq::{not_equal, equal}
@@ -20,9 +21,10 @@ pub extend TrayMenuItem with ToJson::{to_json}
 pub extend TrayMenuItem with FromJson::{from_json}
 
 ///|
+#derive(ToJson, FromJson, Debug, Eq)
 pub(all) struct TrayMenu {
   items : Array[TrayMenuItem]
-} derive(ToJson, FromJson, Debug, Eq)
+}
 
 ///|
 pub extend TrayMenu with Eq::{not_equal, equal}
@@ -37,11 +39,12 @@ pub extend TrayMenu with ToJson::{to_json}
 pub extend TrayMenu with FromJson::{from_json}
 
 ///|
+#derive(ToJson, FromJson, Debug, Eq)
 pub(all) struct ShowRequest {
   icon : Json?
   tooltip : String?
   menu : TrayMenu?
-} derive(ToJson, FromJson, Debug, Eq)
+}
 
 ///|
 pub extend ShowRequest with Eq::{not_equal, equal}
@@ -56,9 +59,10 @@ pub extend ShowRequest with ToJson::{to_json}
 pub extend ShowRequest with FromJson::{from_json}
 
 ///|
+#derive(ToJson, FromJson, Debug, Eq)
 pub(all) struct SetIconRequest {
   icon : Json?
-} derive(ToJson, FromJson, Debug, Eq)
+}
 
 ///|
 pub extend SetIconRequest with Eq::{not_equal, equal}
@@ -73,9 +77,10 @@ pub extend SetIconRequest with ToJson::{to_json}
 pub extend SetIconRequest with FromJson::{from_json}
 
 ///|
+#derive(ToJson, FromJson, Debug, Eq)
 pub(all) struct SetTooltipRequest {
   tooltip : String
-} derive(ToJson, FromJson, Debug, Eq)
+}
 
 ///|
 pub extend SetTooltipRequest with Eq::{not_equal, equal}
@@ -90,9 +95,10 @@ pub extend SetTooltipRequest with ToJson::{to_json}
 pub extend SetTooltipRequest with FromJson::{from_json}
 
 ///|
+#derive(ToJson, FromJson, Debug, Eq)
 pub(all) struct SetMenuRequest {
   items : Array[TrayMenuItem]
-} derive(ToJson, FromJson, Debug, Eq)
+}
 
 ///|
 pub extend SetMenuRequest with Eq::{not_equal, equal}
@@ -107,9 +113,10 @@ pub extend SetMenuRequest with ToJson::{to_json}
 pub extend SetMenuRequest with FromJson::{from_json}
 
 ///|
+#derive(ToJson, FromJson, Debug, Eq)
 pub(all) struct TrayReply {
   visible : Bool
-} derive(ToJson, FromJson, Debug, Eq)
+}
 
 ///|
 pub extend TrayReply with Eq::{not_equal, equal}
@@ -124,12 +131,13 @@ pub extend TrayReply with ToJson::{to_json}
 pub extend TrayReply with FromJson::{from_json}
 
 ///|
+#derive(ToJson, FromJson, Debug, Eq)
 pub(all) struct TrayActivity {
   operation : String
   visible : Bool
   tooltip : String?
   icon : String?
-} derive(ToJson, FromJson, Debug, Eq)
+}
 
 ///|
 pub extend TrayActivity with Eq::{not_equal, equal}
@@ -144,9 +152,10 @@ pub extend TrayActivity with ToJson::{to_json}
 pub extend TrayActivity with FromJson::{from_json}
 
 ///|
+#derive(ToJson, FromJson, Debug, Eq)
 pub(all) struct TrayClick {
   visible : Bool
-} derive(ToJson, FromJson, Debug, Eq)
+}
 
 ///|
 pub extend TrayClick with Eq::{not_equal, equal}
@@ -161,9 +170,10 @@ pub extend TrayClick with ToJson::{to_json}
 pub extend TrayClick with FromJson::{from_json}
 
 ///|
+#derive(ToJson, FromJson, Debug, Eq)
 pub(all) struct TrayRightClick {
   visible : Bool
-} derive(ToJson, FromJson, Debug, Eq)
+}
 
 ///|
 pub extend TrayRightClick with Eq::{not_equal, equal}
@@ -178,9 +188,10 @@ pub extend TrayRightClick with ToJson::{to_json}
 pub extend TrayRightClick with FromJson::{from_json}
 
 ///|
+#derive(ToJson, FromJson, Debug, Eq)
 pub(all) struct TrayDoubleClick {
   visible : Bool
-} derive(ToJson, FromJson, Debug, Eq)
+}
 
 ///|
 pub extend TrayDoubleClick with Eq::{not_equal, equal}
@@ -195,10 +206,11 @@ pub extend TrayDoubleClick with ToJson::{to_json}
 pub extend TrayDoubleClick with FromJson::{from_json}
 
 ///|
+#derive(ToJson, FromJson, Debug, Eq)
 pub(all) struct TrayMenuItemClick {
   item_id : String
   visible : Bool
-} derive(ToJson, FromJson, Debug, Eq)
+}
 
 ///|
 pub extend TrayMenuItemClick with Eq::{not_equal, equal}

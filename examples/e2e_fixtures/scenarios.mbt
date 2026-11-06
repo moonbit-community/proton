@@ -5,10 +5,11 @@ let async_extension_add_resource : String =
   #|<body><h1>Async Add</h1></body></html>
 
 ///|
+#derive(ToJson, FromJson)
 struct AsyncAddPayload {
   left : Int32
   right : Int32
-} derive(ToJson, FromJson)
+}
 
 ///|
 pub extend AsyncAddPayload with ToJson::{to_json}
@@ -56,9 +57,10 @@ let sync_async_extensions_resource : String =
   #|<body><h1>Sync + Async Extensions</h1></body></html>
 
 ///|
+#derive(ToJson, FromJson)
 struct SyncDoublePayload {
   value : Int32
-} derive(ToJson, FromJson)
+}
 
 ///|
 pub extend SyncDoublePayload with ToJson::{to_json}
@@ -67,11 +69,12 @@ pub extend SyncDoublePayload with ToJson::{to_json}
 pub extend SyncDoublePayload with FromJson::{from_json}
 
 ///|
+#derive(ToJson, FromJson)
 struct SyncDoubleReply {
   value : Int32
   doubled : Int32
   source : String
-} derive(ToJson, FromJson)
+}
 
 ///|
 pub extend SyncDoubleReply with ToJson::{to_json}
@@ -80,11 +83,12 @@ pub extend SyncDoubleReply with ToJson::{to_json}
 pub extend SyncDoubleReply with FromJson::{from_json}
 
 ///|
+#derive(ToJson, FromJson)
 struct AsyncSumPayload {
   left : Int32
   right : Int32
   delay_ms : Int32?
-} derive(ToJson, FromJson)
+}
 
 ///|
 pub extend AsyncSumPayload with ToJson::{to_json}
@@ -93,11 +97,12 @@ pub extend AsyncSumPayload with ToJson::{to_json}
 pub extend AsyncSumPayload with FromJson::{from_json}
 
 ///|
+#derive(ToJson, FromJson)
 struct AsyncSumReply {
   total : Int32
   waited_ms : Int32
   source : String
-} derive(ToJson, FromJson)
+}
 
 ///|
 pub extend AsyncSumReply with ToJson::{to_json}
@@ -193,11 +198,12 @@ let event_broadcast_resource : String =
   #|<body><h1>Event Broadcast</h1></body></html>
 
 ///|
+#derive(ToJson, FromJson)
 struct EventStartPayload {
   run_id : Int32
   count : Int32
   interval_ms : Int32
-} derive(ToJson, FromJson)
+}
 
 ///|
 pub extend EventStartPayload with ToJson::{to_json}
@@ -206,12 +212,13 @@ pub extend EventStartPayload with ToJson::{to_json}
 pub extend EventStartPayload with FromJson::{from_json}
 
 ///|
+#derive(ToJson, FromJson)
 struct EventTick {
   run_id : Int32
   index : Int32
   total : Int32
   remaining : Int32
-} derive(ToJson, FromJson)
+}
 
 ///|
 pub extend EventTick with ToJson::{to_json}
@@ -220,10 +227,11 @@ pub extend EventTick with ToJson::{to_json}
 pub extend EventTick with FromJson::{from_json}
 
 ///|
+#derive(ToJson, FromJson)
 struct EventDone {
   run_id : Int32
   total : Int32
-} derive(ToJson, FromJson)
+}
 
 ///|
 pub extend EventDone with ToJson::{to_json}
@@ -232,10 +240,11 @@ pub extend EventDone with ToJson::{to_json}
 pub extend EventDone with FromJson::{from_json}
 
 ///|
+#derive(ToJson, FromJson)
 struct EventTickerResult {
   ticks : Array[EventTick]
   done : EventDone
-} derive(ToJson, FromJson)
+}
 
 ///|
 pub extend EventTickerResult with ToJson::{to_json}

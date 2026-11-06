@@ -1,7 +1,8 @@
 ///|
+#derive(ToJson, FromJson)
 struct SetAttentionRequest {
   flash : Bool
-} derive(ToJson, FromJson)
+}
 
 ///|
 pub extend SetAttentionRequest with ToJson::{to_json}
@@ -10,10 +11,11 @@ pub extend SetAttentionRequest with ToJson::{to_json}
 pub extend SetAttentionRequest with FromJson::{from_json}
 
 ///|
+#derive(ToJson, FromJson)
 struct SetAttentionReply {
   applied : Bool
   message : String
-} derive(ToJson, FromJson)
+}
 
 ///|
 pub extend SetAttentionReply with ToJson::{to_json}

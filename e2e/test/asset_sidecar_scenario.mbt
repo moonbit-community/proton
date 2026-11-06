@@ -1,4 +1,5 @@
 ///|
+#derive(FromJson, Eq, Debug)
 struct AssetSidecarScenarioProbe {
   url : String
   pathname : String
@@ -15,7 +16,7 @@ struct AssetSidecarScenarioProbe {
   worker_reply : String
   command_reply : Int32
   delayed_reply : Int32
-} derive(FromJson, Eq, Debug)
+}
 
 ///|
 pub extend AssetSidecarScenarioProbe with Eq::{not_equal, equal}

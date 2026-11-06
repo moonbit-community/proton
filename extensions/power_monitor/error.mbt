@@ -1,9 +1,10 @@
 ///|
 /// Failures while querying system power and idle state.
+#derive(Debug, Eq)
 suberror PowerMonitorError {
   BackendUnavailable(detail~ : String)
   QueryFailed(operation~ : String, detail~ : String)
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend PowerMonitorError with Eq::{not_equal, equal}

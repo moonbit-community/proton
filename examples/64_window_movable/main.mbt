@@ -1,7 +1,8 @@
 ///|
+#derive(ToJson, FromJson)
 struct MovableRequest {
   action : String
-} derive(ToJson, FromJson)
+}
 
 ///|
 pub extend MovableRequest with ToJson::{to_json}
@@ -10,6 +11,7 @@ pub extend MovableRequest with ToJson::{to_json}
 pub extend MovableRequest with FromJson::{from_json}
 
 ///|
+#derive(ToJson, FromJson)
 struct MovableReply {
   applied : Bool
   movable : Bool
@@ -18,7 +20,7 @@ struct MovableReply {
   width : Int32
   height : Int32
   message : String
-} derive(ToJson, FromJson)
+}
 
 ///|
 pub extend MovableReply with ToJson::{to_json}

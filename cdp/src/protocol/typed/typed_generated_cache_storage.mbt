@@ -7,13 +7,14 @@
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct CacheStorageCache {
   cache_id : CacheStorageCacheId
   security_origin : String
   storage_key : String
   storage_bucket : StorageStorageBucket?
   cache_name : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend CacheStorageCache with Eq::{not_equal, equal}
@@ -74,9 +75,10 @@ pub fn CacheStorageCache::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct CacheStorageCachedResponse {
   body : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend CacheStorageCachedResponse with Eq::{not_equal, equal}
@@ -118,9 +120,10 @@ pub fn CacheStorageCachedResponse::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct CacheStorageCachedResponseType {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend CacheStorageCachedResponseType with Eq::{not_equal, equal}
@@ -162,9 +165,10 @@ pub fn CacheStorageCachedResponseType::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct CacheStorageCacheId {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend CacheStorageCacheId with Eq::{not_equal, equal}
@@ -202,6 +206,7 @@ pub fn CacheStorageCacheId::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct CacheStorageDataEntry {
   request_url : String
   request_method : String
@@ -211,7 +216,7 @@ pub(all) struct CacheStorageDataEntry {
   response_status_text : String
   response_type : CacheStorageCachedResponseType
   response_headers : Array[CacheStorageHeader]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend CacheStorageDataEntry with Eq::{not_equal, equal}
@@ -291,10 +296,11 @@ pub fn CacheStorageDataEntry::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct CacheStorageHeader {
   name : String
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend CacheStorageHeader with Eq::{not_equal, equal}
@@ -336,9 +342,10 @@ pub fn CacheStorageHeader::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct CacheStorageDeleteCacheParams {
   cache_id : CacheStorageCacheId
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend CacheStorageDeleteCacheParams with Eq::{not_equal, equal}
@@ -391,10 +398,11 @@ pub fn cache_storage_delete_cache_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct CacheStorageDeleteEntryParams {
   cache_id : CacheStorageCacheId
   request : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend CacheStorageDeleteEntryParams with Eq::{not_equal, equal}
@@ -448,11 +456,12 @@ pub fn cache_storage_delete_entry_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct CacheStorageRequestCachedResponseParams {
   cache_id : CacheStorageCacheId
   request_url : String
   request_headers : Array[CacheStorageHeader]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend CacheStorageRequestCachedResponseParams with Eq::{not_equal, equal}
@@ -485,9 +494,10 @@ pub fn CacheStorageRequestCachedResponseParams::to_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct CacheStorageRequestCachedResponseResult {
   response : CacheStorageCachedResponse
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend CacheStorageRequestCachedResponseResult with Eq::{not_equal, equal}
@@ -556,11 +566,12 @@ pub fn cache_storage_request_cached_response_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct CacheStorageRequestCacheNamesParams {
   security_origin : String?
   storage_key : String?
   storage_bucket : StorageStorageBucket?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend CacheStorageRequestCacheNamesParams with Eq::{not_equal, equal}
@@ -597,9 +608,10 @@ pub fn CacheStorageRequestCacheNamesParams::to_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct CacheStorageRequestCacheNamesResult {
   caches : Array[CacheStorageCache]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend CacheStorageRequestCacheNamesResult with Eq::{not_equal, equal}
@@ -671,12 +683,13 @@ pub fn cache_storage_request_cache_names_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct CacheStorageRequestEntriesParams {
   cache_id : CacheStorageCacheId
   skip_count : Int32?
   page_size : Int32?
   path_filter : String?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend CacheStorageRequestEntriesParams with Eq::{not_equal, equal}
@@ -714,10 +727,11 @@ pub fn CacheStorageRequestEntriesParams::to_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct CacheStorageRequestEntriesResult {
   cache_data_entries : Array[CacheStorageDataEntry]
   return_count : Double
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend CacheStorageRequestEntriesResult with Eq::{not_equal, equal}

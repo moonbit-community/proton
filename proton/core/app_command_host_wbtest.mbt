@@ -1,7 +1,8 @@
 ///|
+#derive(Debug)
 suberror CommandHostTestError {
   PrivateFailure(String)
-} derive(Debug)
+}
 
 ///|
 pub extend CommandHostTestError with Debug::{to_repr}

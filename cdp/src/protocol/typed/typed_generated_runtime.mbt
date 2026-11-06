@@ -7,11 +7,12 @@
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct RuntimeCallArgument {
   value : Json?
   unserializable_value : RuntimeUnserializableValue?
   object_id : RuntimeRemoteObjectId?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend RuntimeCallArgument with Eq::{not_equal, equal}
@@ -68,13 +69,14 @@ pub fn RuntimeCallArgument::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct RuntimeCallFrame {
   function_name : String
   script_id : RuntimeScriptId
   url : String
   line_number : Int32
   column_number : Int32
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend RuntimeCallFrame with Eq::{not_equal, equal}
@@ -130,10 +132,11 @@ pub fn RuntimeCallFrame::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct RuntimeCustomPreview {
   header : String
   body_getter_id : RuntimeRemoteObjectId?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend RuntimeCustomPreview with Eq::{not_equal, equal}
@@ -180,12 +183,13 @@ pub fn RuntimeCustomPreview::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct RuntimeDeepSerializedValue {
   type_ : String
   value : Json?
   object_id : String?
   weak_local_object_reference : Int32?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend RuntimeDeepSerializedValue with Eq::{not_equal, equal}
@@ -243,10 +247,11 @@ pub fn RuntimeDeepSerializedValue::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct RuntimeEntryPreview {
   key : RuntimeObjectPreview?
   value : RuntimeObjectPreview
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend RuntimeEntryPreview with Eq::{not_equal, equal}
@@ -295,6 +300,7 @@ pub fn RuntimeEntryPreview::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct RuntimeExceptionDetails {
   exception_id : Int32
   text : String
@@ -306,7 +312,7 @@ pub(all) struct RuntimeExceptionDetails {
   exception : RuntimeRemoteObject?
   execution_context_id : RuntimeExecutionContextId?
   exception_meta_data : Json?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend RuntimeExceptionDetails with Eq::{not_equal, equal}
@@ -395,13 +401,14 @@ pub fn RuntimeExceptionDetails::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct RuntimeExecutionContextDescription {
   id : RuntimeExecutionContextId
   origin : String
   name : String
   unique_id : String
   aux_data : Json?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend RuntimeExecutionContextDescription with Eq::{not_equal, equal}
@@ -457,9 +464,10 @@ pub fn RuntimeExecutionContextDescription::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct RuntimeExecutionContextId {
   value : Int32
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend RuntimeExecutionContextId with Eq::{not_equal, equal}
@@ -508,10 +516,11 @@ pub fn RuntimeExecutionContextId::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct RuntimeInternalPropertyDescriptor {
   name : String
   value : RuntimeRemoteObject?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend RuntimeInternalPropertyDescriptor with Eq::{not_equal, equal}
@@ -562,6 +571,7 @@ pub fn RuntimeInternalPropertyDescriptor::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct RuntimeObjectPreview {
   type_ : String
   subtype : String?
@@ -569,7 +579,7 @@ pub(all) struct RuntimeObjectPreview {
   overflow : Bool
   properties : Array[RuntimePropertyPreview]
   entries : Array[RuntimeEntryPreview]?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend RuntimeObjectPreview with Eq::{not_equal, equal}
@@ -642,12 +652,13 @@ pub fn RuntimeObjectPreview::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct RuntimePrivatePropertyDescriptor {
   name : String
   value : RuntimeRemoteObject?
   get : RuntimeRemoteObject?
   set : RuntimeRemoteObject?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend RuntimePrivatePropertyDescriptor with Eq::{not_equal, equal}
@@ -712,6 +723,7 @@ pub fn RuntimePrivatePropertyDescriptor::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct RuntimePropertyDescriptor {
   name : String
   value : RuntimeRemoteObject?
@@ -723,7 +735,7 @@ pub(all) struct RuntimePropertyDescriptor {
   was_thrown : Bool?
   is_own : Bool?
   symbol : RuntimeRemoteObject?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend RuntimePropertyDescriptor with Eq::{not_equal, equal}
@@ -815,13 +827,14 @@ pub fn RuntimePropertyDescriptor::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct RuntimePropertyPreview {
   name : String
   type_ : String
   value : String?
   value_preview : RuntimeObjectPreview?
   subtype : String?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend RuntimePropertyPreview with Eq::{not_equal, equal}
@@ -878,6 +891,7 @@ pub fn RuntimePropertyPreview::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct RuntimeRemoteObject {
   type_ : String
   subtype : String?
@@ -889,7 +903,7 @@ pub(all) struct RuntimeRemoteObject {
   object_id : RuntimeRemoteObjectId?
   preview : RuntimeObjectPreview?
   custom_preview : RuntimeCustomPreview?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend RuntimeRemoteObject with Eq::{not_equal, equal}
@@ -986,9 +1000,10 @@ pub fn RuntimeRemoteObject::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct RuntimeRemoteObjectId {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend RuntimeRemoteObjectId with Eq::{not_equal, equal}
@@ -1026,9 +1041,10 @@ pub fn RuntimeRemoteObjectId::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct RuntimeScriptId {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend RuntimeScriptId with Eq::{not_equal, equal}
@@ -1066,11 +1082,12 @@ pub fn RuntimeScriptId::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct RuntimeSerializationOptions {
   serialization : String
   max_depth : Int32?
   additional_parameters : Json?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend RuntimeSerializationOptions with Eq::{not_equal, equal}
@@ -1124,12 +1141,13 @@ pub fn RuntimeSerializationOptions::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct RuntimeStackTrace {
   description : String?
   call_frames : Array[RuntimeCallFrame]
   parent : RuntimeStackTrace?
   parent_id : RuntimeStackTraceId?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend RuntimeStackTrace with Eq::{not_equal, equal}
@@ -1196,10 +1214,11 @@ pub fn RuntimeStackTrace::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct RuntimeStackTraceId {
   id : String
   debugger_id : RuntimeUniqueDebuggerId?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend RuntimeStackTraceId with Eq::{not_equal, equal}
@@ -1246,9 +1265,10 @@ pub fn RuntimeStackTraceId::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct RuntimeTimeDelta {
   value : Double
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend RuntimeTimeDelta with Eq::{not_equal, equal}
@@ -1286,9 +1306,10 @@ pub fn RuntimeTimeDelta::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct RuntimeTimestamp {
   value : Double
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend RuntimeTimestamp with Eq::{not_equal, equal}
@@ -1326,9 +1347,10 @@ pub fn RuntimeTimestamp::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct RuntimeUniqueDebuggerId {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend RuntimeUniqueDebuggerId with Eq::{not_equal, equal}
@@ -1366,9 +1388,10 @@ pub fn RuntimeUniqueDebuggerId::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct RuntimeUnserializableValue {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend RuntimeUnserializableValue with Eq::{not_equal, equal}
@@ -1410,11 +1433,12 @@ pub fn RuntimeUnserializableValue::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct RuntimeAddBindingParams {
   name : String
   execution_context_id : RuntimeExecutionContextId?
   execution_context_name : String?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend RuntimeAddBindingParams with Eq::{not_equal, equal}
@@ -1469,11 +1493,12 @@ pub fn runtime_add_binding_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct RuntimeAwaitPromiseParams {
   promise_object_id : RuntimeRemoteObjectId
   return_by_value : Bool?
   generate_preview : Bool?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend RuntimeAwaitPromiseParams with Eq::{not_equal, equal}
@@ -1508,10 +1533,11 @@ pub fn RuntimeAwaitPromiseParams::to_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct RuntimeAwaitPromiseResult {
   result : RuntimeRemoteObject
   exception_details : RuntimeExceptionDetails?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend RuntimeAwaitPromiseResult with Eq::{not_equal, equal}
@@ -1581,6 +1607,7 @@ pub fn runtime_await_promise_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct RuntimeCallFunctionOnParams {
   function_declaration : String
   object_id : RuntimeRemoteObjectId?
@@ -1595,7 +1622,7 @@ pub(all) struct RuntimeCallFunctionOnParams {
   throw_on_side_effect : Bool?
   unique_context_id : String?
   serialization_options : RuntimeSerializationOptions?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend RuntimeCallFunctionOnParams with Eq::{not_equal, equal}
@@ -1660,10 +1687,11 @@ pub fn RuntimeCallFunctionOnParams::to_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct RuntimeCallFunctionOnResult {
   result : RuntimeRemoteObject
   exception_details : RuntimeExceptionDetails?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend RuntimeCallFunctionOnResult with Eq::{not_equal, equal}
@@ -1733,12 +1761,13 @@ pub fn runtime_call_function_on_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct RuntimeCompileScriptParams {
   expression : String
   source_url : String
   persist_script : Bool
   execution_context_id : RuntimeExecutionContextId?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend RuntimeCompileScriptParams with Eq::{not_equal, equal}
@@ -1772,10 +1801,11 @@ pub fn RuntimeCompileScriptParams::to_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct RuntimeCompileScriptResult {
   script_id : RuntimeScriptId?
   exception_details : RuntimeExceptionDetails?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend RuntimeCompileScriptResult with Eq::{not_equal, equal}
@@ -1904,6 +1934,7 @@ pub fn runtime_enable_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct RuntimeEvaluateParams {
   expression : String
   object_group : String?
@@ -1921,7 +1952,7 @@ pub(all) struct RuntimeEvaluateParams {
   allow_unsafe_eval_blocked_by_csp : Bool?
   unique_context_id : String?
   serialization_options : RuntimeSerializationOptions?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend RuntimeEvaluateParams with Eq::{not_equal, equal}
@@ -1991,10 +2022,11 @@ pub fn RuntimeEvaluateParams::to_json(self : RuntimeEvaluateParams) -> Json {
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct RuntimeEvaluateResult {
   result : RuntimeRemoteObject
   exception_details : RuntimeExceptionDetails?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend RuntimeEvaluateResult with Eq::{not_equal, equal}
@@ -2062,9 +2094,10 @@ pub fn runtime_evaluate_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct RuntimeGetExceptionDetailsParams {
   error_object_id : RuntimeRemoteObjectId
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend RuntimeGetExceptionDetailsParams with Eq::{not_equal, equal}
@@ -2093,9 +2126,10 @@ pub fn RuntimeGetExceptionDetailsParams::to_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct RuntimeGetExceptionDetailsResult {
   exception_details : RuntimeExceptionDetails?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend RuntimeGetExceptionDetailsResult with Eq::{not_equal, equal}
@@ -2166,12 +2200,13 @@ pub fn runtime_get_exception_details_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct RuntimeGetHeapUsageResult {
   used_size : Double
   total_size : Double
   embedder_heap_used_size : Double
   backing_storage_size : Double
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend RuntimeGetHeapUsageResult with Eq::{not_equal, equal}
@@ -2243,9 +2278,10 @@ pub fn runtime_get_heap_usage_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct RuntimeGetIsolateIdResult {
   id : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend RuntimeGetIsolateIdResult with Eq::{not_equal, equal}
@@ -2304,13 +2340,14 @@ pub fn runtime_get_isolate_id_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct RuntimeGetPropertiesParams {
   object_id : RuntimeRemoteObjectId
   own_properties : Bool?
   accessor_properties_only : Bool?
   generate_preview : Bool?
   non_indexed_properties_only : Bool?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend RuntimeGetPropertiesParams with Eq::{not_equal, equal}
@@ -2351,12 +2388,13 @@ pub fn RuntimeGetPropertiesParams::to_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct RuntimeGetPropertiesResult {
   result : Array[RuntimePropertyDescriptor]
   internal_properties : Array[RuntimeInternalPropertyDescriptor]?
   private_properties : Array[RuntimePrivatePropertyDescriptor]?
   exception_details : RuntimeExceptionDetails?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend RuntimeGetPropertiesResult with Eq::{not_equal, equal}
@@ -2449,9 +2487,10 @@ pub fn runtime_get_properties_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct RuntimeGlobalLexicalScopeNamesParams {
   execution_context_id : RuntimeExecutionContextId?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend RuntimeGlobalLexicalScopeNamesParams with Eq::{not_equal, equal}
@@ -2482,9 +2521,10 @@ pub fn RuntimeGlobalLexicalScopeNamesParams::to_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct RuntimeGlobalLexicalScopeNamesResult {
   names : Array[String]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend RuntimeGlobalLexicalScopeNamesResult with Eq::{not_equal, equal}
@@ -2558,10 +2598,11 @@ pub fn runtime_global_lexical_scope_names_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct RuntimeQueryObjectsParams {
   prototype_object_id : RuntimeRemoteObjectId
   object_group : String?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend RuntimeQueryObjectsParams with Eq::{not_equal, equal}
@@ -2593,9 +2634,10 @@ pub fn RuntimeQueryObjectsParams::to_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct RuntimeQueryObjectsResult {
   objects : RuntimeRemoteObject
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend RuntimeQueryObjectsResult with Eq::{not_equal, equal}
@@ -2660,9 +2702,10 @@ pub fn runtime_query_objects_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct RuntimeReleaseObjectParams {
   object_id : RuntimeRemoteObjectId
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend RuntimeReleaseObjectParams with Eq::{not_equal, equal}
@@ -2715,9 +2758,10 @@ pub fn runtime_release_object_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct RuntimeReleaseObjectGroupParams {
   object_group : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend RuntimeReleaseObjectGroupParams with Eq::{not_equal, equal}
@@ -2774,9 +2818,10 @@ pub fn runtime_release_object_group_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct RuntimeRemoveBindingParams {
   name : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend RuntimeRemoveBindingParams with Eq::{not_equal, equal}
@@ -2851,6 +2896,7 @@ pub fn runtime_run_if_waiting_for_debugger_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct RuntimeRunScriptParams {
   script_id : RuntimeScriptId
   execution_context_id : RuntimeExecutionContextId?
@@ -2860,7 +2906,7 @@ pub(all) struct RuntimeRunScriptParams {
   return_by_value : Bool?
   generate_preview : Bool?
   await_promise : Bool?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend RuntimeRunScriptParams with Eq::{not_equal, equal}
@@ -2906,10 +2952,11 @@ pub fn RuntimeRunScriptParams::to_json(self : RuntimeRunScriptParams) -> Json {
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct RuntimeRunScriptResult {
   result : RuntimeRemoteObject
   exception_details : RuntimeExceptionDetails?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend RuntimeRunScriptResult with Eq::{not_equal, equal}
@@ -2977,9 +3024,10 @@ pub fn runtime_run_script_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct RuntimeSetAsyncCallStackDepthParams {
   max_depth : Int32
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend RuntimeSetAsyncCallStackDepthParams with Eq::{not_equal, equal}
@@ -3036,9 +3084,10 @@ pub fn runtime_set_async_call_stack_depth_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct RuntimeSetCustomObjectFormatterEnabledParams {
   enabled : Bool
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend RuntimeSetCustomObjectFormatterEnabledParams with Eq::{
@@ -3098,9 +3147,10 @@ pub fn runtime_set_custom_object_formatter_enabled_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct RuntimeSetMaxCallStackSizeToCaptureParams {
   size : Int32
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend RuntimeSetMaxCallStackSizeToCaptureParams with Eq::{not_equal, equal}
@@ -3179,11 +3229,12 @@ pub fn runtime_terminate_execution_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct RuntimeBindingCalledEventParams {
   name : String
   payload : String
   execution_context_id : RuntimeExecutionContextId
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend RuntimeBindingCalledEventParams with Eq::{not_equal, equal}
@@ -3257,6 +3308,7 @@ pub fn runtime_binding_called_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct RuntimeConsoleAPICalledEventParams {
   type_ : String
   args : Array[RuntimeRemoteObject]
@@ -3264,7 +3316,7 @@ pub(all) struct RuntimeConsoleAPICalledEventParams {
   timestamp : RuntimeTimestamp
   stack_trace : RuntimeStackTrace?
   context : String?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend RuntimeConsoleAPICalledEventParams with Eq::{not_equal, equal}
@@ -3358,10 +3410,11 @@ pub fn runtime_console_apicalled_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct RuntimeExceptionRevokedEventParams {
   reason : String
   exception_id : Int32
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend RuntimeExceptionRevokedEventParams with Eq::{not_equal, equal}
@@ -3433,10 +3486,11 @@ pub fn runtime_exception_revoked_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct RuntimeExceptionThrownEventParams {
   timestamp : RuntimeTimestamp
   exception_details : RuntimeExceptionDetails
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend RuntimeExceptionThrownEventParams with Eq::{not_equal, equal}
@@ -3510,9 +3564,10 @@ pub fn runtime_exception_thrown_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct RuntimeExecutionContextCreatedEventParams {
   context : RuntimeExecutionContextDescription
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend RuntimeExecutionContextCreatedEventParams with Eq::{not_equal, equal}
@@ -3582,10 +3637,11 @@ pub fn runtime_execution_context_created_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct RuntimeExecutionContextDestroyedEventParams {
   execution_context_id : RuntimeExecutionContextId
   execution_context_unique_id : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend RuntimeExecutionContextDestroyedEventParams with Eq::{
@@ -3683,11 +3739,12 @@ pub fn runtime_execution_contexts_cleared_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct RuntimeInspectRequestedEventParams {
   object : RuntimeRemoteObject
   hints : Json
   execution_context_id : RuntimeExecutionContextId?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend RuntimeInspectRequestedEventParams with Eq::{not_equal, equal}

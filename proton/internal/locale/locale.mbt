@@ -1,12 +1,13 @@
 ///|
 /// A canonical RFC 5646 language tag.
+#derive(Debug, Eq)
 pub struct Locale {
   canonical : String
   language_value : String
   script_value : String?
   region_value : String?
   matching_value : String?
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend Locale with Eq::{not_equal, equal}
@@ -16,6 +17,7 @@ pub extend Locale with Debug::{to_repr}
 
 ///|
 /// Failures produced while parsing an RFC 5646 language tag.
+#derive(Debug, Eq)
 pub(all) suberror LocaleParseError {
   Empty
   InvalidCharacter(position~ : Int32, character~ : Char)
@@ -24,7 +26,7 @@ pub(all) suberror LocaleParseError {
   InvalidSubtag(index~ : Int32, value~ : String, expectation~ : String)
   DuplicateVariant(variant~ : String)
   DuplicateExtension(singleton~ : String)
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend LocaleParseError with Eq::{not_equal, equal}

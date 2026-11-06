@@ -13,7 +13,8 @@ pub fn capability() -> @extension.RendererCapability
 pub fn register_commands(@command.CommandRegistrar) -> Unit raise
 
 // Errors
-type KeepAwakeError derive(Eq, @debug.Debug)
+#derive(Eq, @debug.Debug)
+type KeepAwakeError
 pub fn KeepAwakeError::equal(Self, Self) -> Bool
 pub fn KeepAwakeError::not_equal(Self, Self) -> Bool
 pub fn KeepAwakeError::output(Self, &Logger) -> Unit

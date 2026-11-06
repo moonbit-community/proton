@@ -1,9 +1,10 @@
 ///|
+#derive(FromJson, Eq, Debug)
 struct WebContentsViewPageProbe {
   url : String
   title : String
   marker : String
-} derive(FromJson, Eq, Debug)
+}
 
 ///|
 pub extend WebContentsViewPageProbe with Eq::{not_equal, equal}

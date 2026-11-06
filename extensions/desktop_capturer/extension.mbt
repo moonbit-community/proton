@@ -2,16 +2,18 @@
 let get_sources_command = @desktop_capturer_contract.get_sources
 
 ///|
+#derive(FromJson)
 struct WindowSourcesWire {
   supported : Bool
   sources : Array[WindowSourceWire]
   error : String?
-} derive(FromJson)
+}
 
 ///|
 pub extend WindowSourcesWire with FromJson::{from_json}
 
 ///|
+#derive(FromJson)
 struct WindowSourceWire {
   id : String
   display_id : String
@@ -21,7 +23,7 @@ struct WindowSourceWire {
   height : Int32
   thumbnail : String?
   name : String
-} derive(FromJson)
+}
 
 ///|
 pub extend WindowSourceWire with FromJson::{from_json}

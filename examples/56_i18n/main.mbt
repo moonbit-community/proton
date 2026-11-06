@@ -1,5 +1,6 @@
 ///|
-struct LocaleRequest {} derive(ToJson, FromJson)
+#derive(ToJson, FromJson)
+struct LocaleRequest {}
 
 ///|
 pub extend LocaleRequest with ToJson::{to_json}
@@ -8,10 +9,11 @@ pub extend LocaleRequest with ToJson::{to_json}
 pub extend LocaleRequest with FromJson::{from_json}
 
 ///|
+#derive(ToJson, FromJson)
 struct LocaleSnapshot {
   locale : String
   preferred_languages : Array[String]
-} derive(ToJson, FromJson)
+}
 
 ///|
 pub extend LocaleSnapshot with ToJson::{to_json}

@@ -1,10 +1,11 @@
 ///|
 /// Failures while accessing the system clipboard.
+#derive(Debug, Eq)
 suberror ClipboardError {
   Unsupported(detail~ : String)
   ReadFailed(detail~ : String)
   WriteFailed(detail~ : String)
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend ClipboardError with Eq::{not_equal, equal}

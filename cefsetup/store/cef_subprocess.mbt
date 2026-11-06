@@ -120,9 +120,9 @@ async fn install_default_subprocess() -> String {
     return executable
   }
   let staging = create_install_staging(root)
-  defer (remove_tree(staging) catch { _ => () })
+  defer discard_tree(staging)
   let build_dir = subprocess_build_directory()
-  defer (remove_tree(build_dir) catch { _ => () })
+  defer discard_tree(build_dir)
   let args = [
     "install",
     subprocess_package(release_version()),

@@ -1,7 +1,8 @@
 ///|
+#derive(ToJson, FromJson)
 struct MenuStateRequest {
   action : String
-} derive(ToJson, FromJson)
+}
 
 ///|
 pub extend MenuStateRequest with ToJson::{to_json}
@@ -10,13 +11,14 @@ pub extend MenuStateRequest with ToJson::{to_json}
 pub extend MenuStateRequest with FromJson::{from_json}
 
 ///|
+#derive(ToJson, FromJson)
 struct MenuStateReply {
   enabled : Bool
   visible : Bool
   checked : Bool
   applied : Bool
   message : String
-} derive(ToJson, FromJson)
+}
 
 ///|
 pub extend MenuStateReply with ToJson::{to_json}

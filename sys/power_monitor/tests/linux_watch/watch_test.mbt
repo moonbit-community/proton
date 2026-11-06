@@ -154,7 +154,9 @@ async test "power watching scopes cancel, time out, release subscriptions and re
       )
       assert_eq(@process.run("kill", ["-STOP", bus.pid.to_string()]), 0)
       @async.protect_from_cancel(() => {
-        defer @process.run("kill", ["-CONT", bus.pid.to_string()]) |> ignore
+        defer @async.protect_from_cancel(() => {
+          @process.run("kill", ["-CONT", bus.pid.to_string()]) |> ignore
+        })
         cancel_pending_watch(monitor)
         // This must fail through the startup deadline, without external cancellation.
         @async.with_timeout(7000, () => {

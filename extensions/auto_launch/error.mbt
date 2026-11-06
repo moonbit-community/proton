@@ -1,11 +1,12 @@
 ///|
 /// Failures while resolving or mutating an operating-system startup entry.
+#derive(Debug, Eq)
 suberror AutoLaunchError {
   InvalidConfiguration(detail~ : String)
   QueryFailed(identifier~ : String, detail~ : String)
   EnableFailed(identifier~ : String, detail~ : String)
   DisableFailed(identifier~ : String, detail~ : String)
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend AutoLaunchError with Eq::{not_equal, equal}

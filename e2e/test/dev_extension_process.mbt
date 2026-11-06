@@ -496,11 +496,13 @@ async fn run_dev_extension_scenario(root : String, timeout : Int32) -> Unit {
     println("Dev-extension failure artifacts retained at " + output_root)
   })
   errdefer (if @env.get_env_var("GITHUB_ENV") is Some(env_file) {
-    @fs.write_file(
-      env_file,
-      "PROTON_E2E_FAILURE_DIR=" + output_root + "\n",
-      append=true,
-    )
+    @async.protect_from_cancel(() => {
+      @fs.write_file(
+        env_file,
+        "PROTON_E2E_FAILURE_DIR=" + output_root + "\n",
+        append=true,
+      )
+    })
   })
   try {
     install_scenario_subprocess(

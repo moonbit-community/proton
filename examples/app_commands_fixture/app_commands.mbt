@@ -1,7 +1,8 @@
 ///|
+#derive(ToJson, FromJson)
 struct PingPayload {
   name : String?
-} derive(ToJson, FromJson)
+}
 
 ///|
 pub extend PingPayload with ToJson::{to_json}
@@ -10,10 +11,11 @@ pub extend PingPayload with ToJson::{to_json}
 pub extend PingPayload with FromJson::{from_json}
 
 ///|
+#derive(ToJson, FromJson)
 struct PingReply {
   message : String
   source : String
-} derive(ToJson, FromJson)
+}
 
 ///|
 pub extend PingReply with ToJson::{to_json}
@@ -22,11 +24,12 @@ pub extend PingReply with ToJson::{to_json}
 pub extend PingReply with FromJson::{from_json}
 
 ///|
+#derive(ToJson, FromJson)
 struct SlowAddPayload {
   left : Int32
   right : Int32
   delay_ms : Int32?
-} derive(ToJson, FromJson)
+}
 
 ///|
 pub extend SlowAddPayload with ToJson::{to_json}
@@ -35,11 +38,12 @@ pub extend SlowAddPayload with ToJson::{to_json}
 pub extend SlowAddPayload with FromJson::{from_json}
 
 ///|
+#derive(ToJson, FromJson)
 struct SlowAddReply {
   total : Int32
   waited_ms : Int32
   source : String
-} derive(ToJson, FromJson)
+}
 
 ///|
 pub extend SlowAddReply with ToJson::{to_json}
@@ -48,9 +52,10 @@ pub extend SlowAddReply with ToJson::{to_json}
 pub extend SlowAddReply with FromJson::{from_json}
 
 ///|
+#derive(ToJson, FromJson)
 struct FailPayload {
   message : String?
-} derive(ToJson, FromJson)
+}
 
 ///|
 pub extend FailPayload with ToJson::{to_json}
@@ -59,9 +64,10 @@ pub extend FailPayload with ToJson::{to_json}
 pub extend FailPayload with FromJson::{from_json}
 
 ///|
+#derive(ToJson, FromJson)
 struct ReportProbePayload {
   report : String
-} derive(ToJson, FromJson)
+}
 
 ///|
 pub extend ReportProbePayload with ToJson::{to_json}
@@ -70,9 +76,10 @@ pub extend ReportProbePayload with ToJson::{to_json}
 pub extend ReportProbePayload with FromJson::{from_json}
 
 ///|
+#derive(ToJson, FromJson)
 struct ReportProbeReply {
   ok : Bool
-} derive(ToJson, FromJson)
+}
 
 ///|
 pub extend ReportProbeReply with ToJson::{to_json}
@@ -81,9 +88,10 @@ pub extend ReportProbeReply with ToJson::{to_json}
 pub extend ReportProbeReply with FromJson::{from_json}
 
 ///|
+#derive(Debug)
 suberror AppCommandError {
   Requested(message~ : String)
-} derive(Debug)
+}
 
 ///|
 pub extend AppCommandError with Debug::{to_repr}

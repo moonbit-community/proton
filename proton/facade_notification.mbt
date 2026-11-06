@@ -77,11 +77,12 @@ fn native_notification_result_supported() -> Bool raise @native.NativeError {
 
 ///|
 /// Failures while starting or waiting for native notification delivery.
+#derive(Debug, Eq)
 pub(all) suberror NotificationDeliveryError {
   NativeFailure(status~ : Int32, detail~ : String)
   WaitInterrupted(detail~ : String)
   DeliveryFailed(message~ : String)
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend NotificationDeliveryError with Eq::{not_equal, equal}

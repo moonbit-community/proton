@@ -3,20 +3,21 @@ package "moonbit-community/proton_cdp/protocol"
 
 import {
   "moonbitlang/core/debug",
+  "moonbitlang/core/json",
 }
 
 // Values
-pub fn cdp_command(id~ : Int32, method_name~ : String, params? : Json, session_id? : String) -> CdpCommandMessage
+pub fn cdp_command(id~ : Int32, method_name~ : String, params? : @json.Json, session_id? : String) -> CdpCommandMessage
 
-pub fn cdp_remote_schema_command(id~ : Int32, method_name~ : String, remote_schema~ : Json, params? : Json, session_id? : String) -> CdpCommandMessage raise ProtocolSchemaError
+pub fn cdp_remote_schema_command(id~ : Int32, method_name~ : String, remote_schema~ : @json.Json, params? : @json.Json, session_id? : String) -> CdpCommandMessage raise ProtocolSchemaError
 
-pub fn cdp_schema_command(id~ : Int32, method_name~ : String, params? : Json, session_id? : String) -> CdpCommandMessage raise ProtocolSchemaError
+pub fn cdp_schema_command(id~ : Int32, method_name~ : String, params? : @json.Json, session_id? : String) -> CdpCommandMessage raise ProtocolSchemaError
 
-pub fn cdp_schema_event(method_name~ : String, params? : Json, session_id? : String) -> CdpEventMessage raise ProtocolSchemaError
+pub fn cdp_schema_event(method_name~ : String, params? : @json.Json, session_id? : String) -> CdpEventMessage raise ProtocolSchemaError
 
 pub fn cdp_schema_response(method_name~ : String, CdpResponseMessage) -> CdpResponseMessage raise ProtocolSchemaError
 
-pub fn parse_cdp_incoming(Json) -> CdpIncomingMessage raise ProtocolDecodeError
+pub fn parse_cdp_incoming(@json.Json) -> CdpIncomingMessage raise ProtocolDecodeError
 
 pub fn protocol_command(String) -> ProtocolCommand?
 
@@ -38,11 +39,11 @@ pub fn protocol_events_matching(String) -> Array[ProtocolEvent]
 
 pub fn protocol_manifest() -> ProtocolManifest
 
-pub fn protocol_remote_has_command(Json, String) -> Bool
+pub fn protocol_remote_has_command(@json.Json, String) -> Bool
 
-pub fn protocol_remote_summary(Json) -> ProtocolRemoteSummary raise ProtocolSchemaDiffError
+pub fn protocol_remote_summary(@json.Json) -> ProtocolRemoteSummary raise ProtocolSchemaDiffError
 
-pub fn protocol_schema_diff(Json) -> ProtocolSchemaDiffReport raise ProtocolSchemaDiffError
+pub fn protocol_schema_diff(@json.Json) -> ProtocolSchemaDiffReport raise ProtocolSchemaDiffError
 
 pub fn protocol_type(String) -> ProtocolType?
 
@@ -53,26 +54,29 @@ pub fn protocol_types_for_domain(String) -> Array[ProtocolType]
 pub fn protocol_types_matching(String) -> Array[ProtocolType]
 
 // Errors
+#derive(Eq, @debug.Debug, @json.ToJson)
 pub(all) suberror ProtocolDecodeError {
   ExpectedObject
   MissingField(String)
   InvalidField(String)
-} derive(Eq, ToJson, @debug.Debug)
+}
 pub fn ProtocolDecodeError::equal(Self, Self) -> Bool
 pub fn ProtocolDecodeError::not_equal(Self, Self) -> Bool
-pub fn ProtocolDecodeError::to_json(Self) -> Json
+pub fn ProtocolDecodeError::to_json(Self) -> @json.Json
 pub fn ProtocolDecodeError::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug, @json.ToJson)
 pub(all) suberror ProtocolSchemaDiffError {
   ExpectedObject(String)
   MissingField(String)
   InvalidField(String)
-} derive(Eq, ToJson, @debug.Debug)
+}
 pub fn ProtocolSchemaDiffError::equal(Self, Self) -> Bool
 pub fn ProtocolSchemaDiffError::not_equal(Self, Self) -> Bool
-pub fn ProtocolSchemaDiffError::to_json(Self) -> Json
+pub fn ProtocolSchemaDiffError::to_json(Self) -> @json.Json
 pub fn ProtocolSchemaDiffError::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug, @json.ToJson)
 pub(all) suberror ProtocolSchemaError {
   UnknownCommand(String)
   UnsupportedRemoteCommand(String)
@@ -85,7 +89,7 @@ pub(all) suberror ProtocolSchemaError {
   MissingReturn(String, String)
   UnknownReturn(String, String)
   InvalidReturnType(String, String, String)
-} derive(Eq, ToJson, @debug.Debug)
+}
 pub fn ProtocolSchemaError::diagnostic(Self) -> ProtocolSchemaErrorDiagnostic
 pub fn ProtocolSchemaError::equal(Self, Self) -> Bool
 pub fn ProtocolSchemaError::expected_type(Self) -> String?
@@ -94,63 +98,69 @@ pub fn ProtocolSchemaError::kind(Self) -> String
 pub fn ProtocolSchemaError::method_name(Self) -> String?
 pub fn ProtocolSchemaError::not_equal(Self, Self) -> Bool
 pub fn ProtocolSchemaError::path(Self) -> String
-pub fn ProtocolSchemaError::to_json(Self) -> Json
+pub fn ProtocolSchemaError::to_json(Self) -> @json.Json
 pub fn ProtocolSchemaError::to_repr(Self) -> @debug.Repr
 
 // Types and methods
+#derive(Eq, @debug.Debug, @json.ToJson)
 pub(all) struct CdpCommandMessage {
   id : Int32
   method_name : String
-  params : Json?
+  params : @json.Json?
   session_id : String?
-} derive(Eq, ToJson, @debug.Debug)
+}
 pub fn CdpCommandMessage::equal(Self, Self) -> Bool
 pub fn CdpCommandMessage::not_equal(Self, Self) -> Bool
 pub fn CdpCommandMessage::stringify(Self) -> String
-pub fn CdpCommandMessage::to_json(Self) -> Json
+pub fn CdpCommandMessage::to_json(Self) -> @json.Json
 pub fn CdpCommandMessage::to_repr(Self) -> @debug.Repr
-pub fn CdpCommandMessage::to_wire_json(Self) -> Json
+pub fn CdpCommandMessage::to_wire_json(Self) -> @json.Json
 
+#derive(Eq, @debug.Debug, @json.ToJson)
 pub(all) struct CdpError {
   code : Int32
   message : String
-  data : Json?
-} derive(Eq, ToJson, @debug.Debug)
+  data : @json.Json?
+}
 pub fn CdpError::equal(Self, Self) -> Bool
 pub fn CdpError::not_equal(Self, Self) -> Bool
-pub fn CdpError::to_json(Self) -> Json
+pub fn CdpError::to_json(Self) -> @json.Json
 pub fn CdpError::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug, @json.ToJson)
 pub(all) struct CdpEventMessage {
   method_name : String
-  params : Json?
+  params : @json.Json?
   session_id : String?
-} derive(Eq, ToJson, @debug.Debug)
+}
 pub fn CdpEventMessage::equal(Self, Self) -> Bool
 pub fn CdpEventMessage::not_equal(Self, Self) -> Bool
-pub fn CdpEventMessage::to_json(Self) -> Json
+pub fn CdpEventMessage::to_json(Self) -> @json.Json
 pub fn CdpEventMessage::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug, @json.ToJson)
 pub(all) enum CdpIncomingMessage {
   Response(CdpResponseMessage)
   Event(CdpEventMessage)
-} derive(Eq, ToJson, @debug.Debug)
+}
 pub fn CdpIncomingMessage::equal(Self, Self) -> Bool
 pub fn CdpIncomingMessage::not_equal(Self, Self) -> Bool
-pub fn CdpIncomingMessage::to_json(Self) -> Json
+pub fn CdpIncomingMessage::to_json(Self) -> @json.Json
 pub fn CdpIncomingMessage::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug, @json.ToJson)
 pub(all) struct CdpResponseMessage {
   id : Int32
-  result : Json?
+  result : @json.Json?
   error : CdpError?
   session_id : String?
-} derive(Eq, ToJson, @debug.Debug)
+}
 pub fn CdpResponseMessage::equal(Self, Self) -> Bool
 pub fn CdpResponseMessage::not_equal(Self, Self) -> Bool
-pub fn CdpResponseMessage::to_json(Self) -> Json
+pub fn CdpResponseMessage::to_json(Self) -> @json.Json
 pub fn CdpResponseMessage::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug, @json.ToJson)
 pub(all) struct ProtocolCommand {
   protocol : String
   domain : String
@@ -164,18 +174,19 @@ pub(all) struct ProtocolCommand {
   return_details : Array[ProtocolFieldSummary]
   experimental : Bool
   deprecated : Bool
-} derive(Eq, ToJson, @debug.Debug)
-pub fn ProtocolCommand::build_command(Self, id~ : Int32, params? : Json, session_id? : String) -> CdpCommandMessage raise ProtocolSchemaError
+}
+pub fn ProtocolCommand::build_command(Self, id~ : Int32, params? : @json.Json, session_id? : String) -> CdpCommandMessage raise ProtocolSchemaError
 pub fn ProtocolCommand::equal(Self, Self) -> Bool
 pub fn ProtocolCommand::not_equal(Self, Self) -> Bool
 pub fn ProtocolCommand::parameter_names(Self) -> Array[String]
 pub fn ProtocolCommand::required_parameters(Self) -> Array[String]
 pub fn ProtocolCommand::required_returns(Self) -> Array[String]
 pub fn ProtocolCommand::return_names(Self) -> Array[String]
-pub fn ProtocolCommand::to_json(Self) -> Json
+pub fn ProtocolCommand::to_json(Self) -> @json.Json
 pub fn ProtocolCommand::to_repr(Self) -> @debug.Repr
 pub fn ProtocolCommand::validate_response(Self, CdpResponseMessage) -> Unit raise ProtocolSchemaError
 
+#derive(Eq, @debug.Debug, @json.ToJson)
 pub(all) struct ProtocolCoverage {
   domain_count : Int32
   command_count : Int32
@@ -185,12 +196,13 @@ pub(all) struct ProtocolCoverage {
   event_registry_count : Int32
   type_registry_count : Int32
   complete : Bool
-} derive(Eq, ToJson, @debug.Debug)
+}
 pub fn ProtocolCoverage::equal(Self, Self) -> Bool
 pub fn ProtocolCoverage::not_equal(Self, Self) -> Bool
-pub fn ProtocolCoverage::to_json(Self) -> Json
+pub fn ProtocolCoverage::to_json(Self) -> @json.Json
 pub fn ProtocolCoverage::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug, @json.ToJson)
 pub(all) struct ProtocolDomainSummary {
   protocol : String
   domain : String
@@ -199,12 +211,13 @@ pub(all) struct ProtocolDomainSummary {
   type_count : Int32
   experimental : Bool
   deprecated : Bool
-} derive(Eq, ToJson, @debug.Debug)
+}
 pub fn ProtocolDomainSummary::equal(Self, Self) -> Bool
 pub fn ProtocolDomainSummary::not_equal(Self, Self) -> Bool
-pub fn ProtocolDomainSummary::to_json(Self) -> Json
+pub fn ProtocolDomainSummary::to_json(Self) -> @json.Json
 pub fn ProtocolDomainSummary::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug, @json.ToJson)
 pub(all) struct ProtocolEvent {
   protocol : String
   domain : String
@@ -215,42 +228,45 @@ pub(all) struct ProtocolEvent {
   parameter_details : Array[ProtocolFieldSummary]
   experimental : Bool
   deprecated : Bool
-} derive(Eq, ToJson, @debug.Debug)
-pub fn ProtocolEvent::build_event(Self, params? : Json, session_id? : String) -> CdpEventMessage raise ProtocolSchemaError
+}
+pub fn ProtocolEvent::build_event(Self, params? : @json.Json, session_id? : String) -> CdpEventMessage raise ProtocolSchemaError
 pub fn ProtocolEvent::equal(Self, Self) -> Bool
 pub fn ProtocolEvent::not_equal(Self, Self) -> Bool
 pub fn ProtocolEvent::parameter_names(Self) -> Array[String]
 pub fn ProtocolEvent::required_parameters(Self) -> Array[String]
-pub fn ProtocolEvent::to_json(Self) -> Json
+pub fn ProtocolEvent::to_json(Self) -> @json.Json
 pub fn ProtocolEvent::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug, @json.ToJson)
 pub(all) struct ProtocolFieldSummary {
   name : String
   kind : String
   optional : Bool
   experimental : Bool
   deprecated : Bool
-} derive(Eq, ToJson, @debug.Debug)
+}
 pub fn ProtocolFieldSummary::equal(Self, Self) -> Bool
 pub fn ProtocolFieldSummary::not_equal(Self, Self) -> Bool
-pub fn ProtocolFieldSummary::to_json(Self) -> Json
+pub fn ProtocolFieldSummary::to_json(Self) -> @json.Json
 pub fn ProtocolFieldSummary::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug, @json.ToJson)
 pub(all) struct ProtocolManifest {
   version : ProtocolVersion
   sources : Array[ProtocolSchemaSource]
   domains : Array[ProtocolDomainSummary]
-} derive(Eq, ToJson, @debug.Debug)
+}
 pub fn ProtocolManifest::command_count(Self) -> Int32
 pub fn ProtocolManifest::domain_count(Self) -> Int32
 pub fn ProtocolManifest::equal(Self, Self) -> Bool
 pub fn ProtocolManifest::event_count(Self) -> Int32
 pub fn ProtocolManifest::find_domain(Self, String) -> ProtocolDomainSummary?
 pub fn ProtocolManifest::not_equal(Self, Self) -> Bool
-pub fn ProtocolManifest::to_json(Self) -> Json
+pub fn ProtocolManifest::to_json(Self) -> @json.Json
 pub fn ProtocolManifest::to_repr(Self) -> @debug.Repr
 pub fn ProtocolManifest::type_count(Self) -> Int32
 
+#derive(Eq, @debug.Debug, @json.ToJson)
 pub(all) struct ProtocolRemoteSummary {
   version : ProtocolVersion
   domain_count : Int32
@@ -258,21 +274,23 @@ pub(all) struct ProtocolRemoteSummary {
   event_count : Int32
   type_count : Int32
   domains : Array[ProtocolDomainSummary]
-} derive(Eq, ToJson, @debug.Debug)
+}
 pub fn ProtocolRemoteSummary::equal(Self, Self) -> Bool
 pub fn ProtocolRemoteSummary::not_equal(Self, Self) -> Bool
-pub fn ProtocolRemoteSummary::to_json(Self) -> Json
+pub fn ProtocolRemoteSummary::to_json(Self) -> @json.Json
 pub fn ProtocolRemoteSummary::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug, @json.ToJson)
 pub(all) struct ProtocolSchemaDiffItem {
   name : String
   details : Array[String]
-} derive(Eq, ToJson, @debug.Debug)
+}
 pub fn ProtocolSchemaDiffItem::equal(Self, Self) -> Bool
 pub fn ProtocolSchemaDiffItem::not_equal(Self, Self) -> Bool
-pub fn ProtocolSchemaDiffItem::to_json(Self) -> Json
+pub fn ProtocolSchemaDiffItem::to_json(Self) -> @json.Json
 pub fn ProtocolSchemaDiffItem::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug, @json.ToJson)
 pub(all) struct ProtocolSchemaDiffReport {
   local_version : ProtocolVersion
   remote_version : ProtocolVersion
@@ -296,24 +314,26 @@ pub(all) struct ProtocolSchemaDiffReport {
   local_only_types : Array[String]
   changed_types : Array[ProtocolSchemaDiffItem]
   compatible : Bool
-} derive(Eq, ToJson, @debug.Debug)
+}
 pub fn ProtocolSchemaDiffReport::equal(Self, Self) -> Bool
 pub fn ProtocolSchemaDiffReport::not_equal(Self, Self) -> Bool
-pub fn ProtocolSchemaDiffReport::to_json(Self) -> Json
+pub fn ProtocolSchemaDiffReport::to_json(Self) -> @json.Json
 pub fn ProtocolSchemaDiffReport::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug, @json.ToJson)
 pub(all) struct ProtocolSchemaErrorDiagnostic {
   kind : String
   method_name : String?
   field_name : String?
   path : String
   expected_type : String?
-} derive(Eq, ToJson, @debug.Debug)
+}
 pub fn ProtocolSchemaErrorDiagnostic::equal(Self, Self) -> Bool
 pub fn ProtocolSchemaErrorDiagnostic::not_equal(Self, Self) -> Bool
-pub fn ProtocolSchemaErrorDiagnostic::to_json(Self) -> Json
+pub fn ProtocolSchemaErrorDiagnostic::to_json(Self) -> @json.Json
 pub fn ProtocolSchemaErrorDiagnostic::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug, @json.ToJson)
 pub(all) struct ProtocolSchemaSource {
   protocol : String
   path : String
@@ -323,12 +343,13 @@ pub(all) struct ProtocolSchemaSource {
   command_count : Int32
   event_count : Int32
   type_count : Int32
-} derive(Eq, ToJson, @debug.Debug)
+}
 pub fn ProtocolSchemaSource::equal(Self, Self) -> Bool
 pub fn ProtocolSchemaSource::not_equal(Self, Self) -> Bool
-pub fn ProtocolSchemaSource::to_json(Self) -> Json
+pub fn ProtocolSchemaSource::to_json(Self) -> @json.Json
 pub fn ProtocolSchemaSource::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug, @json.ToJson)
 pub(all) struct ProtocolType {
   protocol : String
   domain : String
@@ -341,19 +362,20 @@ pub(all) struct ProtocolType {
   enum_values : Array[String]
   experimental : Bool
   deprecated : Bool
-} derive(Eq, ToJson, @debug.Debug)
+}
 pub fn ProtocolType::equal(Self, Self) -> Bool
 pub fn ProtocolType::not_equal(Self, Self) -> Bool
-pub fn ProtocolType::to_json(Self) -> Json
+pub fn ProtocolType::to_json(Self) -> @json.Json
 pub fn ProtocolType::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug, @json.ToJson)
 pub(all) struct ProtocolVersion {
   major : String
   minor : String
-} derive(Eq, ToJson, @debug.Debug)
+}
 pub fn ProtocolVersion::equal(Self, Self) -> Bool
 pub fn ProtocolVersion::not_equal(Self, Self) -> Bool
-pub fn ProtocolVersion::to_json(Self) -> Json
+pub fn ProtocolVersion::to_json(Self) -> @json.Json
 pub fn ProtocolVersion::to_repr(Self) -> @debug.Repr
 
 // Type aliases

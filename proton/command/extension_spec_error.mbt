@@ -1,9 +1,10 @@
 ///|
 /// Invalid extension identity or command binding.
+#derive(Debug, Eq)
 pub(all) suberror ExtensionSpecError {
   InvalidContract(detail~ : String)
   ForeignCommandRoute(extension_id~ : String, operation_name~ : String)
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend ExtensionSpecError with Debug::{to_repr}
@@ -16,9 +17,10 @@ pub extend ExtensionSpecError with Show::{to_string, output}
 
 ///|
 /// A stable validation failure for an extension's renderer permission scope.
+#derive(Eq)
 pub(all) suberror PermissionScopeValidationError {
   Invalid(detail~ : String)
-} derive(Eq)
+}
 
 ///|
 pub extend PermissionScopeValidationError with Eq::{not_equal, equal}

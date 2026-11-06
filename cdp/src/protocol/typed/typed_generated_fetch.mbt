@@ -7,12 +7,13 @@
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct FetchAuthChallenge {
   source : String?
   origin : String
   scheme : String
   realm : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend FetchAuthChallenge with Eq::{not_equal, equal}
@@ -60,11 +61,12 @@ pub fn FetchAuthChallenge::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct FetchAuthChallengeResponse {
   response : String
   username : String?
   password : String?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend FetchAuthChallengeResponse with Eq::{not_equal, equal}
@@ -116,10 +118,11 @@ pub fn FetchAuthChallengeResponse::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct FetchHeaderEntry {
   name : String
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend FetchHeaderEntry with Eq::{not_equal, equal}
@@ -161,9 +164,10 @@ pub fn FetchHeaderEntry::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct FetchRequestId {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend FetchRequestId with Eq::{not_equal, equal}
@@ -201,11 +205,12 @@ pub fn FetchRequestId::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct FetchRequestPattern {
   url_pattern : String?
   resource_type : NetworkResourceType?
   request_stage : FetchRequestStage?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend FetchRequestPattern with Eq::{not_equal, equal}
@@ -263,9 +268,10 @@ pub fn FetchRequestPattern::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct FetchRequestStage {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend FetchRequestStage with Eq::{not_equal, equal}
@@ -303,6 +309,7 @@ pub fn FetchRequestStage::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct FetchContinueRequestParams {
   request_id : FetchRequestId
   url : String?
@@ -310,7 +317,7 @@ pub(all) struct FetchContinueRequestParams {
   post_data : String?
   headers : Array[FetchHeaderEntry]?
   intercept_response : Bool?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend FetchContinueRequestParams with Eq::{not_equal, equal}
@@ -378,13 +385,14 @@ pub fn fetch_continue_request_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct FetchContinueResponseParams {
   request_id : FetchRequestId
   response_code : Int32?
   response_phrase : String?
   response_headers : Array[FetchHeaderEntry]?
   binary_response_headers : String?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend FetchContinueResponseParams with Eq::{not_equal, equal}
@@ -449,10 +457,11 @@ pub fn fetch_continue_response_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct FetchContinueWithAuthParams {
   request_id : FetchRequestId
   auth_challenge_response : FetchAuthChallengeResponse
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend FetchContinueWithAuthParams with Eq::{not_equal, equal}
@@ -524,10 +533,11 @@ pub fn fetch_disable_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct FetchEnableParams {
   patterns : Array[FetchRequestPattern]?
   handle_auth_requests : Bool?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend FetchEnableParams with Eq::{not_equal, equal}
@@ -581,10 +591,11 @@ pub fn fetch_enable_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct FetchFailRequestParams {
   request_id : FetchRequestId
   error_reason : NetworkErrorReason
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend FetchFailRequestParams with Eq::{not_equal, equal}
@@ -634,6 +645,7 @@ pub fn fetch_fail_request_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct FetchFulfillRequestParams {
   request_id : FetchRequestId
   response_code : Int32
@@ -641,7 +653,7 @@ pub(all) struct FetchFulfillRequestParams {
   binary_response_headers : String?
   body : String?
   response_phrase : String?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend FetchFulfillRequestParams with Eq::{not_equal, equal}
@@ -707,9 +719,10 @@ pub fn fetch_fulfill_request_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct FetchGetResponseBodyParams {
   request_id : FetchRequestId
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend FetchGetResponseBodyParams with Eq::{not_equal, equal}
@@ -738,10 +751,11 @@ pub fn FetchGetResponseBodyParams::to_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct FetchGetResponseBodyResult {
   body : String
   base64_encoded : Bool
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend FetchGetResponseBodyResult with Eq::{not_equal, equal}
@@ -807,9 +821,10 @@ pub fn fetch_get_response_body_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct FetchTakeResponseBodyAsStreamParams {
   request_id : FetchRequestId
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend FetchTakeResponseBodyAsStreamParams with Eq::{not_equal, equal}
@@ -838,9 +853,10 @@ pub fn FetchTakeResponseBodyAsStreamParams::to_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct FetchTakeResponseBodyAsStreamResult {
   stream : IOStreamHandle
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend FetchTakeResponseBodyAsStreamResult with Eq::{not_equal, equal}
@@ -909,13 +925,14 @@ pub fn fetch_take_response_body_as_stream_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct FetchAuthRequiredEventParams {
   request_id : FetchRequestId
   request : NetworkRequest
   frame_id : PageFrameId
   resource_type : NetworkResourceType
   auth_challenge : FetchAuthChallenge
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend FetchAuthRequiredEventParams with Eq::{not_equal, equal}
@@ -1001,6 +1018,7 @@ pub fn fetch_auth_required_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct FetchRequestPausedEventParams {
   request_id : FetchRequestId
   request : NetworkRequest
@@ -1012,7 +1030,7 @@ pub(all) struct FetchRequestPausedEventParams {
   response_headers : Array[FetchHeaderEntry]?
   network_id : NetworkRequestId?
   redirected_request_id : FetchRequestId?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend FetchRequestPausedEventParams with Eq::{not_equal, equal}

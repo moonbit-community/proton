@@ -7,6 +7,7 @@
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct SystemInfoGPUDevice {
   vendor_id : Double
   device_id : Double
@@ -16,7 +17,7 @@ pub(all) struct SystemInfoGPUDevice {
   device_string : String
   driver_vendor : String
   driver_version : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend SystemInfoGPUDevice with Eq::{not_equal, equal}
@@ -82,6 +83,7 @@ pub fn SystemInfoGPUDevice::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct SystemInfoGPUInfo {
   devices : Array[SystemInfoGPUDevice]
   aux_attributes : Json?
@@ -89,7 +91,7 @@ pub(all) struct SystemInfoGPUInfo {
   driver_bug_workarounds : Array[String]
   video_decoding : Array[SystemInfoVideoDecodeAcceleratorCapability]
   video_encoding : Array[SystemInfoVideoEncodeAcceleratorCapability]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend SystemInfoGPUInfo with Eq::{not_equal, equal}
@@ -173,9 +175,10 @@ pub fn SystemInfoGPUInfo::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct SystemInfoImageType {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend SystemInfoImageType with Eq::{not_equal, equal}
@@ -213,11 +216,12 @@ pub fn SystemInfoImageType::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct SystemInfoProcessInfo {
   type_ : String
   id : Int32
   cpu_time : Double
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend SystemInfoProcessInfo with Eq::{not_equal, equal}
@@ -261,10 +265,11 @@ pub fn SystemInfoProcessInfo::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct SystemInfoSize {
   width : Int32
   height : Int32
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend SystemInfoSize with Eq::{not_equal, equal}
@@ -306,9 +311,10 @@ pub fn SystemInfoSize::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct SystemInfoSubsamplingFormat {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend SystemInfoSubsamplingFormat with Eq::{not_equal, equal}
@@ -350,11 +356,12 @@ pub fn SystemInfoSubsamplingFormat::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct SystemInfoVideoDecodeAcceleratorCapability {
   profile : String
   max_resolution : SystemInfoSize
   min_resolution : SystemInfoSize
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend SystemInfoVideoDecodeAcceleratorCapability with Eq::{
@@ -409,12 +416,13 @@ pub fn SystemInfoVideoDecodeAcceleratorCapability::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct SystemInfoVideoEncodeAcceleratorCapability {
   profile : String
   max_resolution : SystemInfoSize
   max_framerate_numerator : Int32
   max_framerate_denominator : Int32
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend SystemInfoVideoEncodeAcceleratorCapability with Eq::{
@@ -477,9 +485,10 @@ pub fn SystemInfoVideoEncodeAcceleratorCapability::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct SystemInfoGetFeatureStateParams {
   feature_state : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend SystemInfoGetFeatureStateParams with Eq::{not_equal, equal}
@@ -508,9 +517,10 @@ pub fn SystemInfoGetFeatureStateParams::to_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct SystemInfoGetFeatureStateResult {
   feature_enabled : Bool
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend SystemInfoGetFeatureStateResult with Eq::{not_equal, equal}
@@ -579,12 +589,13 @@ pub fn system_info_get_feature_state_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct SystemInfoGetInfoResult {
   gpu : SystemInfoGPUInfo
   model_name : String
   model_version : String
   command_line : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend SystemInfoGetInfoResult with Eq::{not_equal, equal}
@@ -654,9 +665,10 @@ pub fn system_info_get_info_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct SystemInfoGetProcessInfoResult {
   process_info : Array[SystemInfoProcessInfo]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend SystemInfoGetProcessInfoResult with Eq::{not_equal, equal}

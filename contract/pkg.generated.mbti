@@ -14,13 +14,14 @@ pub fn[Payload] event(String) -> Event[Payload]
 pub fn extension(id~ : String, js_namespace~ : String) -> ExtensionContract
 
 // Errors
+#derive(Eq, @debug.Debug)
 pub(all) suberror ContractDefinitionError {
   EmptyApplicationName
   EmptyExtensionId
   EmptyExtensionNamespace
   EmptyExtensionMember(extension_namespace~ : String)
   ExpectedExtensionEvent(route~ : String)
-} derive(Eq, @debug.Debug)
+}
 pub fn ContractDefinitionError::equal(Self, Self) -> Bool
 pub fn ContractDefinitionError::message(Self) -> String
 pub fn ContractDefinitionError::not_equal(Self, Self) -> Bool
@@ -41,12 +42,13 @@ pub struct ContractRoute {
   name : String
 }
 
+#derive(Eq, @debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct EmptyRequest {
-} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+}
 pub fn EmptyRequest::equal(Self, Self) -> Bool
-pub fn EmptyRequest::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn EmptyRequest::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
 pub fn EmptyRequest::not_equal(Self, Self) -> Bool
-pub fn EmptyRequest::to_json(Self) -> Json
+pub fn EmptyRequest::to_json(Self) -> @json.Json
 pub fn EmptyRequest::to_repr(Self) -> @debug.Repr
 
 pub struct Event[Payload] {
@@ -66,15 +68,16 @@ pub fn ExtensionContract::id(Self) -> String
 pub fn ExtensionContract::js_namespace(Self) -> String
 pub fn ExtensionContract::validate(Self) -> Unit raise ContractDefinitionError
 
+#derive(Eq, @debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct SupportReply {
   supported : Bool
   platform : String
   reason : String?
-} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+}
 pub fn SupportReply::equal(Self, Self) -> Bool
-pub fn SupportReply::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn SupportReply::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
 pub fn SupportReply::not_equal(Self, Self) -> Bool
-pub fn SupportReply::to_json(Self) -> Json
+pub fn SupportReply::to_json(Self) -> @json.Json
 pub fn SupportReply::to_repr(Self) -> @debug.Repr
 
 // Type aliases

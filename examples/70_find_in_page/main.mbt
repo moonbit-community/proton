@@ -1,11 +1,12 @@
 ///|
+#derive(ToJson, FromJson)
 struct FindRequest {
   target : String
   text : String
   forward : Bool
   match_case : Bool
   find_next : Bool
-} derive(ToJson, FromJson)
+}
 
 ///|
 pub extend FindRequest with ToJson::{to_json}
@@ -14,10 +15,11 @@ pub extend FindRequest with ToJson::{to_json}
 pub extend FindRequest with FromJson::{from_json}
 
 ///|
+#derive(ToJson, FromJson)
 struct StopRequest {
   target : String
   clear_selection : Bool
-} derive(ToJson, FromJson)
+}
 
 ///|
 pub extend StopRequest with ToJson::{to_json}
@@ -26,11 +28,12 @@ pub extend StopRequest with ToJson::{to_json}
 pub extend StopRequest with FromJson::{from_json}
 
 ///|
+#derive(ToJson, FromJson)
 struct Reply {
   ok : Bool
   request_id : Int32
   message : String
-} derive(ToJson, FromJson)
+}
 
 ///|
 pub extend Reply with ToJson::{to_json}

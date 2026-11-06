@@ -1,4 +1,5 @@
 import {
+  "moonbitlang/async",
   "moonbitlang/async/fs" @async_fs,
   "moonbitlang/async/process",
   "moonbitlang/core/cmp",
@@ -7,10 +8,6 @@ import {
   "moonbitlang/core/encoding/utf8",
   "moonbitlang/x/path",
 }
-
-import {
-  "moonbitlang/async",
-} for "wbtest"
 
 supported_targets = "native+wasm"
 

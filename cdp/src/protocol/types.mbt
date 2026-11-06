@@ -4,10 +4,11 @@
 /// CDP version components are strings because Chrome's protocol JSON models
 /// them as strings. Do not parse them as semantic versions; compare the fields
 /// only when a caller explicitly needs an exact bundled-vs-remote check.
+#derive(Eq, ToJson, Debug)
 pub(all) struct ProtocolVersion {
   major : String
   minor : String
-} derive(Eq, ToJson, Debug)
+}
 
 ///|
 pub extend ProtocolVersion with Eq::{not_equal, equal}
@@ -24,6 +25,7 @@ pub extend ProtocolVersion with ToJson::{to_json}
 /// `protocol` identifies the source schema bucket, for example browser or
 /// JavaScript protocol data. `domain` is the CDP domain name such as `Page`.
 /// Counts reflect modeled commands, events, and domain types after generation.
+#derive(Eq, ToJson, Debug)
 pub(all) struct ProtocolDomainSummary {
   protocol : String
   domain : String
@@ -32,7 +34,7 @@ pub(all) struct ProtocolDomainSummary {
   type_count : Int32
   experimental : Bool
   deprecated : Bool
-} derive(Eq, ToJson, Debug)
+}
 
 ///|
 pub extend ProtocolDomainSummary with Eq::{not_equal, equal}
@@ -48,6 +50,7 @@ pub extend ProtocolDomainSummary with ToJson::{to_json}
 ///
 /// `sha256` and `byte_count` let tests and release tooling verify that the
 /// bundled manifest was generated from the expected protocol JSON inputs.
+#derive(Eq, ToJson, Debug)
 pub(all) struct ProtocolSchemaSource {
   protocol : String
   path : String
@@ -57,7 +60,7 @@ pub(all) struct ProtocolSchemaSource {
   command_count : Int32
   event_count : Int32
   type_count : Int32
-} derive(Eq, ToJson, Debug)
+}
 
 ///|
 pub extend ProtocolSchemaSource with Eq::{not_equal, equal}
@@ -76,13 +79,14 @@ pub extend ProtocolSchemaSource with ToJson::{to_json}
 /// `string`, `integer`, `array<string>`, or a domain-local `$ref`. The boolean
 /// flags include field-level flags plus any inherited domain/command/type flags
 /// already applied by the generator.
+#derive(Eq, ToJson, Debug)
 pub(all) struct ProtocolFieldSummary {
   name : String
   kind : String
   optional : Bool
   experimental : Bool
   deprecated : Bool
-} derive(Eq, ToJson, Debug)
+}
 
 ///|
 pub extend ProtocolFieldSummary with Eq::{not_equal, equal}
@@ -103,6 +107,7 @@ pub extend ProtocolFieldSummary with ToJson::{to_json}
 /// `parameter_details` and `return_details` carry the same fields in a
 /// structured form for callers that need optional/experimental/deprecated flags
 /// without parsing the compact strings.
+#derive(Eq, ToJson, Debug)
 pub(all) struct ProtocolCommand {
   protocol : String
   domain : String
@@ -116,7 +121,7 @@ pub(all) struct ProtocolCommand {
   return_details : Array[ProtocolFieldSummary]
   experimental : Bool
   deprecated : Bool
-} derive(Eq, ToJson, Debug)
+}
 
 ///|
 pub extend ProtocolCommand with Eq::{not_equal, equal}
@@ -133,6 +138,7 @@ pub extend ProtocolCommand with ToJson::{to_json}
 /// `cdp_method` is the event name received over the wire, for example
 /// `Runtime.consoleAPICalled`. `parameters` uses the same compact format as
 /// command parameters.
+#derive(Eq, ToJson, Debug)
 pub(all) struct ProtocolEvent {
   protocol : String
   domain : String
@@ -143,7 +149,7 @@ pub(all) struct ProtocolEvent {
   parameter_details : Array[ProtocolFieldSummary]
   experimental : Bool
   deprecated : Bool
-} derive(Eq, ToJson, Debug)
+}
 
 ///|
 pub extend ProtocolEvent with Eq::{not_equal, equal}
@@ -161,6 +167,7 @@ pub extend ProtocolEvent with ToJson::{to_json}
 /// `properties` and `property_details`; enum-like types expose `enum_values`.
 /// Some protocol types have both properties and enum values depending on the
 /// upstream schema shape.
+#derive(Eq, ToJson, Debug)
 pub(all) struct ProtocolType {
   protocol : String
   domain : String
@@ -173,7 +180,7 @@ pub(all) struct ProtocolType {
   enum_values : Array[String]
   experimental : Bool
   deprecated : Bool
-} derive(Eq, ToJson, Debug)
+}
 
 ///|
 pub extend ProtocolType with Eq::{not_equal, equal}
@@ -191,11 +198,12 @@ pub extend ProtocolType with ToJson::{to_json}
 /// current value, then the count and lookup methods in this file to inspect it.
 /// The manifest intentionally stores summary metadata; full generated typed
 /// structs and builders live in `moonbit-community/proton_cdp/protocol/typed`.
+#derive(Eq, ToJson, Debug)
 pub(all) struct ProtocolManifest {
   version : ProtocolVersion
   sources : Array[ProtocolSchemaSource]
   domains : Array[ProtocolDomainSummary]
-} derive(Eq, ToJson, Debug)
+}
 
 ///|
 pub extend ProtocolManifest with Eq::{not_equal, equal}

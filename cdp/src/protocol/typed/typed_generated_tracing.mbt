@@ -7,9 +7,10 @@
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct TracingMemoryDumpConfig {
   value : Json
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend TracingMemoryDumpConfig with Eq::{not_equal, equal}
@@ -43,9 +44,10 @@ pub fn TracingMemoryDumpConfig::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct TracingMemoryDumpLevelOfDetail {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend TracingMemoryDumpLevelOfDetail with Eq::{not_equal, equal}
@@ -87,9 +89,10 @@ pub fn TracingMemoryDumpLevelOfDetail::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct TracingStreamCompression {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend TracingStreamCompression with Eq::{not_equal, equal}
@@ -131,9 +134,10 @@ pub fn TracingStreamCompression::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct TracingStreamFormat {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend TracingStreamFormat with Eq::{not_equal, equal}
@@ -171,6 +175,7 @@ pub fn TracingStreamFormat::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct TracingTraceConfig {
   record_mode : String?
   trace_buffer_size_in_kb : Double?
@@ -181,7 +186,7 @@ pub(all) struct TracingTraceConfig {
   excluded_categories : Array[String]?
   synthetic_delays : Array[String]?
   memory_dump_config : TracingMemoryDumpConfig?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend TracingTraceConfig with Eq::{not_equal, equal}
@@ -312,9 +317,10 @@ pub fn TracingTraceConfig::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct TracingTracingBackend {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend TracingTracingBackend with Eq::{not_equal, equal}
@@ -370,9 +376,10 @@ pub fn tracing_end_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct TracingGetCategoriesResult {
   categories : Array[String]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend TracingGetCategoriesResult with Eq::{not_equal, equal}
@@ -442,9 +449,10 @@ pub fn tracing_get_categories_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct TracingGetTrackEventDescriptorResult {
   descriptor : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend TracingGetTrackEventDescriptorResult with Eq::{not_equal, equal}
@@ -507,9 +515,10 @@ pub fn tracing_get_track_event_descriptor_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct TracingRecordClockSyncMarkerParams {
   sync_id : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend TracingRecordClockSyncMarkerParams with Eq::{not_equal, equal}
@@ -566,10 +575,11 @@ pub fn tracing_record_clock_sync_marker_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct TracingRequestMemoryDumpParams {
   deterministic : Bool?
   level_of_detail : TracingMemoryDumpLevelOfDetail?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend TracingRequestMemoryDumpParams with Eq::{not_equal, equal}
@@ -603,10 +613,11 @@ pub fn TracingRequestMemoryDumpParams::to_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct TracingRequestMemoryDumpResult {
   dump_guid : String
   success : Bool
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend TracingRequestMemoryDumpResult with Eq::{not_equal, equal}
@@ -674,6 +685,7 @@ pub fn tracing_request_memory_dump_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct TracingStartParams {
   categories : String?
   options : String?
@@ -684,7 +696,7 @@ pub(all) struct TracingStartParams {
   trace_config : TracingTraceConfig?
   perfetto_config : String?
   tracing_backend : TracingTracingBackend?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend TracingStartParams with Eq::{not_equal, equal}
@@ -759,11 +771,12 @@ pub fn tracing_start_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct TracingBufferUsageEventParams {
   percent_full : Double?
   event_count : Double?
   value : Double?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend TracingBufferUsageEventParams with Eq::{not_equal, equal}
@@ -844,9 +857,10 @@ pub fn tracing_buffer_usage_event(
 ///
 /// The protocol schema does not name this item type, so the generator preserves
 /// the original JSON value while still giving callers a stable MoonBit type.
+#derive(Eq, Debug)
 pub(all) struct TracingDataCollectedEventParamsValueItem {
   value : Json
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend TracingDataCollectedEventParamsValueItem with Eq::{not_equal, equal}
@@ -878,9 +892,10 @@ pub fn TracingDataCollectedEventParamsValueItem::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct TracingDataCollectedEventParams {
   value : Array[TracingDataCollectedEventParamsValueItem]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend TracingDataCollectedEventParams with Eq::{not_equal, equal}
@@ -953,12 +968,13 @@ pub fn tracing_data_collected_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct TracingTracingCompleteEventParams {
   data_loss_occurred : Bool
   stream : IOStreamHandle?
   trace_format : TracingStreamFormat?
   stream_compression : TracingStreamCompression?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend TracingTracingCompleteEventParams with Eq::{not_equal, equal}

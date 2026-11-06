@@ -1,9 +1,10 @@
 ///|
+#derive(Debug, Eq)
 pub(all) enum PowerSource {
   Unknown
   AC
   Battery
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend PowerSource with Eq::{not_equal, equal}
@@ -12,10 +13,11 @@ pub extend PowerSource with Eq::{not_equal, equal}
 pub extend PowerSource with Debug::{to_repr}
 
 ///|
+#derive(Debug, Eq)
 pub(all) struct PowerSourceInfo {
   source : PowerSource
   battery_percent : Int32?
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend PowerSourceInfo with Eq::{not_equal, equal}
@@ -25,6 +27,7 @@ pub extend PowerSourceInfo with Debug::{to_repr}
 
 ///|
 /// System power and session events delivered by the watch backend.
+#derive(Debug, Eq)
 pub enum PowerMonitorEvent {
   Suspend
   Resume
@@ -32,7 +35,7 @@ pub enum PowerMonitorEvent {
   OnBattery
   LockScreen
   UnlockScreen
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend PowerMonitorEvent with Eq::{not_equal, equal}

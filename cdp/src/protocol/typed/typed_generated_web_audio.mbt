@@ -7,10 +7,11 @@
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct WebAudioAudioListener {
   listener_id : WebAudioGraphObjectId
   context_id : WebAudioGraphObjectId
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend WebAudioAudioListener with Eq::{not_equal, equal}
@@ -56,6 +57,7 @@ pub fn WebAudioAudioListener::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct WebAudioAudioNode {
   node_id : WebAudioGraphObjectId
   context_id : WebAudioGraphObjectId
@@ -65,7 +67,7 @@ pub(all) struct WebAudioAudioNode {
   channel_count : Double
   channel_count_mode : WebAudioChannelCountMode
   channel_interpretation : WebAudioChannelInterpretation
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend WebAudioAudioNode with Eq::{not_equal, equal}
@@ -135,6 +137,7 @@ pub fn WebAudioAudioNode::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct WebAudioAudioParam {
   param_id : WebAudioGraphObjectId
   node_id : WebAudioGraphObjectId
@@ -144,7 +147,7 @@ pub(all) struct WebAudioAudioParam {
   default_value : Double
   min_value : Double
   max_value : Double
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend WebAudioAudioParam with Eq::{not_equal, equal}
@@ -210,9 +213,10 @@ pub fn WebAudioAudioParam::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct WebAudioAutomationRate {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend WebAudioAutomationRate with Eq::{not_equal, equal}
@@ -250,6 +254,7 @@ pub fn WebAudioAutomationRate::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct WebAudioBaseAudioContext {
   context_id : WebAudioGraphObjectId
   context_type : WebAudioContextType
@@ -258,7 +263,7 @@ pub(all) struct WebAudioBaseAudioContext {
   callback_buffer_size : Double
   max_output_channel_count : Double
   sample_rate : Double
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend WebAudioBaseAudioContext with Eq::{not_equal, equal}
@@ -331,9 +336,10 @@ pub fn WebAudioBaseAudioContext::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct WebAudioChannelCountMode {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend WebAudioChannelCountMode with Eq::{not_equal, equal}
@@ -375,9 +381,10 @@ pub fn WebAudioChannelCountMode::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct WebAudioChannelInterpretation {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend WebAudioChannelInterpretation with Eq::{not_equal, equal}
@@ -419,12 +426,13 @@ pub fn WebAudioChannelInterpretation::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct WebAudioContextRealtimeData {
   current_time : Double
   render_capacity : Double
   callback_interval_mean : Double
   callback_interval_variance : Double
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend WebAudioContextRealtimeData with Eq::{not_equal, equal}
@@ -484,9 +492,10 @@ pub fn WebAudioContextRealtimeData::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct WebAudioContextState {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend WebAudioContextState with Eq::{not_equal, equal}
@@ -524,9 +533,10 @@ pub fn WebAudioContextState::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct WebAudioContextType {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend WebAudioContextType with Eq::{not_equal, equal}
@@ -564,9 +574,10 @@ pub fn WebAudioContextType::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct WebAudioGraphObjectId {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend WebAudioGraphObjectId with Eq::{not_equal, equal}
@@ -604,9 +615,10 @@ pub fn WebAudioGraphObjectId::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct WebAudioNodeType {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend WebAudioNodeType with Eq::{not_equal, equal}
@@ -644,9 +656,10 @@ pub fn WebAudioNodeType::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct WebAudioParamType {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend WebAudioParamType with Eq::{not_equal, equal}
@@ -720,9 +733,10 @@ pub fn web_audio_enable_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct WebAudioGetRealtimeDataParams {
   context_id : WebAudioGraphObjectId
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend WebAudioGetRealtimeDataParams with Eq::{not_equal, equal}
@@ -751,9 +765,10 @@ pub fn WebAudioGetRealtimeDataParams::to_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct WebAudioGetRealtimeDataResult {
   realtime_data : WebAudioContextRealtimeData
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend WebAudioGetRealtimeDataResult with Eq::{not_equal, equal}
@@ -818,9 +833,10 @@ pub fn web_audio_get_realtime_data_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct WebAudioAudioListenerCreatedEventParams {
   listener : WebAudioAudioListener
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend WebAudioAudioListenerCreatedEventParams with Eq::{not_equal, equal}
@@ -890,10 +906,11 @@ pub fn web_audio_audio_listener_created_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct WebAudioAudioListenerWillBeDestroyedEventParams {
   context_id : WebAudioGraphObjectId
   listener_id : WebAudioGraphObjectId
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend WebAudioAudioListenerWillBeDestroyedEventParams with Eq::{
@@ -973,9 +990,10 @@ pub fn web_audio_audio_listener_will_be_destroyed_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct WebAudioAudioNodeCreatedEventParams {
   node : WebAudioAudioNode
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend WebAudioAudioNodeCreatedEventParams with Eq::{not_equal, equal}
@@ -1045,10 +1063,11 @@ pub fn web_audio_audio_node_created_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct WebAudioAudioNodeWillBeDestroyedEventParams {
   context_id : WebAudioGraphObjectId
   node_id : WebAudioGraphObjectId
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend WebAudioAudioNodeWillBeDestroyedEventParams with Eq::{
@@ -1128,9 +1147,10 @@ pub fn web_audio_audio_node_will_be_destroyed_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct WebAudioAudioParamCreatedEventParams {
   param : WebAudioAudioParam
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend WebAudioAudioParamCreatedEventParams with Eq::{not_equal, equal}
@@ -1200,11 +1220,12 @@ pub fn web_audio_audio_param_created_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct WebAudioAudioParamWillBeDestroyedEventParams {
   context_id : WebAudioGraphObjectId
   node_id : WebAudioGraphObjectId
   param_id : WebAudioGraphObjectId
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend WebAudioAudioParamWillBeDestroyedEventParams with Eq::{
@@ -1288,9 +1309,10 @@ pub fn web_audio_audio_param_will_be_destroyed_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct WebAudioContextChangedEventParams {
   context : WebAudioBaseAudioContext
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend WebAudioContextChangedEventParams with Eq::{not_equal, equal}
@@ -1360,9 +1382,10 @@ pub fn web_audio_context_changed_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct WebAudioContextCreatedEventParams {
   context : WebAudioBaseAudioContext
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend WebAudioContextCreatedEventParams with Eq::{not_equal, equal}
@@ -1432,9 +1455,10 @@ pub fn web_audio_context_created_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct WebAudioContextWillBeDestroyedEventParams {
   context_id : WebAudioGraphObjectId
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend WebAudioContextWillBeDestroyedEventParams with Eq::{not_equal, equal}
@@ -1504,12 +1528,13 @@ pub fn web_audio_context_will_be_destroyed_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct WebAudioNodeParamConnectedEventParams {
   context_id : WebAudioGraphObjectId
   source_id : WebAudioGraphObjectId
   destination_id : WebAudioGraphObjectId
   source_output_index : Double?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend WebAudioNodeParamConnectedEventParams with Eq::{not_equal, equal}
@@ -1593,12 +1618,13 @@ pub fn web_audio_node_param_connected_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct WebAudioNodeParamDisconnectedEventParams {
   context_id : WebAudioGraphObjectId
   source_id : WebAudioGraphObjectId
   destination_id : WebAudioGraphObjectId
   source_output_index : Double?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend WebAudioNodeParamDisconnectedEventParams with Eq::{not_equal, equal}
@@ -1682,13 +1708,14 @@ pub fn web_audio_node_param_disconnected_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct WebAudioNodesConnectedEventParams {
   context_id : WebAudioGraphObjectId
   source_id : WebAudioGraphObjectId
   destination_id : WebAudioGraphObjectId
   source_output_index : Double?
   destination_input_index : Double?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend WebAudioNodesConnectedEventParams with Eq::{not_equal, equal}
@@ -1778,13 +1805,14 @@ pub fn web_audio_nodes_connected_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct WebAudioNodesDisconnectedEventParams {
   context_id : WebAudioGraphObjectId
   source_id : WebAudioGraphObjectId
   destination_id : WebAudioGraphObjectId
   source_output_index : Double?
   destination_input_index : Double?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend WebAudioNodesDisconnectedEventParams with Eq::{not_equal, equal}

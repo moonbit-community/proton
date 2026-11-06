@@ -7,6 +7,7 @@
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct AccessibilityAXNode {
   node_id : AccessibilityAXNodeId
   ignored : Bool
@@ -21,7 +22,7 @@ pub(all) struct AccessibilityAXNode {
   child_ids : Array[AccessibilityAXNodeId]?
   backend_domnode_id : DOMBackendNodeId?
   frame_id : PageFrameId?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AccessibilityAXNode with Eq::{not_equal, equal}
@@ -158,9 +159,10 @@ pub fn AccessibilityAXNode::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct AccessibilityAXNodeId {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AccessibilityAXNodeId with Eq::{not_equal, equal}
@@ -198,10 +200,11 @@ pub fn AccessibilityAXNodeId::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct AccessibilityAXProperty {
   name : AccessibilityAXPropertyName
   value : AccessibilityAXValue
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AccessibilityAXProperty with Eq::{not_equal, equal}
@@ -247,9 +250,10 @@ pub fn AccessibilityAXProperty::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct AccessibilityAXPropertyName {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AccessibilityAXPropertyName with Eq::{not_equal, equal}
@@ -291,11 +295,12 @@ pub fn AccessibilityAXPropertyName::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct AccessibilityAXRelatedNode {
   backend_domnode_id : DOMBackendNodeId
   idref : String?
   text : String?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AccessibilityAXRelatedNode with Eq::{not_equal, equal}
@@ -349,12 +354,13 @@ pub fn AccessibilityAXRelatedNode::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct AccessibilityAXValue {
   type_ : AccessibilityAXValueType
   value : Json?
   related_nodes : Array[AccessibilityAXRelatedNode]?
   sources : Array[AccessibilityAXValueSource]?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AccessibilityAXValue with Eq::{not_equal, equal}
@@ -424,9 +430,10 @@ pub fn AccessibilityAXValue::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct AccessibilityAXValueNativeSourceType {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AccessibilityAXValueNativeSourceType with Eq::{not_equal, equal}
@@ -468,6 +475,7 @@ pub fn AccessibilityAXValueNativeSourceType::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct AccessibilityAXValueSource {
   type_ : AccessibilityAXValueSourceType
   value : AccessibilityAXValue?
@@ -478,7 +486,7 @@ pub(all) struct AccessibilityAXValueSource {
   native_source_value : AccessibilityAXValue?
   invalid : Bool?
   invalid_reason : String?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AccessibilityAXValueSource with Eq::{not_equal, equal}
@@ -574,9 +582,10 @@ pub fn AccessibilityAXValueSource::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct AccessibilityAXValueSourceType {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AccessibilityAXValueSourceType with Eq::{not_equal, equal}
@@ -618,9 +627,10 @@ pub fn AccessibilityAXValueSourceType::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct AccessibilityAXValueType {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AccessibilityAXValueType with Eq::{not_equal, equal}
@@ -706,11 +716,12 @@ pub fn accessibility_enable_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct AccessibilityGetAXNodeAndAncestorsParams {
   node_id : DOMNodeId?
   backend_node_id : DOMBackendNodeId?
   object_id : RuntimeRemoteObjectId?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AccessibilityGetAXNodeAndAncestorsParams with Eq::{not_equal, equal}
@@ -747,9 +758,10 @@ pub fn AccessibilityGetAXNodeAndAncestorsParams::to_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct AccessibilityGetAXNodeAndAncestorsResult {
   nodes : Array[AccessibilityAXNode]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AccessibilityGetAXNodeAndAncestorsResult with Eq::{not_equal, equal}
@@ -821,10 +833,11 @@ pub fn accessibility_get_axnode_and_ancestors_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct AccessibilityGetChildAXNodesParams {
   id : AccessibilityAXNodeId
   frame_id : PageFrameId?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AccessibilityGetChildAXNodesParams with Eq::{not_equal, equal}
@@ -856,9 +869,10 @@ pub fn AccessibilityGetChildAXNodesParams::to_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct AccessibilityGetChildAXNodesResult {
   nodes : Array[AccessibilityAXNode]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AccessibilityGetChildAXNodesResult with Eq::{not_equal, equal}
@@ -930,10 +944,11 @@ pub fn accessibility_get_child_axnodes_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct AccessibilityGetFullAXTreeParams {
   depth : Int32?
   frame_id : PageFrameId?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AccessibilityGetFullAXTreeParams with Eq::{not_equal, equal}
@@ -967,9 +982,10 @@ pub fn AccessibilityGetFullAXTreeParams::to_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct AccessibilityGetFullAXTreeResult {
   nodes : Array[AccessibilityAXNode]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AccessibilityGetFullAXTreeResult with Eq::{not_equal, equal}
@@ -1041,12 +1057,13 @@ pub fn accessibility_get_full_axtree_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct AccessibilityGetPartialAXTreeParams {
   node_id : DOMNodeId?
   backend_node_id : DOMBackendNodeId?
   object_id : RuntimeRemoteObjectId?
   fetch_relatives : Bool?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AccessibilityGetPartialAXTreeParams with Eq::{not_equal, equal}
@@ -1086,9 +1103,10 @@ pub fn AccessibilityGetPartialAXTreeParams::to_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct AccessibilityGetPartialAXTreeResult {
   nodes : Array[AccessibilityAXNode]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AccessibilityGetPartialAXTreeResult with Eq::{not_equal, equal}
@@ -1160,9 +1178,10 @@ pub fn accessibility_get_partial_axtree_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct AccessibilityGetRootAXNodeParams {
   frame_id : PageFrameId?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AccessibilityGetRootAXNodeParams with Eq::{not_equal, equal}
@@ -1193,9 +1212,10 @@ pub fn AccessibilityGetRootAXNodeParams::to_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct AccessibilityGetRootAXNodeResult {
   node : AccessibilityAXNode
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AccessibilityGetRootAXNodeResult with Eq::{not_equal, equal}
@@ -1264,13 +1284,14 @@ pub fn accessibility_get_root_axnode_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct AccessibilityQueryAXTreeParams {
   node_id : DOMNodeId?
   backend_node_id : DOMBackendNodeId?
   object_id : RuntimeRemoteObjectId?
   accessible_name : String?
   role : String?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AccessibilityQueryAXTreeParams with Eq::{not_equal, equal}
@@ -1313,9 +1334,10 @@ pub fn AccessibilityQueryAXTreeParams::to_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct AccessibilityQueryAXTreeResult {
   nodes : Array[AccessibilityAXNode]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AccessibilityQueryAXTreeResult with Eq::{not_equal, equal}
@@ -1383,9 +1405,10 @@ pub fn accessibility_query_axtree_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct AccessibilityLoadCompleteEventParams {
   root : AccessibilityAXNode
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AccessibilityLoadCompleteEventParams with Eq::{not_equal, equal}
@@ -1455,9 +1478,10 @@ pub fn accessibility_load_complete_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct AccessibilityNodesUpdatedEventParams {
   nodes : Array[AccessibilityAXNode]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AccessibilityNodesUpdatedEventParams with Eq::{not_equal, equal}

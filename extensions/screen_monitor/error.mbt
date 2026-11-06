@@ -1,9 +1,10 @@
 ///|
 /// Failures while querying screen and display state.
+#derive(Debug, Eq)
 suberror ScreenMonitorError {
   BackendUnavailable(detail~ : String)
   QueryFailed(operation~ : String, detail~ : String)
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend ScreenMonitorError with Eq::{not_equal, equal}

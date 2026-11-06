@@ -1,7 +1,8 @@
 ///|
+#derive(ToJson, FromJson)
 struct SkipTaskbarRequest {
   skip : Bool
-} derive(ToJson, FromJson)
+}
 
 ///|
 pub extend SkipTaskbarRequest with ToJson::{to_json}
@@ -10,11 +11,12 @@ pub extend SkipTaskbarRequest with ToJson::{to_json}
 pub extend SkipTaskbarRequest with FromJson::{from_json}
 
 ///|
+#derive(ToJson, FromJson)
 struct SkipTaskbarReply {
   applied : Bool
   skip : Bool
   message : String
-} derive(ToJson, FromJson)
+}
 
 ///|
 pub extend SkipTaskbarReply with ToJson::{to_json}

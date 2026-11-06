@@ -7,9 +7,10 @@
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct TetheringBindParams {
   port : Int32
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend TetheringBindParams with Eq::{not_equal, equal}
@@ -58,9 +59,10 @@ pub fn tethering_bind_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct TetheringUnbindParams {
   port : Int32
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend TetheringUnbindParams with Eq::{not_equal, equal}
@@ -109,10 +111,11 @@ pub fn tethering_unbind_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct TetheringAcceptedEventParams {
   port : Int32
   connection_id : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend TetheringAcceptedEventParams with Eq::{not_equal, equal}

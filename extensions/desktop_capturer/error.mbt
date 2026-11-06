@@ -1,8 +1,9 @@
 ///|
+#derive(Debug, Eq)
 pub(all) suberror DesktopCapturerError {
   Unsupported(operation~ : String, detail~ : String)
   QueryFailed(detail~ : String)
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend DesktopCapturerError with Debug::{to_repr}

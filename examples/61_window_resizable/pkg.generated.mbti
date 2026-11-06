@@ -10,13 +10,15 @@ import {
 // Errors
 
 // Types and methods
-type SetResizableReply derive(ToJson, @json.FromJson)
-pub fn SetResizableReply::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
-pub fn SetResizableReply::to_json(Self) -> Json
+#derive(@json.FromJson, @json.ToJson)
+type SetResizableReply
+pub fn SetResizableReply::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn SetResizableReply::to_json(Self) -> @json.Json
 
-type SetResizableRequest derive(ToJson, @json.FromJson)
-pub fn SetResizableRequest::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
-pub fn SetResizableRequest::to_json(Self) -> Json
+#derive(@json.FromJson, @json.ToJson)
+type SetResizableRequest
+pub fn SetResizableRequest::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn SetResizableRequest::to_json(Self) -> @json.Json
 
 // Type aliases
 

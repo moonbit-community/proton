@@ -1,9 +1,10 @@
 ///|
 /// Generated MoonBit registrar source and diagnostics.
+#derive(Eq, Debug, ToJson)
 pub(all) struct ProtonCommandCodegenOutput {
   source : String
   warnings : Array[String]
-} derive(Eq, Debug, ToJson)
+}
 
 ///|
 pub extend ProtonCommandCodegenOutput with Eq::{not_equal, equal}

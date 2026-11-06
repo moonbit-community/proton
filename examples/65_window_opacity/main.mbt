@@ -1,7 +1,8 @@
 ///|
+#derive(ToJson, FromJson)
 struct OpacityRequest {
   opacity : Double
-} derive(ToJson, FromJson)
+}
 
 ///|
 pub extend OpacityRequest with ToJson::{to_json}
@@ -10,11 +11,12 @@ pub extend OpacityRequest with ToJson::{to_json}
 pub extend OpacityRequest with FromJson::{from_json}
 
 ///|
+#derive(ToJson, FromJson)
 struct OpacityReply {
   applied : Bool
   opacity : Double
   message : String
-} derive(ToJson, FromJson)
+}
 
 ///|
 pub extend OpacityReply with ToJson::{to_json}

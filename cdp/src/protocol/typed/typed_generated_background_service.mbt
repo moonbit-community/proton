@@ -7,6 +7,7 @@
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct BackgroundServiceBackgroundServiceEvent {
   timestamp : NetworkTimeSinceEpoch
   origin : String
@@ -16,7 +17,7 @@ pub(all) struct BackgroundServiceBackgroundServiceEvent {
   instance_id : String
   event_metadata : Array[BackgroundServiceEventMetadata]
   storage_key : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend BackgroundServiceBackgroundServiceEvent with Eq::{not_equal, equal}
@@ -93,10 +94,11 @@ pub fn BackgroundServiceBackgroundServiceEvent::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct BackgroundServiceEventMetadata {
   key : String
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend BackgroundServiceEventMetadata with Eq::{not_equal, equal}
@@ -142,9 +144,10 @@ pub fn BackgroundServiceEventMetadata::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct BackgroundServiceServiceName {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend BackgroundServiceServiceName with Eq::{not_equal, equal}
@@ -186,9 +189,10 @@ pub fn BackgroundServiceServiceName::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct BackgroundServiceClearEventsParams {
   service : BackgroundServiceServiceName
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend BackgroundServiceClearEventsParams with Eq::{not_equal, equal}
@@ -245,10 +249,11 @@ pub fn background_service_clear_events_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct BackgroundServiceSetRecordingParams {
   should_record : Bool
   service : BackgroundServiceServiceName
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend BackgroundServiceSetRecordingParams with Eq::{not_equal, equal}
@@ -306,9 +311,10 @@ pub fn background_service_set_recording_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct BackgroundServiceStartObservingParams {
   service : BackgroundServiceServiceName
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend BackgroundServiceStartObservingParams with Eq::{not_equal, equal}
@@ -365,9 +371,10 @@ pub fn background_service_start_observing_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct BackgroundServiceStopObservingParams {
   service : BackgroundServiceServiceName
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend BackgroundServiceStopObservingParams with Eq::{not_equal, equal}
@@ -424,9 +431,10 @@ pub fn background_service_stop_observing_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct BackgroundServiceBackgroundServiceEventReceivedEventParams {
   background_service_event : BackgroundServiceBackgroundServiceEvent
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend BackgroundServiceBackgroundServiceEventReceivedEventParams with Eq::{
@@ -502,10 +510,11 @@ pub fn background_service_background_service_event_received_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct BackgroundServiceRecordingStateChangedEventParams {
   is_recording : Bool
   service : BackgroundServiceServiceName
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend BackgroundServiceRecordingStateChangedEventParams with Eq::{

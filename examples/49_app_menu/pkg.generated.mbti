@@ -10,13 +10,15 @@ import {
 // Errors
 
 // Types and methods
-type MenuStateReply derive(ToJson, @json.FromJson)
-pub fn MenuStateReply::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
-pub fn MenuStateReply::to_json(Self) -> Json
+#derive(@json.FromJson, @json.ToJson)
+type MenuStateReply
+pub fn MenuStateReply::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn MenuStateReply::to_json(Self) -> @json.Json
 
-type MenuStateRequest derive(ToJson, @json.FromJson)
-pub fn MenuStateRequest::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
-pub fn MenuStateRequest::to_json(Self) -> Json
+#derive(@json.FromJson, @json.ToJson)
+type MenuStateRequest
+pub fn MenuStateRequest::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn MenuStateRequest::to_json(Self) -> @json.Json
 
 // Type aliases
 

@@ -7,6 +7,7 @@
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PerformanceTimelineLargestContentfulPaint {
   render_time : NetworkTimeSinceEpoch
   load_time : NetworkTimeSinceEpoch
@@ -14,7 +15,7 @@ pub(all) struct PerformanceTimelineLargestContentfulPaint {
   element_id : String?
   url : String?
   node_id : DOMBackendNodeId?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PerformanceTimelineLargestContentfulPaint with Eq::{not_equal, equal}
@@ -83,12 +84,13 @@ pub fn PerformanceTimelineLargestContentfulPaint::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PerformanceTimelineLayoutShift {
   value : Double
   had_recent_input : Bool
   last_input_time : NetworkTimeSinceEpoch
   sources : Array[PerformanceTimelineLayoutShiftAttribution]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PerformanceTimelineLayoutShift with Eq::{not_equal, equal}
@@ -147,11 +149,12 @@ pub fn PerformanceTimelineLayoutShift::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PerformanceTimelineLayoutShiftAttribution {
   previous_rect : DOMRect
   current_rect : DOMRect
   node_id : DOMBackendNodeId?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PerformanceTimelineLayoutShiftAttribution with Eq::{not_equal, equal}
@@ -208,6 +211,7 @@ pub fn PerformanceTimelineLayoutShiftAttribution::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PerformanceTimelineTimelineEvent {
   frame_id : PageFrameId
   type_ : String
@@ -216,7 +220,7 @@ pub(all) struct PerformanceTimelineTimelineEvent {
   duration : Double?
   lcp_details : PerformanceTimelineLargestContentfulPaint?
   layout_shift_details : PerformanceTimelineLayoutShift?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PerformanceTimelineTimelineEvent with Eq::{not_equal, equal}
@@ -290,9 +294,10 @@ pub fn PerformanceTimelineTimelineEvent::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PerformanceTimelineEnableParams {
   event_types : Array[String]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PerformanceTimelineEnableParams with Eq::{not_equal, equal}
@@ -347,9 +352,10 @@ pub fn performance_timeline_enable_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PerformanceTimelineTimelineEventAddedEventParams {
   event : PerformanceTimelineTimelineEvent
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PerformanceTimelineTimelineEventAddedEventParams with Eq::{

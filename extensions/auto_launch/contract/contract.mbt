@@ -1,4 +1,5 @@
 ///|
+#derive(ToJson, FromJson, Debug, Eq)
 pub(all) struct AutoLaunchRequest {
   name : String
   path : String?
@@ -6,7 +7,7 @@ pub(all) struct AutoLaunchRequest {
   background_arg : String?
   extra_arguments : Array[String]?
   identifier : String?
-} derive(ToJson, FromJson, Debug, Eq)
+}
 
 ///|
 pub extend AutoLaunchRequest with Eq::{not_equal, equal}
@@ -21,11 +22,12 @@ pub extend AutoLaunchRequest with ToJson::{to_json}
 pub extend AutoLaunchRequest with FromJson::{from_json}
 
 ///|
+#derive(ToJson, FromJson, Debug, Eq)
 pub(all) struct AutoLaunchReply {
   name : String
   path : String
   identifier : String
-} derive(ToJson, FromJson, Debug, Eq)
+}
 
 ///|
 pub extend AutoLaunchReply with Eq::{not_equal, equal}
@@ -40,9 +42,10 @@ pub extend AutoLaunchReply with ToJson::{to_json}
 pub extend AutoLaunchReply with FromJson::{from_json}
 
 ///|
+#derive(ToJson, FromJson, Debug, Eq)
 pub(all) struct EnabledReply {
   enabled : Bool
-} derive(ToJson, FromJson, Debug, Eq)
+}
 
 ///|
 pub extend EnabledReply with Eq::{not_equal, equal}
@@ -57,9 +60,10 @@ pub extend EnabledReply with ToJson::{to_json}
 pub extend EnabledReply with FromJson::{from_json}
 
 ///|
+#derive(ToJson, FromJson, Debug, Eq)
 pub(all) struct MutationReply {
   changed : Bool
-} derive(ToJson, FromJson, Debug, Eq)
+}
 
 ///|
 pub extend MutationReply with Eq::{not_equal, equal}
@@ -74,10 +78,11 @@ pub extend MutationReply with ToJson::{to_json}
 pub extend MutationReply with FromJson::{from_json}
 
 ///|
+#derive(ToJson, FromJson, Debug, Eq)
 pub(all) struct AutoLaunchActivity {
   operation : String
   identifier : String?
-} derive(ToJson, FromJson, Debug, Eq)
+}
 
 ///|
 pub extend AutoLaunchActivity with Eq::{not_equal, equal}

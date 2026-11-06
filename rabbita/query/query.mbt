@@ -1,6 +1,7 @@
 ///|
 /// A component-owned read. Previous data retains its input so a caller cannot
 /// mistake one directory/query's data for another.
+#derive(Eq)
 pub(all) enum State[Input, Value] {
   Loading(input~ : Input, previous~ : (Input, Value)?)
   Ready(input~ : Input, value~ : Value)
@@ -9,7 +10,7 @@ pub(all) enum State[Input, Value] {
     error~ : @proton_client.ClientFailure,
     previous~ : (Input, Value)?
   )
-} derive(Eq)
+}
 
 ///|
 pub extend State with Eq::{equal, not_equal}
@@ -37,6 +38,7 @@ pub struct Query[Input, Value] {
 }
 
 ///|
+#derive(Eq)
 priv struct Model[I, V] {
   input : I
   previous : (I, V)?
@@ -46,7 +48,7 @@ priv struct Model[I, V] {
   pending : Bool
   dirty : Bool
   error : @proton_client.ClientFailure?
-} derive(Eq)
+}
 
 ///|
 priv enum Msg[I, V] {

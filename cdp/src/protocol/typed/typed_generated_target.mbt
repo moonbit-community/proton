@@ -7,10 +7,11 @@
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct TargetFilterEntry {
   exclude : Bool?
   type_ : String?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend TargetFilterEntry with Eq::{not_equal, equal}
@@ -56,10 +57,11 @@ pub fn TargetFilterEntry::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct TargetRemoteLocation {
   host : String
   port : Int32
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend TargetRemoteLocation with Eq::{not_equal, equal}
@@ -101,9 +103,10 @@ pub fn TargetRemoteLocation::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct TargetSessionID {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend TargetSessionID with Eq::{not_equal, equal}
@@ -141,9 +144,10 @@ pub fn TargetSessionID::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct TargetTargetFilter {
   value : Array[TargetFilterEntry]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend TargetTargetFilter with Eq::{not_equal, equal}
@@ -183,9 +187,10 @@ pub fn TargetTargetFilter::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct TargetTargetID {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend TargetTargetID with Eq::{not_equal, equal}
@@ -223,6 +228,7 @@ pub fn TargetTargetID::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct TargetTargetInfo {
   target_id : TargetTargetID
   type_ : String
@@ -235,7 +241,7 @@ pub(all) struct TargetTargetInfo {
   parent_frame_id : PageFrameId?
   browser_context_id : BrowserBrowserContextID?
   subtype : String?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend TargetTargetInfo with Eq::{not_equal, equal}
@@ -321,9 +327,10 @@ pub fn TargetTargetInfo::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct TargetWindowState {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend TargetWindowState with Eq::{not_equal, equal}
@@ -361,9 +368,10 @@ pub fn TargetWindowState::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct TargetActivateTargetParams {
   target_id : TargetTargetID
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend TargetActivateTargetParams with Eq::{not_equal, equal}
@@ -416,9 +424,10 @@ pub fn target_activate_target_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct TargetAttachToBrowserTargetResult {
   session_id : TargetSessionID
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend TargetAttachToBrowserTargetResult with Eq::{not_equal, equal}
@@ -481,10 +490,11 @@ pub fn target_attach_to_browser_target_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct TargetAttachToTargetParams {
   target_id : TargetTargetID
   flatten : Bool?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend TargetAttachToTargetParams with Eq::{not_equal, equal}
@@ -516,9 +526,10 @@ pub fn TargetAttachToTargetParams::to_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct TargetAttachToTargetResult {
   session_id : TargetSessionID
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend TargetAttachToTargetResult with Eq::{not_equal, equal}
@@ -583,11 +594,12 @@ pub fn target_attach_to_target_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct TargetAutoAttachRelatedParams {
   target_id : TargetTargetID
   wait_for_debugger_on_start : Bool
   filter : TargetTargetFilter?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend TargetAutoAttachRelatedParams with Eq::{not_equal, equal}
@@ -646,9 +658,10 @@ pub fn target_auto_attach_related_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct TargetCloseTargetParams {
   target_id : TargetTargetID
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend TargetCloseTargetParams with Eq::{not_equal, equal}
@@ -673,9 +686,10 @@ pub fn TargetCloseTargetParams::to_json(self : TargetCloseTargetParams) -> Json 
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct TargetCloseTargetResult {
   success : Bool
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend TargetCloseTargetResult with Eq::{not_equal, equal}
@@ -738,12 +752,13 @@ pub fn target_close_target_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct TargetCreateBrowserContextParams {
   dispose_on_detach : Bool?
   proxy_server : String?
   proxy_bypass_list : String?
   origins_with_universal_network_access : Array[String]?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend TargetCreateBrowserContextParams with Eq::{not_equal, equal}
@@ -785,9 +800,10 @@ pub fn TargetCreateBrowserContextParams::to_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct TargetCreateBrowserContextResult {
   browser_context_id : BrowserBrowserContextID
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend TargetCreateBrowserContextResult with Eq::{not_equal, equal}
@@ -856,6 +872,7 @@ pub fn target_create_browser_context_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct TargetCreateTargetParams {
   url : String
   left : Int32?
@@ -870,7 +887,7 @@ pub(all) struct TargetCreateTargetParams {
   for_tab : Bool?
   hidden : Bool?
   focus : Bool?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend TargetCreateTargetParams with Eq::{not_equal, equal}
@@ -935,9 +952,10 @@ pub fn TargetCreateTargetParams::to_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct TargetCreateTargetResult {
   target_id : TargetTargetID
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend TargetCreateTargetResult with Eq::{not_equal, equal}
@@ -1002,10 +1020,11 @@ pub fn target_create_target_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct TargetDetachFromTargetParams {
   session_id : TargetSessionID?
   target_id : TargetTargetID?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend TargetDetachFromTargetParams with Eq::{not_equal, equal}
@@ -1063,9 +1082,10 @@ pub fn target_detach_from_target_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct TargetDisposeBrowserContextParams {
   browser_context_id : BrowserBrowserContextID
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend TargetDisposeBrowserContextParams with Eq::{not_equal, equal}
@@ -1122,11 +1142,12 @@ pub fn target_dispose_browser_context_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct TargetExposeDevToolsProtocolParams {
   target_id : TargetTargetID
   binding_name : String?
   inherit_permissions : Bool?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend TargetExposeDevToolsProtocolParams with Eq::{not_equal, equal}
@@ -1189,10 +1210,11 @@ pub fn target_expose_dev_tools_protocol_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct TargetGetBrowserContextsResult {
   browser_context_ids : Array[BrowserBrowserContextID]
   default_browser_context_id : BrowserBrowserContextID?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend TargetGetBrowserContextsResult with Eq::{not_equal, equal}
@@ -1263,9 +1285,10 @@ pub fn target_get_browser_contexts_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct TargetGetDevToolsTargetParams {
   target_id : TargetTargetID
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend TargetGetDevToolsTargetParams with Eq::{not_equal, equal}
@@ -1294,9 +1317,10 @@ pub fn TargetGetDevToolsTargetParams::to_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct TargetGetDevToolsTargetResult {
   target_id : TargetTargetID?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend TargetGetDevToolsTargetResult with Eq::{not_equal, equal}
@@ -1362,9 +1386,10 @@ pub fn target_get_dev_tools_target_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct TargetGetTargetInfoParams {
   target_id : TargetTargetID?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend TargetGetTargetInfoParams with Eq::{not_equal, equal}
@@ -1395,9 +1420,10 @@ pub fn TargetGetTargetInfoParams::to_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct TargetGetTargetInfoResult {
   target_info : TargetTargetInfo
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend TargetGetTargetInfoResult with Eq::{not_equal, equal}
@@ -1462,9 +1488,10 @@ pub fn target_get_target_info_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct TargetGetTargetsParams {
   filter : TargetTargetFilter?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend TargetGetTargetsParams with Eq::{not_equal, equal}
@@ -1491,9 +1518,10 @@ pub fn TargetGetTargetsParams::to_json(self : TargetGetTargetsParams) -> Json {
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct TargetGetTargetsResult {
   target_infos : Array[TargetTargetInfo]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend TargetGetTargetsResult with Eq::{not_equal, equal}
@@ -1559,10 +1587,11 @@ pub fn target_get_targets_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct TargetOpenDevToolsParams {
   target_id : TargetTargetID
   panel_id : String?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend TargetOpenDevToolsParams with Eq::{not_equal, equal}
@@ -1594,9 +1623,10 @@ pub fn TargetOpenDevToolsParams::to_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct TargetOpenDevToolsResult {
   target_id : TargetTargetID
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend TargetOpenDevToolsResult with Eq::{not_equal, equal}
@@ -1661,11 +1691,12 @@ pub fn target_open_dev_tools_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct TargetSendMessageToTargetParams {
   message : String
   session_id : TargetSessionID?
   target_id : TargetTargetID?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend TargetSendMessageToTargetParams with Eq::{not_equal, equal}
@@ -1728,12 +1759,13 @@ pub fn target_send_message_to_target_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct TargetSetAutoAttachParams {
   auto_attach : Bool
   wait_for_debugger_on_start : Bool
   flatten : Bool?
   filter : TargetTargetFilter?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend TargetSetAutoAttachParams with Eq::{not_equal, equal}
@@ -1795,10 +1827,11 @@ pub fn target_set_auto_attach_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct TargetSetDiscoverTargetsParams {
   discover : Bool
   filter : TargetTargetFilter?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend TargetSetDiscoverTargetsParams with Eq::{not_equal, equal}
@@ -1854,9 +1887,10 @@ pub fn target_set_discover_targets_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct TargetSetRemoteLocationsParams {
   locations : Array[TargetRemoteLocation]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend TargetSetRemoteLocationsParams with Eq::{not_equal, equal}
@@ -1909,11 +1943,12 @@ pub fn target_set_remote_locations_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct TargetAttachedToTargetEventParams {
   session_id : TargetSessionID
   target_info : TargetTargetInfo
   waiting_for_debugger : Bool
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend TargetAttachedToTargetEventParams with Eq::{not_equal, equal}
@@ -1991,10 +2026,11 @@ pub fn target_attached_to_target_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct TargetDetachedFromTargetEventParams {
   session_id : TargetSessionID
   target_id : TargetTargetID?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend TargetDetachedFromTargetEventParams with Eq::{not_equal, equal}
@@ -2071,11 +2107,12 @@ pub fn target_detached_from_target_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct TargetReceivedMessageFromTargetEventParams {
   session_id : TargetSessionID
   message : String
   target_id : TargetTargetID?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend TargetReceivedMessageFromTargetEventParams with Eq::{
@@ -2157,11 +2194,12 @@ pub fn target_received_message_from_target_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct TargetTargetCrashedEventParams {
   target_id : TargetTargetID
   status : String
   error_code : Int32
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend TargetTargetCrashedEventParams with Eq::{not_equal, equal}
@@ -2235,9 +2273,10 @@ pub fn target_target_crashed_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct TargetTargetCreatedEventParams {
   target_info : TargetTargetInfo
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend TargetTargetCreatedEventParams with Eq::{not_equal, equal}
@@ -2307,9 +2346,10 @@ pub fn target_target_created_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct TargetTargetDestroyedEventParams {
   target_id : TargetTargetID
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend TargetTargetDestroyedEventParams with Eq::{not_equal, equal}
@@ -2379,9 +2419,10 @@ pub fn target_target_destroyed_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct TargetTargetInfoChangedEventParams {
   target_info : TargetTargetInfo
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend TargetTargetInfoChangedEventParams with Eq::{not_equal, equal}

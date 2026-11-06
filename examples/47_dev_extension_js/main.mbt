@@ -1,9 +1,10 @@
 ///|
+#derive(ToJson, FromJson)
 struct StartPayload {
   run_id : Int32
   count : Int32
   interval_ms : Int32
-} derive(ToJson, FromJson)
+}
 
 ///|
 pub extend StartPayload with ToJson::{to_json}
@@ -12,12 +13,13 @@ pub extend StartPayload with ToJson::{to_json}
 pub extend StartPayload with FromJson::{from_json}
 
 ///|
+#derive(ToJson, FromJson)
 struct TickEvent {
   run_id : Int32
   index : Int32
   total : Int32
   remaining : Int32
-} derive(ToJson, FromJson)
+}
 
 ///|
 pub extend TickEvent with ToJson::{to_json}
@@ -26,10 +28,11 @@ pub extend TickEvent with ToJson::{to_json}
 pub extend TickEvent with FromJson::{from_json}
 
 ///|
+#derive(ToJson, FromJson)
 struct DoneEvent {
   run_id : Int32
   total : Int32
-} derive(ToJson, FromJson)
+}
 
 ///|
 pub extend DoneEvent with ToJson::{to_json}
@@ -38,10 +41,11 @@ pub extend DoneEvent with ToJson::{to_json}
 pub extend DoneEvent with FromJson::{from_json}
 
 ///|
+#derive(ToJson, FromJson)
 struct TickerResult {
   ticks : Array[TickEvent]
   done : DoneEvent
-} derive(ToJson, FromJson)
+}
 
 ///|
 pub extend TickerResult with ToJson::{to_json}

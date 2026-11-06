@@ -1,9 +1,10 @@
 ///|
 /// A browser-session operation failed. `status` and `detail` preserve the
 /// native diagnostic, including calls after the application runtime has ended.
+#derive(Debug)
 pub(all) suberror SessionError {
   OperationFailed(action~ : String, status~ : Int32, detail~ : String)
-} derive(Debug)
+}
 
 ///|
 pub extend SessionError with Debug::{to_repr}

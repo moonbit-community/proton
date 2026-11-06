@@ -10,13 +10,15 @@ import {
 // Errors
 
 // Types and methods
-type SetAttentionReply derive(ToJson, @json.FromJson)
-pub fn SetAttentionReply::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
-pub fn SetAttentionReply::to_json(Self) -> Json
+#derive(@json.FromJson, @json.ToJson)
+type SetAttentionReply
+pub fn SetAttentionReply::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn SetAttentionReply::to_json(Self) -> @json.Json
 
-type SetAttentionRequest derive(ToJson, @json.FromJson)
-pub fn SetAttentionRequest::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
-pub fn SetAttentionRequest::to_json(Self) -> Json
+#derive(@json.FromJson, @json.ToJson)
+type SetAttentionRequest
+pub fn SetAttentionRequest::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn SetAttentionRequest::to_json(Self) -> @json.Json
 
 // Type aliases
 

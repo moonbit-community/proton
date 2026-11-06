@@ -1,9 +1,10 @@
 ///|
 /// The immutable locale selection for one Proton application session.
+#derive(Debug, Eq)
 pub struct LocalePreferences {
   locale_value : Locale
   preferred_values : Array[Locale]
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend LocalePreferences with Eq::{not_equal, equal}

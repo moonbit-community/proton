@@ -1,11 +1,12 @@
 ///|
 /// Failures while managing the process keep-awake guard.
+#derive(Debug, Eq)
 suberror KeepAwakeError {
   UnknownScope(scope~ : String)
   AlreadyActive
   AcquireFailed(detail~ : String)
   ReleaseFailed(detail~ : String)
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend KeepAwakeError with Eq::{not_equal, equal}

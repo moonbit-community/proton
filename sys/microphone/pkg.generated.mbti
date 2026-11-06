@@ -10,13 +10,14 @@ import {
 // Errors
 
 // Types and methods
+#derive(Eq, @debug.Debug)
 pub(all) struct CaptureConfig {
   channels : Int32
   sample_rate_hz : Int32
   sample_format : SampleFormat
   echo_cancellation : Bool
   noise_suppression : Bool
-} derive(Eq, @debug.Debug)
+}
 pub fn CaptureConfig::CaptureConfig(channels? : Int32, sample_rate_hz? : Int32, sample_format? : SampleFormat, echo_cancellation? : Bool, noise_suppression? : Bool) -> Self
 pub fn CaptureConfig::equal(Self, Self) -> Bool
 pub fn CaptureConfig::normalized(Self) -> Self
@@ -28,12 +29,13 @@ pub fn CaptureConfig::to_string(Self) -> String
 pub fn CaptureConfig::uses_voice_processing(Self) -> Bool
 pub impl Show for CaptureConfig
 
+#derive(Eq, @debug.Debug)
 pub(all) enum CaptureState {
   Idle
   Armed
   Recording
   Muted
-} derive(Eq, @debug.Debug)
+}
 pub fn CaptureState::equal(Self, Self) -> Bool
 pub fn CaptureState::label(Self) -> String
 pub fn CaptureState::not_equal(Self, Self) -> Bool
@@ -42,13 +44,14 @@ pub fn CaptureState::to_repr(Self) -> @debug.Repr
 pub fn CaptureState::to_string(Self) -> String
 pub impl Show for CaptureState
 
+#derive(Eq, @debug.Debug)
 pub(all) struct MicrophoneDevice {
   id : String
   name : String
   state : CaptureState
   default_config : CaptureConfig
   monitor_supported : Bool
-} derive(Eq, @debug.Debug)
+}
 pub fn MicrophoneDevice::equal(Self, Self) -> Bool
 pub fn MicrophoneDevice::is_live(Self) -> Bool
 pub fn MicrophoneDevice::list() -> Array[Self]
@@ -60,11 +63,12 @@ pub fn MicrophoneDevice::to_repr(Self) -> @debug.Repr
 pub fn MicrophoneDevice::to_string(Self) -> String
 pub impl Show for MicrophoneDevice
 
+#derive(Eq, @debug.Debug)
 pub(all) enum SampleFormat {
   I16
   U16
   F32
-} derive(Eq, @debug.Debug)
+}
 pub fn SampleFormat::bytes_per_sample(Self) -> Int32
 pub fn SampleFormat::equal(Self, Self) -> Bool
 pub fn SampleFormat::not_equal(Self, Self) -> Bool

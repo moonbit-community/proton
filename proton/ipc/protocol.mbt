@@ -9,12 +9,13 @@ pub fn protocol_version() -> Int32 {
 
 ///|
 /// One operation invocation sent from the JavaScript bridge to the user process.
+#derive(ToJson, FromJson, Eq, Debug)
 pub(all) struct IpcOpRequest {
   version : Int32
   id : String
   name : String
   payload : Json
-} derive(ToJson, FromJson, Eq, Debug)
+}
 
 ///|
 pub extend IpcOpRequest with Eq::{not_equal, equal}
@@ -31,11 +32,12 @@ pub extend IpcOpRequest with FromJson::{from_json}
 ///|
 /// A command failure with a stable code and a caller-facing message.
 /// Backend diagnostics are included only when explicitly enabled.
+#derive(ToJson, FromJson)
 pub(all) struct IpcCommandError {
   code : String
   message : String
   detail : String?
-} derive(ToJson, FromJson)
+}
 
 ///|
 pub extend IpcCommandError with ToJson::{to_json}
@@ -48,12 +50,13 @@ pub extend IpcCommandError with FromJson::{from_json}
 ///
 /// `status == 0` means success. Any non-zero status means `body` contains a JSON
 /// object containing `code`, `message`, and optional `detail` for rejection.
+#derive(ToJson, FromJson, Eq, Debug)
 pub(all) struct IpcOpResponse {
   version : Int32
   id : String
   status : Int32
   body : Json
-} derive(ToJson, FromJson, Eq, Debug)
+}
 
 ///|
 pub extend IpcOpResponse with Eq::{not_equal, equal}
@@ -69,12 +72,13 @@ pub extend IpcOpResponse with FromJson::{from_json}
 
 ///|
 /// One extension event sent from the user process to JavaScript.
+#derive(ToJson, FromJson, Eq, Debug)
 pub(all) struct IpcExtensionEvent {
   version : Int32
   extension_namespace : String
   event_name : String
   payload : Json
-} derive(ToJson, FromJson, Eq, Debug)
+}
 
 ///|
 pub extend IpcExtensionEvent with Eq::{not_equal, equal}
@@ -90,9 +94,10 @@ pub extend IpcExtensionEvent with FromJson::{from_json}
 
 ///|
 /// One JavaScript-facing API exposed for a remote extension namespace.
+#derive(ToJson, FromJson, Eq, Debug)
 pub(all) struct IpcExtensionApi {
   api_name : String
-} derive(ToJson, FromJson, Eq, Debug)
+}
 
 ///|
 pub extend IpcExtensionApi with Eq::{not_equal, equal}
@@ -108,12 +113,13 @@ pub extend IpcExtensionApi with FromJson::{from_json}
 
 ///|
 /// JavaScript bridge metadata for one remote extension.
+#derive(ToJson, FromJson, Eq, Debug)
 pub(all) struct IpcExtensionDescriptor {
   id : String
   js_namespace : String
   apis : Array[IpcExtensionApi]
   scripts : Array[String]
-} derive(ToJson, FromJson, Eq, Debug)
+}
 
 ///|
 pub extend IpcExtensionDescriptor with Eq::{not_equal, equal}

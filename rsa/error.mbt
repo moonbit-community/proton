@@ -4,11 +4,12 @@
 /// Every variant describes a defect in configuration, not in a signature.
 /// Signature verification itself never raises: it answers with a boolean, so
 /// that no caller can mistake an error path for a successful check.
+#derive(Debug, Eq)
 pub(all) suberror KeyError {
   Malformed(detail~ : String)
   ModulusTooSmall(bits~ : Int32, minimum~ : Int32)
   InvalidExponent(detail~ : String)
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend KeyError with Eq::{not_equal, equal}

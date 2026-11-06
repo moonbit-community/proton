@@ -1,8 +1,9 @@
 ///|
+#derive(ToJson, FromJson, Debug, Eq)
 pub(all) struct AcquireRequest {
   reason : String?
   scope : String?
-} derive(ToJson, FromJson, Debug, Eq)
+}
 
 ///|
 pub extend AcquireRequest with Eq::{not_equal, equal}
@@ -17,10 +18,11 @@ pub extend AcquireRequest with ToJson::{to_json}
 pub extend AcquireRequest with FromJson::{from_json}
 
 ///|
+#derive(ToJson, FromJson, Debug, Eq)
 pub(all) struct KeepAwakeReply {
   active : Bool
   scope : String?
-} derive(ToJson, FromJson, Debug, Eq)
+}
 
 ///|
 pub extend KeepAwakeReply with Eq::{not_equal, equal}
@@ -35,10 +37,11 @@ pub extend KeepAwakeReply with ToJson::{to_json}
 pub extend KeepAwakeReply with FromJson::{from_json}
 
 ///|
+#derive(ToJson, FromJson, Debug, Eq)
 pub(all) struct KeepAwakeActivity {
   operation : String
   scope : String?
-} derive(ToJson, FromJson, Debug, Eq)
+}
 
 ///|
 pub extend KeepAwakeActivity with Eq::{not_equal, equal}

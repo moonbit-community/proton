@@ -26,9 +26,10 @@ pub fn ensure_supported() -> Result[Unit, String] {
 
 ///|
 /// A platform shell request could not be completed.
+#derive(Debug)
 pub suberror ShellError {
   ShellError(operation~ : String, target~ : String, reason~ : String)
-} derive(Debug)
+}
 
 ///|
 pub extend ShellError with Debug::{to_repr}

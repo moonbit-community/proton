@@ -21,6 +21,7 @@ pub let parse_listing : @proton_contract.Command[ParseListingRequest, Microphone
 // Errors
 
 // Types and methods
+#derive(Eq, @debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct CaptureConfigReply {
   channels : Int32
   sample_rate_hz : Int32
@@ -30,36 +31,39 @@ pub(all) struct CaptureConfigReply {
   bytes_per_sample : Int32
   recommended_chunk_frames : Int32
   uses_voice_processing : Bool
-} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+}
 pub fn CaptureConfigReply::equal(Self, Self) -> Bool
-pub fn CaptureConfigReply::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn CaptureConfigReply::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
 pub fn CaptureConfigReply::not_equal(Self, Self) -> Bool
-pub fn CaptureConfigReply::to_json(Self) -> Json
+pub fn CaptureConfigReply::to_json(Self) -> @json.Json
 pub fn CaptureConfigReply::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct CaptureConfigRequest {
   channels : Int32?
   sample_rate_hz : Int32?
   sample_format : String?
   echo_cancellation : Bool?
   noise_suppression : Bool?
-} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+}
 pub fn CaptureConfigRequest::equal(Self, Self) -> Bool
-pub fn CaptureConfigRequest::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn CaptureConfigRequest::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
 pub fn CaptureConfigRequest::not_equal(Self, Self) -> Bool
-pub fn CaptureConfigRequest::to_json(Self) -> Json
+pub fn CaptureConfigRequest::to_json(Self) -> @json.Json
 pub fn CaptureConfigRequest::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct MicrophoneActivity {
   operation : String
   count : Int32?
-} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+}
 pub fn MicrophoneActivity::equal(Self, Self) -> Bool
-pub fn MicrophoneActivity::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn MicrophoneActivity::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
 pub fn MicrophoneActivity::not_equal(Self, Self) -> Bool
-pub fn MicrophoneActivity::to_json(Self) -> Json
+pub fn MicrophoneActivity::to_json(Self) -> @json.Json
 pub fn MicrophoneActivity::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct MicrophoneDeviceReply {
   id : String
   name : String
@@ -68,29 +72,31 @@ pub(all) struct MicrophoneDeviceReply {
   monitor_supported : Bool
   live : Bool
   session_label : String
-} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+}
 pub fn MicrophoneDeviceReply::equal(Self, Self) -> Bool
-pub fn MicrophoneDeviceReply::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn MicrophoneDeviceReply::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
 pub fn MicrophoneDeviceReply::not_equal(Self, Self) -> Bool
-pub fn MicrophoneDeviceReply::to_json(Self) -> Json
+pub fn MicrophoneDeviceReply::to_json(Self) -> @json.Json
 pub fn MicrophoneDeviceReply::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct MicrophoneDevicesReply {
   devices : Array[MicrophoneDeviceReply]
-} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+}
 pub fn MicrophoneDevicesReply::equal(Self, Self) -> Bool
-pub fn MicrophoneDevicesReply::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn MicrophoneDevicesReply::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
 pub fn MicrophoneDevicesReply::not_equal(Self, Self) -> Bool
-pub fn MicrophoneDevicesReply::to_json(Self) -> Json
+pub fn MicrophoneDevicesReply::to_json(Self) -> @json.Json
 pub fn MicrophoneDevicesReply::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct ParseListingRequest {
   listing : String
-} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+}
 pub fn ParseListingRequest::equal(Self, Self) -> Bool
-pub fn ParseListingRequest::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn ParseListingRequest::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
 pub fn ParseListingRequest::not_equal(Self, Self) -> Bool
-pub fn ParseListingRequest::to_json(Self) -> Json
+pub fn ParseListingRequest::to_json(Self) -> @json.Json
 pub fn ParseListingRequest::to_repr(Self) -> @debug.Repr
 
 // Type aliases

@@ -33,10 +33,11 @@ fn[T] expect_app_run_error(action : () -> T raise AppRunError) -> AppRunError {
 }
 
 ///|
+#derive(Debug)
 priv suberror FacadeLifecycleTestError {
   DestroyFailed(String)
   StartFailed(String)
-} derive(Debug)
+}
 
 ///|
 async fn test_create_window(

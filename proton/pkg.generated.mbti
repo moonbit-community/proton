@@ -14,6 +14,7 @@ import {
   "moonbit-community/proton_contract",
   "moonbitlang/async",
   "moonbitlang/core/debug",
+  "moonbitlang/core/json",
 }
 
 // Values
@@ -58,17 +59,19 @@ pub fn url(String, String, width? : Int32, height? : Int32, debug? : Bool, resiz
 pub fn view(String, width~ : Int32, height~ : Int32, x? : Int32, y? : Int32, visible? : Bool, z_order? : Int32, background_color? : String) -> ViewConfig
 
 // Errors
+#derive(@debug.Debug)
 pub(all) suberror AppCleanupError {
   CommandExtension(CommandExtensionLifecycleError)
   LifecycleHook(LifecycleHookError)
   WindowDestroy(status~ : Int32, detail~ : String)
   RuntimeDestroy(status~ : Int32, detail~ : String)
-} derive(@debug.Debug)
+}
 pub fn AppCleanupError::message(Self) -> String
 pub fn AppCleanupError::output(Self, &Logger) -> Unit
 pub fn AppCleanupError::to_repr(Self) -> @debug.Repr
 pub fn AppCleanupError::to_string(Self) -> String
 
+#derive(@debug.Debug)
 pub(all) suberror AppConfigurationError {
   InvalidSetting(name~ : String, message~ : String)
   ExtensionDependencyCycle(extension_id~ : String)
@@ -78,19 +81,20 @@ pub(all) suberror AppConfigurationError {
   InvalidJavaScriptApi(js_namespace~ : String, api_name~ : String)
   InvalidEntryUrl(url~ : String, reason~ : String)
   InvalidRendererCapability(detail~ : String)
-} derive(@debug.Debug)
+}
 pub fn AppConfigurationError::message(Self) -> String
 pub fn AppConfigurationError::output(Self, &Logger) -> Unit
 pub fn AppConfigurationError::to_repr(Self) -> @debug.Repr
 pub fn AppConfigurationError::to_string(Self) -> String
 
+#derive(Eq, @debug.Debug)
 pub(all) suberror AppControlError {
   InvalidProtocolScheme(scheme~ : String)
   UndeclaredProtocolScheme(scheme~ : String)
   InvalidExecutable(path~ : String)
   UnsupportedPlatform(action~ : String)
   NativeControlFailure(action~ : String, status~ : Int32, detail~ : String)
-} derive(Eq, @debug.Debug)
+}
 pub fn AppControlError::equal(Self, Self) -> Bool
 pub fn AppControlError::message(Self) -> String
 pub fn AppControlError::not_equal(Self, Self) -> Bool
@@ -98,16 +102,18 @@ pub fn AppControlError::output(Self, &Logger) -> Unit
 pub fn AppControlError::to_repr(Self) -> @debug.Repr
 pub fn AppControlError::to_string(Self) -> String
 
+#derive(@debug.Debug)
 pub(all) suberror AppEntryError {
   ReadFailed(path~ : String, detail~ : String)
   PlatformLoad(action~ : String, status~ : Int32, detail~ : String)
   ClosedDuringStartup
-} derive(@debug.Debug)
+}
 pub fn AppEntryError::message(Self) -> String
 pub fn AppEntryError::output(Self, &Logger) -> Unit
 pub fn AppEntryError::to_repr(Self) -> @debug.Repr
 pub fn AppEntryError::to_string(Self) -> String
 
+#derive(Eq, @debug.Debug)
 pub(all) suberror AppPathError {
   MissingApplicationIdentifier
   InvalidIdentifier(identifier~ : String)
@@ -118,12 +124,13 @@ pub(all) suberror AppPathError {
   InvalidPathOverride(kind~ : String, path~ : String, reason~ : String)
   SystemPath(kind~ : String, status~ : Int32, detail~ : String)
   PlatformProbe(status~ : Int32, detail~ : String)
-} derive(Eq, @debug.Debug)
+}
 pub fn AppPathError::equal(Self, Self) -> Bool
 pub fn AppPathError::message(Self) -> String
 pub fn AppPathError::not_equal(Self, Self) -> Bool
 pub fn AppPathError::to_repr(Self) -> @debug.Repr
 
+#derive(@debug.Debug)
 pub(all) suberror AppRunError {
   EventLoopError(String)
   ConfigurationError(AppConfigurationError)
@@ -137,37 +144,40 @@ pub(all) suberror AppRunError {
   BridgeRuntimeError(@types.BridgeDiagnostic)
   CleanupFailed(primary~ : String?, failures~ : Array[AppCleanupError])
   UnexpectedTaskFailure(detail~ : String)
-} derive(@debug.Debug)
+}
 pub fn AppRunError::message(Self) -> String
 pub fn AppRunError::output(Self, &Logger) -> Unit
 pub fn AppRunError::to_repr(Self) -> @debug.Repr
 pub fn AppRunError::to_string(Self) -> String
 
+#derive(@debug.Debug)
 pub(all) suberror CommandExtensionLifecycleError {
   ApplicationRegistrationFailed(detail~ : String)
   RegistrationFailed(extension_id~ : String, detail~ : String)
   EventSourceStartFailed(extension_id~ : String, detail~ : String)
   DestroyFailed(extension_id~ : String, detail~ : String)
-} derive(@debug.Debug)
+}
 pub fn CommandExtensionLifecycleError::message(Self) -> String
 pub fn CommandExtensionLifecycleError::output(Self, &Logger) -> Unit
 pub fn CommandExtensionLifecycleError::to_repr(Self) -> @debug.Repr
 pub fn CommandExtensionLifecycleError::to_string(Self) -> String
 
+#derive(@debug.Debug)
 pub(all) suberror LifecycleHookError {
   ApplicationStart(index~ : Int32, detail~ : String)
   ApplicationShutdown(detail~ : String)
   WindowReady(index~ : Int32, detail~ : String)
   WindowClose(window~ : String, detail~ : String)
-} derive(@debug.Debug)
+}
 pub fn LifecycleHookError::message(Self) -> String
 pub fn LifecycleHookError::output(Self, &Logger) -> Unit
 pub fn LifecycleHookError::to_repr(Self) -> @debug.Repr
 pub fn LifecycleHookError::to_string(Self) -> String
 
+#derive(Eq, @debug.Debug)
 pub(all) suberror NativeImageError {
   OperationFailed(action~ : String, status~ : Int32, detail~ : String)
-} derive(Eq, @debug.Debug)
+}
 pub fn NativeImageError::equal(Self, Self) -> Bool
 pub fn NativeImageError::message(Self) -> String
 pub fn NativeImageError::not_equal(Self, Self) -> Bool
@@ -175,27 +185,30 @@ pub fn NativeImageError::output(Self, &Logger) -> Unit
 pub fn NativeImageError::to_repr(Self) -> @debug.Repr
 pub fn NativeImageError::to_string(Self) -> String
 
+#derive(Eq, @debug.Debug)
 pub(all) suberror NotificationDeliveryError {
   NativeFailure(status~ : Int32, detail~ : String)
   WaitInterrupted(detail~ : String)
   DeliveryFailed(message~ : String)
-} derive(Eq, @debug.Debug)
+}
 pub fn NotificationDeliveryError::equal(Self, Self) -> Bool
 pub fn NotificationDeliveryError::message(Self) -> String
 pub fn NotificationDeliveryError::not_equal(Self, Self) -> Bool
 pub fn NotificationDeliveryError::to_repr(Self) -> @debug.Repr
 
+#derive(@debug.Debug)
 pub(all) suberror ScreenQueryError {
   QueryFailed(status~ : Int32, detail~ : String)
-} derive(@debug.Debug)
+}
 pub fn ScreenQueryError::message(Self) -> String
 pub fn ScreenQueryError::output(Self, &Logger) -> Unit
 pub fn ScreenQueryError::to_repr(Self) -> @debug.Repr
 pub fn ScreenQueryError::to_string(Self) -> String
 
+#derive(@debug.Debug)
 pub(all) suberror SessionError {
   OperationFailed(action~ : String, status~ : Int32, detail~ : String)
-} derive(@debug.Debug)
+}
 pub fn SessionError::message(Self) -> String
 pub fn SessionError::to_repr(Self) -> @debug.Repr
 
@@ -206,17 +219,19 @@ pub fn SystemAppearanceError::message(Self) -> String
 pub fn SystemAppearanceError::output(Self, &Logger) -> Unit
 pub fn SystemAppearanceError::to_string(Self) -> String
 
+#derive(@debug.Debug)
 pub(all) suberror SystemLocaleError {
   NativeQuery(status~ : Int32, detail~ : String)
-} derive(@debug.Debug)
+}
 pub fn SystemLocaleError::message(Self) -> String
 pub fn SystemLocaleError::output(Self, &Logger) -> Unit
 pub fn SystemLocaleError::to_repr(Self) -> @debug.Repr
 pub fn SystemLocaleError::to_string(Self) -> String
 
+#derive(Eq, @debug.Debug)
 pub(all) suberror SystemPreferencesError {
   SystemPreferencesUnavailable(query~ : String, status~ : Int32, detail~ : String)
-} derive(Eq, @debug.Debug)
+}
 pub fn SystemPreferencesError::equal(Self, Self) -> Bool
 pub fn SystemPreferencesError::message(Self) -> String
 pub fn SystemPreferencesError::not_equal(Self, Self) -> Bool
@@ -224,6 +239,7 @@ pub fn SystemPreferencesError::output(Self, &Logger) -> Unit
 pub fn SystemPreferencesError::to_repr(Self) -> @debug.Repr
 pub fn SystemPreferencesError::to_string(Self) -> String
 
+#derive(@debug.Debug)
 pub(all) suberror WindowSessionError {
   AlreadyOpen(id~ : String)
   ApplicationQuitting
@@ -234,7 +250,7 @@ pub(all) suberror WindowSessionError {
   Cancelled
   OperationFailed(action~ : String, status~ : Int32, detail~ : String)
   StartupFailed(id~ : String, error~ : AppRunError)
-} derive(@debug.Debug)
+}
 pub fn WindowSessionError::message(Self) -> String
 pub fn WindowSessionError::output(Self, &Logger) -> Unit
 pub fn WindowSessionError::to_repr(Self) -> @debug.Repr
@@ -294,6 +310,7 @@ pub fn App::web_request_cancel_prefix(Self, String) -> Unit
 pub fn App::web_request_header_prefix(Self, String, String, String) -> Unit
 pub fn App::web_request_redirect_prefix(Self, String, String) -> Unit
 
+#derive(Eq, @debug.Debug)
 pub(all) enum AppPathKind {
   Home
   AppData
@@ -311,7 +328,7 @@ pub(all) enum AppPathKind {
   Pictures
   Videos
   Recent
-} derive(Eq, @debug.Debug)
+}
 pub fn AppPathKind::equal(Self, Self) -> Bool
 pub fn AppPathKind::not_equal(Self, Self) -> Bool
 pub fn AppPathKind::to_repr(Self) -> @debug.Repr
@@ -359,46 +376,52 @@ pub fn ApplicationContext::task_group(Self) -> @async.TaskGroup[Unit]
 pub fn ApplicationContext::task_metrics(Self) -> Array[@types.AppTaskMetric] raise AppControlError
 pub fn ApplicationContext::windows(Self) -> WindowManager
 
+#derive(Eq, @debug.Debug)
 pub(all) enum ApplicationQuitDecision {
   Allow
   Prevent
-} derive(Eq, @debug.Debug)
+}
 pub fn ApplicationQuitDecision::equal(Self, Self) -> Bool
 pub fn ApplicationQuitDecision::not_equal(Self, Self) -> Bool
 pub fn ApplicationQuitDecision::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug)
 pub(all) struct ApplicationSession {
   partition : String?
   data_path : String?
-} derive(Eq, @debug.Debug)
+}
 pub fn ApplicationSession::equal(Self, Self) -> Bool
 pub fn ApplicationSession::not_equal(Self, Self) -> Bool
 pub fn ApplicationSession::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug)
 pub(all) enum BrowserPermissionDecision {
   Allow
   Deny
-} derive(Eq, @debug.Debug)
+}
 pub fn BrowserPermissionDecision::equal(Self, Self) -> Bool
 pub fn BrowserPermissionDecision::not_equal(Self, Self) -> Bool
 pub fn BrowserPermissionDecision::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug)
 pub(all) struct CertificateError {
   url : String
   error_code : Int32
-} derive(Eq, @debug.Debug)
+}
 pub fn CertificateError::equal(Self, Self) -> Bool
 pub fn CertificateError::not_equal(Self, Self) -> Bool
 pub fn CertificateError::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug)
 pub(all) enum ColorScheme {
   Light
   Dark
-} derive(Eq, @debug.Debug)
+}
 pub fn ColorScheme::equal(Self, Self) -> Bool
 pub fn ColorScheme::not_equal(Self, Self) -> Bool
 pub fn ColorScheme::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug)
 pub(all) struct Cookie {
   name : String
   value : String
@@ -408,60 +431,66 @@ pub(all) struct Cookie {
   http_only : Bool
   same_site : @types.CookieSameSite
   expiration_date : Double?
-} derive(Eq, @debug.Debug)
+}
 pub fn Cookie::equal(Self, Self) -> Bool
 pub fn Cookie::not_equal(Self, Self) -> Bool
 pub fn Cookie::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug)
 pub(all) enum DockBounceType {
   Informational
   Critical
-} derive(Eq, @debug.Debug)
+}
 pub fn DockBounceType::equal(Self, Self) -> Bool
 pub fn DockBounceType::not_equal(Self, Self) -> Bool
 pub fn DockBounceType::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug)
 pub(all) enum DownloadDecision {
   Deny
   ShowSaveDialog
   SaveTo(String)
-} derive(Eq, @debug.Debug)
+}
 pub fn DownloadDecision::equal(Self, Self) -> Bool
 pub fn DownloadDecision::not_equal(Self, Self) -> Bool
 pub fn DownloadDecision::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug)
 pub(all) struct DownloadEvent {
   id : Int32
   state : String
   received_bytes : Int64
   total_bytes : Int64
   percent : Int32
-} derive(Eq, @debug.Debug)
+}
 pub fn DownloadEvent::equal(Self, Self) -> Bool
 pub fn DownloadEvent::not_equal(Self, Self) -> Bool
 pub fn DownloadEvent::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug)
 pub(all) struct DownloadRequest {
   id : Int32
   url : String
   suggested_name : String
-} derive(Eq, @debug.Debug)
+}
 pub fn DownloadRequest::equal(Self, Self) -> Bool
 pub fn DownloadRequest::not_equal(Self, Self) -> Bool
 pub fn DownloadRequest::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug)
 pub(all) enum LastWindowClosedPolicy {
   Quit
   KeepRunning
-} derive(Eq, @debug.Debug)
+}
 pub fn LastWindowClosedPolicy::equal(Self, Self) -> Bool
 pub fn LastWindowClosedPolicy::not_equal(Self, Self) -> Bool
 pub fn LastWindowClosedPolicy::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug)
 pub(all) struct MediaPermissionRequest {
   origin : String
   permissions : Int32
-} derive(Eq, @debug.Debug)
+}
 pub fn MediaPermissionRequest::equal(Self, Self) -> Bool
 pub fn MediaPermissionRequest::not_equal(Self, Self) -> Bool
 pub fn MediaPermissionRequest::to_repr(Self) -> @debug.Repr
@@ -509,14 +538,16 @@ pub fn NativeImage::to_bitmap(Self, scale_factor? : Double) -> (Bytes, Int32, In
 pub fn NativeImage::to_jpeg(Self, scale_factor? : Double, quality? : Int32) -> (Bytes, Int32, Int32) raise NativeImageError
 pub fn NativeImage::to_png(Self, scale_factor? : Double, with_transparency? : Bool) -> (Bytes, Int32, Int32) raise NativeImageError
 
+#derive(Eq, @debug.Debug)
 pub(all) enum NavigationDecision {
   Allow
   Deny
-} derive(Eq, @debug.Debug)
+}
 pub fn NavigationDecision::equal(Self, Self) -> Bool
 pub fn NavigationDecision::not_equal(Self, Self) -> Bool
 pub fn NavigationDecision::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug)
 pub(all) struct NavigationEntry {
   url : String
   display_url : String
@@ -526,15 +557,16 @@ pub(all) struct NavigationEntry {
   transition_qualifiers : Array[NavigationTransitionQualifier]
   has_post_data : Bool
   http_status_code : Int32
-} derive(Eq, @debug.Debug)
+}
 pub fn NavigationEntry::equal(Self, Self) -> Bool
 pub fn NavigationEntry::not_equal(Self, Self) -> Bool
 pub fn NavigationEntry::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug)
 pub(all) struct NavigationHistory {
   entries : Array[NavigationEntry]
   active_index : Int32
-} derive(Eq, @debug.Debug)
+}
 pub fn NavigationHistory::active_entry(Self) -> NavigationEntry?
 pub fn NavigationHistory::can_go_back(Self) -> Bool
 pub fn NavigationHistory::can_go_forward(Self) -> Bool
@@ -544,16 +576,18 @@ pub fn NavigationHistory::length(Self) -> Int32
 pub fn NavigationHistory::not_equal(Self, Self) -> Bool
 pub fn NavigationHistory::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug)
 pub(all) struct NavigationRequest {
   url : String
   http_method : String
   user_gesture : Bool
   redirect : Bool
-} derive(Eq, @debug.Debug)
+}
 pub fn NavigationRequest::equal(Self, Self) -> Bool
 pub fn NavigationRequest::not_equal(Self, Self) -> Bool
 pub fn NavigationRequest::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug)
 pub(all) enum NavigationTransition {
   Link
   Typed
@@ -567,47 +601,52 @@ pub(all) enum NavigationTransition {
   Keyword
   KeywordGenerated
   Other(Int32)
-} derive(Eq, @debug.Debug)
+}
 pub fn NavigationTransition::equal(Self, Self) -> Bool
 pub fn NavigationTransition::not_equal(Self, Self) -> Bool
 pub fn NavigationTransition::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug)
 pub(all) enum NavigationTransitionQualifier {
   ClientRedirect
   ServerRedirect
   ForwardBack
   FromAddressBar
-} derive(Eq, @debug.Debug)
+}
 pub fn NavigationTransitionQualifier::equal(Self, Self) -> Bool
 pub fn NavigationTransitionQualifier::not_equal(Self, Self) -> Bool
 pub fn NavigationTransitionQualifier::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug)
 pub(all) enum NewWindowDecision {
   Deny
   OpenInCurrent
   OpenInWindow(String)
-} derive(Eq, @debug.Debug)
+}
 pub fn NewWindowDecision::equal(Self, Self) -> Bool
 pub fn NewWindowDecision::not_equal(Self, Self) -> Bool
 pub fn NewWindowDecision::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug)
 pub(all) struct NewWindowRequest {
   url : String
   user_gesture : Bool
-} derive(Eq, @debug.Debug)
+}
 pub fn NewWindowRequest::equal(Self, Self) -> Bool
 pub fn NewWindowRequest::not_equal(Self, Self) -> Bool
 pub fn NewWindowRequest::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug)
 pub(all) enum PdfPrintMargins {
   Default
   NoMargins
   Custom(top~ : Double, right~ : Double, bottom~ : Double, left~ : Double)
-} derive(Eq, @debug.Debug)
+}
 pub fn PdfPrintMargins::equal(Self, Self) -> Bool
 pub fn PdfPrintMargins::not_equal(Self, Self) -> Bool
 pub fn PdfPrintMargins::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug)
 pub(all) struct PdfPrintOptions {
   landscape : Bool
   print_background : Bool
@@ -622,7 +661,7 @@ pub(all) struct PdfPrintOptions {
   footer_template : String
   generate_tagged_pdf : Bool
   generate_document_outline : Bool
-} derive(Eq, @debug.Debug)
+}
 pub fn PdfPrintOptions::PdfPrintOptions(landscape? : Bool, print_background? : Bool, scale? : Double, paper_width? : Double, paper_height? : Double, prefer_css_page_size? : Bool, margins? : PdfPrintMargins, page_ranges? : String, display_header_footer? : Bool, header_template? : String, footer_template? : String, generate_tagged_pdf? : Bool, generate_document_outline? : Bool) -> Self
 pub fn PdfPrintOptions::equal(Self, Self) -> Bool
 pub fn PdfPrintOptions::not_equal(Self, Self) -> Bool
@@ -641,23 +680,26 @@ pub fn PendingUpdate::notes_url(Self) -> String?
 pub fn PendingUpdate::size(Self) -> Int64
 pub fn PendingUpdate::version(Self) -> String
 
+#derive(Eq, @debug.Debug)
 pub(all) struct RelaunchOptions {
   executable : String?
   arguments : Array[String]?
-} derive(Eq, @debug.Debug)
+}
 pub fn RelaunchOptions::RelaunchOptions(executable? : String, arguments? : Array[String]) -> Self
 pub fn RelaunchOptions::equal(Self, Self) -> Bool
 pub fn RelaunchOptions::not_equal(Self, Self) -> Bool
 pub fn RelaunchOptions::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug)
 pub(all) struct RenderProcessGoneDetails {
   reason : RenderProcessGoneReason
   exit_code : Int32
-} derive(Eq, @debug.Debug)
+}
 pub fn RenderProcessGoneDetails::equal(Self, Self) -> Bool
 pub fn RenderProcessGoneDetails::not_equal(Self, Self) -> Bool
 pub fn RenderProcessGoneDetails::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug)
 pub(all) enum RenderProcessGoneReason {
   AbnormalExit
   Killed
@@ -666,7 +708,7 @@ pub(all) enum RenderProcessGoneReason {
   LaunchFailed
   IntegrityFailure
   Unknown
-} derive(Eq, @debug.Debug)
+}
 pub fn RenderProcessGoneReason::equal(Self, Self) -> Bool
 pub fn RenderProcessGoneReason::not_equal(Self, Self) -> Bool
 pub fn RenderProcessGoneReason::to_repr(Self) -> @debug.Repr
@@ -702,19 +744,21 @@ pub fn SessionHandle::flush_cookies(Self) -> Unit raise SessionError
 pub async fn SessionHandle::get_cookies(Self, url? : String, include_http_only? : Bool) -> Array[Cookie]
 pub fn SessionHandle::set_cookie(Self, String, String, String, domain? : String, path? : String, secure? : Bool, http_only? : Bool, same_site? : @types.CookieSameSite) -> Unit raise SessionError
 
+#derive(Eq, @debug.Debug)
 pub(all) enum StorageDataKind {
   Cookies
   HttpCache
   AllSupported
-} derive(Eq, @debug.Debug)
+}
 pub fn StorageDataKind::equal(Self, Self) -> Bool
 pub fn StorageDataKind::not_equal(Self, Self) -> Bool
 pub fn StorageDataKind::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug)
 pub(all) struct SystemAppearance {
   color_scheme : ColorScheme
   high_contrast : Bool
-} derive(Eq, @debug.Debug)
+}
 pub fn SystemAppearance::equal(Self, Self) -> Bool
 pub fn SystemAppearance::not_equal(Self, Self) -> Bool
 pub fn SystemAppearance::to_repr(Self) -> @debug.Repr
@@ -760,6 +804,7 @@ pub fn ViewHandle::state(Self) -> @types.ViewState raise WindowSessionError
 pub fn ViewHandle::web_contents(Self) -> WebContentsHandle
 pub fn ViewHandle::window_id(Self) -> String
 
+#derive(Eq, @debug.Debug)
 pub(all) enum WebContentsEvent {
   Closed
   BridgeFailed(diagnostic~ : @types.BridgeDiagnostic)
@@ -774,7 +819,7 @@ pub(all) enum WebContentsEvent {
   ResourceCompleted(url~ : String, status~ : Int32, received_bytes~ : Int64)
   ResourceRequested(url~ : String, request_method~ : String, will_cancel~ : Bool)
   RendererProcessTerminated(url~ : String, status~ : Int32, error_code~ : Int32, detail~ : String)
-} derive(Eq, @debug.Debug)
+}
 pub fn WebContentsEvent::equal(Self, Self) -> Bool
 pub fn WebContentsEvent::not_equal(Self, Self) -> Bool
 pub fn WebContentsEvent::to_repr(Self) -> @debug.Repr
@@ -831,18 +876,20 @@ pub(all) struct WebContentsPolicy {
 }
 pub fn WebContentsPolicy::WebContentsPolicy(navigation_handler? : (WebContentsHandle, NavigationRequest) -> NavigationDecision, new_window_handler? : async (WebContentsHandle, NewWindowRequest) -> NewWindowDecision noraise) -> Self
 
+#derive(Eq, @debug.Debug)
 pub(all) struct WindowButtonPosition {
   x : Int32
   y : Int32
-} derive(Eq, @debug.Debug)
+}
 pub fn WindowButtonPosition::equal(Self, Self) -> Bool
 pub fn WindowButtonPosition::not_equal(Self, Self) -> Bool
 pub fn WindowButtonPosition::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug)
 pub(all) enum WindowCloseDecision {
   Allow
   Deny
-} derive(Eq, @debug.Debug)
+}
 pub fn WindowCloseDecision::equal(Self, Self) -> Bool
 pub fn WindowCloseDecision::not_equal(Self, Self) -> Bool
 pub fn WindowCloseDecision::to_repr(Self) -> @debug.Repr
@@ -880,6 +927,7 @@ pub fn WindowContext::preferred_languages(Self) -> Array[@locale.Locale]
 pub fn WindowContext::task_group(Self) -> @async.TaskGroup[Unit]
 pub fn WindowContext::windows(Self) -> WindowManager
 
+#derive(Eq, @debug.Debug)
 pub(all) enum WindowEvent {
   StateChanged(@types.WindowState)
   Closed
@@ -896,15 +944,15 @@ pub(all) enum WindowEvent {
   Unmaximize
   EnterFullScreen
   LeaveFullScreen
-} derive(Eq, @debug.Debug)
+}
 pub fn WindowEvent::equal(Self, Self) -> Bool
 pub fn WindowEvent::not_equal(Self, Self) -> Bool
 pub fn WindowEvent::to_repr(Self) -> @debug.Repr
 
 pub struct WindowEventEmitter {
-  emit_event : async (@proton_contract.ContractRoute, String, Json) -> Unit noraise
+  emit_event : async (@proton_contract.ContractRoute, String, @json.Json) -> Unit noraise
 }
-pub async fn[Payload : ToJson] WindowEventEmitter::emit(Self, @proton_contract.Event[Payload], Payload) -> Unit
+pub async fn[Payload : @json.ToJson] WindowEventEmitter::emit(Self, @proton_contract.Event[Payload], Payload) -> Unit
 
 pub struct WindowHandle {
   id : String

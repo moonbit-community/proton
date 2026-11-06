@@ -1,8 +1,9 @@
 ///|
+#derive(ToJson, FromJson)
 struct AddRequest {
   left : Int32
   right : Int32
-} derive(ToJson, FromJson)
+}
 
 ///|
 pub extend AddRequest with ToJson::{to_json}
@@ -11,9 +12,10 @@ pub extend AddRequest with ToJson::{to_json}
 pub extend AddRequest with FromJson::{from_json}
 
 ///|
+#derive(ToJson, FromJson)
 struct ReportProbeRequest {
   report : String
-} derive(ToJson, FromJson)
+}
 
 ///|
 pub extend ReportProbeRequest with ToJson::{to_json}

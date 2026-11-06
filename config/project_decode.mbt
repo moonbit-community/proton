@@ -1,24 +1,23 @@
 ///|
+#derive(ToJson(fields(package_config(rename="package"))), FromJson(fields(package_config(rename="package"))))
 priv struct ConfigFields {
   identifier : String
   backend : BackendConfig?
   frontend : FrontendConfig?
   package_config : PackageConfig?
-} derive (
-  ToJson(fields(package_config(rename="package"))),
-  FromJson(fields(package_config(rename="package"))),
-)
+}
 
 ///|
 extend ConfigFields with ToJson::{to_json}
 
 ///|
 /// Desktop host used to select project overrides, independently of build targets.
+#derive(Eq, Debug)
 pub(all) enum Platform {
   Macos
   Windows
   Linux
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend Platform with Eq::{equal, not_equal}

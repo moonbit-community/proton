@@ -19,10 +19,11 @@ struct UpdateStage {
 
 ///|
 /// What consuming an authenticated update stage changed.
+#derive(Debug, Eq)
 pub enum UpdateInstallOutcome {
   Installed
   AlreadyInstalled
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend UpdateInstallOutcome with Eq::{not_equal, equal}

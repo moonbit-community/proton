@@ -15,10 +15,11 @@ pub fn app_command_extension_op_name(String, String) -> String
 pub fn app_command_js_property_is_reserved(String) -> Bool
 
 // Errors
+#derive(Eq, @debug.Debug)
 pub(all) suberror ExtensionSpecError {
   InvalidContract(detail~ : String)
   ForeignCommandRoute(extension_id~ : String, operation_name~ : String)
-} derive(Eq, @debug.Debug)
+}
 pub fn ExtensionSpecError::equal(Self, Self) -> Bool
 pub fn ExtensionSpecError::message(Self) -> String
 pub fn ExtensionSpecError::not_equal(Self, Self) -> Bool
@@ -26,9 +27,10 @@ pub fn ExtensionSpecError::output(Self, &Logger) -> Unit
 pub fn ExtensionSpecError::to_repr(Self) -> @debug.Repr
 pub fn ExtensionSpecError::to_string(Self) -> String
 
+#derive(Eq)
 pub(all) suberror PermissionScopeValidationError {
   Invalid(detail~ : String)
-} derive(Eq)
+}
 pub fn PermissionScopeValidationError::equal(Self, Self) -> Bool
 pub fn PermissionScopeValidationError::message(Self) -> String
 pub fn PermissionScopeValidationError::not_equal(Self, Self) -> Bool
@@ -61,7 +63,7 @@ pub struct AppCommandExtensionSpec {
   scripts : Array[String]
   dependencies : Array[String]
   register : (CommandRegistrar) -> Unit raise
-  resolve_permission : (Json, String) -> Json raise PermissionScopeValidationError
+  resolve_permission : (@json.Json, String) -> @json.Json raise PermissionScopeValidationError
   on_start : (@async.TaskGroup[Unit]) -> Unit raise
   on_destroy : () -> Unit raise
 }
@@ -70,10 +72,10 @@ pub fn AppCommandExtensionSpec::destroy(Self) -> Unit raise
 pub fn AppCommandExtensionSpec::id(Self) -> String
 pub fn AppCommandExtensionSpec::js_namespace(Self) -> String
 pub fn AppCommandExtensionSpec::register(Self, @core.AppCommandHost) -> AppCommandExtensionDescriptor raise
-pub fn AppCommandExtensionSpec::resolve_permission(Self, Json, String) -> Json raise PermissionScopeValidationError
+pub fn AppCommandExtensionSpec::resolve_permission(Self, @json.Json, String) -> @json.Json raise PermissionScopeValidationError
 pub fn AppCommandExtensionSpec::scripts(Self) -> Array[String]
 pub fn AppCommandExtensionSpec::start(Self, @async.TaskGroup[Unit]) -> Unit raise
-pub fn AppCommandExtensionSpec::typed(@proton_contract.ExtensionContract, (CommandRegistrar) -> Unit raise, scripts? : Array[String], dependencies? : Array[String], resolve_permission? : (Json, String) -> Json raise PermissionScopeValidationError, on_start? : (@async.TaskGroup[Unit]) -> Unit raise, on_destroy? : () -> Unit raise) -> Self raise ExtensionSpecError
+pub fn AppCommandExtensionSpec::typed(@proton_contract.ExtensionContract, (CommandRegistrar) -> Unit raise, scripts? : Array[String], dependencies? : Array[String], resolve_permission? : (@json.Json, String) -> @json.Json raise PermissionScopeValidationError, on_start? : (@async.TaskGroup[Unit]) -> Unit raise, on_destroy? : () -> Unit raise) -> Self raise ExtensionSpecError
 
 pub struct CommandRegistrar {
   host : @core.AppCommandHost
@@ -82,7 +84,7 @@ pub struct CommandRegistrar {
   mut registration_closed : Bool
 }
 pub fn CommandRegistrar::CommandRegistrar(@core.AppCommandHost) -> Self
-pub fn[Request : @json.FromJson, Response : ToJson] CommandRegistrar::bind(Self, @proton_contract.Command[Request, Response], async (@core.AppCommandRequestContext, Request) -> Response) -> Unit raise
+pub fn[Request : @json.FromJson, Response : @json.ToJson] CommandRegistrar::bind(Self, @proton_contract.Command[Request, Response], async (@core.AppCommandRequestContext, Request) -> Response) -> Unit raise
 
 // Type aliases
 pub using @core {type AppCommandRequestContext}

@@ -9,13 +9,14 @@
 /// `MissingField` and `InvalidField` indicate this library could not convert a
 /// successful response into the requested helper type. `WaitTimeout` is used by
 /// response waits when a command id does not complete in time.
+#derive(Eq, ToJson, Debug)
 pub(all) suberror BrowserError {
   CommandFailed(Int32, String)
   MissingField(String)
   InvalidField(String)
   WaitTimeout(String)
   ConnectionClosed
-} derive(Eq, ToJson, Debug)
+}
 
 ///|
 pub extend BrowserError with Eq::{not_equal, equal}
@@ -59,6 +60,7 @@ impl Show for BrowserError with fn output(self, logger) {
 /// // let targets = client.get_targets()
 /// // println(targets.length().to_string())
 /// ```
+#derive(Eq, ToJson, Debug)
 pub(all) struct CdpTargetInfo {
   target_id : String
   target_type : String
@@ -66,7 +68,7 @@ pub(all) struct CdpTargetInfo {
   url : String
   attached : Bool
   browser_context_id : String?
-} derive(Eq, ToJson, Debug)
+}
 
 ///|
 pub extend CdpTargetInfo with Eq::{not_equal, equal}

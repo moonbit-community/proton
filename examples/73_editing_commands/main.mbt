@@ -1,8 +1,9 @@
 ///|
+#derive(ToJson, FromJson)
 struct EditRequest {
   target : String
   action : String
-} derive(ToJson, FromJson)
+}
 
 ///|
 pub extend EditRequest with ToJson::{to_json}
@@ -11,10 +12,11 @@ pub extend EditRequest with ToJson::{to_json}
 pub extend EditRequest with FromJson::{from_json}
 
 ///|
+#derive(ToJson, FromJson)
 struct EditReply {
   ok : Bool
   message : String
-} derive(ToJson, FromJson)
+}
 
 ///|
 pub extend EditReply with ToJson::{to_json}

@@ -1,7 +1,8 @@
 ///|
+#derive(ToJson, FromJson)
 struct SampleRequest {
   action : String
-} derive(ToJson, FromJson)
+}
 
 ///|
 pub extend SampleRequest with ToJson::{to_json}
@@ -10,13 +11,14 @@ pub extend SampleRequest with ToJson::{to_json}
 pub extend SampleRequest with FromJson::{from_json}
 
 ///|
+#derive(ToJson, FromJson)
 struct MetricRow {
   task_id : Int64
   kind : String
   process_cpu_percent : Double
   memory_mb : Double
   name : String
-} derive(ToJson, FromJson)
+}
 
 ///|
 pub extend MetricRow with ToJson::{to_json}
@@ -25,12 +27,13 @@ pub extend MetricRow with ToJson::{to_json}
 pub extend MetricRow with FromJson::{from_json}
 
 ///|
+#derive(ToJson, FromJson)
 struct SampleReply {
   ok : Bool
   message : String
   measured : Bool
   metrics : Array[MetricRow]
-} derive(ToJson, FromJson)
+}
 
 ///|
 pub extend SampleReply with ToJson::{to_json}

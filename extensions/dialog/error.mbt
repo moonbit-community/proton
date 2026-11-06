@@ -1,9 +1,10 @@
 ///|
 /// Failures while creating or waiting for a native dialog.
+#derive(Debug, Eq)
 suberror DialogError {
   WindowUnavailable
   OperationFailed(kind~ : String, detail~ : String)
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend DialogError with Eq::{not_equal, equal}

@@ -1,8 +1,9 @@
 ///|
+#derive(ToJson, FromJson)
 struct AssetSidecarAddPayload {
   left : Int32
   right : Int32
-} derive(ToJson, FromJson)
+}
 
 ///|
 pub extend AssetSidecarAddPayload with ToJson::{to_json}
@@ -11,9 +12,10 @@ pub extend AssetSidecarAddPayload with ToJson::{to_json}
 pub extend AssetSidecarAddPayload with FromJson::{from_json}
 
 ///|
+#derive(ToJson, FromJson)
 struct AssetSidecarReportPayload {
   report : String
-} derive(ToJson, FromJson)
+}
 
 ///|
 pub extend AssetSidecarReportPayload with ToJson::{to_json}

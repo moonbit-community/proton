@@ -1,10 +1,11 @@
 ///|
+#derive(Eq)
 priv enum DoctorStatus {
   Ok
   Warn
   Error
   Neutral
-} derive(Eq)
+}
 
 ///|
 fn DoctorStatus::symbol(self : DoctorStatus) -> String {

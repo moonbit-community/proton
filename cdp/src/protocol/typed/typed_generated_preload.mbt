@@ -7,9 +7,10 @@
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PreloadPrefetchStatus {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PreloadPrefetchStatus with Eq::{not_equal, equal}
@@ -47,12 +48,13 @@ pub fn PreloadPrefetchStatus::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PreloadPreloadingAttemptKey {
   loader_id : NetworkLoaderId
   action : PreloadSpeculationAction
   url : String
   target_hint : PreloadSpeculationTargetHint?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PreloadPreloadingAttemptKey with Eq::{not_equal, equal}
@@ -111,11 +113,12 @@ pub fn PreloadPreloadingAttemptKey::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PreloadPreloadingAttemptSource {
   key : PreloadPreloadingAttemptKey
   rule_set_ids : Array[PreloadRuleSetId]
   node_ids : Array[DOMBackendNodeId]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PreloadPreloadingAttemptSource with Eq::{not_equal, equal}
@@ -177,9 +180,10 @@ pub fn PreloadPreloadingAttemptSource::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PreloadPreloadingStatus {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PreloadPreloadingStatus with Eq::{not_equal, equal}
@@ -217,9 +221,10 @@ pub fn PreloadPreloadingStatus::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PreloadPreloadPipelineId {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PreloadPreloadPipelineId with Eq::{not_equal, equal}
@@ -261,9 +266,10 @@ pub fn PreloadPreloadPipelineId::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PreloadPrerenderFinalStatus {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PreloadPrerenderFinalStatus with Eq::{not_equal, equal}
@@ -305,11 +311,12 @@ pub fn PreloadPrerenderFinalStatus::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PreloadPrerenderMismatchedHeaders {
   header_name : String
   initial_value : String?
   activation_value : String?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PreloadPrerenderMismatchedHeaders with Eq::{not_equal, equal}
@@ -367,6 +374,7 @@ pub fn PreloadPrerenderMismatchedHeaders::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PreloadRuleSet {
   id : PreloadRuleSetId
   loader_id : NetworkLoaderId
@@ -377,7 +385,7 @@ pub(all) struct PreloadRuleSet {
   error_type : PreloadRuleSetErrorType?
   error_message : String?
   tag : String?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PreloadRuleSet with Eq::{not_equal, equal}
@@ -462,9 +470,10 @@ pub fn PreloadRuleSet::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PreloadRuleSetErrorType {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PreloadRuleSetErrorType with Eq::{not_equal, equal}
@@ -502,9 +511,10 @@ pub fn PreloadRuleSetErrorType::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PreloadRuleSetId {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PreloadRuleSetId with Eq::{not_equal, equal}
@@ -542,9 +552,10 @@ pub fn PreloadRuleSetId::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PreloadSpeculationAction {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PreloadSpeculationAction with Eq::{not_equal, equal}
@@ -586,9 +597,10 @@ pub fn PreloadSpeculationAction::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PreloadSpeculationTargetHint {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PreloadSpeculationTargetHint with Eq::{not_equal, equal}
@@ -666,6 +678,7 @@ pub fn preload_enable_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PreloadPrefetchStatusUpdatedEventParams {
   key : PreloadPreloadingAttemptKey
   pipeline_id : PreloadPreloadPipelineId
@@ -674,7 +687,7 @@ pub(all) struct PreloadPrefetchStatusUpdatedEventParams {
   status : PreloadPreloadingStatus
   prefetch_status : PreloadPrefetchStatus
   request_id : NetworkRequestId
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PreloadPrefetchStatusUpdatedEventParams with Eq::{not_equal, equal}
@@ -768,13 +781,14 @@ pub fn preload_prefetch_status_updated_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PreloadPreloadEnabledStateUpdatedEventParams {
   disabled_by_preference : Bool
   disabled_by_data_saver : Bool
   disabled_by_battery_saver : Bool
   disabled_by_holdback_prefetch_speculation_rules : Bool
   disabled_by_holdback_prerender_speculation_rules : Bool
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PreloadPreloadEnabledStateUpdatedEventParams with Eq::{
@@ -869,10 +883,11 @@ pub fn preload_preload_enabled_state_updated_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PreloadPreloadingAttemptSourcesUpdatedEventParams {
   loader_id : NetworkLoaderId
   preloading_attempt_sources : Array[PreloadPreloadingAttemptSource]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PreloadPreloadingAttemptSourcesUpdatedEventParams with Eq::{
@@ -957,6 +972,7 @@ pub fn preload_preloading_attempt_sources_updated_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PreloadPrerenderStatusUpdatedEventParams {
   key : PreloadPreloadingAttemptKey
   pipeline_id : PreloadPreloadPipelineId
@@ -964,7 +980,7 @@ pub(all) struct PreloadPrerenderStatusUpdatedEventParams {
   prerender_status : PreloadPrerenderFinalStatus?
   disallowed_mojo_interface : String?
   mismatched_headers : Array[PreloadPrerenderMismatchedHeaders]?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PreloadPrerenderStatusUpdatedEventParams with Eq::{not_equal, equal}
@@ -1067,9 +1083,10 @@ pub fn preload_prerender_status_updated_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PreloadRuleSetRemovedEventParams {
   id : PreloadRuleSetId
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PreloadRuleSetRemovedEventParams with Eq::{not_equal, equal}
@@ -1139,9 +1156,10 @@ pub fn preload_rule_set_removed_event(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct PreloadRuleSetUpdatedEventParams {
   rule_set : PreloadRuleSet
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PreloadRuleSetUpdatedEventParams with Eq::{not_equal, equal}

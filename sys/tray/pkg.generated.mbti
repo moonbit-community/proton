@@ -3,6 +3,7 @@ package "moonbit-community/proton_tray"
 
 import {
   "moonbitlang/core/debug",
+  "moonbitlang/core/json",
 }
 
 // Values
@@ -19,16 +20,17 @@ pub fn is_supported() -> Bool
 // Errors
 
 // Types and methods
+#derive(Eq, @debug.Debug, @json.ToJson)
 pub enum Platform {
   Windows
   Linux
   Macos
   Unknown
-} derive(Eq, ToJson, @debug.Debug)
+}
 pub fn Platform::equal(Self, Self) -> Bool
 pub fn Platform::not_equal(Self, Self) -> Bool
 pub fn Platform::output(Self, &Logger) -> Unit
-pub fn Platform::to_json(Self) -> Json
+pub fn Platform::to_json(Self) -> @json.Json
 pub fn Platform::to_repr(Self) -> @debug.Repr
 pub fn Platform::to_string(Self) -> String
 pub impl Show for Platform
@@ -52,24 +54,26 @@ pub fn Tray::show(Self, tooltip? : String?) -> Result[Bool, String]
 pub fn Tray::tooltip(Self) -> String
 pub fn Tray::visible(Self) -> Bool
 
+#derive(Eq, @debug.Debug)
 pub(all) enum TrayEvent {
   Click
   RightClick
   DoubleClick
   MenuItemClick(String)
-} derive(Eq, @debug.Debug)
+}
 pub fn TrayEvent::equal(Self, Self) -> Bool
 pub fn TrayEvent::event_name(Self) -> String
 pub fn TrayEvent::item_id(Self) -> String?
 pub fn TrayEvent::not_equal(Self, Self) -> Bool
 pub fn TrayEvent::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug)
 pub(all) enum TrayMenuItem {
   Normal(id~ : String, label~ : String, enabled~ : Bool)
   Separator
   Checkbox(id~ : String, label~ : String, checked~ : Bool, enabled~ : Bool)
   Submenu(label~ : String, items~ : Array[TrayMenuItem], enabled~ : Bool)
-} derive(Eq, @debug.Debug)
+}
 pub fn TrayMenuItem::checkbox(id~ : String, label~ : String, checked? : Bool, enabled? : Bool) -> Self
 pub fn TrayMenuItem::equal(Self, Self) -> Bool
 pub fn TrayMenuItem::kind(Self) -> TrayMenuItemKind
@@ -79,12 +83,13 @@ pub fn TrayMenuItem::separator() -> Self
 pub fn TrayMenuItem::submenu(label~ : String, items~ : Array[Self], enabled? : Bool) -> Self
 pub fn TrayMenuItem::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug)
 pub(all) enum TrayMenuItemKind {
   Normal
   Separator
   Checkbox
   Submenu
-} derive(Eq, @debug.Debug)
+}
 pub fn TrayMenuItemKind::equal(Self, Self) -> Bool
 pub fn TrayMenuItemKind::not_equal(Self, Self) -> Bool
 pub fn TrayMenuItemKind::to_repr(Self) -> @debug.Repr

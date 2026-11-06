@@ -22,19 +22,21 @@ pub struct IsolatedWorld {
 }
 
 ///|
+#derive(Debug)
 pub(all) suberror PageLifecycleError {
   Closed
   ContextLost
-} derive(Debug)
+}
 
 ///|
 pub extend PageLifecycleError with Debug::{to_repr}
 
 ///|
+#derive(Debug)
 pub(all) suberror JavaScriptError {
   Exception(Json)
   MissingValue(Json)
-} derive(Debug)
+}
 
 ///|
 pub extend JavaScriptError with Debug::{to_repr}
@@ -107,7 +109,7 @@ async fn[X] Page::initialize_scoped(
   client : @client.CdpClient,
   timeout_ms : Int32,
 ) -> Page {
-  errdefer client.close()
+  errdefer @async.protect_from_cancel(() => client.close())
   let page = Page::initialize(client, timeout_ms)
   tasks.add_defer(() => @async.protect_from_cancel(() => page.close()))
   page

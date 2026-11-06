@@ -10,7 +10,8 @@ import {
 pub fn capability() -> @extension.RendererCapability
 
 // Errors
-type ProcessExtensionError derive(Eq, @debug.Debug)
+#derive(Eq, @debug.Debug)
+type ProcessExtensionError
 pub fn ProcessExtensionError::equal(Self, Self) -> Bool
 pub fn ProcessExtensionError::not_equal(Self, Self) -> Bool
 pub fn ProcessExtensionError::output(Self, &Logger) -> Unit

@@ -1,10 +1,11 @@
 ///|
 /// Progress of a host-side download. Counts bytes written to the temporary file.
 /// `total_bytes` is absent when the decoded response size is unknown.
+#derive(Debug, Eq)
 pub(all) struct DownloadProgress {
   received_bytes : Int64
   total_bytes : Int64?
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend DownloadProgress with Debug::{to_repr}
@@ -17,6 +18,7 @@ pub extend DownloadProgress with Eq::{equal, not_equal}
 /// DestinationExists preserves the caller's original destination path.
 /// A cleanup failure preserves the primary error, if any, and the temporary
 /// path so that a file which could not be removed can be located.
+#derive(Debug)
 pub(all) suberror DownloadError {
   InvalidRequest(detail~ : String)
   HttpStatus(status~ : Int32)
@@ -24,7 +26,7 @@ pub(all) suberror DownloadError {
   NetworkFailed(detail~ : String)
   FileFailed(detail~ : String)
   CleanupFailed(primary~ : DownloadError?, path~ : String, detail~ : String)
-} derive(Debug)
+}
 
 ///|
 pub extend DownloadError with Debug::{to_repr}

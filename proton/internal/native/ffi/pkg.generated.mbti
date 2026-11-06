@@ -517,6 +517,7 @@ pub(all) enum BrowserOperation {
 
 pub type EventHandle
 
+#derive(@debug.Debug)
 pub(all) enum EventInt64Field {
   Window
   View
@@ -524,9 +525,10 @@ pub(all) enum EventInt64Field {
   Revision
   ReceivedBytes
   TotalBytes
-} derive(@debug.Debug)
+}
 pub fn EventInt64Field::to_repr(Self) -> @debug.Repr
 
+#derive(@debug.Debug)
 pub(all) enum EventIntField {
   Status
   ErrorCode
@@ -548,9 +550,10 @@ pub(all) enum EventIntField {
   DarkColors
   HighContrastColors
   ReopenWhenEmpty
-} derive(@debug.Debug)
+}
 pub fn EventIntField::to_repr(Self) -> @debug.Repr
 
+#derive(@debug.Debug)
 pub(all) enum EventKind {
   Unknown
   WindowCreated
@@ -590,9 +593,10 @@ pub(all) enum EventKind {
   BrowserResourceRequested
   NativeThemeChanged
   TaskbarButtonClicked
-} derive(@debug.Debug)
+}
 pub fn EventKind::to_repr(Self) -> @debug.Repr
 
+#derive(@debug.Debug)
 pub(all) enum EventTextField {
   Url
   Title
@@ -605,7 +609,7 @@ pub(all) enum EventTextField {
   Activation
   NotificationPayload
   Method
-} derive(@debug.Debug)
+}
 pub fn EventTextField::to_repr(Self) -> @debug.Repr
 
 #external

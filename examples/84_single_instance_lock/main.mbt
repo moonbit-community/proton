@@ -1,7 +1,8 @@
 ///|
+#derive(ToJson, FromJson)
 struct ControlRequest {
   action : String
-} derive(ToJson, FromJson)
+}
 
 ///|
 pub extend ControlRequest with ToJson::{to_json}
@@ -10,12 +11,13 @@ pub extend ControlRequest with ToJson::{to_json}
 pub extend ControlRequest with FromJson::{from_json}
 
 ///|
+#derive(ToJson, FromJson)
 struct ControlReply {
   ok : Bool
   message : String
   has_lock : Bool
   activations : Int32
-} derive(ToJson, FromJson)
+}
 
 ///|
 pub extend ControlReply with ToJson::{to_json}

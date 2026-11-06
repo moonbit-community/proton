@@ -7,9 +7,10 @@
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct IOStreamHandle {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend IOStreamHandle with Eq::{not_equal, equal}
@@ -47,9 +48,10 @@ pub fn IOStreamHandle::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct IOCloseParams {
   handle : IOStreamHandle
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend IOCloseParams with Eq::{not_equal, equal}
@@ -98,11 +100,12 @@ pub fn io_close_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct IOReadParams {
   handle : IOStreamHandle
   offset : Int32?
   size : Int32?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend IOReadParams with Eq::{not_equal, equal}
@@ -133,11 +136,12 @@ pub fn IOReadParams::to_json(self : IOReadParams) -> Json {
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct IOReadResult {
   base64_encoded : Bool?
   data : String
   eof : Bool
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend IOReadResult with Eq::{not_equal, equal}
@@ -202,9 +206,10 @@ pub fn io_read_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct IOResolveBlobParams {
   object_id : RuntimeRemoteObjectId
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend IOResolveBlobParams with Eq::{not_equal, equal}
@@ -229,9 +234,10 @@ pub fn IOResolveBlobParams::to_json(self : IOResolveBlobParams) -> Json {
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct IOResolveBlobResult {
   uuid : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend IOResolveBlobResult with Eq::{not_equal, equal}

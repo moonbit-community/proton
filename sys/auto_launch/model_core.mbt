@@ -11,10 +11,11 @@ struct AutoLaunchConfig {
 
 ///|
 /// A rendered file-based auto-launch entry ready to be written to disk.
+#derive(Debug, Eq)
 struct FileEntry {
   file_path : String
   contents : String
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend FileEntry with Eq::{not_equal, equal}

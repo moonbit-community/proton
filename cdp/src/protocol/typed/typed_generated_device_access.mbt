@@ -7,9 +7,10 @@
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DeviceAccessDeviceId {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DeviceAccessDeviceId with Eq::{not_equal, equal}
@@ -47,10 +48,11 @@ pub fn DeviceAccessDeviceId::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DeviceAccessPromptDevice {
   id : DeviceAccessDeviceId
   name : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DeviceAccessPromptDevice with Eq::{not_equal, equal}
@@ -98,9 +100,10 @@ pub fn DeviceAccessPromptDevice::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DeviceAccessRequestId {
   value : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DeviceAccessRequestId with Eq::{not_equal, equal}
@@ -138,9 +141,10 @@ pub fn DeviceAccessRequestId::from_json(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DeviceAccessCancelPromptParams {
   id : DeviceAccessRequestId
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DeviceAccessCancelPromptParams with Eq::{not_equal, equal}
@@ -237,10 +241,11 @@ pub fn device_access_enable_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DeviceAccessSelectPromptParams {
   id : DeviceAccessRequestId
   device_id : DeviceAccessDeviceId
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DeviceAccessSelectPromptParams with Eq::{not_equal, equal}
@@ -294,10 +299,11 @@ pub fn device_access_select_prompt_command(
 /// Fields follow the Chrome DevTools Protocol schema. Optional schema fields
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
+#derive(Eq, Debug)
 pub(all) struct DeviceAccessDeviceRequestPromptedEventParams {
   id : DeviceAccessRequestId
   devices : Array[DeviceAccessPromptDevice]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DeviceAccessDeviceRequestPromptedEventParams with Eq::{

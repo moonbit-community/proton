@@ -1,5 +1,6 @@
 ///|
 /// Failures at Proton's private MoonBit/native boundary.
+#derive(Debug, Eq)
 pub(all) suberror NativeError {
   /// A negative status returned by a private platform stub.
   Status(status~ : Int32, message~ : String)
@@ -7,7 +8,7 @@ pub(all) suberror NativeError {
   InvalidArgument(message~ : String)
   /// Malformed data returned by the native runtime.
   InvalidPayload(context~ : String, message~ : String)
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend NativeError with Eq::{not_equal, equal}
@@ -91,10 +92,11 @@ impl Show for NativeError with fn output(self, logger) {
 }
 
 ///|
+#derive(Debug, Eq)
 pub(all) enum ProcessResult {
   MainProcess
   SubprocessHandled(Int32)
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend ProcessResult with Eq::{not_equal, equal}
@@ -103,13 +105,14 @@ pub extend ProcessResult with Eq::{not_equal, equal}
 pub extend ProcessResult with Debug::{to_repr}
 
 ///|
+#derive(Debug, Eq)
 pub(all) struct RuntimeInfo {
   platform : String
   /// The source-built target identifier, such as `darwin-arm64`. Matches the
   /// platform keys in an update manifest.
   platform_id : String
   features : Array[String]
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend RuntimeInfo with Eq::{not_equal, equal}
@@ -118,6 +121,7 @@ pub extend RuntimeInfo with Eq::{not_equal, equal}
 pub extend RuntimeInfo with Debug::{to_repr}
 
 ///|
+#derive(Debug, Eq)
 pub(all) enum SystemPathKind {
   Desktop
   Documents
@@ -126,7 +130,7 @@ pub(all) enum SystemPathKind {
   Pictures
   Videos
   Recent
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend SystemPathKind with Eq::{not_equal, equal}
@@ -135,9 +139,10 @@ pub extend SystemPathKind with Eq::{not_equal, equal}
 pub extend SystemPathKind with Debug::{to_repr}
 
 ///|
+#derive(Debug, Eq)
 pub(all) struct RuntimeWaitReady {
   mask : Int32
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend RuntimeWaitReady with Eq::{not_equal, equal}
@@ -147,12 +152,13 @@ pub extend RuntimeWaitReady with Debug::{to_repr}
 
 ///|
 /// Inputs forwarded by a second operating-system application instance.
+#derive(Debug, Eq, ToJson, FromJson)
 pub(all) struct AppActivation {
   abi_version : Int32
   urls : Array[String]
   files : Array[String]
   reopen : Bool
-} derive(Debug, Eq, ToJson, FromJson)
+}
 
 ///|
 pub extend AppActivation with Eq::{not_equal, equal}
@@ -183,10 +189,11 @@ struct AppInstance {
 /// Appearance snapshot carried by a native theme change event. The values are
 /// the same ones `native_theme_query` reports, captured when the operating
 /// system appearance changed so the event needs no second query.
+#derive(Debug, Eq)
 pub(all) struct NativeThemeSnapshot {
   dark_colors : Bool
   high_contrast_colors : Bool
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend NativeThemeSnapshot with Eq::{not_equal, equal}
@@ -195,6 +202,7 @@ pub extend NativeThemeSnapshot with Eq::{not_equal, equal}
 pub extend NativeThemeSnapshot with Debug::{to_repr}
 
 ///|
+#derive(Debug, Eq)
 enum RuntimeEvent {
   WindowCreated(Int64)
   WindowClosed(Int64)
@@ -220,15 +228,16 @@ enum RuntimeEvent {
   ResourceRequested(NativeResourceRequest)
   ResourceRequestCancelled(Int64)
   QuitRequested
-} derive(Debug, Eq)
+}
 
 ///|
+#derive(Debug, Eq)
 pub(all) struct NativeResourceRequest {
   request_id : Int64
   window : Int64
   view : Int64?
   url : String
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend NativeResourceRequest with Eq::{not_equal, equal}
@@ -237,6 +246,7 @@ pub extend NativeResourceRequest with Eq::{not_equal, equal}
 pub extend NativeResourceRequest with Debug::{to_repr}
 
 ///|
+#derive(Debug, Eq)
 pub(all) struct PdfPrintSettings {
   landscape : Bool
   print_background : Bool
@@ -255,7 +265,7 @@ pub(all) struct PdfPrintSettings {
   footer_template : String
   generate_tagged_pdf : Bool
   generate_document_outline : Bool
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend PdfPrintSettings with Eq::{not_equal, equal}
@@ -270,10 +280,11 @@ pub extend RuntimeEvent with Eq::{not_equal, equal}
 pub extend RuntimeEvent with Debug::{to_repr}
 
 ///|
+#derive(Debug, Eq)
 pub(all) enum NativeNotificationResult {
   Delivered
   Failed(String)
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend NativeNotificationResult with Eq::{not_equal, equal}
@@ -282,6 +293,7 @@ pub extend NativeNotificationResult with Eq::{not_equal, equal}
 pub extend NativeNotificationResult with Debug::{to_repr}
 
 ///|
+#derive(Debug, Eq)
 pub(all) enum NativeBrowserRequest {
   NewWindow(request_id~ : Int64, url~ : String, user_gesture~ : Bool)
   Download(
@@ -292,7 +304,7 @@ pub(all) enum NativeBrowserRequest {
   )
   Certificate(request_id~ : Int64, url~ : String, error_code~ : Int32)
   Media(request_id~ : Int64, origin~ : String, permissions~ : Int32)
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend NativeBrowserRequest with Eq::{not_equal, equal}
@@ -301,13 +313,14 @@ pub extend NativeBrowserRequest with Eq::{not_equal, equal}
 pub extend NativeBrowserRequest with Debug::{to_repr}
 
 ///|
+#derive(Debug, Eq)
 pub(all) struct NativeDownloadUpdate {
   download_id : Int32
   state : String
   received_bytes : Int64
   total_bytes : Int64
   percent : Int32
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend NativeDownloadUpdate with Eq::{not_equal, equal}
@@ -316,11 +329,12 @@ pub extend NativeDownloadUpdate with Eq::{not_equal, equal}
 pub extend NativeDownloadUpdate with Debug::{to_repr}
 
 ///|
+#derive(Debug, Eq)
 pub(all) struct NativePdfPrintResult {
   request_id : Int32
   path : String
   success : Bool
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend NativePdfPrintResult with Eq::{not_equal, equal}
@@ -332,6 +346,7 @@ pub extend NativePdfPrintResult with Debug::{to_repr}
 /// One entry of Chromium's navigation history. `transition` is the
 /// page-transition type and `qualifiers` is the flag set Proton maps from
 /// Chromium's transition flags.
+#derive(Debug, Eq, FromJson)
 pub(all) struct NavigationEntry {
   url : String
   display_url : String
@@ -341,7 +356,7 @@ pub(all) struct NavigationEntry {
   qualifiers : Int32
   has_post_data : Bool
   http_status_code : Int32
-} derive(Debug, Eq, FromJson)
+}
 
 ///|
 pub extend NavigationEntry with Eq::{not_equal, equal}
@@ -355,10 +370,11 @@ pub extend NavigationEntry with FromJson::{from_json}
 ///|
 /// Navigation-history snapshot: every entry in order plus the active index,
 /// or -1 while the browser has no entries.
+#derive(Debug, Eq, FromJson)
 pub(all) struct NavigationHistory {
   entries : Array[NavigationEntry]
   active_index : Int32
-} derive(Debug, Eq, FromJson)
+}
 
 ///|
 pub extend NavigationHistory with Eq::{not_equal, equal}
@@ -370,13 +386,14 @@ pub extend NavigationHistory with Debug::{to_repr}
 pub extend NavigationHistory with FromJson::{from_json}
 
 ///|
+#derive(Debug, Eq)
 pub(all) struct BridgeLifecycleState {
   revision : String
   outcome : String
   page_instance : String
   url : String
   failure_pending : Bool
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend BridgeLifecycleState with Eq::{not_equal, equal}
@@ -385,6 +402,7 @@ pub extend BridgeLifecycleState with Eq::{not_equal, equal}
 pub extend BridgeLifecycleState with Debug::{to_repr}
 
 ///|
+#derive(Debug, Eq)
 pub(all) struct BridgeRequest {
   request_id : Int64
   window : Int64
@@ -392,7 +410,7 @@ pub(all) struct BridgeRequest {
   payload : Json
   page_instance : String?
   source_origin : String
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend BridgeRequest with Debug::{to_repr}
@@ -410,20 +428,22 @@ pub(all) enum BridgeRequestAdmission {
 }
 
 ///|
+#derive(Debug)
 pub(all) enum BridgeResponse {
   Ok(request_id~ : Int64, payload~ : Json)
   Err(request_id~ : Int64, code~ : String, message~ : String, detail~ : String?)
-} derive(Debug)
+}
 
 ///|
 pub extend BridgeResponse with Debug::{to_repr}
 
 ///|
+#derive(Debug, Eq)
 pub(all) enum DialogLevel {
   Info = 0
   Warning = 1
   Error = 2
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend DialogLevel with Eq::{not_equal, equal}
@@ -441,6 +461,7 @@ fn DialogLevel::native_value(self : DialogLevel) -> Int32 {
 }
 
 ///|
+#derive(Debug, Eq)
 enum NativeBrowserEvent {
   LoadingChanged(Bool)
   Navigated(String)
@@ -451,7 +472,7 @@ enum NativeBrowserEvent {
   ResourceCompleted(String, Int32, Int64)
   ResourceRequested(String, String, Bool)
   RendererProcessTerminated(String, Int32, Int32, String)
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend NativeBrowserEvent with Eq::{not_equal, equal}
@@ -460,11 +481,12 @@ pub extend NativeBrowserEvent with Eq::{not_equal, equal}
 pub extend NativeBrowserEvent with Debug::{to_repr}
 
 ///|
+#derive(Debug, Eq)
 pub(all) struct NativeDialogCompletion {
   dialog : Int64
   window : Int64?
   result : Result[String, NativeError]
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend NativeDialogCompletion with Eq::{not_equal, equal}
@@ -473,11 +495,12 @@ pub extend NativeDialogCompletion with Eq::{not_equal, equal}
 pub extend NativeDialogCompletion with Debug::{to_repr}
 
 ///|
+#derive(Debug, Eq)
 pub(all) struct NativeCookieGetCompletion {
   request_id : Int64
   window : Int64
   result : Result[Array[NativeCookieRecord], NativeError]
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend NativeCookieGetCompletion with Eq::{not_equal, equal}
@@ -486,6 +509,7 @@ pub extend NativeCookieGetCompletion with Eq::{not_equal, equal}
 pub extend NativeCookieGetCompletion with Debug::{to_repr}
 
 ///|
+#derive(Debug, Eq)
 pub(all) struct NativeCookieRecord {
   name : String
   value : String
@@ -495,7 +519,7 @@ pub(all) struct NativeCookieRecord {
   http_only : Bool
   same_site : CookieSameSite
   expires : Int64?
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend NativeCookieRecord with Eq::{not_equal, equal}
@@ -515,9 +539,10 @@ fn CookieSameSite::native_value(self : CookieSameSite) -> Int32 {
 
 ///|
 /// An application-level native menu bar.
+#derive(Debug, Eq)
 struct MenuBar {
   menus : Array[Menu]
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend MenuBar with Eq::{not_equal, equal}
@@ -527,11 +552,12 @@ pub extend MenuBar with Debug::{to_repr}
 
 ///|
 /// A top-level native menu and its items.
+#derive(Debug, Eq)
 struct Menu {
   label : String?
   role : MenuRole?
   items : Array[MenuItem]?
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend Menu with Eq::{not_equal, equal}
@@ -541,6 +567,7 @@ pub extend Menu with Debug::{to_repr}
 
 ///|
 /// A command, separator, or platform role in a native menu.
+#derive(Debug, Eq)
 struct MenuItem {
   kind : MenuItemKind
   id : String?
@@ -551,15 +578,16 @@ struct MenuItem {
   enabled : Bool
   visible : Bool
   checked : Bool?
-} derive(Debug, Eq)
+}
 
 ///|
+#derive(Debug, Eq)
 priv enum MenuItemKind {
   Command
   Separator
   Role
   Submenu
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend MenuItem with Eq::{not_equal, equal}
@@ -568,9 +596,10 @@ pub extend MenuItem with Eq::{not_equal, equal}
 pub extend MenuItem with Debug::{to_repr}
 
 ///|
+#derive(Debug, Eq)
 pub(all) struct BridgeConfig {
   grants : Array[BridgeGrantConfig]
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend BridgeConfig with Eq::{not_equal, equal}
@@ -580,12 +609,13 @@ pub extend BridgeConfig with Debug::{to_repr}
 
 ///|
 /// Renderer capabilities granted to one canonical source in one window.
+#derive(Debug, Eq)
 pub(all) struct BridgeGrantConfig {
   source_origin : String
   ops : Array[String]
   extensions : Array[BridgeExtensionConfig]
   initialization_units : Array[BridgeInitializationUnit]
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend BridgeGrantConfig with Eq::{not_equal, equal}
@@ -595,10 +625,11 @@ pub extend BridgeGrantConfig with Debug::{to_repr}
 
 ///|
 /// One JavaScript namespace installed by the renderer bootstrap.
+#derive(Debug, Eq)
 pub(all) struct BridgeExtensionConfig {
   js_namespace : String
   apis : Array[String]
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend BridgeExtensionConfig with Eq::{not_equal, equal}
@@ -608,11 +639,12 @@ pub extend BridgeExtensionConfig with Debug::{to_repr}
 
 ///|
 /// One ordered JavaScript initialization unit owned by an extension.
+#derive(Debug, Eq)
 pub(all) struct BridgeInitializationUnit {
   owner : String
   name : String
   source : String
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend BridgeInitializationUnit with Eq::{not_equal, equal}
@@ -739,6 +771,7 @@ pub fn RuntimeEvent::resource_request_cancellation(
 
 ///|
 /// The payload of a web contents view lifecycle event.
+#derive(Debug, Eq)
 pub(all) struct BrowserEventInfo {
   url : String?
   title : String?
@@ -746,7 +779,7 @@ pub(all) struct BrowserEventInfo {
   error_code : Int32?
   error_text : String?
   received_bytes : Int64?
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend BrowserEventInfo with Eq::{not_equal, equal}
@@ -755,12 +788,13 @@ pub extend BrowserEventInfo with Eq::{not_equal, equal}
 pub extend BrowserEventInfo with Debug::{to_repr}
 
 ///|
+#derive(Debug, Eq)
 pub(all) struct RendererProcessTerminationInfo {
   url : String
   status : Int32
   error_code : Int32
   detail : String
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend RendererProcessTerminationInfo with Eq::{not_equal, equal}
@@ -1148,12 +1182,13 @@ struct WindowRef {
 }
 
 ///|
+#derive(ToJson)
 pub(all) struct TitlebarArea {
   x : Double
   y : Double
   width : Double
   height : Double
-} derive(ToJson)
+}
 
 ///|
 pub extend TitlebarArea with ToJson::{to_json}
@@ -1282,11 +1317,12 @@ fn cached_runtime_info() -> RuntimeInfo raise NativeError {
 }
 
 ///|
+#derive(Debug, Eq)
 pub(all) enum BrowserPolicyMode {
   Allow
   Deny
   Ask
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend BrowserPolicyMode with Eq::{not_equal, equal}
@@ -1295,6 +1331,7 @@ pub extend BrowserPolicyMode with Eq::{not_equal, equal}
 pub extend BrowserPolicyMode with Debug::{to_repr}
 
 ///|
+#derive(Debug, Eq)
 pub(all) struct BrowserPolicy {
   navigation : BrowserPolicyMode
   new_window : BrowserPolicyMode
@@ -1302,7 +1339,7 @@ pub(all) struct BrowserPolicy {
   certificate : BrowserPolicyMode
   media : BrowserPolicyMode
   devtools : Bool
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend BrowserPolicy with Eq::{not_equal, equal}
@@ -1330,11 +1367,12 @@ pub fn bridge_permission_grants_supported() -> Bool {
 
 ///|
 /// Controls whether and where CEF exposes its remote debugging endpoint.
+#derive(Debug, Eq)
 pub(all) enum RemoteDebugging {
   Disabled
   Ephemeral
   Fixed(Int32)
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend RemoteDebugging with Eq::{not_equal, equal}
@@ -1343,6 +1381,7 @@ pub extend RemoteDebugging with Eq::{not_equal, equal}
 pub extend RemoteDebugging with Debug::{to_repr}
 
 ///|
+#derive(Debug, Eq)
 struct RuntimeConfig {
   use_bundled : Bool
   headless : Bool
@@ -1360,7 +1399,7 @@ struct RuntimeConfig {
   framework_dialog_ok_label : String?
   framework_dialog_cancel_label : String?
   remote_debugging : RemoteDebugging
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend RuntimeConfig with Eq::{not_equal, equal}
@@ -1369,6 +1408,7 @@ pub extend RuntimeConfig with Eq::{not_equal, equal}
 pub extend RuntimeConfig with Debug::{to_repr}
 
 ///|
+#derive(Debug, Eq)
 struct WindowConfig {
   title : String
   width : Int32
@@ -1387,7 +1427,7 @@ struct WindowConfig {
   framework_titlebar_maximize_label : String?
   framework_titlebar_restore_label : String?
   framework_titlebar_close_label : String?
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend WindowConfig with Eq::{not_equal, equal}
@@ -1797,6 +1837,7 @@ struct View {
 /// default to `0`, `visible` to `true`, `z_order` to `0`, and `initial_url`
 /// to `about:blank`. Views stack above the window's main browser, ordered by
 /// ascending `z_order`.
+#derive(Debug, Eq)
 struct ViewConfig {
   x : Int32
   y : Int32
@@ -1808,7 +1849,7 @@ struct ViewConfig {
   background_color : String?
   navigation : BrowserPolicyMode
   new_window : BrowserPolicyMode
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend ViewConfig with Eq::{not_equal, equal}

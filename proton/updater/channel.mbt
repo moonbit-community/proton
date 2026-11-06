@@ -70,12 +70,13 @@ pub fn UpdateChannel::UpdateChannel(
 
 ///|
 /// What a check concluded.
+#derive(Eq, Debug)
 pub enum CheckOutcome {
   /// Nothing newer is on offer for this platform.
   UpToDate
   /// A newer release is available and has been fully authenticated.
   Available(AvailableUpdate)
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend CheckOutcome with Eq::{not_equal, equal}
@@ -85,6 +86,7 @@ pub extend CheckOutcome with Debug::{to_repr}
 
 ///|
 /// A release that passed every check short of being downloaded.
+#derive(Eq, Debug)
 pub struct AvailableUpdate {
   version : @manifest.Version
   notes_url : String?
@@ -92,7 +94,7 @@ pub struct AvailableUpdate {
   size : Int64
   sha256_hex : String
   signature_hex : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AvailableUpdate with Eq::{not_equal, equal}

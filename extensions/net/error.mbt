@@ -1,10 +1,11 @@
 ///|
 /// Failures while making HTTP requests through the extension layer.
+#derive(Debug, Eq)
 suberror NetError {
   RequestFailed(detail~ : String)
   InvalidUrl(detail~ : String)
   UnsupportedMethod(name~ : String)
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend NetError with Eq::{not_equal, equal}

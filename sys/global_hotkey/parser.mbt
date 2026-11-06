@@ -1,10 +1,11 @@
 ///|
 /// Stores the normalized shortcut data passed into the native backend.
+#derive(Debug, Eq)
 struct ParsedGlobalHotkey {
   normalized : String
   modifiers : Int32
   key_name : String
-} derive(Debug, Eq)
+}
 
 ///|
 pub extend ParsedGlobalHotkey with Eq::{not_equal, equal}

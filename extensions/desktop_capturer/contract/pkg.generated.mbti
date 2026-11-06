@@ -15,26 +15,29 @@ pub let get_sources : @proton_contract.Command[GetSourcesRequest, GetSourcesRepl
 // Errors
 
 // Types and methods
+#derive(Eq, @debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct GetSourcesReply {
   sources : Array[Source]
-} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+}
 pub fn GetSourcesReply::equal(Self, Self) -> Bool
-pub fn GetSourcesReply::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn GetSourcesReply::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
 pub fn GetSourcesReply::not_equal(Self, Self) -> Bool
-pub fn GetSourcesReply::to_json(Self) -> Json
+pub fn GetSourcesReply::to_json(Self) -> @json.Json
 pub fn GetSourcesReply::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct GetSourcesRequest {
   types : Array[String]
   thumbnail_width : Int32?
   thumbnail_height : Int32?
-} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+}
 pub fn GetSourcesRequest::equal(Self, Self) -> Bool
-pub fn GetSourcesRequest::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn GetSourcesRequest::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
 pub fn GetSourcesRequest::not_equal(Self, Self) -> Bool
-pub fn GetSourcesRequest::to_json(Self) -> Json
+pub fn GetSourcesRequest::to_json(Self) -> @json.Json
 pub fn GetSourcesRequest::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct Source {
   id : String
   name : String
@@ -44,11 +47,11 @@ pub(all) struct Source {
   width : Int32
   height : Int32
   thumbnail : String?
-} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+}
 pub fn Source::equal(Self, Self) -> Bool
-pub fn Source::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn Source::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
 pub fn Source::not_equal(Self, Self) -> Bool
-pub fn Source::to_json(Self) -> Json
+pub fn Source::to_json(Self) -> @json.Json
 pub fn Source::to_repr(Self) -> @debug.Repr
 
 // Type aliases

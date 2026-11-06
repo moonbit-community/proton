@@ -23,6 +23,7 @@ pub fn oldest_accepted(Int32) -> @proton_updater.Timestamp raise UpdateError
 pub fn relaunch() -> Unit raise UpdateError
 
 // Errors
+#derive(Eq, @debug.Debug)
 pub(all) suberror UpdateError {
   FetchFailed(url~ : String, detail~ : String)
   ManifestSignatureInvalid
@@ -39,7 +40,7 @@ pub(all) suberror UpdateError {
   VersionMismatch(detail~ : String)
   InstallInterrupted(detail~ : String)
   InstallFailed(step~ : String, detail~ : String)
-} derive(Eq, @debug.Debug)
+}
 pub fn UpdateError::equal(Self, Self) -> Bool
 pub fn UpdateError::message(Self) -> String
 pub fn UpdateError::not_equal(Self, Self) -> Bool
@@ -48,6 +49,7 @@ pub fn UpdateError::to_repr(Self) -> @debug.Repr
 pub fn UpdateError::to_string(Self) -> String
 
 // Types and methods
+#derive(Eq, @debug.Debug)
 pub struct AvailableUpdate {
   version : @proton_updater.Version
   notes_url : String?
@@ -55,7 +57,7 @@ pub struct AvailableUpdate {
   size : Int64
   sha256_hex : String
   signature_hex : String
-} derive(Eq, @debug.Debug)
+}
 pub fn AvailableUpdate::equal(Self, Self) -> Bool
 pub fn AvailableUpdate::not_equal(Self, Self) -> Bool
 pub fn AvailableUpdate::notes_url(Self) -> String?
@@ -64,18 +66,20 @@ pub fn AvailableUpdate::to_repr(Self) -> @debug.Repr
 pub fn AvailableUpdate::url(Self) -> String
 pub fn AvailableUpdate::version(Self) -> @proton_updater.Version
 
+#derive(Eq, @debug.Debug)
 pub enum CheckOutcome {
   UpToDate
   Available(AvailableUpdate)
-} derive(Eq, @debug.Debug)
+}
 pub fn CheckOutcome::equal(Self, Self) -> Bool
 pub fn CheckOutcome::not_equal(Self, Self) -> Bool
 pub fn CheckOutcome::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug)
 pub enum InstallOutcome {
   Installed
   AlreadyInstalled
-} derive(Eq, @debug.Debug)
+}
 pub fn InstallOutcome::equal(Self, Self) -> Bool
 pub fn InstallOutcome::not_equal(Self, Self) -> Bool
 pub fn InstallOutcome::to_repr(Self) -> @debug.Repr

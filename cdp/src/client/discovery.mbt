@@ -18,6 +18,7 @@
 ///   supplied filters.
 /// - `InvalidVersionResponse`: discovery JSON was present but not in the shape
 ///   required by this library.
+#derive(Eq, ToJson, Debug)
 pub(all) suberror DiscoveryError {
   InvalidTarget(String)
   HttpStatus(Int32, String)
@@ -25,7 +26,7 @@ pub(all) suberror DiscoveryError {
   MissingTargetWebSocketDebuggerUrl(String)
   NoMatchingTarget(String)
   InvalidVersionResponse
-} derive(Eq, ToJson, Debug)
+}
 
 ///|
 pub extend DiscoveryError with Eq::{not_equal, equal}
@@ -42,6 +43,7 @@ pub extend DiscoveryError with ToJson::{to_json}
 /// The `path` field points at the target string, HTTP request, or JSON field
 /// that failed, while optional fields are populated only for matching error
 /// variants.
+#derive(Eq, ToJson, Debug)
 pub(all) struct DiscoveryErrorDiagnostic {
   kind : String
   target : String?
@@ -51,7 +53,7 @@ pub(all) struct DiscoveryErrorDiagnostic {
   selector : String?
   path : String
   message : String
-} derive(Eq, ToJson, Debug)
+}
 
 ///|
 pub extend DiscoveryErrorDiagnostic with Eq::{not_equal, equal}
@@ -186,10 +188,11 @@ pub fn DiscoveryError::selector(self : DiscoveryError) -> String? {
 /// `parse_cdp_target` is the preferred way to construct this enum from user
 /// input. It normalizes ports and `host:port` strings into `Http` targets and
 /// strips one trailing slash from HTTP base URLs.
+#derive(Eq, ToJson, Debug)
 pub(all) enum CdpTarget {
   WebSocket(String)
   Http(String)
-} derive(Eq, ToJson, Debug)
+}
 
 ///|
 pub extend CdpTarget with Eq::{not_equal, equal}
@@ -210,6 +213,7 @@ pub extend CdpTarget with ToJson::{to_json}
 /// `browser` and `protocol_version` are required by Chrome's response and are
 /// therefore non-optional. `user_agent`, `v8_version`, and `webkit_version`
 /// are optional because non-Chrome-compatible endpoints may omit them.
+#derive(Eq, ToJson, Debug)
 pub(all) struct CdpVersionInfo {
   browser : String
   protocol_version : String
@@ -218,7 +222,7 @@ pub(all) struct CdpVersionInfo {
   webkit_version : String?
   web_socket_debugger_url : String
   raw : Json
-} derive(Eq, ToJson, Debug)
+}
 
 ///|
 pub extend CdpVersionInfo with Eq::{not_equal, equal}
@@ -240,6 +244,7 @@ pub extend CdpVersionInfo with ToJson::{to_json}
 /// `shared_worker`. Page WebSocket URLs are optional in Chrome's schema, so
 /// callers that require a direct page socket should handle
 /// `MissingTargetWebSocketDebuggerUrl`.
+#derive(Eq, ToJson, Debug)
 pub(all) struct CdpDiscoveredTarget {
   target_id : String
   target_type : String
@@ -249,7 +254,7 @@ pub(all) struct CdpDiscoveredTarget {
   devtools_frontend_url : String?
   web_socket_debugger_url : String?
   raw : Json
-} derive(Eq, ToJson, Debug)
+}
 
 ///|
 pub extend CdpDiscoveredTarget with Eq::{not_equal, equal}

@@ -1,8 +1,9 @@
 ///|
+#derive(ToJson, FromJson)
 struct SlowAddRequest {
   left : Int32
   right : Int32
-} derive(ToJson, FromJson)
+}
 
 ///|
 pub extend SlowAddRequest with ToJson::{to_json}
