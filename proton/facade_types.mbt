@@ -910,14 +910,13 @@ pub extend NavigationDecision with Debug::{to_repr}
 /// dispositions, which Electron reports as `disposition`.
 #derive(Debug, Eq)
 pub(all) enum NewWindowDisposition {
-  /// A plain click on a `target="_blank"` link, or `window.open` without
-  /// window features.
+  /// Open a new tab and give it focus.
   ForegroundTab
-  /// A middle click, or a Cmd (macOS) or Ctrl click.
+  /// Open a new tab in the background.
   BackgroundTab
-  /// A Shift click.
+  /// Open a new window.
   Window
-  /// `window.open` with window features such as a size.
+  /// Open a popup window.
   Popup
   /// A disposition this Proton release does not name.
   Other
