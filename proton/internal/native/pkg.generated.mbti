@@ -346,7 +346,7 @@ pub fn NativeBrowserEvent::to_repr(Self) -> @debug.Repr
 
 #derive(Eq, @debug.Debug)
 pub(all) enum NativeBrowserRequest {
-  NewWindow(request_id~ : Int64, url~ : String, user_gesture~ : Bool)
+  NewWindow(request_id~ : Int64, url~ : String, user_gesture~ : Bool, disposition~ : Int32)
   Download(request_id~ : Int64, download_id~ : Int32, url~ : String, suggested_name~ : String)
   Certificate(request_id~ : Int64, url~ : String, error_code~ : Int32)
   Media(request_id~ : Int64, origin~ : String, permissions~ : Int32)

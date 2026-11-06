@@ -171,7 +171,6 @@ static int CEF_CALLBACK proton_engine_on_before_popup(
   (void)frame;
   (void)popup_id;
   (void)target_frame_name;
-  (void)target_disposition;
   (void)popupFeatures;
   (void)windowInfo;
   (void)client;
@@ -180,7 +179,7 @@ static int CEF_CALLBACK proton_engine_on_before_popup(
   (void)no_javascript_access;
   return proton_browser_session_request_new_window(
       proton_engine_contents_session(browser), target_url,
-      user_gesture);
+      target_disposition, user_gesture);
 }
 
 static proton_engine_client_t *proton_engine_client_from_browser(

@@ -26,6 +26,8 @@ pub fn find_result_event() -> @ffi.EventHandle
 
 pub fn header_case_trace() -> String
 
+pub fn new_window_event(String) -> @ffi.EventHandle
+
 pub fn renderer_terminated_event() -> @ffi.EventHandle
 
 pub fn resource_handler_lifetime_trace() -> String

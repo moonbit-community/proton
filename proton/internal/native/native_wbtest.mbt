@@ -1326,3 +1326,30 @@ test "native renderer publisher preserves status and error code independently" {
   assert_eq(code, -107)
   assert_eq(detail, "renderer stopped")
 }
+
+///|
+test "native new-window publisher reports Chromium dispositions as ABI codes" {
+  let expected = [
+    ("foreground_tab", 1),
+    ("background_tab", 2),
+    ("window", 3),
+    ("popup", 4),
+    ("switch_to_tab", 0),
+  ]
+  for entry in expected {
+    let (name, code) = entry
+    let event = decode_native_runtime_event(
+      @event_fixture.new_window_event(name),
+    )
+    guard event
+      is BrowserRequest(
+        7L,
+        Some(11L),
+        NewWindow(user_gesture~, disposition~, ..)
+      ) else {
+      fail("expected a child-view new-window request for \{name}")
+    }
+    assert_true(user_gesture)
+    assert_eq(disposition, code)
+  }
+}

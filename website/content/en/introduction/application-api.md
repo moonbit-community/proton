@@ -518,6 +518,22 @@ hash navigation and `history.pushState`, and subresource loads, are not intercep
 confirmation, await the confirmation before calling `contents.load_url(url)`.
 `new_window_handler` remains asynchronous.
 
+`NewWindowRequest.disposition` reports where the page or user asked the new
+browsing context to open, following Chromium's dispositions (Electron's
+`disposition`):
+
+| `NewWindowDisposition` | Typical source |
+| --- | --- |
+| `ForegroundTab` | Plain click on a `target="_blank"` link; `window.open` without window features |
+| `BackgroundTab` | Middle click, or Cmd (macOS) / Ctrl click on a link |
+| `Window` | Shift click on a link |
+| `Popup` | `window.open` with window features such as a size |
+| `Other` | A disposition this release does not name |
+
+`user_gesture` is also true for a script that calls `window.open` while
+handling a click; check `disposition` to tell such a popup from a modified
+link click.
+
 ```moonbit
 let policy = @proton.WebContentsPolicy(navigation_handler=fn(_contents, request) {
   if request.url.has_prefix("https://proton.localhost/") ||
