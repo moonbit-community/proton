@@ -7,6 +7,16 @@ names and ports the same way as the browser. Equivalent spellings of a loopback
 address, such as `127.1` and `127.0.0.1`, work with the same frontend server and
 bridge permissions.
 
+**New-window disposition (breaking API change)**
+
+`NewWindowRequest.disposition` reports where the click or script asked the new
+browsing context to open: `ForegroundTab`, `BackgroundTab`, `Window`, `Popup`,
+or `Other`. Use it to separate a Cmd/Ctrl or middle click from a plain
+`target="_blank"` click, and to recognize `window.open` popups that request
+window features. Code that constructs `NewWindowRequest` values, for example in
+tests, must supply the new field. See
+[host callback contracts](../introduction/application-api.md#host-callback-contracts).
+
 ## 0.7.0
 
 0.7.0 simplifies project creation and runtime setup, consolidates platform

@@ -127,3 +127,20 @@ pub fn renderer_terminated_event() -> @ffi.EventHandle {
   renderer_terminated_event_ffi(event)
   event
 }
+
+///|
+#borrow(event, disposition)
+extern "C" fn new_window_event_ffi(
+  event : @ffi.EventHandle,
+  disposition : Bytes,
+) -> Unit = "proton_test_new_window_event"
+
+///|
+/// `disposition` names the Chromium disposition the fixture reports:
+/// `foreground_tab`, `background_tab`, `window`, `popup`, or any other name for
+/// a disposition Proton does not name.
+pub fn new_window_event(disposition : String) -> @ffi.EventHandle {
+  let event = @ffi.event_create()
+  new_window_event_ffi(event, @utf8.encode(disposition))
+  event
+}

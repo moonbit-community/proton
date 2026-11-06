@@ -22,6 +22,16 @@ typedef enum {
   PROTON_BROWSER_POLICY_ASK = 2,
 } proton_browser_policy_mode_t;
 
+/* Where a new-window request asked to open. The values are Proton's event ABI,
+ * decoded by NewWindowDisposition::from_code; CEF's enum does not cross it. */
+typedef enum {
+  PROTON_BROWSER_NEW_WINDOW_OTHER = 0,
+  PROTON_BROWSER_NEW_WINDOW_FOREGROUND_TAB = 1,
+  PROTON_BROWSER_NEW_WINDOW_BACKGROUND_TAB = 2,
+  PROTON_BROWSER_NEW_WINDOW_WINDOW = 3,
+  PROTON_BROWSER_NEW_WINDOW_POPUP = 4,
+} proton_browser_new_window_disposition_t;
+
 typedef struct {
   proton_browser_policy_mode_t navigation;
   proton_browser_policy_mode_t new_window;
@@ -162,7 +172,7 @@ int proton_browser_session_before_browse(
     cef_request_t *request, int user_gesture, int is_redirect);
 int proton_browser_session_request_new_window(
     proton_browser_session_t *session, const cef_string_t *target_url,
-    int user_gesture);
+    cef_window_open_disposition_t target_disposition, int user_gesture);
 int proton_browser_session_open_url_from_tab(
     proton_browser_session_t *session, const cef_string_t *target_url,
     cef_window_open_disposition_t target_disposition, int user_gesture);

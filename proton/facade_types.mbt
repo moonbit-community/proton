@@ -906,10 +906,35 @@ pub extend NavigationDecision with Eq::{not_equal, equal}
 pub extend NavigationDecision with Debug::{to_repr}
 
 ///|
+/// Where a new browsing context asked to open, following Chromium's window-open
+/// dispositions, which Electron reports as `disposition`.
+#derive(Debug, Eq)
+pub(all) enum NewWindowDisposition {
+  /// A plain click on a `target="_blank"` link, or `window.open` without
+  /// window features.
+  ForegroundTab
+  /// A middle click, or a Cmd (macOS) or Ctrl click.
+  BackgroundTab
+  /// A Shift click.
+  Window
+  /// `window.open` with window features such as a size.
+  Popup
+  /// A disposition this Proton release does not name.
+  Other
+}
+
+///|
+pub extend NewWindowDisposition with Eq::{not_equal, equal}
+
+///|
+pub extend NewWindowDisposition with Debug::{to_repr}
+
+///|
 #derive(Debug, Eq)
 pub(all) struct NewWindowRequest {
   url : String
   user_gesture : Bool
+  disposition : NewWindowDisposition
 }
 
 ///|

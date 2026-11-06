@@ -3118,6 +3118,18 @@ fn RuntimeSession::decide_navigation(
 }
 
 ///|
+/// Decodes the native event ABI from `proton_browser_new_window_disposition_t`.
+fn NewWindowDisposition::from_code(code : Int32) -> NewWindowDisposition {
+  match code {
+    1 => ForegroundTab
+    2 => BackgroundTab
+    3 => Window
+    4 => Popup
+    _ => Other
+  }
+}
+
+///|
 fn RuntimeSession::start_browser_request(
   self : RuntimeSession,
   window_id : Int64?,
@@ -3144,9 +3156,14 @@ fn RuntimeSession::start_browser_request(
     () => {
       defer self.wakeup.signal.notify()
       match request {
-        NewWindow(url~, user_gesture~, ..) => {
+        NewWindow(url~, user_gesture~, disposition~, ..) => {
           let decision = match policy.new_window_handler {
-            Some(handler) => handler(browser, { url, user_gesture, })
+            Some(handler) =>
+              handler(browser, {
+                url,
+                user_gesture,
+                disposition: NewWindowDisposition::from_code(disposition),
+              })
             None => NewWindowDecision::Deny
           }
           match decision {

@@ -788,9 +788,26 @@ int proton_browser_session_before_browse(
   return !allow;
 }
 
+static proton_browser_new_window_disposition_t
+proton_browser_new_window_disposition(
+    cef_window_open_disposition_t disposition) {
+  switch (disposition) {
+  case CEF_WOD_NEW_FOREGROUND_TAB:
+    return PROTON_BROWSER_NEW_WINDOW_FOREGROUND_TAB;
+  case CEF_WOD_NEW_BACKGROUND_TAB:
+    return PROTON_BROWSER_NEW_WINDOW_BACKGROUND_TAB;
+  case CEF_WOD_NEW_WINDOW:
+    return PROTON_BROWSER_NEW_WINDOW_WINDOW;
+  case CEF_WOD_NEW_POPUP:
+    return PROTON_BROWSER_NEW_WINDOW_POPUP;
+  default:
+    return PROTON_BROWSER_NEW_WINDOW_OTHER;
+  }
+}
+
 int proton_browser_session_request_new_window(
     proton_browser_session_t *session, const cef_string_t *target_url,
-    int user_gesture) {
+    cef_window_open_disposition_t target_disposition, int user_gesture) {
   if (session == NULL ||
       session->policy.new_window != PROTON_BROWSER_POLICY_ASK) {
     return 1;
@@ -810,6 +827,8 @@ int proton_browser_session_request_new_window(
       session, pending, PROTON_EVENT_BROWSER_NEW_WINDOW_REQUESTED);
   if (event != NULL) {
     event->user_gesture = user_gesture;
+    event->disposition =
+        (int32_t)proton_browser_new_window_disposition(target_disposition);
   }
   if (!proton_browser_enqueue_event(session, event)) {
     proton_browser_pending_remove(session, pending);
@@ -831,7 +850,7 @@ int proton_browser_session_open_url_from_tab(
   case CEF_WOD_NEW_POPUP:
   case CEF_WOD_NEW_WINDOW:
     return proton_browser_session_request_new_window(
-        session, target_url, user_gesture);
+        session, target_url, target_disposition, user_gesture);
   default:
     return 1;
   }

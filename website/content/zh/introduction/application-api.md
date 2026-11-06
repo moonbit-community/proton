@@ -491,6 +491,20 @@ net 扩展在宿主执行 HTTP 请求，返回状态、响应头及 UTF-8 文本
 `history.pushState` 和子资源加载不经过此拦截。需要异步确认时，先等待确认完成，再调用
 `contents.load_url(url)`。`new_window_handler` 仍是异步函数。
 
+`NewWindowRequest.disposition` 表示页面或用户要求在哪里打开新的浏览上下文，
+沿用 Chromium 的打开方式（即 Electron 的 `disposition`）：
+
+| `NewWindowDisposition` | 常见来源 |
+| --- | --- |
+| `ForegroundTab` | 普通点击 `target="_blank"` 链接；不带窗口特性的 `window.open` |
+| `BackgroundTab` | 中键点击，或 Cmd（macOS）／Ctrl 点击链接 |
+| `Window` | Shift 点击链接 |
+| `Popup` | 带尺寸等窗口特性的 `window.open` |
+| `Other` | 当前版本未命名的打开方式 |
+
+脚本在处理点击时调用 `window.open`，`user_gesture` 同样为 true；
+需要区分这类弹出窗口与带修饰键的链接点击时，应检查 `disposition`。
+
 ```moonbit
 let policy = @proton.WebContentsPolicy(navigation_handler=fn(_contents, request) {
   if request.url.has_prefix("https://proton.localhost/") ||
