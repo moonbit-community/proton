@@ -158,11 +158,11 @@ test "parse dev url endpoint keeps next 404-compatible tcp readiness" {
 ///|
 test "parse dev url endpoint applies ready path for display" {
   let endpoint = parse_dev_url_endpoint(
-    "https://example.test:444/app?debug=1",
+    "https://[0:0:0:0:0:0:0:1]:444/app?debug=1",
     Some("healthz"),
   )
-  @debug.assert_eq(endpoint.url, "https://example.test:444/healthz")
-  @debug.assert_eq(endpoint.host, "example.test")
+  @debug.assert_eq(endpoint.url, "https://[::1]:444/healthz")
+  @debug.assert_eq(endpoint.host, "::1")
   @debug.assert_eq(endpoint.port, 444)
 }
 

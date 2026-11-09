@@ -1,5 +1,12 @@
 # Release Notes
 
+## Unreleased
+
+HTTP(S) bridge grants and `proton_cli dev` readiness checks now normalize host
+names and ports the same way as the browser. Equivalent spellings of a loopback
+address, such as `127.1` and `127.0.0.1`, work with the same frontend server and
+bridge permissions.
+
 ## 0.7.0
 
 0.7.0 simplifies project creation and runtime setup, consolidates platform

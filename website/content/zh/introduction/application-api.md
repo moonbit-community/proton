@@ -31,6 +31,9 @@
 
 各函数返回 `App` 构建器，共同选项包括宽度、高度、调试模式和是否允许调整大小。主窗口入口属于 `WindowConfig`；需要替换主窗口声明时，调用 `App.main_window(config)`。
 
+HTTP(S) 入口按浏览器规范化后的 origin 授予 bridge 权限。例如，
+`http://[0:0:0:0:0:0:0:1]:5173/` 和 `http://[::1]:5173/` 的 origin 相同。
+
 `file` 和 `asset` 在 `https://proton.localhost/<filename>` 提供原始 HTML，以入口文件所在目录作为资源根目录。相对路径的脚本、样式、图片和导航遵循浏览器正常的 URL 解析规则。Proton 不插入 `<base>` 元素，也不改写文档；页面自行声明的 `<base>` 保持正常作用。内联 `html` 入口不自动获得文件系统资源根目录。参见[资源示例](../examples/46_asset_sidecar_resources.md)。
 
 **配置应用**

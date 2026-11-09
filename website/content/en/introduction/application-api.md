@@ -31,6 +31,10 @@ For the complete set of methods, overloads, typed errors and defaults, use the [
 
 Each returns an `App` builder. Shared options include width, height, debug mode and resizability. To replace the primary window declaration, pass a new `WindowConfig` to `App.main_window(config)`; the entry belongs to that configuration.
 
+For HTTP(S) entries, bridge grants use the browser's normalized origin. For
+example, `http://[0:0:0:0:0:0:0:1]:5173/` and `http://[::1]:5173/` have the same
+origin.
+
 `file` and `asset` serve the original HTML at `https://proton.localhost/<filename>`, with the entry file’s directory as the resource root. Relative scripts, styles, images and navigation use normal browser URL resolution. Proton does not insert a `<base>` element or rewrite the document; a `<base>` declared by the page retains its normal effect. Inline `html` entries do not acquire a filesystem resource root. See the [asset example](../examples/46_asset_sidecar_resources.md).
 
 **Configuring an application**

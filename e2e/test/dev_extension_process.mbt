@@ -194,7 +194,8 @@ async fn spawn_dev_extension_cli_app(
     output_path,
     create_mode=@fs.CreateOrTruncate,
   )
-  let frontend_url = "http://127.0.0.1:" + frontend_port.to_string()
+  // Chromium normalizes this loopback spelling before applying bridge grants.
+  let frontend_url = "http://127.1:" + frontend_port.to_string()
   let frontend_command = "warren dev --browser-entry main --direct --port " +
     frontend_port.to_string()
   let args = [

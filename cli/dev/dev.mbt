@@ -737,137 +737,23 @@ fn parse_dev_url_endpoint(
   url : String,
   ready_path : String?,
 ) -> DevUrlEndpoint raise DevServerError {
-  let wait_url = append_ready_path(url, ready_path)
-  let (scheme, rest) = match wait_url.split_once("://") {
-    Some((scheme, rest)) => (scheme.to_owned().to_lower(), rest.to_owned())
-    None => raise MissingScheme(url=wait_url)
-  }
-  let default_port = match scheme {
-    "http" => 80
-    "https" => 443
-    _ => raise UnsupportedScheme(url=wait_url)
-  }
-  let authority = url_authority(rest)
-  if !dev_url_authority_is_valid(authority) {
-    raise InvalidOrigin(url=wait_url)
-  }
-  let (host, port) = parse_host_port(authority, default_port)
-  DevUrlEndpoint::{ url: wait_url, host, port, }
-}
-
-///|
-fn url_authority(rest : String) -> String {
-  let mut end = rest.length()
-  for delimiter in ["/", "?", "#"] {
-    match rest.find(delimiter) {
-      Some(index) if index < end => end = index
-      _ => ()
-    }
-  }
-  rest.unsafe_substring(start=0, end~).to_string()
-}
-
-///|
-fn dev_url_authority_is_valid(authority : String) -> Bool {
-  if authority == "" || authority.contains("@") {
-    return false
-  }
-  for ch in authority {
-    let code = ch.to_int()
-    if code <= 0x20 ||
-      code >= 0x7f ||
-      ch == '/' ||
-      ch == '?' ||
-      ch == '#' ||
-      ch == '"' ||
-      ch == '\\' {
-      return false
-    }
-  }
-  true
-}
-
-///|
-fn parse_host_port(
-  host_port : String,
-  default_port : Int32,
-) -> (String, Int32) raise DevServerError {
-  if host_port.has_prefix("[") {
-    match host_port.split_once("]") {
-      Some((left, right)) => {
-        let left = left.to_owned()
-        let host = left.unsafe_substring(start=1, end=left.length())
-        let port = if right == "" {
-          default_port
-        } else if right.has_prefix(":") {
-          parse_port(right[1:].to_owned())
-        } else {
-          raise InvalidHost(authority=host_port)
-        }
-        if host == "" {
-          raise EmptyHost
-        } else {
-          (host, port)
-        }
-      }
-      None => raise InvalidHost(authority=host_port)
-    }
-  } else {
-    match host_port.split_once(":") {
-      Some((host, port_text)) => {
-        let host = host.to_owned()
-        if host == "" {
-          raise EmptyHost
-        } else {
-          (host, parse_port(port_text.to_owned()))
-        }
-      }
-      None =>
-        if host_port == "" {
-          raise EmptyHost
-        } else {
-          (host_port, default_port)
-        }
-    }
-  }
-}
-
-///|
-fn parse_port(text : String) -> Int32 raise DevServerError {
-  let port = @string.parse_int(text[:]) catch {
-    _ => raise InvalidPort(value=text)
-  }
-  if port <= 0 || port > 65535 {
-    raise PortOutOfRange(value=text)
-  } else {
-    port
-  }
-}
-
-///|
-fn append_ready_path(url : String, ready_path : String?) -> String {
-  match ready_path {
-    None => url
-    Some(path) =>
-      if path == "" {
-        url
-      } else if path.has_prefix("/") {
-        url_origin(url) + path
-      } else {
-        url_origin(url) + "/" + path
+  let parsed = @proton_config.parse_http_url(url) catch {
+    error =>
+      match error {
+        MissingScheme => raise DevServerError::MissingScheme(url~)
+        UnsupportedScheme => raise DevServerError::UnsupportedScheme(url~)
+        MissingHost => raise EmptyHost
+        InvalidOrigin(_) => raise DevServerError::InvalidOrigin(url~)
+        EmptyPort => raise InvalidPort(value="")
+        ZeroPort => raise PortOutOfRange(value="0")
       }
   }
-}
-
-///|
-fn url_origin(url : String) -> String {
-  match url.split_once("://") {
-    Some((scheme, rest)) => {
-      let authority = url_authority(rest.to_owned())
-      scheme.to_owned() + "://" + authority
-    }
-    None => url
+  let wait_url = match ready_path {
+    Some(path) if path.has_prefix("/") => parsed.origin + path
+    Some(path) if path != "" => parsed.origin + "/" + path
+    _ => url
   }
+  { url: wait_url, host: parsed.host, port: parsed.port, }
 }
 
 ///|
