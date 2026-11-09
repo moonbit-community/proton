@@ -109,6 +109,9 @@ proton_cli dev [options] [-- <application-arguments>...]
 
 Prepares the release-matched runtime and subprocess executable automatically, then builds and runs the native backend. When a frontend command is configured, it starts that command, waits for readiness and supplies the development URL to the application. Backend changes require a rebuild/restart; frontend refresh is owned by the frontend tool.
 
+Readiness checks use the same host and port normalization as the browser. For
+example, a frontend URL using `127.1` probes the same endpoint as `127.0.0.1`.
+
 | Option | Default and meaning |
 | --- | --- |
 | `--config <path>` | Project configuration; defaults to `proton.project.json` in the working directory |

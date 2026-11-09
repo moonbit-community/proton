@@ -9,6 +9,8 @@ import {
 // Values
 pub fn current_platform() -> Platform
 
+pub fn parse_http_url(String) -> HttpUrl raise HttpUrlError
+
 pub fn validate_application_identifier(String) -> String raise AppConfigError
 
 // Errors
@@ -30,6 +32,15 @@ pub fn AppConfigError::not_equal(Self, Self) -> Bool
 pub fn AppConfigError::output(Self, &Logger) -> Unit
 pub fn AppConfigError::to_repr(Self) -> @debug.Repr
 pub fn AppConfigError::to_string(Self) -> String
+
+pub(all) suberror HttpUrlError {
+  MissingScheme
+  UnsupportedScheme
+  MissingHost
+  InvalidOrigin(reason~ : String)
+  EmptyPort
+  ZeroPort
+}
 
 // Types and methods
 #derive(Eq, @debug.Debug)
@@ -92,6 +103,12 @@ pub fn FrontendConfig::from_json(@json.Json, @json.JsonPath) -> Self raise @json
 pub fn FrontendConfig::not_equal(Self, Self) -> Bool
 pub fn FrontendConfig::to_json(Self) -> @json.Json
 pub fn FrontendConfig::to_repr(Self) -> @debug.Repr
+
+pub struct HttpUrl {
+  origin : String
+  host : String
+  port : Int32
+}
 
 #derive(Eq, @debug.Debug, @json.FromJson, @json.ToJson)
 pub(all) struct PackageConfig {

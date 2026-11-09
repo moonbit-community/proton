@@ -1089,7 +1089,7 @@ test "dev bridge page policy parses exact http origins" {
     "http://127.0.0.1:3000",
   )
   assert_eq(
-    unwrap_configuration(() => url_origin("http://[::1]:5173/app")),
+    unwrap_configuration(() => url_origin("http://[0:0:0:0:0:0:0:1]:5173/app")),
     "http://[::1]:5173",
   )
   assert_eq(
@@ -1109,7 +1109,10 @@ test "dev bridge page policy parses exact http origins" {
       ("ftp://localhost:5173/app", "http or https"),
       ("http://local\"host:5173/app", "invalid origin"),
       ("http://local\\host:5173/app", "invalid origin"),
+      ("http://user@localhost:5173/app", "invalid origin"),
+      ("http://münchen.example/app", "invalid origin"),
       ("http://localhost:/app", "port must not be empty"),
+      ("http://localhost:0/app", "port is out of range"),
       ("http://[::1]5173/app", "invalid IPv6 origin"),
     ] {
     let (url, expected_reason) = item

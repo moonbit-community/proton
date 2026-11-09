@@ -657,153 +657,18 @@ fn bridge_page_policy_for_entry(
 
 ///|
 fn url_origin(url : String) -> String raise AppConfigurationError {
-  let (scheme_view, rest_view) = match url.split_once("://") {
-    Some(parts) => parts
-    None =>
-      raise InvalidEntryUrl(url~, reason="URL must include http:// or https://")
-  }
-  let scheme = scheme_view.to_owned().to_lower()
-  if scheme != "http" && scheme != "https" {
-    raise InvalidEntryUrl(url~, reason="URL must use http or https")
-  }
-  let rest = rest_view.to_owned()
-  if rest == "" {
-    raise InvalidEntryUrl(url~, reason="URL is missing a host")
-  }
-  let mut end = rest.length()
-  for delimiter in ["/", "?", "#"] {
-    match rest.find(delimiter) {
-      Some(index) if index < end => end = index
-      _ => ()
-    }
-  }
-  if end == 0 {
-    raise InvalidEntryUrl(url~, reason="URL is missing a host")
-  }
-  let authority = rest.unsafe_substring(start=0, end~).to_string()
-  if !entry_origin_authority_is_valid(authority) {
-    raise InvalidEntryUrl(url~, reason="URL has an invalid origin")
-  }
-  scheme + "://" + canonical_entry_origin_authority(authority, scheme, url)
-}
-
-///|
-fn entry_origin_authority_is_valid(authority : String) -> Bool {
-  if authority == "" || authority.contains("@") {
-    return false
-  }
-  for ch in authority {
-    let code = ch.to_int()
-    if code <= 0x20 ||
-      code >= 0x7f ||
-      ch == '/' ||
-      ch == '?' ||
-      ch == '#' ||
-      ch == '"' ||
-      ch == '\\' {
-      return false
-    }
-  }
-  true
-}
-
-///|
-fn canonical_entry_origin_authority(
-  authority : String,
-  scheme : String,
-  source_url : String,
-) -> String raise AppConfigurationError {
-  if authority.has_prefix("[") {
-    let (host_part, suffix) = match authority.split_once("]") {
-      Some(parts) => parts
-      None =>
-        raise InvalidEntryUrl(
-          url=source_url,
-          reason="URL has an invalid IPv6 origin",
-        )
-    }
-    let host_text = host_part.to_owned()
-    let host = host_text
-      .unsafe_substring(start=1, end=host_text.length())
-      .to_string()
-    if host == "" {
-      raise InvalidEntryUrl(url=source_url, reason="URL host must not be empty")
-    }
-    if suffix != "" && !suffix.has_prefix(":") {
-      raise InvalidEntryUrl(
-        url=source_url,
-        reason="URL has an invalid IPv6 origin",
-      )
-    }
-    "[" +
-    host.to_lower() +
-    "]" +
-    canonical_entry_origin_port_suffix(suffix.to_owned(), scheme, source_url)
-  } else {
-    let first_colon = authority.find(":")
-    let last_colon = authority.rev_find(":")
-    if first_colon != last_colon {
-      raise InvalidEntryUrl(
-        url=source_url,
-        reason="IPv6 origins must use brackets",
-      )
-    }
-    match first_colon {
-      None => authority.to_lower()
-      Some(index) => {
-        let host = authority.unsafe_substring(start=0, end=index).to_string()
-        let port = authority
-          .unsafe_substring(start=index + 1, end=authority.length())
-          .to_string()
-        if host == "" {
-          raise InvalidEntryUrl(
-            url=source_url,
-            reason="URL host must not be empty",
-          )
-        }
-        if port == "" {
-          raise InvalidEntryUrl(
-            url=source_url,
-            reason="URL port must not be empty",
-          )
-        }
-        host.to_lower() +
-        canonical_entry_origin_port_suffix(port, scheme, source_url)
+  let parsed = @proton_config.parse_http_url(url) catch {
+    error => {
+      let reason = match error {
+        MissingScheme => "URL must include http:// or https://"
+        UnsupportedScheme => "URL must use http or https"
+        MissingHost => "URL is missing a host"
+        InvalidOrigin(reason~) => reason
+        EmptyPort => "URL port must not be empty"
+        ZeroPort => "URL port is out of range: 0"
       }
+      raise InvalidEntryUrl(url~, reason~)
     }
   }
-}
-
-///|
-fn canonical_entry_origin_port_suffix(
-  port : String,
-  scheme : String,
-  source_url : String,
-) -> String raise AppConfigurationError {
-  if port == "" {
-    return ""
-  }
-  let text = if port.has_prefix(":") { port[1:].to_owned() } else { port }
-  if text == "" {
-    raise InvalidEntryUrl(url=source_url, reason="URL port must not be empty")
-  }
-  let value = @string.parse_int(text[:]) catch {
-    _ =>
-      raise InvalidEntryUrl(
-        url=source_url,
-        reason="URL port must be an integer: " + text,
-      )
-  }
-  if value <= 0 || value > 65535 {
-    raise InvalidEntryUrl(
-      url=source_url,
-      reason="URL port is out of range: " + text,
-    )
-  }
-  let default_port = if scheme == "http" { 80 } else { 443 }
-  if value == default_port {
-    ""
-  } else {
-    ":" + value.to_string()
-  }
+  parsed.origin
 }
