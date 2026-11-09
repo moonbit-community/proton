@@ -1,10 +1,10 @@
 name = "moonbit-community/proton_power_monitor"
 
-version = "0.7.0"
+version = "0.8.0"
 
 import {
   "moonbitlang/async@0.22.5",
-  "moonbit-community/proton_ffi@0.7.0",
+  "moonbit-community/proton_ffi@0.8.0",
 }
 
 readme = "README.mbt.md"

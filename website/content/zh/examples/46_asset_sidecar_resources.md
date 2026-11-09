@@ -2,7 +2,7 @@
 
 本例加载 HTML 入口及独立的 JavaScript、CSS 和 worker 文件，展示页面从应用资源加载时如何组织文件和相对路径。
 
-[46_asset_sidecar_resources](https://github.com/moonbit-community/proton/tree/885948a4e3e7ca24e7dcca84446d2494f13f9df5/examples/46_asset_sidecar_resources) · 关键文件：[main.mbt](https://github.com/moonbit-community/proton/tree/885948a4e3e7ca24e7dcca84446d2494f13f9df5/examples/46_asset_sidecar_resources/main.mbt), [app/app.html](https://github.com/moonbit-community/proton/tree/885948a4e3e7ca24e7dcca84446d2494f13f9df5/examples/46_asset_sidecar_resources/app/app.html), [app/app.js](https://github.com/moonbit-community/proton/tree/885948a4e3e7ca24e7dcca84446d2494f13f9df5/examples/46_asset_sidecar_resources/app/app.js), [app/app.css](https://github.com/moonbit-community/proton/tree/885948a4e3e7ca24e7dcca84446d2494f13f9df5/examples/46_asset_sidecar_resources/app/app.css), [app/worker.js](https://github.com/moonbit-community/proton/tree/885948a4e3e7ca24e7dcca84446d2494f13f9df5/examples/46_asset_sidecar_resources/app/worker.js)
+[46_asset_sidecar_resources](https://github.com/moonbit-community/proton/tree/main/examples/46_asset_sidecar_resources) · 关键文件：[main.mbt](https://github.com/moonbit-community/proton/tree/main/examples/46_asset_sidecar_resources/main.mbt), [app/app.html](https://github.com/moonbit-community/proton/tree/main/examples/46_asset_sidecar_resources/app/app.html), [app/app.js](https://github.com/moonbit-community/proton/tree/main/examples/46_asset_sidecar_resources/app/app.js), [app/app.css](https://github.com/moonbit-community/proton/tree/main/examples/46_asset_sidecar_resources/app/app.css), [app/worker.js](https://github.com/moonbit-community/proton/tree/main/examples/46_asset_sidecar_resources/app/worker.js)
 
 ## 行为
 

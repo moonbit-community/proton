@@ -1,6 +1,6 @@
 # Release Notes
 
-## Unreleased
+## 0.8.0 (Unreleased)
 
 HTTP(S) bridge grants and `proton_cli dev` readiness checks now normalize host
 names and ports the same way as the browser. Equivalent spellings of a loopback
@@ -15,6 +15,13 @@ or `Other`. Handlers can now apply different policies to requests for background
 tabs and popup windows. Code that constructs `NewWindowRequest` values, for
 example in tests, must supply the new field. See
 [host callback contracts](../introduction/application-api.md#host-callback-contracts).
+
+**Build and cleanup**
+
+Source builds require `moonc` 0.10.19 or newer. Cancelling packaging lets the
+rollback restore the previous output when replacement has not completed.
+Temporary directories and resources such as KeepAwake guards and CDP connections
+can also finish cleanup when their operations are cancelled.
 
 ## 0.7.0
 

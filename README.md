@@ -15,8 +15,9 @@ with the application on each supported platform.
 
 ## Quick start
 
-This README targets Proton 0.7.0. See [release notes](website/content/en/release-notes/releases.md#070)
-for migration from 0.6.0.
+This README targets the upcoming Proton 0.8.0. Registry installation commands
+require its publication. See the [release notes](website/content/en/release-notes/releases.md#080-unreleased)
+for migration from 0.7.0.
 
 Install [MoonBit and the native build prerequisites](website/content/en/introduction/installation.md)
 for your platform. The default template uses Rabbita for its MoonBit frontend
@@ -24,14 +25,14 @@ and Warren to serve and build it; install Node.js/npm as described in the
 prerequisites. Run these commands outside another MoonBit workspace:
 
 ```sh
-moon install moonbit-community/proton_cli@0.7.0
+moon install moonbit-community/proton_cli@0.8.0
 moon install moonbit-community/warren@0.4.5
 proton_cli new my-app
 cd my-app
 ```
 
 Keep all `moonbit-community/proton` and `moonbit-community/proton_*` requirements
-in `shared/moon.mod`, `backend/moon.mod`, and `frontend/moon.mod` on `0.7.0`,
+in `shared/moon.mod`, `backend/moon.mod`, and `frontend/moon.mod` on `0.8.0`,
 matching the CLI. Update older generated requirements before continuing:
 
 ```sh
@@ -72,7 +73,7 @@ tooling, use `--template minimal` and follow the
 ## Application API
 
 An application's native entry point configures an `App` and runs it. For
-example, an inline-HTML app inside a generated 0.7.0 minimal project can use:
+example, an inline-HTML app inside a generated 0.8.0 minimal project can use:
 
 ```moonbit
 async fn main {

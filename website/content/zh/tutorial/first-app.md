@@ -1,6 +1,6 @@
 # 创建项目
 
-本教程使用 Proton 0.7.0。`dev`、`build`、`package` 会自动准备环境；
+本教程面向即将发布的 Proton 0.8.0。`dev`、`build`、`package` 会自动准备环境；
 只在需要提前准备时执行 `proton_cli setup`。版本可用性见[运行环境](../introduction/installation.md)。
 
 本章用 minimal 模板创建一个桌面窗口，运行它、修改页面，再构建可执行文件。开始前请完成[环境准备](../introduction/installation.md)。
@@ -27,7 +27,7 @@ moonx moonbit-community/moon-new hello-proton \
 cd hello-proton
 ```
 
-确认 `moon.mod` 中的 `moonbit-community/proton` 依赖为 `0.7.0`，与 CLI 匹配。
+确认 `moon.mod` 中的 `moonbit-community/proton` 依赖为 `0.8.0`，与 CLI 匹配。
 如果生成的模板使用更早版本，请先更新该依赖再继续。
 
 明确指定 `--template minimal`，因为默认模板是 `isomorphic`。分发应用前，在 `proton.project.json` 中将 `identifier` 改为自己的唯一标识，例如 `com.example.hello-proton`。
