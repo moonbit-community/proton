@@ -1064,6 +1064,7 @@ fn decode_native_runtime_event(
           request_id=@native_ffi.event_int64(event, RequestId),
           url=require_native_event_text(event, Url, "browser new window"),
           user_gesture=@native_ffi.event_int(event, UserGesture) != 0,
+          disposition=@native_ffi.event_int(event, Disposition),
         ),
       )
     BrowserDownloadRequested =>

@@ -628,9 +628,22 @@ pub fn NewWindowDecision::not_equal(Self, Self) -> Bool
 pub fn NewWindowDecision::to_repr(Self) -> @debug.Repr
 
 #derive(Eq, @debug.Debug)
+pub(all) enum NewWindowDisposition {
+  ForegroundTab
+  BackgroundTab
+  Window
+  Popup
+  Other
+}
+pub fn NewWindowDisposition::equal(Self, Self) -> Bool
+pub fn NewWindowDisposition::not_equal(Self, Self) -> Bool
+pub fn NewWindowDisposition::to_repr(Self) -> @debug.Repr
+
+#derive(Eq, @debug.Debug)
 pub(all) struct NewWindowRequest {
   url : String
   user_gesture : Bool
+  disposition : NewWindowDisposition
 }
 pub fn NewWindowRequest::equal(Self, Self) -> Bool
 pub fn NewWindowRequest::not_equal(Self, Self) -> Bool

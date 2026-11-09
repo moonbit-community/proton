@@ -622,3 +622,30 @@ MOONBIT_FFI_EXPORT void proton_test_renderer_terminated_event(proton_event_t *ou
   proton_event_dispatch_end();
   proton_event_unbind_sink(out);
 }
+
+static cef_window_open_disposition_t proton_test_cef_disposition(
+    const char *name) {
+  if (strcmp(name, "foreground_tab") == 0) return CEF_WOD_NEW_FOREGROUND_TAB;
+  if (strcmp(name, "background_tab") == 0) return CEF_WOD_NEW_BACKGROUND_TAB;
+  if (strcmp(name, "window") == 0) return CEF_WOD_NEW_WINDOW;
+  if (strcmp(name, "popup") == 0) return CEF_WOD_NEW_POPUP;
+  return CEF_WOD_SWITCH_TO_TAB;
+}
+
+MOONBIT_FFI_EXPORT void proton_test_new_window_event(
+    proton_event_t *out, moonbit_bytes_t disposition) {
+  proton_browser_policy_t policy = {0};
+  policy.new_window = PROTON_BROWSER_POLICY_ASK;
+  proton_browser_session_t *session =
+      proton_browser_session_create(&policy, NULL, NULL, NULL);
+  proton_browser_session_bind_contents(session, 7, 11);
+  proton_event_bind_sink(proton_test_capture_event, out);
+  proton_event_dispatch_begin();
+  /* An empty URL keeps the conversion out of libcef, which tests do not load. */
+  cef_string_t url = {0};
+  (void)proton_browser_session_request_new_window(
+      session, &url, proton_test_cef_disposition((const char *)disposition), 1);
+  proton_browser_session_destroy(session);
+  proton_event_dispatch_end();
+  proton_event_unbind_sink(out);
+}

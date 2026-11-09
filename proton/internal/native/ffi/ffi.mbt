@@ -82,6 +82,7 @@ pub(all) enum EventIntField {
   DarkColors
   HighContrastColors
   ReopenWhenEmpty
+  Disposition
 }
 
 ///|
