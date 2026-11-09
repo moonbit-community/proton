@@ -1,6 +1,6 @@
 # Release Notes
 
-## 0.8.0（未发布）
+## 0.8.0
 
 HTTP(S) bridge 授权与 `proton_cli dev` 就绪探测采用与浏览器一致的主机和端口
 规范化规则。`127.1` 和 `127.0.0.1` 等等价的回环地址写法可以访问同一前端服务，
@@ -17,6 +17,8 @@ HTTP(S) bridge 授权与 `proton_cli dev` 就绪探测采用与浏览器一致�
 
 源码构建要求 `moonc` 0.10.19 或更新版本。如果替换产物期间取消打包，回滚可以恢复旧产物。
 取消操作时，临时目录、KeepAwake guard 和 CDP 连接也可以完成清理。
+
+[完整改动](https://github.com/moonbit-community/proton/compare/885948a4e3e7ca24e7dcca84446d2494f13f9df5...9a0c5a9300f293015288acc1ff5f186f563e6a77)
 
 ## 0.7.0
 

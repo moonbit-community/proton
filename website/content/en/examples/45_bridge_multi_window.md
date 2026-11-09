@@ -2,7 +2,7 @@
 
 This example creates windows on demand within one application and grants command access to an explicit family of window IDs.
 
-[45_bridge_multi_window](https://github.com/moonbit-community/proton/tree/main/examples/45_bridge_multi_window) · Source files: [main.mbt](https://github.com/moonbit-community/proton/tree/main/examples/45_bridge_multi_window/main.mbt)
+[45_bridge_multi_window](https://github.com/moonbit-community/proton/tree/9a0c5a9300f293015288acc1ff5f186f563e6a77/examples/45_bridge_multi_window) · Source files: [main.mbt](https://github.com/moonbit-community/proton/tree/9a0c5a9300f293015288acc1ff5f186f563e6a77/examples/45_bridge_multi_window/main.mbt)
 
 ## Behavior
 

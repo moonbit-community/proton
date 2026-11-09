@@ -4,7 +4,7 @@ version = "0.1.0"
 
 import {
   "moonbitlang/async@0.22.5",
-  "moonbit-community/proton@0.7.0",
+  "moonbit-community/proton@0.8.0",
 }
 
 license = "Apache-2.0"

@@ -14,7 +14,7 @@
 | 进程所有权与激活 | 单实例构建器、上下文方法 | [进程控制](#进程控制与指标) |
 | 路径、文件与构建元数据 | 项目配置、应用路径 | [Configuration](../configuration/project.md) |
 
-完整方法、类型化错误和默认参数见[API 索引](https://github.com/moonbit-community/proton/blob/main/proton/pkg.generated.mbti)。本页说明各入口的适用场景、状态所有权，以及启动、取消和退出期间的行为。
+完整方法、类型化错误和默认参数见[API 索引](https://github.com/moonbit-community/proton/blob/9a0c5a9300f293015288acc1ff5f186f563e6a77/proton/pkg.generated.mbti)。本页说明各入口的适用场景、状态所有权，以及启动、取消和退出期间的行为。
 
 ## 应用生命周期
 
@@ -192,7 +192,7 @@ Proton 不对命令载荷设置固定的大小上限。载荷通过 JSON 序列�
 
 `proton_client.subscribe(event, listener, failure)` 通过 `FromJson` 解码载荷，返回 `Subscription`。`Subscription.close()` 释放监听器。订阅建立可能抛出 `ClientFailure`；事件解码失败通过 failure 回调报告 `EventDecode`。
 
-`proton_rabbita.subscribe` 将订阅所有权接入 Rabbita，选项包括订阅 key、重试次数、ready 命令和 client 覆盖。完整签名见 [Rabbita API](https://github.com/moonbit-community/proton/blob/main/rabbita/pkg.generated.mbti)。
+`proton_rabbita.subscribe` 将订阅所有权接入 Rabbita，选项包括订阅 key、重试次数、ready 命令和 client 覆盖。完整签名见 [Rabbita API](https://github.com/moonbit-community/proton/blob/9a0c5a9300f293015288acc1ff5f186f563e6a77/rabbita/pkg.generated.mbti)。
 
 JavaScript 接口为 `window.__MoonBit__.app.on(name, callback)`。回调接收包含 `payload` 的事件对象；注册返回取消订阅函数。
 
@@ -291,7 +291,7 @@ on_render_process_gone 同时覆盖主页面和子视图，无需额外订阅 on
 
 **无障碍与无窗口执行**
 
-Web 内容使用 Chromium 原生无障碍树。页面应提供语义化 HTML、ARIA、键盘导航和可见焦点。默认遵循平台无障碍策略；`App.accessibility(AccessibilityMode::AlwaysEnabled)` 使无障碍树在整个运行期间保持可用。参见[各平台无障碍行为](https://github.com/moonbit-community/proton/blob/main/proton/README.md#accessibility)。
+Web 内容使用 Chromium 原生无障碍树。页面应提供语义化 HTML、ARIA、键盘导航和可见焦点。默认遵循平台无障碍策略；`App.accessibility(AccessibilityMode::AlwaysEnabled)` 使无障碍树在整个运行期间保持可用。参见[各平台无障碍行为](https://github.com/moonbit-community/proton/blob/9a0c5a9300f293015288acc1ff5f186f563e6a77/proton/README.md#accessibility)。
 
 `App.headless()` 或 `PROTON_HEADLESS=1` 使用离屏渲染，不创建原生顶层窗口。原生对话框、菜单、标题栏等依赖窗口的 UI 不可用。Linux 仍需要 X11 display，例如 Xvfb。因此，浏览器自动化与原生窗口行为需要不同的验证环境。
 
@@ -431,7 +431,7 @@ net 扩展在宿主执行 HTTP 请求，返回状态、响应头及 UTF-8 文本
 它不发送浏览器下载事件。应用可以在自己的命令中调用它，将 token 和目标路径授权留在后端；
 `net.capability()` 不会因此获得文件写入权限。取消和超时使用现有异步任务机制及 `@async.with_timeout`。
 
-完整扩展清单及各范围类型见[扩展 API](https://github.com/moonbit-community/proton/blob/main/extensions/pkg.generated.mbti)。访问某个 API 前分别确认：目标授权、操作系统授权、平台后端支持。
+完整扩展清单及各范围类型见[扩展 API](https://github.com/moonbit-community/proton/blob/9a0c5a9300f293015288acc1ff5f186f563e6a77/extensions/pkg.generated.mbti)。访问某个 API 前分别确认：目标授权、操作系统授权、平台后端支持。
 
 ## 宿主回调契约
 
@@ -555,7 +555,7 @@ on_session_created 在应用启动钩子创建窗口前提供 partition 和解�
 
 操作要求应用运行时存活，不要求页面存活；错误类型为 `SessionError`。`KeepRunning` 无窗口期间仍可使用句柄；应用退出会唤醒待完成的 Cookie 查询并使保留的会话句柄失效。并发 Cookie 查询相互独立。清理浏览器存储不会删除应用自己管理的文件，也不等于完成业务登出；后端凭据和 UI 状态需单独处理。
 
-完整属性及 StorageDataKind 变体见[API 参考](https://github.com/moonbit-community/proton/blob/main/proton/pkg.generated.mbti)。
+完整属性及 StorageDataKind 变体见[API 参考](https://github.com/moonbit-community/proton/blob/9a0c5a9300f293015288acc1ff5f186f563e6a77/proton/pkg.generated.mbti)。
 
 ## 应用更新
 
@@ -624,7 +624,7 @@ ApplicationContext.has_single_instance_lock() 查询所有权，release_single_i
 
 `ApplicationContext.focus(steal=...)` 在 macOS 激活应用，`steal` 决定是否允许替换另一个前台应用；在 Windows 和 Linux 聚焦第一个可见窗口。应用级 `hide`、`show`、`is_active` 和 `is_hidden` 仅适用于 macOS，其它平台抛出 `AppControlError::UnsupportedPlatform`。`@proton.is_ready()` 报告应用就绪状态。
 
-CEF 通过 `on_render_process_gone` 报告 renderer 终止，但不提供同等的其它子进程退出通知，因此不支持 Electron 的 `child-process-gone`。浏览器操作映射及其它不支持的 Electron 对应项见[页面控制参考](https://github.com/moonbit-community/proton/blob/main/proton/README.md#page-history-and-inserted-css)。
+CEF 通过 `on_render_process_gone` 报告 renderer 终止，但不提供同等的其它子进程退出通知，因此不支持 Electron 的 `child-process-gone`。浏览器操作映射及其它不支持的 Electron 对应项见[页面控制参考](https://github.com/moonbit-community/proton/blob/9a0c5a9300f293015288acc1ff5f186f563e6a77/proton/README.md#page-history-and-inserted-css)。
 
 **Dock 与应用徽章**
 
@@ -648,8 +648,8 @@ ApplicationContext.task_metrics() 返回 Chromium task 的 AppTaskMetric 列表�
 
 ## API 参考
 
-- [应用 API](https://github.com/moonbit-community/proton/blob/main/proton/pkg.generated.mbti)
-- [扩展 API](https://github.com/moonbit-community/proton/blob/main/extensions/pkg.generated.mbti)
-- [类型化契约](https://github.com/moonbit-community/proton/blob/main/contract/pkg.generated.mbti)
-- [前端客户端](https://github.com/moonbit-community/proton/blob/main/client/pkg.generated.mbti)
-- [Rabbita 集成](https://github.com/moonbit-community/proton/blob/main/rabbita/pkg.generated.mbti)
+- [应用 API](https://github.com/moonbit-community/proton/blob/9a0c5a9300f293015288acc1ff5f186f563e6a77/proton/pkg.generated.mbti)
+- [扩展 API](https://github.com/moonbit-community/proton/blob/9a0c5a9300f293015288acc1ff5f186f563e6a77/extensions/pkg.generated.mbti)
+- [类型化契约](https://github.com/moonbit-community/proton/blob/9a0c5a9300f293015288acc1ff5f186f563e6a77/contract/pkg.generated.mbti)
+- [前端客户端](https://github.com/moonbit-community/proton/blob/9a0c5a9300f293015288acc1ff5f186f563e6a77/client/pkg.generated.mbti)
+- [Rabbita 集成](https://github.com/moonbit-community/proton/blob/9a0c5a9300f293015288acc1ff5f186f563e6a77/rabbita/pkg.generated.mbti)

@@ -2,7 +2,7 @@
 
 本示例在同一个应用中按需创建窗口，并明确授权一组窗口 ID 调用命令。
 
-[45_bridge_multi_window](https://github.com/moonbit-community/proton/tree/main/examples/45_bridge_multi_window) · 关键文件：[main.mbt](https://github.com/moonbit-community/proton/tree/main/examples/45_bridge_multi_window/main.mbt)
+[45_bridge_multi_window](https://github.com/moonbit-community/proton/tree/9a0c5a9300f293015288acc1ff5f186f563e6a77/examples/45_bridge_multi_window) · 关键文件：[main.mbt](https://github.com/moonbit-community/proton/tree/9a0c5a9300f293015288acc1ff5f186f563e6a77/examples/45_bridge_multi_window/main.mbt)
 
 ## 行为
 

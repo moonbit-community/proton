@@ -2,7 +2,7 @@
 
 本例在主窗口侧栏旁放置一个子浏览器，展示主页面与可独立导航的浏览器视图之间的关系，以及如何显式设置子视图的边界。
 
-[53_view_minimal](https://github.com/moonbit-community/proton/tree/main/examples/53_view_minimal) · 关键文件：[main.mbt](https://github.com/moonbit-community/proton/tree/main/examples/53_view_minimal/main.mbt)
+[53_view_minimal](https://github.com/moonbit-community/proton/tree/9a0c5a9300f293015288acc1ff5f186f563e6a77/examples/53_view_minimal) · 关键文件：[main.mbt](https://github.com/moonbit-community/proton/tree/9a0c5a9300f293015288acc1ff5f186f563e6a77/examples/53_view_minimal/main.mbt)
 
 ## 行为
 

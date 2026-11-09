@@ -3,7 +3,7 @@ name = "{{username}}/{{module}}_shared"
 version = "0.1.0"
 
 import {
-  "moonbit-community/proton_contract@0.7.0",
+  "moonbit-community/proton_contract@0.8.0",
 }
 
 license = "Apache-2.0"

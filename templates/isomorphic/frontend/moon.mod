@@ -4,9 +4,9 @@ version = "0.1.0"
 
 import {
   "{{username}}/{{module}}_shared@0.1.0",
-  "moonbit-community/proton_contract@0.7.0",
-  "moonbit-community/proton_client@0.7.0",
-  "moonbit-community/proton_rabbita@0.7.0",
+  "moonbit-community/proton_contract@0.8.0",
+  "moonbit-community/proton_client@0.8.0",
+  "moonbit-community/proton_rabbita@0.8.0",
   "moonbit-community/rabbita@0.16.4",
 }
 

@@ -10,7 +10,7 @@ This is a MoonBit Proton native desktop app.
 - Build with `proton_cli build`.
 - Inspect packaging with `proton_cli package --dry-run`.
 - Package with `proton_cli package`.
-- Use CLI 0.7.0 to match the application dependencies. `dev`, `build`, and `package`
+- Use CLI 0.8.0 to match the application dependencies. `dev`, `build`, and `package`
   prepare the environment automatically; `proton_cli setup` prepares it in advance
   for direct `moon` builds.
 

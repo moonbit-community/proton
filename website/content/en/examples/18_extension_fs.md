@@ -2,7 +2,7 @@
 
 This example lets a renderer request host file operations through the filesystem extension. The backend grants a specific directory and operation scope; the page exercises that grant through the command bridge.
 
-[18_extension_fs](https://github.com/moonbit-community/proton/tree/main/examples/18_extension_fs) · Source files: [main.mbt](https://github.com/moonbit-community/proton/tree/main/examples/18_extension_fs/main.mbt), [fs.html](https://github.com/moonbit-community/proton/tree/main/examples/18_extension_fs/fs.html)
+[18_extension_fs](https://github.com/moonbit-community/proton/tree/9a0c5a9300f293015288acc1ff5f186f563e6a77/examples/18_extension_fs) · Source files: [main.mbt](https://github.com/moonbit-community/proton/tree/9a0c5a9300f293015288acc1ff5f186f563e6a77/examples/18_extension_fs/main.mbt), [fs.html](https://github.com/moonbit-community/proton/tree/9a0c5a9300f293015288acc1ff5f186f563e6a77/examples/18_extension_fs/fs.html)
 
 ## Behavior
 

@@ -1,6 +1,6 @@
 # Release Notes
 
-## 0.8.0 (Unreleased)
+## 0.8.0
 
 HTTP(S) bridge grants and `proton_cli dev` readiness checks now normalize host
 names and ports the same way as the browser. Equivalent spellings of a loopback
@@ -22,6 +22,8 @@ Source builds require `moonc` 0.10.19 or newer. Cancelling packaging lets the
 rollback restore the previous output when replacement has not completed.
 Temporary directories and resources such as KeepAwake guards and CDP connections
 can also finish cleanup when their operations are cancelled.
+
+[Complete changes](https://github.com/moonbit-community/proton/compare/885948a4e3e7ca24e7dcca84446d2494f13f9df5...9a0c5a9300f293015288acc1ff5f186f563e6a77)
 
 ## 0.7.0
 
