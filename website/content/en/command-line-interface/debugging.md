@@ -27,7 +27,7 @@ Use the announced endpoint for that process lifetime; do not reserve and release
 
 The application must have debugging enabled (`App.debug()`); the port variable
 does not enable it. For native MoonBit automation, see the optional
-[`proton_cdp` library](https://github.com/moonbit-community/proton/blob/main/cdp/README.mbt.md).
+[`proton_cdp` library](https://github.com/moonbit-community/proton/blob/9a0c5a9300f293015288acc1ff5f186f563e6a77/cdp/README.mbt.md).
 
 ## Native CDP automation
 
@@ -50,7 +50,7 @@ async fn read_title(endpoint : String, title : String) -> Json {
 
 `Page.connect` selects a page; `target_id`, `url`, and `title` can disambiguate multiple targets. Connections belong to the supplied task group; leaving its scope closes them without closing the target application. `Page.close()` closes the connection explicitly. Page navigation and reload replace the execution context: use the returned `Navigation.wait_for_context()` before evaluating the new document. `Page.evaluate` is a single execution, not an automatic retry of potentially stateful JavaScript. A new execution context does not establish DOM or Proton bridge readiness; use `Page.wait_until` with an application-specific, side-effect-free predicate and an application-owned timeout when those are required.
 
-See the [versioned CDP guide](https://github.com/moonbit-community/proton/blob/main/cdp/README.mbt.md) for browser launch, screenshots and schema compatibility. CDP is for diagnostics and external automation, not an alternative application command bridge.
+See the [versioned CDP guide](https://github.com/moonbit-community/proton/blob/9a0c5a9300f293015288acc1ff5f186f563e6a77/cdp/README.mbt.md) for browser launch, screenshots and schema compatibility. CDP is for diagnostics and external automation, not an alternative application command bridge.
 
 ## Logs
 

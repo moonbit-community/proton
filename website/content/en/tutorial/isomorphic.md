@@ -1,8 +1,8 @@
 # Build a complete Todo application
 
-This tutorial targets the upcoming Proton 0.8.0. `dev`, `build`, and `package` prepare the
+This tutorial uses Proton 0.8.0. `dev`, `build`, and `package` prepare the
 environment automatically. Use `proton_cli setup` only to prepare it in advance.
-See [environment requirements](../introduction/installation.md) for release availability.
+See [environment requirements](../introduction/installation.md) for prerequisites.
 
 This tutorial uses the isomorphic template to connect a shared contract, native state, and a Rabbita UI. You will first run the generated Todo app, then add **Complete all** and **Reopen all** operations across all three modules.
 

@@ -1,7 +1,7 @@
 # 运行环境要求
 
-本书面向即将发布的 Proton 0.8.0。正式发布后可使用下文的 registry 安装命令。
-从 0.6.0 升级的方法见 [Release Notes](../release-notes/releases.md)。
+本书面向 Proton 0.8.0。
+从 0.7.0 升级的方法见 [Release Notes](../release-notes/releases.md)。
 
 Proton 0.8.0 支持以下宿主构建环境。原生构建与打包面向当前操作系统，Proton CLI 不提供跨操作系统交叉编译流程。
 
@@ -55,12 +55,12 @@ CLI 和应用依赖应保持相同 Proton 发行版本。
 
 ## 源码与运行时
 
-示例使用 `main` 分支上的仓库工作区。0.8.0 发布后，安装[所需工具](installation.md)及与检出的源码版本匹配的 CLI，并准备该版本的运行时。
+示例使用 0.8.0 发布提交的仓库工作区。安装[所需工具](installation.md)及匹配的 CLI，并准备该版本的运行时。
 
 ```sh
 git clone https://github.com/moonbit-community/proton.git
 cd proton
-git checkout main
+git checkout 9a0c5a9300f293015288acc1ff5f186f563e6a77
 moon update
 proton_cli setup
 ```

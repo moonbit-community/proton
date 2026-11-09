@@ -26,7 +26,7 @@ update frontend titles where applicable. The initial values are `Proton App`,
 
 ## Setup
 
-This template uses Proton 0.7.0. Use the matching CLI version. `dev`, `build`,
+This template uses Proton 0.8.0. Use the matching CLI version. `dev`, `build`,
 and `package` prepare the runtime and subprocess executable automatically.
 Use optional `proton_cli setup` to prepare them in advance, including before
 direct `moon` builds.
@@ -84,7 +84,7 @@ When `formats` is omitted, Proton selects the current host's default package
 formats. Frontend commands run from `frontend.path`; paths inside them are
 relative to that directory. Keep shell syntax appropriate to the host platform.
 The [configuration reference](https://moonbit-community.github.io/proton/configuration/project.html)
-describes 0.7.0's root platform overrides and migration from 0.6.0.
+describes the root platform overrides introduced in 0.7.0 and migration from 0.6.0.
 
 Window behavior, the asset entry, single-instance handling, and renderer
 permissions are declared by the Proton `App` builder in `backend/app/main.mbt`.

@@ -1,8 +1,8 @@
 # Create a project
 
-This tutorial targets the upcoming Proton 0.8.0. `dev`, `build`, and `package` prepare the
+This tutorial uses Proton 0.8.0. `dev`, `build`, and `package` prepare the
 environment automatically. Use `proton_cli setup` only to prepare it in advance.
-See [environment requirements](../introduction/installation.md) for release availability.
+See [environment requirements](../introduction/installation.md) for prerequisites.
 
 This guide creates a desktop window with the minimal template. You will run it, change its contents, and build the executable. Finish [prerequisites](../introduction/installation.md) before starting.
 

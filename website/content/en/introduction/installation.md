@@ -1,7 +1,6 @@
 # Environment requirements
 
-This book targets the upcoming Proton 0.8.0. Registry installation commands
-require its publication. See [Release Notes](../release-notes/releases.md)
+This book targets Proton 0.8.0. See [Release Notes](../release-notes/releases.md)
 for migration from 0.7.0.
 
 Proton 0.8.0 supports the following host build environments. Native builds and packages target the host operating system; cross-compilation is not provided by the Proton CLI.
@@ -58,12 +57,12 @@ To create an application with these tools, follow the [minimal application tutor
 
 ## Source checkout and runtime
 
-Examples use the repository workspace on `main`. Once 0.8.0 is published, install the [required tools](installation.md) and the CLI matching the checkout, then prepare its runtime:
+Examples use the repository workspace at the 0.8.0 release commit. Install the [required tools](installation.md) and the matching CLI, then prepare its runtime:
 
 ```sh
 git clone https://github.com/moonbit-community/proton.git
 cd proton
-git checkout main
+git checkout 9a0c5a9300f293015288acc1ff5f186f563e6a77
 moon update
 proton_cli setup
 ```
