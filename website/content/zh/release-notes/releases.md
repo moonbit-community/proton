@@ -1,6 +1,6 @@
 # Release Notes
 
-## 未发布
+## 0.8.0（未发布）
 
 HTTP(S) bridge 授权与 `proton_cli dev` 就绪探测采用与浏览器一致的主机和端口
 规范化规则。`127.1` 和 `127.0.0.1` 等等价的回环地址写法可以访问同一前端服务，
@@ -12,6 +12,11 @@ HTTP(S) bridge 授权与 `proton_cli dev` 就绪探测采用与浏览器一致�
 `ForegroundTab`、`BackgroundTab`、`Window`、`Popup` 或 `Other`。处理函数可以为
 后台标签页和弹出窗口分别选择处理策略。自行构造 `NewWindowRequest` 的代码（例如测试）需要补上该字段。
 参见[宿主回调契约](../introduction/application-api.md#宿主回调契约)。
+
+**构建与取消清理**
+
+源码构建要求 `moonc` 0.10.19 或更新版本。如果替换产物期间取消打包，回滚可以恢复旧产物。
+取消操作时，临时目录、KeepAwake guard 和 CDP 连接也可以完成清理。
 
 ## 0.7.0
 

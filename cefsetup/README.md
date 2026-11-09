@@ -6,7 +6,7 @@ are shared by all projects for a user and are selected by platform, archive
 digest, and layout version. Subprocess executables are shared by platform and
 Proton version under `~/.proton/subprocesses`.
 
-Proton CLI 0.7.0 prepares this installation automatically for `dev`,
+Since 0.7.0, Proton CLI prepares this installation automatically for `dev`,
 `build`, and `package`. Use `proton_cli setup` for optional prewarming from any
 directory. Direct Moon builds still require prior setup.
 

@@ -2,7 +2,7 @@
 
 本例在异步命令执行期间发送进度通知，展示前端如何通过事件订阅观察后端工作，以及进度事件与最终命令响应的区别。
 
-[40_event_broadcast](https://github.com/moonbit-community/proton/tree/885948a4e3e7ca24e7dcca84446d2494f13f9df5/examples/40_event_broadcast) · 关键文件：[main.mbt](https://github.com/moonbit-community/proton/tree/885948a4e3e7ca24e7dcca84446d2494f13f9df5/examples/40_event_broadcast/main.mbt), [app.html](https://github.com/moonbit-community/proton/tree/885948a4e3e7ca24e7dcca84446d2494f13f9df5/examples/40_event_broadcast/app.html)
+[40_event_broadcast](https://github.com/moonbit-community/proton/tree/main/examples/40_event_broadcast) · 关键文件：[main.mbt](https://github.com/moonbit-community/proton/tree/main/examples/40_event_broadcast/main.mbt), [app.html](https://github.com/moonbit-community/proton/tree/main/examples/40_event_broadcast/app.html)
 
 ## 行为
 

@@ -72,6 +72,6 @@ async fn main {
 
 ## 平台相关的窗口行为
 
-原生窗口装饰和可用控制项因平台而异。依赖平台专属方法前，请查询[窗口 API](https://github.com/moonbit-community/proton/blob/885948a4e3e7ca24e7dcca84446d2494f13f9df5/proton/pkg.generated.mbti)。使用叠加标题栏时，需要一起处理前端标题栏布局与原生配置。
+原生窗口装饰和可用控制项因平台而异。依赖平台专属方法前，请查询[窗口 API](https://github.com/moonbit-community/proton/blob/main/proton/pkg.generated.mbti)。使用叠加标题栏时，需要一起处理前端标题栏布局与原生配置。
 
 辅助页面也是独立的 capability 目标，只应授予其所需的宿主操作，见[原生能力](capabilities.md)。

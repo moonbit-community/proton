@@ -1,6 +1,6 @@
 # Create a project
 
-This tutorial uses Proton 0.7.0. `dev`, `build`, and `package` prepare the
+This tutorial targets the upcoming Proton 0.8.0. `dev`, `build`, and `package` prepare the
 environment automatically. Use `proton_cli setup` only to prepare it in advance.
 See [environment requirements](../introduction/installation.md) for release availability.
 
@@ -29,7 +29,7 @@ Then enter the project and continue with the same setup commands:
 cd hello-proton
 ```
 
-Ensure `moon.mod` requires `moonbit-community/proton@0.7.0` to match the CLI.
+Ensure `moon.mod` requires `moonbit-community/proton@0.8.0` to match the CLI.
 If the generated template uses an earlier version, update that requirement before continuing.
 
 Specify `--template minimal` because the default is `isomorphic`. Before distributing the app, edit `identifier` in `proton.project.json` to your own unique identifier, such as `com.example.hello-proton`.

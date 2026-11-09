@@ -1,6 +1,6 @@
 # Build a complete Todo application
 
-This tutorial uses Proton 0.7.0. `dev`, `build`, and `package` prepare the
+This tutorial targets the upcoming Proton 0.8.0. `dev`, `build`, and `package` prepare the
 environment automatically. Use `proton_cli setup` only to prepare it in advance.
 See [environment requirements](../introduction/installation.md) for release availability.
 
@@ -32,7 +32,7 @@ cd todo-app
 ```
 
 Keep all `moonbit-community/proton` and `moonbit-community/proton_*` requirements
-in `shared/moon.mod`, `backend/moon.mod`, and `frontend/moon.mod` on `0.7.0`,
+in `shared/moon.mod`, `backend/moon.mod`, and `frontend/moon.mod` on `0.8.0`,
 matching the CLI. Update older generated requirements before continuing:
 
 ```sh
