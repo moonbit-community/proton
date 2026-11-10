@@ -1,6 +1,6 @@
 name = "moonbit-community/proton_codegen"
 
-version = "0.8.0"
+version = "0.9.0"
 
 import {
   "moonbitlang/lexer@0.4.4",

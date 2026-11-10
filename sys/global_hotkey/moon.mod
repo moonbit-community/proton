@@ -1,9 +1,9 @@
 name = "moonbit-community/proton_global_hotkey"
 
-version = "0.8.0"
+version = "0.9.0"
 
 import {
-  "moonbit-community/proton_ffi@0.8.0",
+  "moonbit-community/proton_ffi@0.9.0",
 }
 
 readme = "README.mbt.md"

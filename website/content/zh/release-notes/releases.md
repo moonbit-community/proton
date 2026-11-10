@@ -1,6 +1,8 @@
 # Release Notes
 
-## 尚未发布
+## 0.9.0
+
+**异步运行时迁移（破坏性 API 变更）**
 
 Proton 改用 MoonBit 内置的 `moonbitlang/core/async` 运行时。使用异步 API 或
 `async fn main` 的包，需要在 `moon.pkg` 中将 `moonbitlang/async` 导入替换为

@@ -1,14 +1,14 @@
 name = "moonbit-community/proton/e2e"
 
-version = "0.8.0"
+version = "0.9.0"
 
 import {
   "moonbitlang/x@0.5.5",
-  "moonbit-community/proton_cdp@0.8.0",
-  "moonbit-community/proton@0.8.0",
-  "moonbit-community/proton_cefsetup@0.8.0",
-  "moonbit-community/proton_updater@0.8.0",
-  "moonbit-community/proton/examples@0.8.0",
+  "moonbit-community/proton_cdp@0.9.0",
+  "moonbit-community/proton@0.9.0",
+  "moonbit-community/proton_cefsetup@0.9.0",
+  "moonbit-community/proton_updater@0.9.0",
+  "moonbit-community/proton/examples@0.9.0",
 }
 
 readme = "README.md"
