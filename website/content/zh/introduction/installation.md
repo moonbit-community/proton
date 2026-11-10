@@ -2,7 +2,7 @@
 
 本书面向 Proton 0.8.0。
 从 0.7.0 升级的方法见 [Release Notes](../release-notes/releases.md)。
-当前源码的异步运行时要求见[尚未发布的改动](../release-notes/releases.md#尚未发布)。
+当前源码的异步运行时要求见 [0.9.0 迁移说明](../release-notes/releases.md#090)。
 
 Proton 0.8.0 支持以下宿主构建环境。原生构建与打包面向当前操作系统，Proton CLI 不提供跨操作系统交叉编译流程。
 

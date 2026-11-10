@@ -1,6 +1,8 @@
 # Release Notes
 
-## Unreleased
+## 0.9.0
+
+**Async runtime migration (breaking API change)**
 
 Proton now uses MoonBit's bundled `moonbitlang/core/async` runtime. In packages
 that use async APIs or an `async fn main`, replace `moonbitlang/async` imports

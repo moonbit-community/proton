@@ -1,12 +1,12 @@
 name = "moonbit-community/proton_rabbita"
 
-version = "0.8.0"
+version = "0.9.0"
 
 import {
   // Rabbita still uses the standalone package. Share core/async's runtime.
   "moonbitlang/async@0.22.7",
-  "moonbit-community/proton_client@0.8.0",
-  "moonbit-community/proton_contract@0.8.0",
+  "moonbit-community/proton_client@0.9.0",
+  "moonbit-community/proton_contract@0.9.0",
   "moonbit-community/rabbita@0.16.4",
 }
 

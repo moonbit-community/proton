@@ -1,5 +1,5 @@
 ///|
-let cli_current_version : String = "0.8.0"
+let cli_current_version : String = "0.9.0"
 
 ///|
 let cli_manifest_url : String = "https://mooncakes.io/api/v0/manifest/moonbit-community/proton_cli"
