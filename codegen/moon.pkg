@@ -1,8 +1,8 @@
 import {
   "moonbit-community/proton_codegen/lib" @codegen,
-  "moonbitlang/async",
-  "moonbitlang/async/fs" @async_fs,
-  "moonbitlang/async/stdio",
+  "moonbitlang/core/async",
+  "moonbitlang/core/async/fs" @async_fs,
+  "moonbitlang/core/async/stdio",
   "moonbitlang/core/argparse",
   "moonbitlang/core/debug",
   "moonbitlang/core/env",
@@ -13,3 +13,7 @@ import {
 supported_targets = "wasm"
 
 pkgtype(kind: "executable")
+
+options(
+  "allow-experimental-packages": true,
+)

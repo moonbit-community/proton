@@ -444,15 +444,15 @@ priv struct WindowLifetime {
   mut ready : Bool
   mut closed : Bool
   mut startup_error : AppRunError?
-  ready_signal : @async.CondVar
-  close_signal : @async.CondVar
+  ready_signal : @async.Cond
+  close_signal : @async.Cond
 }
 
 ///|
 priv struct CommandHostRuntime {
   host : @core.AppCommandHost
   destroy_hooks : Array[CommandExtensionDestroyHook]
-  start_hooks : Array[(@async.TaskGroup[Unit]) -> Unit raise AppRunError]
+  start_hooks : Array[(@async.TaskGroup) -> Unit raise AppRunError]
   event_sources : Array[CommandExtensionEventSource]
   mut closed : Bool
 }
@@ -521,11 +521,11 @@ priv struct RuntimeSession {
   wakeup : RuntimeWakeup
   forward_menu_events : Bool
   monitor_bridge : Bool
-  application_tasks : @async.TaskGroup[Unit]
+  application_tasks : @async.TaskGroup
   /// The single-instance lock this process holds, when the application
   /// declared `single_instance`. Released on demand and destroyed on exit.
   mut app_instance : @native.AppInstance?
-  window_tasks : @async.TaskGroup[Unit]
+  window_tasks : @async.TaskGroup
   lifecycle_failures : Array[AppCleanupError]
   window_commands : Array[WindowSessionCommand]
   pending_window_opens : Array[PendingWindowOpen]
@@ -544,7 +544,7 @@ priv enum DialogCompletionState {
 priv struct PendingDialogCompletion {
   dialog : Int64
   mut state : DialogCompletionState
-  changed : @async.CondVar
+  changed : @async.Cond
 }
 
 ///|
@@ -570,7 +570,7 @@ priv struct RuntimeEventPump {
 // first result; routing and cancellation belong to each operation's owner.
 priv struct Completion[T] {
   mut result : T?
-  changed : @async.CondVar
+  changed : @async.Cond
 }
 
 ///|
@@ -599,7 +599,7 @@ priv enum WindowSessionCommand {
 ///|
 priv struct WindowOpenCompletion[T] {
   mut state : WindowOpenCompletionState[T]
-  changed : @async.CondVar
+  changed : @async.Cond
 }
 
 ///|

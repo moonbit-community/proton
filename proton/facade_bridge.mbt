@@ -12,7 +12,7 @@ fn build_command_host(
     },
   )
   let destroy_hooks : Array[CommandExtensionDestroyHook] = []
-  let start_hooks : Array[(@async.TaskGroup[Unit]) -> Unit raise AppRunError] = []
+  let start_hooks : Array[(@async.TaskGroup) -> Unit raise AppRunError] = []
   let event_sources : Array[CommandExtensionEventSource] = []
   let app_capabilities : Array[RegisteredAppCommandCapability] = []
   let mut has_commands = false
@@ -495,7 +495,7 @@ async fn dispatch_bridge_request(
           )
       },
     )
-    command_tasks.return_immediately(())
+    command_tasks.return_immediately()
   }) catch {
     error => {
       @xlog.error(category="proton.command") <?
@@ -529,7 +529,7 @@ async fn dispatch_bridge_request_in_command_scope(
   request : @native.BridgeRequest,
   wake_signal : @core.RuntimeWakeSignal,
   dialog_completions : DialogCompletionStore,
-  command_tasks : @async.TaskGroup[Unit],
+  command_tasks : @async.TaskGroup,
   locale_preferences : @locale.LocalePreferences,
 ) -> @native.BridgeResponse {
   let request_id = request.request_id()

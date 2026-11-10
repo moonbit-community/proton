@@ -1,16 +1,21 @@
 import {
-  "moonbitlang/async",
-  "moonbitlang/async/fs",
+  "moonbitlang/core/async",
+  "moonbitlang/core/async/fs",
   "moonbitlang/core/env",
+  "moonbitlang/core/encoding/utf8",
   "moonbitlang/core/json",
-  "moonbitlang/async/http",
-  "moonbitlang/async/process",
-  "moonbitlang/async/websocket",
+  "moonbitlang/core/async/http",
+  "moonbitlang/core/async/process",
+  "moonbitlang/core/async/websocket",
   "moonbit-community/proton_cdp/protocol",
 }
 
 import {
-  "moonbitlang/async/socket",
+  "moonbitlang/core/async/socket",
 } for "wbtest"
 
 supported_targets = "+native"
+
+options(
+  "allow-experimental-packages": true,
+)

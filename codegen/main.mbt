@@ -61,7 +61,7 @@ fn codegen_command() -> @argparse.Command {
 
 ///|
 async fn write_stderr_line(message : String) -> Unit noraise {
-  @stdio.stderr.write(message + "\n") catch {
+  @stdio.stderr.text.write(message + "\n") catch {
     _ => ()
   }
 }
@@ -110,7 +110,7 @@ async fn generate(matches : @argparse.Matches) -> Unit {
   } else {
     @codegen.generate_commands_from_files(inputs)
   }
-  @async_fs.write_file(output, result.source, create_mode=CreateOrTruncate) catch {
+  @async_fs.write_text(output, result.source, create_mode=CreateOrTruncate) catch {
     error =>
       raise CodegenCliError::WriteFailed(
         path=output,

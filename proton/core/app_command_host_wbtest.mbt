@@ -145,7 +145,7 @@ async test "request context exposes the application locale snapshot" {
     assert_eq(context.preferred_languages().map(locale => locale.to_string()), [
       "ja-JP", "en-GB", "en-US",
     ])
-    group.return_immediately(())
+    group.return_immediately()
   })
 }
 

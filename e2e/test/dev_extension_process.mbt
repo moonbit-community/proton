@@ -84,10 +84,6 @@ async fn run_dev_extension_command(
 ) -> Unit {
   let output_path = join_path(output_root, name + ".log")
   @async.with_task_group(group => {
-    let output = @process.redirect_to_file(
-      output_path,
-      create_mode=@fs.CreateOrTruncate,
-    )
     let (program, args) = isolated_app_command(program, args)
     let process = @process.spawn(
       group,
@@ -95,8 +91,8 @@ async fn run_dev_extension_command(
       args,
       cwd~,
       extra_env=env,
-      stdout=output,
-      stderr=output,
+      stdout=ToFile(output_path),
+      stderr=DuplicateStdout,
       cancel_handler=app_cancel_handler(),
       no_wait=true,
     )
@@ -180,7 +176,7 @@ async fn dev_extension_host_env(
 
 ///|
 async fn spawn_dev_extension_cli_app(
-  group : @async.TaskGroup[Unit],
+  group : @async.TaskGroup,
   root : String,
   output_root : String,
   run_id : Int32,
@@ -189,10 +185,6 @@ async fn spawn_dev_extension_cli_app(
   let output_path = join_path(
     output_root,
     "child-" + run_id.to_string() + ".log",
-  )
-  let output = @process.redirect_to_file(
-    output_path,
-    create_mode=@fs.CreateOrTruncate,
   )
   // Chromium normalizes this loopback spelling before applying bridge grants.
   let frontend_url = "http://127.1:" + frontend_port.to_string()
@@ -229,8 +221,8 @@ async fn spawn_dev_extension_cli_app(
     args,
     cwd=root,
     extra_env=dev_extension_host_env(root, output_root, run_id),
-    stdout=output,
-    stderr=output,
+    stdout=ToFile(output_path),
+    stderr=DuplicateStdout,
     cancel_handler=app_cancel_handler(),
     no_wait=true,
   )
@@ -239,7 +231,7 @@ async fn spawn_dev_extension_cli_app(
 
 ///|
 async fn spawn_dev_extension_production_app(
-  group : @async.TaskGroup[Unit],
+  group : @async.TaskGroup,
   root : String,
   output_root : String,
   run_id : Int32,
@@ -247,10 +239,6 @@ async fn spawn_dev_extension_production_app(
   let output_path = join_path(
     output_root,
     "child-" + run_id.to_string() + ".log",
-  )
-  let output = @process.redirect_to_file(
-    output_path,
-    create_mode=@fs.CreateOrTruncate,
   )
   let (program, args) = isolated_app_command("moon", [
     "-C",
@@ -270,8 +258,8 @@ async fn spawn_dev_extension_production_app(
     args,
     cwd=root,
     extra_env=dev_extension_runtime_env(root, output_root, run_id),
-    stdout=output,
-    stderr=output,
+    stdout=ToFile(output_path),
+    stderr=DuplicateStdout,
     cancel_handler=app_cancel_handler(),
     no_wait=true,
   )
@@ -498,7 +486,7 @@ async fn run_dev_extension_scenario(root : String, timeout : Int32) -> Unit {
   })
   errdefer (if @env.get_env_var("GITHUB_ENV") is Some(env_file) {
     @async.protect_from_cancel(() => {
-      @fs.write_file(
+      @fs.write_text(
         env_file,
         "PROTON_E2E_FAILURE_DIR=" + output_root + "\n",
         append=true,
@@ -514,7 +502,7 @@ async fn run_dev_extension_scenario(root : String, timeout : Int32) -> Unit {
     run_dev_extension_scenario_once(root, output_root, timeout)
   } catch {
     error => {
-      @fs.write_file(join_path(output_root, "failure.txt"), error.to_string())
+      @fs.write_text(join_path(output_root, "failure.txt"), error.to_string())
       fail("Dev-extension scenario failed: " + error.to_string())
     }
   }

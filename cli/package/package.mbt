@@ -390,13 +390,13 @@ async fn run_package_prepare(plan : PackagePlan) -> Unit {
       @output.info("Preparing package: " + command)
       @output.info("Package prepare cwd: " + plan.base_dir)
       let (program, args) = @project.shell_command(command)
-      let code = @process.run(program, args, cwd=plan.base_dir) catch {
-        error =>
-          raise @build.BuildProcessError::Start(
-            command="package.prepare '" + command + "'",
-            detail=@debug.render(Repr(error)),
-          )
-      }
+      let code = @process.run(program, args, cwd=plan.base_dir).exit_code catch {
+          error =>
+            raise @build.BuildProcessError::Start(
+              command="package.prepare '" + command + "'",
+              detail=@debug.render(Repr(error)),
+            )
+        }
       if code != 0 {
         raise @build.BuildProcessError::Exit(
           command="package.prepare '" + command + "'",

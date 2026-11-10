@@ -24,10 +24,12 @@ async fn kill_renderer_subprocesses(snapshot : ProcessSnapshot) -> Unit {
     guard names_renderer || forked_from_subprocess else { continue }
     if @path.sep == '\\' {
       ignore(
-        @process.collect_output_merged(
+        @process.run(
           "taskkill",
           ["/pid", pid.to_string(), "/t", "/f"],
           no_console_window=true,
+          stdout=Discard,
+          stderr=Discard,
         ),
       )
     } else {
@@ -37,7 +39,7 @@ async fn kill_renderer_subprocesses(snapshot : ProcessSnapshot) -> Unit {
           ["-9", pid.to_string()],
           inherit_env=false,
           no_console_window=true,
-        ),
+        ).exit_code,
       )
     }
     killed = killed + 1

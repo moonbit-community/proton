@@ -1,6 +1,6 @@
 ///|
 fn[T] Completion::Completion() -> Completion[T] {
-  { result: None, changed: @async.CondVar::Cond(), }
+  { result: None, changed: @async.Cond(), }
 }
 
 ///|

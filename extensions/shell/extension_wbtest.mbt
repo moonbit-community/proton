@@ -26,33 +26,31 @@ async test "shell delegates literal targets and reports launcher failures" {
   let launcher =
     #|#!/bin/sh
     #|printf '%s\n' "$@" > "$0.args"
-  @async_fs.write_file(dir + "/gio", launcher)
-  @async_fs.write_file(dir + "/dbus-send", launcher)
+  @async_fs.write_text(dir + "/gio", launcher)
+  @async_fs.write_text(dir + "/dbus-send", launcher)
   @async_fs.chmod(dir + "/gio", 0o755)
   @async_fs.chmod(dir + "/dbus-send", 0o755)
   @env.set_env_var("PATH", dir)
   let target = "https://example.invalid/中文?q=a b&x=$(false)"
   @sys_shell.open(target)
   assert_eq(
-    @async_fs.read_file(dir + "/gio.args").text(),
+    @async_fs.read_text(dir + "/gio.args"),
     "open\n--\n" + target + "\n",
   )
   let path = "/tmp/中文 space,%#'$.txt"
   @sys_shell.reveal_item(path)
   assert_eq(
-    @async_fs.read_file(dir + "/dbus-send.args").text(),
+    @async_fs.read_text(dir + "/dbus-send.args"),
     "--session\n--print-reply=literal\n--dest=org.freedesktop.FileManager1\n" +
     "/org/freedesktop/FileManager1\norg.freedesktop.FileManager1.ShowItems\n" +
     "array:string:file:///tmp/%E4%B8%AD%E6%96%87%20space%2C%25%23%27%24.txt\nstring:\n",
   )
-  @async_fs.write_file(dir + "/target", "content")
+  @async_fs.write_text(dir + "/target", "content")
   @async_fs.symlink(dir + "/link", target=dir + "/target")
   @sys_shell.reveal_item(dir + "/link")
-  assert_true(
-    @async_fs.read_file(dir + "/dbus-send.args").text().contains("/link\n"),
-  )
-  @async_fs.write_file(dir + "/gio", "#!/bin/sh\nexit 1\n")
-  @async_fs.write_file(dir + "/dbus-send", "#!/bin/sh\nexit 1\n")
+  assert_true(@async_fs.read_text(dir + "/dbus-send.args").contains("/link\n"))
+  @async_fs.write_text(dir + "/gio", "#!/bin/sh\nexit 1\n")
+  @async_fs.write_text(dir + "/dbus-send", "#!/bin/sh\nexit 1\n")
   assert_true(
     try {
       @sys_shell.open(target)

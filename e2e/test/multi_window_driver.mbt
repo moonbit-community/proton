@@ -1,6 +1,6 @@
 ///|
 async fn run_multi_window_driver_probe(
-  tasks : @async.TaskGroup[Unit],
+  tasks : @async.TaskGroup,
   target : String,
   timeout : Int32,
 ) -> Unit {
@@ -19,17 +19,12 @@ async fn run_multi_window_driver_probe(
   )
   wait_for_ready(page_a, multi_window_ready_expression(), timeout)
   wait_for_ready(page_b, multi_window_ready_expression(), timeout)
-  let (result_a, result_b) = @async.with_task_group(group => {
-    let task_a = group.spawn(
-      () => evaluate_bool(page_a, multi_window_driver_expression(220), true),
-      no_wait=true,
-    )
-    let task_b = group.spawn(
-      () => evaluate_bool(page_b, multi_window_driver_expression(20), true),
-      no_wait=true,
-    )
-    (task_a.wait(), task_b.wait())
-  })
+  let values = @async.all([
+    () => evaluate_bool(page_a, multi_window_driver_expression(220), true),
+    () => evaluate_bool(page_b, multi_window_driver_expression(20), true),
+  ])
+  let result_a = values[0]
+  let result_b = values[1]
   guard result_a && result_b else {
     fail("CDP e2e multi-window driver probe failed")
   }

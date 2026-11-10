@@ -13,12 +13,12 @@ async fn write_cef_fixture(root : String, platform : ProtonPlatform) -> Unit {
     if !path_exists(parent) {
       @async_fs.mkdir(parent, recursive=true)
     }
-    @async_fs.write_file(path, "fixture", create_mode=CreateOrTruncate)
+    @async_fs.write_text(path, "fixture", create_mode=CreateOrTruncate)
   }
   if platform.id == "linux-x64" || platform.id == "win32-x64" {
     let locales = path_join(root, "Resources/locales")
     ensure_dir(locales)
-    @async_fs.write_file(
+    @async_fs.write_text(
       path_join(locales, "en-US.pak"),
       "fixture",
       create_mode=CreateOrTruncate,
@@ -78,7 +78,7 @@ async test "CEF validation rejects empty artifacts" {
   let platform = darwin_arm64_platform()
   write_cef_fixture(temp, platform)
   let empty = path_join(temp, installed_cef_relative_files(platform)[0])
-  @async_fs.write_file(empty, "", create_mode=CreateOrTruncate)
+  @async_fs.write_text(empty, "", create_mode=CreateOrTruncate)
   assert_true(validate_cef_layout(temp, platform).contains(empty))
 }
 
@@ -97,7 +97,7 @@ async test "runtime assembly replaces an incomplete staging layout" {
     ensure_dir(cef_root)
     write_cef_fixture(cef_root, platform)
     ensure_dir(runtime)
-    @async_fs.write_file(
+    @async_fs.write_text(
       path_join(runtime, "truncated"),
       "fixture",
       create_mode=CreateOrTruncate,
@@ -121,20 +121,20 @@ async test "one publish replaces an invalid installation" {
   let target = path_join(temp, "target")
   let staging = path_join(temp, "staging")
   @async_fs.mkdir(target)
-  @async_fs.write_file(
+  @async_fs.write_text(
     path_join(target, "old"),
     "old",
     create_mode=CreateOrTruncate,
   )
   @async_fs.mkdir(staging)
-  @async_fs.write_file(
+  @async_fs.write_text(
     path_join(staging, "new"),
     "new",
     create_mode=CreateOrTruncate,
   )
   publish_staged_directory(staging, target)
   assert_false(path_exists(path_join(target, "old")))
-  assert_eq(@async_fs.read_file(path_join(target, "new")).text(), "new")
+  assert_eq(@async_fs.read_text(path_join(target, "new")), "new")
 }
 
 ///|
@@ -173,9 +173,9 @@ async test "subprocess validation rejects empty and non-executable installations
   defer discard_tree(temp)
   let subprocess = path_join(temp, "cef_process")
   assert_false(subprocess_is_valid(subprocess))
-  @async_fs.write_file(subprocess, "", create_mode=CreateOrTruncate)
+  @async_fs.write_text(subprocess, "", create_mode=CreateOrTruncate)
   assert_false(subprocess_is_valid(subprocess))
-  @async_fs.write_file(
+  @async_fs.write_text(
     subprocess,
     "subprocess fixture",
     create_mode=CreateOrTruncate,
@@ -189,13 +189,13 @@ async test "subprocess validation rejects empty and non-executable installations
   let staging = path_join(temp, "repair")
   @async_fs.mkdir(staging)
   let repaired = path_join(staging, "cef_process")
-  @async_fs.write_file(repaired, "replacement", create_mode=CreateOrTruncate)
+  @async_fs.write_text(repaired, "replacement", create_mode=CreateOrTruncate)
   if @path.sep != '\\' {
     @async_fs.chmod(repaired, 0o755)
   }
   let target = path_join(temp, "installation")
   @async_fs.mkdir(target)
-  @async_fs.write_file(
+  @async_fs.write_text(
     path_join(target, "cef_process"),
     "",
     create_mode=CreateOrTruncate,
@@ -237,7 +237,7 @@ async test "setup reuses a complete runtime and subprocess without project state
   write_runtime_manifest(runtime)
   let (subprocess_root, subprocess, _) = default_subprocess_paths()
   ensure_dir(subprocess_root)
-  @async_fs.write_file(
+  @async_fs.write_text(
     subprocess,
     "cached subprocess",
     create_mode=CreateOrTruncate,
@@ -249,7 +249,7 @@ async test "setup reuses a complete runtime and subprocess without project state
     let installed = setup_default()
     assert_eq(installed.runtime_root(), runtime.runtime_root)
     assert_eq(
-      @async_fs.read_file(resolve_default_subprocess()).text(),
+      @async_fs.read_text(resolve_default_subprocess()),
       "cached subprocess",
     )
   }

@@ -54,7 +54,7 @@ async test "metadata cancellation closes the streaming connection" {
         defer conn.close()
         ignore(conn.read_request())
         conn.send_response(200, "OK")
-        conn.write("partial metadata")
+        conn.write_string("partial metadata")
         conn.flush()
         started.val = true
         ignore(conn.read_request()) catch {

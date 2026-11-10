@@ -1,5 +1,20 @@
 # Release Notes
 
+## Unreleased
+
+Proton now uses MoonBit's bundled `moonbitlang/core/async` runtime. In packages
+that use async APIs or an `async fn main`, replace `moonbitlang/async` imports
+with the corresponding `moonbitlang/core/async` imports and add
+`options("allow-experimental-packages": true)` to `moon.pkg`. Use a MoonBit
+toolchain that ships the experimental core async packages.
+
+`ApplicationContext::task_group()`, `WindowContext::task_group()`, extension
+startup hooks, KeepAwake, and CDP now use `@async.TaskGroup` without a type
+parameter. A task group returns `Unit`, and `return_immediately()` takes no
+argument. Use `@async.all` to collect concurrent results. If a dependency
+still imports `moonbitlang/async`, resolve it to `0.22.7` or newer so it shares
+the same runtime.
+
 ## 0.8.0
 
 HTTP(S) bridge grants and `proton_cli dev` readiness checks now normalize host

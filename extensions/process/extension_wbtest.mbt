@@ -12,7 +12,7 @@ async fn process_request(
         @ipc.IpcOpRequest("test", "ext:process/" + name, body),
       ),
     )
-    request_tasks.return_immediately(())
+    request_tasks.return_immediately()
   })
   response.val.unwrap()
 }
@@ -90,10 +90,10 @@ async test "owner shutdown reaps children and clears the registry" {
         cwd: None,
       })
       child.val = Some(owner.lookup_process(reply.process_id))
-      request_tasks.return_immediately(())
+      request_tasks.return_immediately()
     })
     assert_true(child.val.unwrap().try_wait() is None)
-    owner_tasks.return_immediately(())
+    owner_tasks.return_immediately()
   })
   // Exiting the owning task group joins the process cancellation task.
   assert_true(child.val.unwrap().try_wait() is Some(_))

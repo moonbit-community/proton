@@ -26,7 +26,7 @@ descriptors as the desktop convenience functions.
 
 The cancellation function returned by invoke_with_callbacks is idempotent and
 suppresses late success/failure callbacks even if the transport ignores abort.
-Async invocation requires a moonbitlang/async task context; adapters whose
+Async invocation requires a moonbitlang/core/async task context; adapters whose
 runtime owns scheduling should use invoke_with_callbacks. Async task
 cancellation also cancels the pending invocation. Cancellation ends
 observation and requests backend cancellation; it never promises to undo a

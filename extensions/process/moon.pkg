@@ -1,6 +1,6 @@
 import {
-  "moonbitlang/async",
-  "moonbitlang/async/process" @async_process,
+  "moonbitlang/core/async",
+  "moonbitlang/core/async/process" @async_process,
   "moonbitlang/core/debug",
   "moonbit-community/proton",
   "moonbit-community/proton/extension" @proton_extension,
@@ -16,6 +16,7 @@ import {
 } for "wbtest"
 
 options(
+  "allow-experimental-packages": true,
   targets: {
     "extension.mbt": [ "native" ],
     "extension_wbtest.mbt": [ "native" ],

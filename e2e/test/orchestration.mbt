@@ -182,8 +182,8 @@ fn path_list_separator() -> String {
 }
 
 ///|
-async fn[X] spawn_scenario_app(
-  group : @async.TaskGroup[X],
+async fn spawn_scenario_app(
+  group : @async.TaskGroup,
   root : String,
   output_root : String,
   scenario : String,
@@ -216,18 +216,14 @@ async fn[X] spawn_scenario_app(
     output_root,
     "child-" + run_id.to_string() + ".log",
   )
-  let output = @process.redirect_to_file(
-    output_path,
-    create_mode=@fs.CreateOrTruncate,
-  )
   let process = @process.spawn(
     group,
     program,
     args,
     cwd=root,
     extra_env=app_process_env(root, output_root, scenario, run_id),
-    stdout=output,
-    stderr=output,
+    stdout=ToFile(output_path),
+    stderr=DuplicateStdout,
     cancel_handler=app_cancel_handler(),
     no_wait=true,
   )
@@ -272,17 +268,13 @@ async fn install_scenario_subprocess(
       )
     None => {
       let log_path = join_path(output_root, "subprocess-install.log")
-      let output = @process.redirect_to_file(
-        log_path,
-        create_mode=@fs.CreateOrTruncate,
-      )
       let code = @process.run(
-        "moon",
-        args,
-        cwd=root,
-        stdout=output,
-        stderr=output,
-      )
+          "moon",
+          args,
+          cwd=root,
+          stdout=ToFile(log_path),
+          stderr=DuplicateStdout,
+        ).exit_code
       guard code == 0 else {
         fail(
           "failed to install the E2E CEF subprocess" +
@@ -346,10 +338,12 @@ fn app_cancel_handler() -> @process.CancellationHandler {
   if @path.sep == '\\' {
     @process.CancellationHandler(async fn(pid) {
       ignore(
-        @process.collect_output_merged(
+        @process.run(
           "taskkill",
           ["/pid", pid.to_string(), "/t", "/f"],
           no_console_window=true,
+          stdout=Discard,
+          stderr=Discard,
         ),
       )
     })
@@ -379,7 +373,7 @@ async fn terminate_unix_app_tree(pid : Int32, signal : String) -> Unit {
       ],
       inherit_env=false,
       no_console_window=true,
-    ),
+    ).exit_code,
   )
 }
 

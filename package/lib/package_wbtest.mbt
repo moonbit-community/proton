@@ -420,9 +420,9 @@ async test "competing package builds serialize preparation and release the lock 
   let root = @async_fs.tmpdir(prefix="proton-package-lock-")
   defer discard_tree(root)
   let executable = path_join(root, "fixture")
-  @async_fs.write_file(executable, "fixture", create_mode=CreateOrTruncate)
+  @async_fs.write_text(executable, "fixture", create_mode=CreateOrTruncate)
   let icon = path_join(root, "icon.png")
-  @async_fs.write_file(icon, package_test_png)
+  @async_fs.write_binary(icon, package_test_png)
   let formats = match current_package_host() {
     Linux => [AppImage]
     _ => [App]
@@ -489,14 +489,14 @@ async test "macOS packaging preserves declared minimum and leaves resources opaq
   let root = @async_fs.tmpdir(prefix="proton-package-minimum-")
   defer discard_tree(root)
   let source = path_join(root, "main.c")
-  @async_fs.write_file(source, "int main(void) { return 0; }")
+  @async_fs.write_text(source, "int main(void) { return 0; }")
   let executable = path_join(root, "main")
-  assert_eq(@process.run("cc", [source, "-o", executable]), 0)
+  assert_eq(@process.run("cc", [source, "-o", executable]).exit_code, 0)
   // A Java class header shares the fat Mach-O magic. Resources are copied,
   // regardless of their filename or contents, without binary inspection.
   let resource = path_join(root, "resource.bin")
   let contents : Bytes = b"\xca\xfe\xba\xbe\x00\x00\x00\x45\x00\x01"
-  @async_fs.write_file(resource, contents)
+  @async_fs.write_binary(resource, contents)
   let spec = PackageSpec(
     executable,
     "Minimum Test",
@@ -514,9 +514,9 @@ async test "macOS packaging preserves declared minimum and leaves resources opaq
       ..spec,
       macos_minimum_system_version: requested,
     })
-    let plist = @async_fs.read_file(
+    let plist = @async_fs.read_text(
       path_join(artifacts[0], "Contents/Info.plist"),
-    ).text()
+    )
     match requested {
       None => assert_false(plist.contains("LSMinimumSystemVersion"))
       Some(value) =>
@@ -528,9 +528,9 @@ async test "macOS packaging preserves declared minimum and leaves resources opaq
     }
     for name in ["Example.class", "opaque.bin"] {
       assert_eq(
-        @async_fs.read_file(
+        @async_fs.read_binary(
           path_join(artifacts[0], "Contents/Resources/" + name),
-        ).binary(),
+        ),
         contents,
       )
     }
@@ -543,13 +543,13 @@ async test "AppImage staging keeps a single-file executable payload executable" 
   let root = @async_fs.tmpdir(prefix="proton-package-mode-")
   defer discard_tree(root)
   let executable = path_join(root, "fixture")
-  @async_fs.write_file(executable, "fixture", create_mode=CreateOrTruncate)
+  @async_fs.write_text(executable, "fixture", create_mode=CreateOrTruncate)
   // Stands in for the CEF subprocess executable, which Proton stages as its own payload.
   let helper = path_join(root, "helper")
-  @async_fs.write_file(helper, "#!/bin/sh\n", create_mode=CreateOrTruncate)
+  @async_fs.write_text(helper, "#!/bin/sh\n", create_mode=CreateOrTruncate)
   @async_fs.chmod(helper, 0o755)
   let icon = path_join(root, "icon.png")
-  @async_fs.write_file(icon, package_test_png)
+  @async_fs.write_binary(icon, package_test_png)
   let spec = PackageSpec(
     executable,
     "Mode Test",
@@ -565,7 +565,7 @@ async test "AppImage staging keeps a single-file executable payload executable" 
     build_with(spec, PackageCustomization(), layout => {
       prepared.val = true
       let staged = path_join(layout.executables, "helper")
-      assert_eq(@process.run("test", ["-x", staged]), 0)
+      assert_eq(@process.run("test", ["-x", staged]).exit_code, 0)
       raise PackagePreparationTestError
     }),
   ) catch {
@@ -584,9 +584,9 @@ async test "cancelled package builds release the output lock" {
     let root = @async_fs.tmpdir(prefix="proton-package-cancel-")
     defer discard_tree(root)
     let executable = path_join(root, "fixture")
-    @async_fs.write_file(executable, "fixture", create_mode=CreateOrTruncate)
+    @async_fs.write_text(executable, "fixture", create_mode=CreateOrTruncate)
     let icon = path_join(root, "icon.png")
-    @async_fs.write_file(icon, package_test_png)
+    @async_fs.write_binary(icon, package_test_png)
     let formats = match current_package_host() {
       Linux => [AppImage]
       _ => [App]
@@ -662,7 +662,7 @@ async test "file copies accept leading-dash source and destination paths" {
   @async_fs.mkdir(root)
   defer discard_tree(root)
   let source = path_join(root, "-v")
-  @async_fs.write_file(source, "executable payload")
+  @async_fs.write_text(source, "executable payload")
   @async_fs.chmod(source, 0o755)
   let roots = [
     root,
@@ -676,8 +676,8 @@ async test "file copies accept leading-dash source and destination paths" {
         "file-" + source_index.to_string() + "-" + destination_index.to_string(),
       )
       copy_file(path_join(source_root, "-v"), destination)
-      assert_eq(@async_fs.read_file(destination).text(), "executable payload")
-      assert_eq(@process.run("test", ["-x", destination]), 0)
+      assert_eq(@async_fs.read_text(destination), "executable payload")
+      assert_eq(@process.run("test", ["-x", destination]).exit_code, 0)
     }
   }
 }
@@ -692,7 +692,7 @@ async test "directory copies accept leading-dash source and destination paths" {
   defer discard_tree(root)
   let source = path_join(root, "-directory")
   ensure_dir(path_join(source, "nested"))
-  @async_fs.write_file(path_join(source, "nested/payload"), "directory payload")
+  @async_fs.write_text(path_join(source, "nested/payload"), "directory payload")
   let roots = [
     root,
     "./" + root,
@@ -706,7 +706,7 @@ async test "directory copies accept leading-dash source and destination paths" {
       )
       copy_tree(path_join(source_root, "-directory"), destination)
       assert_eq(
-        @async_fs.read_file(path_join(destination, "nested/payload")).text(),
+        @async_fs.read_text(path_join(destination, "nested/payload")),
         "directory payload",
       )
     }

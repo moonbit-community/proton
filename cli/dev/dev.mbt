@@ -150,7 +150,7 @@ pub async fn run(cwd : String, matches : @argparse.Matches) -> Unit {
   let snapshot_dir = @async_fs.tmpdir(prefix="proton-dev-config-")
   defer @async_fs.rmdir(snapshot_dir, recursive=true)
   let snapshot_path = @fsutil.path_join(snapshot_dir, "proton.project.json")
-  @async_fs.write_file(
+  @async_fs.write_text(
     snapshot_path,
     project_config.to_json().stringify(),
     create_mode=CreateOrTruncate,
@@ -492,8 +492,8 @@ fn path_list_separator() -> String {
 }
 
 ///|
-async fn[X] start_frontend(
-  group : @async.TaskGroup[X],
+async fn start_frontend(
+  group : @async.TaskGroup,
   frontend_path : String,
   command : String,
   env : Map[String, String],
@@ -539,7 +539,7 @@ fn frontend_cancel_handler() -> @process.CancellationHandler {
           ["/pid", pid.to_string(), "/t", "/f"],
           no_console_window=true,
           cancel_handler=@process.hard_cancel(),
-        ),
+        ).exit_code,
       )
     })
   } else {
@@ -564,7 +564,7 @@ async fn terminate_unix_frontend_tree(pid : Int32, signal : String) -> Unit {
         signal,
       ],
       no_console_window=true,
-    ),
+    ).exit_code,
   )
 }
 
@@ -666,9 +666,9 @@ async fn command_exists(command : String) -> Bool {
     ["-c", "command -v " + shell_quote(command) + " >/dev/null 2>&1"]
   }
   let program = if @path.sep == '\\' { "cmd" } else { "sh" }
-  let code = @process.run(program, args, no_console_window=true) catch {
-    _ => return false
-  }
+  let code = @process.run(program, args, no_console_window=true).exit_code catch {
+      _ => return false
+    }
   code == 0
 }
 
@@ -710,16 +710,14 @@ async fn server_ready(endpoint : DevUrlEndpoint, ready_path : String?) -> Bool {
 
 ///|
 async fn http_ready(url : String) -> Bool {
-  let (code, _) = @process.collect_output_merged("curl", [
-    "-fsS",
-    "--max-time",
-    "2",
-    "-o",
-    dev_null_path(),
-    url,
-  ]) catch {
-    _ => return false
-  }
+  let code = @process.run(
+      "curl",
+      ["-fsS", "--max-time", "2", "-o", dev_null_path(), url],
+      stdout=Discard,
+      stderr=Discard,
+    ).exit_code catch {
+      _ => return false
+    }
   code == 0
 }
 
@@ -787,9 +785,9 @@ async fn run_app(
   for key, value in env {
     moon_env[key] = value
   }
-  let code = @process.run("moon", moon_args, cwd=root, extra_env=moon_env) catch {
-    err => raise Start(role="MoonBit app", detail=@debug.render(Repr(err)))
-  }
+  let code = @process.run("moon", moon_args, cwd=root, extra_env=moon_env).exit_code catch {
+      err => raise Start(role="MoonBit app", detail=@debug.render(Repr(err)))
+    }
   code
 }
 

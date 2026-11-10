@@ -253,7 +253,7 @@ native checks before handing off larger refactors.
   automation may use WebSocket to talk to Chromium, but Proton app IPC belongs
   to the source-built native bridge route.
 - Keep the root facade wake-driven through Proton's external event loop. The
-  facade's `fn init` hands it to `moonbitlang/async` -- that is the only place
+  facade's `fn init` hands it to `moonbitlang/core/async` -- that is the only place
   guaranteed to run before async starts its loop, and installing afterwards
   aborts -- and `proton_host_loop_poll` is the only thing that advances the
   platform while it is running: every native notification reaches MoonBit as a

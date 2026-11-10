@@ -1,6 +1,6 @@
 import {
-  "moonbitlang/async",
-  "moonbitlang/async/pipe",
+  "moonbitlang/core/async",
+  "moonbitlang/core/async/pipe",
   "moonbit-community/proton_ffi" @ffi,
   "moonbitlang/core/encoding/utf8",
 }
@@ -8,6 +8,7 @@ import {
 supported_targets = "native"
 
 options(
+  "allow-experimental-packages": true,
   link: {
     "native": {
       "stub-cc-flags": "${build.MACOS_STUB_FLAGS} ${build.LINUX_STUB_FLAGS}",

@@ -128,7 +128,7 @@ pub extend AttributeScenarioProbe with FromJson::{from_json}
 
 ///|
 async fn run_extension_scenario_page_probe(
-  tasks : @async.TaskGroup[Unit],
+  tasks : @async.TaskGroup,
   app : SpawnedScenarioApp,
   target : String,
   name : String,

@@ -3,7 +3,8 @@ name = "{{username}}/{{module}}"
 version = "0.1.0"
 
 import {
-  "moonbitlang/async@0.22.5",
+  // Proton 0.8.0 uses the standalone API. This version shares core/async's runtime.
+  "moonbitlang/async@0.22.7",
   "moonbit-community/proton@0.8.0",
 }
 

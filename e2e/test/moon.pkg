@@ -1,10 +1,10 @@
 import {
   "moonbitlang/core/debug",
-  "moonbitlang/async",
-  "moonbitlang/async/fs",
-  "moonbitlang/async/http",
-  "moonbitlang/async/process",
-  "moonbitlang/async/socket",
+  "moonbitlang/core/async",
+  "moonbitlang/core/async/fs",
+  "moonbitlang/core/async/http",
+  "moonbitlang/core/async/process",
+  "moonbitlang/core/async/socket",
   "moonbitlang/core/encoding/base64",
   "moonbitlang/core/env",
   "moonbitlang/core/json",
@@ -23,5 +23,6 @@ supported_targets = "native"
 pkgtype(kind: "executable")
 
 options(
+  "allow-experimental-packages": true,
   "native-stub": [ "process_group.c" ],
 )

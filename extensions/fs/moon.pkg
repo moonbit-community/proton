@@ -1,9 +1,9 @@
 import {
   "moonbitlang/core/debug",
   "moonbitlang/core/encoding/utf8",
-  "moonbitlang/async",
-  "moonbitlang/async/fs" @async_fs,
-  "moonbitlang/async/os_error",
+  "moonbitlang/core/async",
+  "moonbitlang/core/async/fs" @async_fs,
+  "moonbitlang/core/async/os_error",
   "moonbitlang/x/path" @mbpath,
   "moonbit-community/proton",
   "moonbit-community/proton/extension" @proton_extension,
@@ -15,6 +15,7 @@ supported_targets = "native"
 formatter(ignore: [ "extension.g.mbt" ])
 
 options(
+  "allow-experimental-packages": true,
   targets: {
     "extension.g.mbt": [ "native" ],
     "extension.mbt": [ "native" ],

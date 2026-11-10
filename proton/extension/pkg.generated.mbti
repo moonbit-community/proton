@@ -5,7 +5,7 @@ import {
   "moonbit-community/proton/command",
   "moonbit-community/proton_contract",
   "moonbit-community/proton_ffi",
-  "moonbitlang/async",
+  "moonbitlang/core/async",
   "moonbitlang/core/debug",
   "moonbitlang/core/json",
 }
@@ -17,7 +17,7 @@ pub fn[Payload : @json.ToJson] event(@proton_contract.Event[Payload], Payload) -
 
 pub fn event_source((@proton_ffi.EventWakeup) -> Unit raise, () -> Unit, () -> Array[Event] raise) -> EventSource
 
-pub fn typed(@proton_contract.ExtensionContract, (@command.CommandRegistrar) -> Unit raise, scripts? : Array[String], dependencies? : Array[String], resolve_permission? : (@json.Json, String) -> @json.Json raise @command.PermissionScopeValidationError, event_source? : EventSource, on_start? : (@async.TaskGroup[Unit]) -> Unit raise, on_destroy? : () -> Unit raise) -> Extension
+pub fn typed(@proton_contract.ExtensionContract, (@command.CommandRegistrar) -> Unit raise, scripts? : Array[String], dependencies? : Array[String], resolve_permission? : (@json.Json, String) -> @json.Json raise @command.PermissionScopeValidationError, event_source? : EventSource, on_start? : (@async.TaskGroup) -> Unit raise, on_destroy? : () -> Unit raise) -> Extension
 
 // Errors
 #derive(@debug.Debug)

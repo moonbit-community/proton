@@ -17,7 +17,7 @@ pub extend WebContentsViewPageProbe with FromJson::{from_json}
 
 ///|
 async fn run_web_contents_view_scenario_probe(
-  tasks : @async.TaskGroup[Unit],
+  tasks : @async.TaskGroup,
   app : SpawnedScenarioApp,
   target : String,
   browser_web_socket_url : String,
@@ -38,19 +38,12 @@ async fn run_web_contents_view_scenario_probe(
   wait_for_ready(page_right, web_contents_view_ready_expression(), timeout)
   ignore(capture_headless_screenshot(page_left))
   ignore(capture_headless_screenshot(page_right))
-  let (left_value, right_value) = @async.with_task_group(group => {
-    let task_left = group.spawn(
-      () => evaluate_json(page_left, web_contents_view_probe_expression(), true),
-      no_wait=true,
-    )
-    let task_right = group.spawn(
-      () => {
-        evaluate_json(page_right, web_contents_view_probe_expression(), true)
-      },
-      no_wait=true,
-    )
-    (task_left.wait(), task_right.wait())
-  })
+  let values = @async.all([
+    () => evaluate_json(page_left, web_contents_view_probe_expression(), true),
+    () => evaluate_json(page_right, web_contents_view_probe_expression(), true),
+  ])
+  let left_value = values[0]
+  let right_value = values[1]
   assert_web_contents_view_page(
     decode_probe(left_value, "left web contents view"),
     "WCV Left",
@@ -108,7 +101,7 @@ async fn run_web_contents_view_scenario_probe(
 
 ///|
 async fn connect_web_contents_view_page(
-  tasks : @async.TaskGroup[Unit],
+  tasks : @async.TaskGroup,
   target : @client.CdpDiscoveredTarget,
   timeout : Int32,
 ) -> @page.Page {

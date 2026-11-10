@@ -58,13 +58,17 @@ fn cli_version_text() -> String {
 
 ///|
 async fn fetch_latest_cli_version() -> String? {
-  let (code, output) = @process.collect_output_merged("curl", [
-    "-fsSL", "--max-time", "2", cli_manifest_url,
-  ]) catch {
+  let output = @process.run(
+    "curl",
+    ["-fsSL", "--max-time", "2", cli_manifest_url],
+    stdout=Collect,
+    stderr=DuplicateStdout,
+  ) catch {
     _ => return None
   }
+  let code = output.exit_code
   guard code == 0 else { return None }
-  let text = output.text() catch { _ => return None }
+  let text = output.stdout_text() catch { _ => return None }
   latest_version_from_manifest_text(text)
 }
 

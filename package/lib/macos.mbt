@@ -217,20 +217,21 @@ async fn run_macos_tool(
   args : Array[String],
   stage : String,
 ) -> Unit {
-  let (code, output) = @process.collect_output_merged(tool, args) catch {
+  let output = @process.run(tool, args, stdout=Collect, stderr=DuplicateStdout) catch {
     error =>
       raise MacosSigningError::ToolFailure(
         stage~,
         detail=@debug.render(Repr(error)),
       )
   }
+  let code = output.exit_code
   guard code == 0 else {
     raise MacosSigningError::ToolFailure(
       stage~,
       detail="exit code " +
         code.to_string() +
         ": " +
-        (output.text() catch { _ => "non-UTF-8 output" }),
+        (output.stdout_text() catch { _ => "non-UTF-8 output" }),
     )
   }
 }
@@ -354,21 +355,25 @@ fn macos_codesign_verify_args(target : String, deep~ : Bool) -> Array[String] {
 
 ///|
 async fn verify_macos_developer_id(app : String) -> Unit {
-  let (code, output) = @process.collect_output_merged("/usr/bin/codesign", [
-    "--display", "--verbose=4", app,
-  ]) catch {
+  let output = @process.run(
+    "/usr/bin/codesign",
+    ["--display", "--verbose=4", app],
+    stdout=Collect,
+    stderr=DuplicateStdout,
+  ) catch {
     error =>
       raise MacosSigningError::Verification(
         detail="failed to inspect signing authority: " +
           @debug.render(Repr(error)),
       )
   }
+  let code = output.exit_code
   guard code == 0 else {
     raise MacosSigningError::Verification(
       detail="failed to inspect signing authority",
     )
   }
-  let text = output.text() catch {
+  let text = output.stdout_text() catch {
     error =>
       raise MacosSigningError::Verification(
         detail="failed to decode signing authority: " +

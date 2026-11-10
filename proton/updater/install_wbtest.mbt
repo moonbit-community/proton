@@ -45,13 +45,13 @@ fn install_test_path(root : String, name : String) -> String {
 #cfg(platform="windows")
 async fn prepare_update_test_installation(root : String) -> String {
   let executable = install_test_path(root, "Demo.exe")
-  @async_fs.write_file(executable, "fixture", create_mode=CreateOrTruncate)
-  @async_fs.write_file(
+  @async_fs.write_text(executable, "fixture", create_mode=CreateOrTruncate)
+  @async_fs.write_text(
     install_test_path(root, "Uninstall.exe"),
     "fixture",
     create_mode=CreateOrTruncate,
   )
-  @async_fs.write_file(
+  @async_fs.write_text(
     install_test_path(root, "proton-update-version"),
     "0.2.0\n",
     create_mode=CreateOrTruncate,
@@ -63,8 +63,8 @@ async fn prepare_update_test_installation(root : String) -> String {
 #cfg(platform="linux")
 async fn prepare_update_test_installation(root : String) -> String {
   let appimage = install_test_path(root, "Demo.AppImage")
-  @async_fs.write_file(appimage, "fixture", create_mode=CreateOrTruncate)
-  @async_fs.write_file(
+  @async_fs.write_text(appimage, "fixture", create_mode=CreateOrTruncate)
+  @async_fs.write_text(
     appimage + ".proton-version",
     "0.2.0\n",
     create_mode=CreateOrTruncate,
@@ -78,7 +78,7 @@ async fn prepare_update_test_installation(root : String) -> String {
   let bundle = install_test_path(root, "Demo.app")
   let contents = install_test_path(bundle, "Contents")
   @async_fs.mkdir(contents, recursive=true)
-  @async_fs.write_file(
+  @async_fs.write_text(
     install_test_path(contents, "Info.plist"),
     "<plist><dict><key>CFBundleShortVersionString</key><string>0.2.0</string></dict></plist>",
     create_mode=CreateOrTruncate,
@@ -168,8 +168,8 @@ async test "cancelling a download releases its native stage" {
     }
     @async.with_task_group(group => {
       let started = Ref(false)
-      let entered = @async.CondVar::Cond()
-      let blocked = @async.CondVar::Cond()
+      let entered = @async.Cond()
+      let blocked = @async.Cond()
       let fetch : ArtifactFetch = async fn(
         _url,
         _size,

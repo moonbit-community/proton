@@ -4,7 +4,7 @@ package "moonbit-community/proton/command"
 import {
   "moonbit-community/proton/core",
   "moonbit-community/proton_contract",
-  "moonbitlang/async",
+  "moonbitlang/core/async",
   "moonbitlang/core/debug",
   "moonbitlang/core/json",
 }
@@ -64,7 +64,7 @@ pub struct AppCommandExtensionSpec {
   dependencies : Array[String]
   register : (CommandRegistrar) -> Unit raise
   resolve_permission : (@json.Json, String) -> @json.Json raise PermissionScopeValidationError
-  on_start : (@async.TaskGroup[Unit]) -> Unit raise
+  on_start : (@async.TaskGroup) -> Unit raise
   on_destroy : () -> Unit raise
 }
 pub fn AppCommandExtensionSpec::dependencies(Self) -> Array[String]
@@ -74,8 +74,8 @@ pub fn AppCommandExtensionSpec::js_namespace(Self) -> String
 pub fn AppCommandExtensionSpec::register(Self, @core.AppCommandHost) -> AppCommandExtensionDescriptor raise
 pub fn AppCommandExtensionSpec::resolve_permission(Self, @json.Json, String) -> @json.Json raise PermissionScopeValidationError
 pub fn AppCommandExtensionSpec::scripts(Self) -> Array[String]
-pub fn AppCommandExtensionSpec::start(Self, @async.TaskGroup[Unit]) -> Unit raise
-pub fn AppCommandExtensionSpec::typed(@proton_contract.ExtensionContract, (CommandRegistrar) -> Unit raise, scripts? : Array[String], dependencies? : Array[String], resolve_permission? : (@json.Json, String) -> @json.Json raise PermissionScopeValidationError, on_start? : (@async.TaskGroup[Unit]) -> Unit raise, on_destroy? : () -> Unit raise) -> Self raise ExtensionSpecError
+pub fn AppCommandExtensionSpec::start(Self, @async.TaskGroup) -> Unit raise
+pub fn AppCommandExtensionSpec::typed(@proton_contract.ExtensionContract, (CommandRegistrar) -> Unit raise, scripts? : Array[String], dependencies? : Array[String], resolve_permission? : (@json.Json, String) -> @json.Json raise PermissionScopeValidationError, on_start? : (@async.TaskGroup) -> Unit raise, on_destroy? : () -> Unit raise) -> Self raise ExtensionSpecError
 
 pub struct CommandRegistrar {
   host : @core.AppCommandHost

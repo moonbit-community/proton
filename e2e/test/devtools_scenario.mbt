@@ -8,7 +8,7 @@ async fn evaluate_bool_in_context(
 
 ///|
 async fn run_devtools_scenario_page_probe(
-  tasks : @async.TaskGroup[Unit],
+  tasks : @async.TaskGroup,
   app : SpawnedScenarioApp,
   target : String,
   browser_web_socket_url : String,

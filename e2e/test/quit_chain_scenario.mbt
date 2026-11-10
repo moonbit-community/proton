@@ -149,7 +149,7 @@ async fn wait_for_quit_chain_exit(
 
 ///|
 async fn spawn_quit_chain_probe(
-  group : @async.TaskGroup[Unit],
+  group : @async.TaskGroup,
   root : String,
   output_root : String,
   mode : String,
@@ -160,10 +160,6 @@ async fn spawn_quit_chain_probe(
 ) -> SpawnedScenarioApp {
   let (program, args) = scenario_app_command()
   let output_path = join_path(output_root, "quit-chain-" + mode + ".log.out")
-  let output = @process.redirect_to_file(
-    output_path,
-    create_mode=@fs.CreateOrTruncate,
-  )
   let env = app_process_env(root, output_root, "quit_chain", run_id)
   env["PROTON_QUIT_CHAIN_MODE"] = mode
   env["PROTON_QUIT_CHAIN_LOG"] = log_path
@@ -175,8 +171,8 @@ async fn spawn_quit_chain_probe(
     args,
     cwd=root,
     extra_env=env,
-    stdout=output,
-    stderr=output,
+    stdout=ToFile(output_path),
+    stderr=DuplicateStdout,
     cancel_handler=app_cancel_handler(),
     no_wait=true,
   )

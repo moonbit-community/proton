@@ -24,8 +24,8 @@ pub struct Guard {
 /// helper. Callers can impose a startup deadline with `@async.with_timeout`.
 /// macOS and Windows retain their native power assertions. On Windows, acquire
 /// and release must run on the same OS thread.
-pub async fn[G] acquire(
-  group : @async.TaskGroup[G],
+pub async fn acquire(
+  group : @async.TaskGroup,
   reason~ : String = default_reason,
   scope~ : Scope = Scope::PreventSystemSleep,
 ) -> Guard raise KeepAwakeError {
@@ -47,8 +47,8 @@ pub async fn[G] acquire(
 }
 
 ///|
-async fn[G] acquire_linux(
-  group : @async.TaskGroup[G],
+async fn acquire_linux(
+  group : @async.TaskGroup,
   tool : String,
   reason : String,
   scope : Scope,
@@ -59,26 +59,24 @@ async fn[G] acquire_linux(
     PreventSystemAndDisplaySleep => "idle:sleep"
   }
   try {
-    let (stdin, writer) = @process.write_to_process()
-    let mut acquired = false
-    defer (if !acquired { writer.close() })
-    let (reader, stdout) = @process.read_from_process()
-    defer reader.close()
     let child = @process.spawn(
       group,
       tool,
       [
         "--what", what, "--mode", "block", "--why", reason, "/bin/sh", "-c", "printf 'ready\\n'; exec /bin/cat >/dev/null",
       ],
-      stdin~,
-      stdout~,
+      stdin=FeedFromParent,
+      stdout=Collect,
       no_wait=true,
       cancel_handler=@process.hard_cancel(),
     )
-    let keep_guard = own_guard(group, Linux(child, writer), scope)
+    let reader = child.stdout
+    defer reader.close()
+    let mut acquired = false
+    let keep_guard = own_guard(group, Linux(child, child.stdin), scope)
     defer (if !acquired { keep_guard.release() })
     // systemd-inhibit runs our command only after acquiring the lock.
-    match reader.read_until("\n") {
+    match reader.text.read_until("\n") {
       Some("ready") => ()
       None => {
         let status = child.wait()
@@ -104,7 +102,7 @@ async fn[G] acquire_linux(
   } catch {
     BackendUnavailable(..) as error => raise error
     OperationFailed(..) as error => raise error
-    @os_error.OSError(_) as error if error.is_ENOENT() =>
+    @os_error.OsError(NotFound, ..) as error =>
       raise BackendUnavailable(detail=error.to_string())
     error =>
       raise OperationFailed(operation="acquire", detail=error.to_string())
@@ -120,10 +118,12 @@ pub async fn[T] with_keepawake(
   reason~ : String = default_reason,
   scope~ : Scope = Scope::PreventSystemSleep,
 ) -> T {
+  let mut result = None
   @async.with_task_group(group => {
     let keep_guard = acquire(group, reason~, scope~)
-    keep_guard.with_action(action)
+    result = Some(keep_guard.with_action(action))
   })
+  result.unwrap()
 }
 
 ///|
@@ -195,8 +195,8 @@ async fn Guard::release_with(
 }
 
 ///|
-fn[G] own_guard(
-  group : @async.TaskGroup[G],
+fn own_guard(
+  group : @async.TaskGroup,
   backend : GuardBackend,
   scope : Scope,
 ) -> Guard {

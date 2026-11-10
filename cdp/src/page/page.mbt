@@ -53,7 +53,7 @@ priv struct PageState {
   mut context : ExecutionContextLease?
   mut generation : UInt64
   mut closed : Bool
-  changed : @async.CondVar
+  changed : @async.Cond
 }
 
 ///|
@@ -63,14 +63,14 @@ fn PageState::PageState() -> PageState {
     context: None,
     generation: 0UL,
     closed: false,
-    changed: @async.CondVar::Cond(),
+    changed: @async.Cond(),
   }
 }
 
 ///|
 /// Connects to a direct page target and enables page/context lifecycle events.
-pub async fn[X] Page::connect(
-  tasks : @async.TaskGroup[X],
+pub async fn Page::connect(
+  tasks : @async.TaskGroup,
   target : @client.CdpTarget,
   target_id? : String,
   url? : String,
@@ -90,8 +90,8 @@ pub async fn[X] Page::connect(
 
 ///|
 /// Connects to a direct page WebSocket and enables page/context lifecycle events.
-pub async fn[X] Page::connect_web_socket(
-  tasks : @async.TaskGroup[X],
+pub async fn Page::connect_web_socket(
+  tasks : @async.TaskGroup,
   web_socket_url : String,
   timeout_ms~ : Int32 = 25000,
 ) -> Page {
@@ -104,8 +104,8 @@ pub async fn[X] Page::connect_web_socket(
 }
 
 ///|
-async fn[X] Page::initialize_scoped(
-  tasks : @async.TaskGroup[X],
+async fn Page::initialize_scoped(
+  tasks : @async.TaskGroup,
   client : @client.CdpClient,
   timeout_ms : Int32,
 ) -> Page {

@@ -48,7 +48,7 @@ pub async fn generate_typed_commands_from_files(
         detail="all codegen inputs must belong to the same package directory",
       )
     }
-    let source = @async_fs.read_file(input_file).text() catch {
+    let source = @async_fs.read_text(input_file) catch {
       error =>
         raise CodegenInputError::InputRead(
           path=input_file,

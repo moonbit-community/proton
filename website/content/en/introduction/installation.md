@@ -1,7 +1,9 @@
 # Environment requirements
 
 This book targets Proton 0.8.0. See [Release Notes](../release-notes/releases.md)
-for migration from 0.7.0.
+for migration from 0.7.0. The
+[unreleased notes](../release-notes/releases.md#unreleased) describe the async
+runtime requirements for the current source tree.
 
 Proton 0.8.0 supports the following host build environments. Native builds and packages target the host operating system; cross-compilation is not provided by the Proton CLI.
 

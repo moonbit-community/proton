@@ -27,12 +27,14 @@ async test "download streams authenticated binary content and reports written by
   let progress : Array[@net.DownloadProgress] = []
   with_download_server(
     connection => {
-      let request = connection.read_until("\r\n\r\n").unwrap()
+      let request = @utf8.decode(connection.read_until(b"\r\n\r\n").unwrap())
       assert_true(request.contains("Authorization: Bearer test-token\r\n"))
       assert_true(request.contains("Accept-Encoding: identity\r\n"))
       assert_true(request.has_prefix("GET /file?q=1 HTTP/1.1\r\n"))
       connection.write(
-        "HTTP/1.1 200 OK\r\nContent-Length: \{content.length()}\r\n\r\n",
+        @utf8.encode(
+          "HTTP/1.1 200 OK\r\nContent-Length: \{content.length()}\r\n\r\n",
+        ),
       )
       connection.write(content)
     },
@@ -45,7 +47,7 @@ async test "download streams authenticated binary content and reports written by
       )
     },
   )
-  assert_eq(@fs.read_file(destination).binary(), content)
+  assert_eq(@fs.read_binary(destination), content)
   assert_eq(progress[0].received_bytes, 0L)
   assert_eq(
     progress.last().unwrap().received_bytes,
@@ -82,13 +84,13 @@ async test "download handles empty chunked and unknown-length identity responses
     let destination = root + "/\{index}"
     with_download_server(
       connection => {
-        ignore(connection.read_until("\r\n\r\n"))
-        connection.write("HTTP/1.1 200 OK\r\n\{headers}\r\n")
+        ignore(connection.read_until(b"\r\n\r\n"))
+        connection.write(@utf8.encode("HTTP/1.1 200 OK\r\n\{headers}\r\n"))
         connection.write(body)
       },
       url => @net.download(url, destination, on_progress=p => progress.push(p)),
     )
-    assert_eq(@fs.read_file(destination).binary(), expected)
+    assert_eq(@fs.read_binary(destination), expected)
     assert_eq(
       progress.last().unwrap().received_bytes,
       expected.length().to_int64(),
@@ -102,13 +104,15 @@ async test "HTTP failures redirects and partial responses preserve existing file
   let root = @fs.tmpdir(prefix="proton-net-download-")
   defer @fs.rmdir(root, recursive=true)
   let destination = root + "/file"
-  @fs.write_file(destination, "old")
+  @fs.write_text(destination, "old")
   for status in [401, 403, 404, 302, 206] {
     with_download_server(
       connection => {
-        ignore(connection.read_until("\r\n\r\n"))
+        ignore(connection.read_until(b"\r\n\r\n"))
         connection.write(
-          "HTTP/1.1 \{status} Rejected\r\nContent-Length: 0\r\nLocation: /other\r\n\r\n",
+          @utf8.encode(
+            "HTTP/1.1 \{status} Rejected\r\nContent-Length: 0\r\nLocation: /other\r\n\r\n",
+          ),
         )
       },
       url => {
@@ -120,7 +124,7 @@ async test "HTTP failures redirects and partial responses preserve existing file
         }
       },
     )
-    assert_eq(@fs.read_file(destination).text(), "old")
+    assert_eq(@fs.read_text(destination), "old")
     assert_eq(@fs.readdir(root), ["file"])
   }
 }
@@ -130,11 +134,11 @@ async test "truncated downloads clean up without replacing the old file" {
   let root = @fs.tmpdir(prefix="proton-net-download-")
   defer @fs.rmdir(root, recursive=true)
   let destination = root + "/file"
-  @fs.write_file(destination, "old")
+  @fs.write_text(destination, "old")
   with_download_server(
     connection => {
-      ignore(connection.read_until("\r\n\r\n"))
-      connection.write("HTTP/1.1 200 OK\r\nContent-Length: 100\r\n\r\npartial")
+      ignore(connection.read_until(b"\r\n\r\n"))
+      connection.write(b"HTTP/1.1 200 OK\r\nContent-Length: 100\r\n\r\npartial")
     },
     url => {
       try @net.download(url, destination, overwrite=true) catch {
@@ -145,7 +149,7 @@ async test "truncated downloads clean up without replacing the old file" {
       }
     },
   )
-  assert_eq(@fs.read_file(destination).text(), "old")
+  assert_eq(@fs.read_text(destination), "old")
   assert_eq(@fs.readdir(root), ["file"])
 }
 
@@ -155,12 +159,12 @@ async test "overwrite is explicit and failed file submission cleans up" {
   defer @fs.rmdir(root, recursive=true)
   // Error paths preserve the caller's spelling, including redundant components.
   let destination = root + "/./file"
-  @fs.write_file(destination, "old")
+  @fs.write_text(destination, "old")
   for overwrite in [false, true] {
     with_download_server(
       connection => {
-        ignore(connection.read_until("\r\n\r\n"))
-        connection.write("HTTP/1.1 200 OK\r\nContent-Length: 3\r\n\r\nnew")
+        ignore(connection.read_until(b"\r\n\r\n"))
+        connection.write(b"HTTP/1.1 200 OK\r\nContent-Length: 3\r\n\r\nnew")
       },
       url => {
         if overwrite {
@@ -175,14 +179,7 @@ async test "overwrite is explicit and failed file submission cleans up" {
         }
       },
     )
-    assert_eq(
-      @fs.read_file(destination).text(),
-      if overwrite {
-        "new"
-      } else {
-        "old"
-      },
-    )
+    assert_eq(@fs.read_text(destination), if overwrite { "new" } else { "old" })
     assert_eq(@fs.readdir(root), ["file"])
   }
   let invalid_parents = ["/missing/file", "/file/other"]
@@ -206,14 +203,14 @@ async test "cancellation closes a stalled response and removes its temporary fil
   let root = @fs.tmpdir(prefix="proton-net-download-")
   defer @fs.rmdir(root, recursive=true)
   let destination = root + "/file"
-  @fs.write_file(destination, "old")
+  @fs.write_text(destination, "old")
   let ready : @async.Queue[Unit] = @async.Queue(kind=Unbounded)
   let peer_closed = Ref(false)
   with_download_server(
     connection => {
-      ignore(connection.read_until("\r\n\r\n"))
-      connection.write("HTTP/1.1 200 OK\r\nContent-Length: 100\r\n\r\npartial")
-      assert_eq(connection.read_some(), None)
+      ignore(connection.read_until(b"\r\n\r\n"))
+      connection.write(b"HTTP/1.1 200 OK\r\nContent-Length: 100\r\n\r\npartial")
+      assert_eq(connection.read(), None)
       peer_closed.val = true
     },
     url => {
@@ -241,7 +238,7 @@ async test "cancellation closes a stalled response and removes its temporary fil
     },
   )
   assert_true(peer_closed.val)
-  assert_eq(@fs.read_file(destination).text(), "old")
+  assert_eq(@fs.read_text(destination), "old")
   assert_eq(@fs.readdir(root), ["file"])
 }
 
@@ -257,12 +254,12 @@ async test "concurrent downloads cannot both claim the same destination" {
     let release : @async.Queue[Unit] = @async.Queue(kind=Unbounded)
     @async.with_task_group(group => {
       group.spawn_bg(() => {
-        for content in ["one", "two"] {
+        for content in [b"one", b"two"] {
           let (connection, _) = server.accept()
           group.spawn_bg(() => {
             defer connection.close()
-            ignore(connection.read_until("\r\n\r\n"))
-            connection.write("HTTP/1.1 200 OK\r\nContent-Length: 3\r\n\r\n")
+            ignore(connection.read_until(b"\r\n\r\n"))
+            connection.write(b"HTTP/1.1 200 OK\r\nContent-Length: 3\r\n\r\n")
             release.get()
             connection.write(content)
           })
@@ -292,7 +289,7 @@ async test "concurrent downloads cannot both claim the same destination" {
       assert_true(tasks[0].wait() != tasks[1].wait())
     })
   })
-  let content = @fs.read_file(destination).text()
+  let content = @fs.read_text(destination)
   assert_true(content == "one" || content == "two")
   assert_eq(@fs.readdir(root), ["file"])
 }
@@ -302,11 +299,11 @@ async test "cancellation at the final progress notification does not submit the 
   let root = @fs.tmpdir(prefix="proton-net-download-")
   defer @fs.rmdir(root, recursive=true)
   let destination = root + "/file"
-  @fs.write_file(destination, "old")
+  @fs.write_text(destination, "old")
   with_download_server(
     connection => {
-      ignore(connection.read_until("\r\n\r\n"))
-      connection.write("HTTP/1.1 200 OK\r\nContent-Length: 3\r\n\r\nnew")
+      ignore(connection.read_until(b"\r\n\r\n"))
+      connection.write(b"HTTP/1.1 200 OK\r\nContent-Length: 3\r\n\r\nnew")
     },
     url => {
       @async.with_task_group(group => {
@@ -328,7 +325,7 @@ async test "cancellation at the final progress notification does not submit the 
       })
     },
   )
-  assert_eq(@fs.read_file(destination).text(), "old")
+  assert_eq(@fs.read_text(destination), "old")
   assert_eq(@fs.readdir(root), ["file"])
 }
 
@@ -382,12 +379,12 @@ async test "relative destination paths are resolved before file submission" {
     .to_string()
   with_download_server(
     connection => {
-      ignore(connection.read_until("\r\n\r\n"))
-      connection.write("HTTP/1.1 200 OK\r\nContent-Length: 2\r\n\r\nok")
+      ignore(connection.read_until(b"\r\n\r\n"))
+      connection.write(b"HTTP/1.1 200 OK\r\nContent-Length: 2\r\n\r\nok")
     },
     url => @net.download(url, destination),
   )
-  assert_eq(@fs.read_file(root + "/relative.bin").text(), "ok")
+  assert_eq(@fs.read_text(root + "/relative.bin"), "ok")
   assert_eq(@fs.readdir(root), ["relative.bin"])
 }
 
@@ -396,7 +393,7 @@ async test "encoded responses are rejected instead of saving gzip bytes" {
   let root = @fs.tmpdir(prefix="proton-net-download-")
   defer @fs.rmdir(root, recursive=true)
   let destination = root + "/file"
-  @fs.write_file(destination, "old")
+  @fs.write_text(destination, "old")
   // async#672: even a valid gzip stream can bypass decoding with close framing.
   let gzip = b"\x1f\x8b\x08\x00\x00\x00\x00\x00\x02\x03\xcb\x48\xcd\xc9\xc9\x07\x00\x86\xa6\x10\x36\x05\x00\x00\x00"
   for
@@ -409,7 +406,9 @@ async test "encoded responses are rejected instead of saving gzip bytes" {
       let progress_called = Ref(false)
       with_download_server(
         connection => {
-          let request = connection.read_until("\r\n\r\n").unwrap()
+          let request = @utf8.decode(
+            connection.read_until(b"\r\n\r\n").unwrap(),
+          )
           assert_true(
             request.contains(
               if explicit_encoding {
@@ -449,7 +448,7 @@ async test "encoded responses are rejected instead of saving gzip bytes" {
         },
       )
       assert_false(progress_called.val)
-      assert_eq(@fs.read_file(destination).text(), "old")
+      assert_eq(@fs.read_text(destination), "old")
       assert_eq(@fs.readdir(root), ["file"])
     }
   }
@@ -474,19 +473,19 @@ async test "download preserves symlink parent traversal for existing and new fil
       let destination = base + "/local/link/../" + name
       let intended = root + "/other/" + name
       let unrelated = root + "/local/" + name
-      @fs.write_file(unrelated, "unrelated")
+      @fs.write_text(unrelated, "unrelated")
       if overwrite {
-        @fs.write_file(intended, "old")
+        @fs.write_text(intended, "old")
       }
       with_download_server(
         connection => {
-          ignore(connection.read_until("\r\n\r\n"))
-          connection.write("HTTP/1.1 200 OK\r\nContent-Length: 3\r\n\r\nnew")
+          ignore(connection.read_until(b"\r\n\r\n"))
+          connection.write(b"HTTP/1.1 200 OK\r\nContent-Length: 3\r\n\r\nnew")
         },
         url => @net.download(url, destination, overwrite~),
       )
-      assert_eq(@fs.read_file(intended).text(), "new")
-      assert_eq(@fs.read_file(unrelated).text(), "unrelated")
+      assert_eq(@fs.read_text(intended), "new")
+      assert_eq(@fs.read_text(unrelated), "unrelated")
     }
   }
   assert_false(
@@ -506,13 +505,13 @@ async test "download replaces a final symlink without changing its target" {
   guard @async.platform is (MacOS | Linux) else { return }
   let root = @fs.tmpdir(prefix="proton-net-download-")
   defer @fs.rmdir(root, recursive=true)
-  @fs.write_file(root + "/target", "original")
+  @fs.write_text(root + "/target", "original")
   @fs.symlink(target="target", root + "/link")
   for overwrite in [false, true] {
     with_download_server(
       connection => {
-        ignore(connection.read_until("\r\n\r\n"))
-        connection.write("HTTP/1.1 200 OK\r\nContent-Length: 3\r\n\r\nnew")
+        ignore(connection.read_until(b"\r\n\r\n"))
+        connection.write(b"HTTP/1.1 200 OK\r\nContent-Length: 3\r\n\r\nnew")
       },
       url => {
         try @net.download(url, root + "/link", overwrite~) catch {
@@ -526,9 +525,9 @@ async test "download replaces a final symlink without changing its target" {
         }
       },
     )
-    assert_eq(@fs.read_file(root + "/target").text(), "original")
+    assert_eq(@fs.read_text(root + "/target"), "original")
   }
-  assert_eq(@fs.read_file(root + "/link").text(), "new")
+  assert_eq(@fs.read_text(root + "/link"), "new")
   assert_eq(@fs.readdir(root, sort=true), ["link", "target"])
 }
 
@@ -540,12 +539,12 @@ async test "download resolves directory links including Windows junctions" {
   @fs.symlink(target=root + "/parent", root + "/alias")
   with_download_server(
     connection => {
-      ignore(connection.read_until("\r\n\r\n"))
-      connection.write("HTTP/1.1 200 OK\r\nContent-Length: 2\r\n\r\nok")
+      ignore(connection.read_until(b"\r\n\r\n"))
+      connection.write(b"HTTP/1.1 200 OK\r\nContent-Length: 2\r\n\r\nok")
     },
     url => @net.download(url, root + "/alias/file"),
   )
-  assert_eq(@fs.read_file(root + "/parent/file").text(), "ok")
+  assert_eq(@fs.read_text(root + "/parent/file"), "ok")
   assert_eq(@fs.readdir(root + "/parent"), ["file"])
 }
 
@@ -558,12 +557,12 @@ async test "download does not require permission to list the parent directory" {
   defer @async.protect_from_cancel(() => @fs.chmod(root, 0o700))
   with_download_server(
     connection => {
-      ignore(connection.read_until("\r\n\r\n"))
-      connection.write("HTTP/1.1 200 OK\r\nContent-Length: 2\r\n\r\nok")
+      ignore(connection.read_until(b"\r\n\r\n"))
+      connection.write(b"HTTP/1.1 200 OK\r\nContent-Length: 2\r\n\r\nok")
     },
     url => @net.download(url, root + "/file"),
   )
-  assert_eq(@fs.read_file(root + "/file").text(), "ok")
+  assert_eq(@fs.read_text(root + "/file"), "ok")
 }
 
 ///|
@@ -599,20 +598,20 @@ async test "download preserves Windows extended and junction paths to dotted dir
     }
     for (entry, name) in [(parent, "direct"), (junction, "junction")] {
       if ordinary_exists {
-        @fs.write_file(ordinary + "\\" + name, "unrelated")
+        @fs.write_text(ordinary + "\\" + name, "unrelated")
       }
       with_download_server(
         connection => {
-          ignore(connection.read_until("\r\n\r\n"))
-          connection.write("HTTP/1.1 200 OK\r\nContent-Length: 3\r\n\r\nnew")
+          ignore(connection.read_until(b"\r\n\r\n"))
+          connection.write(b"HTTP/1.1 200 OK\r\nContent-Length: 3\r\n\r\nnew")
         },
         url => {
           @net.download(url, entry + "\\" + name, overwrite=ordinary_exists)
         },
       )
-      assert_eq(@fs.read_file(parent + "\\" + name).text(), "new")
+      assert_eq(@fs.read_text(parent + "\\" + name), "new")
       if ordinary_exists {
-        assert_eq(@fs.read_file(ordinary + "\\" + name).text(), "unrelated")
+        assert_eq(@fs.read_text(ordinary + "\\" + name), "unrelated")
       }
     }
     assert_eq(@fs.readdir(parent, sort=true), ["direct", "junction"])

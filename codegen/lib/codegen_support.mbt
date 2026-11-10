@@ -1,6 +1,6 @@
 ///|
 async fn read_proton_ext_codegen_config_file(path : String) -> (String, String) {
-  let text = @async_fs.read_file(path).text() catch {
+  let text = @async_fs.read_text(path) catch {
     error =>
       raise CodegenInputError::InputRead(
         path~,

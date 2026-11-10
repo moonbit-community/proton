@@ -114,14 +114,14 @@ async fn ensure_dir(path : String) -> Unit {
 ///|
 async fn copy_macos_file(source : String, destination : String) -> Unit {
   ensure_dir(path_parent(destination))
-  let code = @process.run("ditto", [source, destination]) catch {
-    error =>
-      raise StagingFileSystemError::Copy(
-        source~,
-        destination~,
-        detail=@debug.render(Repr(error)),
-      )
-  }
+  let code = @process.run("ditto", [source, destination]).exit_code catch {
+      error =>
+        raise StagingFileSystemError::Copy(
+          source~,
+          destination~,
+          detail=@debug.render(Repr(error)),
+        )
+    }
   guard code == 0 else {
     raise StagingToolError::Exit(tool="ditto", code~, detail=source)
   }
@@ -129,7 +129,7 @@ async fn copy_macos_file(source : String, destination : String) -> Unit {
 
 ///|
 async fn write_text(path : String, text : String) -> Unit {
-  @async_fs.write_file(path, text, create_mode=CreateOrTruncate) catch {
+  @async_fs.write_text(path, text, create_mode=CreateOrTruncate) catch {
     error =>
       raise StagingFileSystemError::Write(
         path~,
@@ -171,14 +171,14 @@ fn macho_thin_filetype(data : Bytes) -> Int32? {
 
 ///|
 async fn require_launchable_macho(path : String) -> Unit {
-  let data = @async_fs.read_file(path) catch {
+  let data = @async_fs.read_binary(path) catch {
     error =>
       raise StagingFileSystemError::Read(
         path~,
         detail=@debug.render(Repr(error)),
       )
   }
-  guard macho_thin_filetype(data.binary()) is Some(filetype) else { return }
+  guard macho_thin_filetype(data) is Some(filetype) else { return }
   guard filetype != MachoExecute else { return }
   raise StagingPlanError::NotLaunchableMachO(path~, filetype~)
 }

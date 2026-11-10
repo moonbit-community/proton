@@ -26,7 +26,7 @@ async test "tool wait yields and cancellation reaps the child" {
       }
       @async.sleep(10)
       assert_false(finished.val)
-      @async_fs.write_file(dir + "/release", "")
+      @async_fs.write_text(dir + "/release", "")
       task.wait()
       assert_true(finished.val)
     })
@@ -42,7 +42,7 @@ async test "tool wait yields and cancellation reaps the child" {
       while !@async_fs.exists(dir + "/ready") {
         @async.sleep(1)
       }
-      let pid = @async_fs.read_file(dir + "/ready").text()
+      let pid = @async_fs.read_text(dir + "/ready")
       task.cancel()
       let cancelled = try {
         task.wait()
@@ -53,8 +53,13 @@ async test "tool wait yields and cancellation reaps the child" {
       }
       assert_true(cancelled)
       assert_false(converted_to_shell_error.val)
-      assert_eq(@async_fs.read_file(dir + "/stopped").text(), "stopped")
-      let (status, _, _) = @process.collect_output("/bin/kill", ["-0", pid])
+      assert_eq(@async_fs.read_text(dir + "/stopped"), "stopped")
+      let status = @process.run(
+          "/bin/kill",
+          ["-0", pid],
+          stdout=Discard,
+          stderr=Discard,
+        ).exit_code
       assert_true(status != 0)
     })
   })

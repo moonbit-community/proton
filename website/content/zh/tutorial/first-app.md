@@ -93,7 +93,7 @@ async fn main {
 
 `..config(@proton.load_config())` 加载完整应用配置（包括必需的应用标识），并将它安装到应用。仅有显示标题并不能标识应用。
 
-`.run_or_abort()` 持续运行到应用退出，并报告启动或运行错误。入口是 async 函数，所以需要保留模板中的 `moonbitlang/async` 导入。
+`.run_or_abort()` 持续运行到应用退出，并报告启动或运行错误。入口是 async 函数，请保留生成包中的 async 导入和包选项。
 
 ## 4. 检查并构建
 

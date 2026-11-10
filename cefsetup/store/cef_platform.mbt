@@ -132,11 +132,17 @@ async fn detect_host_arch() -> String? {
     Some(value) => return Some(value)
     None => ()
   }
-  let (code, output) = @process.collect_output_merged("uname", ["-m"]) catch {
+  let output = @process.run(
+    "uname",
+    ["-m"],
+    stdout=Collect,
+    stderr=DuplicateStdout,
+  ) catch {
     _ => return None
   }
+  let code = output.exit_code
   guard code == 0 else { return None }
-  let text = output.text() catch { _ => return None }
+  let text = output.stdout_text() catch { _ => return None }
   let trimmed = text.trim()
   if trimmed == "" {
     None

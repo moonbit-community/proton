@@ -102,7 +102,7 @@ async fn test_write_file(
 async test "file creation rejects dangling symlinks without blocking ordinary creation" {
   with_fs_test_root((context, allowed, outside) => {
     test_write_file(context, allowed + "/ordinary.txt", "ordinary")
-    assert_eq(@async_fs.read_file(allowed + "/ordinary.txt").text(), "ordinary")
+    assert_eq(@async_fs.read_text(allowed + "/ordinary.txt"), "ordinary")
     for
       (link, target, requested) in [
         (allowed + "/file-link", outside + "/new.txt", allowed + "/file-link"),
@@ -130,8 +130,8 @@ async test "file creation rejects dangling symlinks without blocking ordinary cr
     let inside_link = allowed + "/working-link"
     @async_fs.symlink(inside_link, target=allowed + "/ordinary.txt")
     test_write_file(context, inside_link, "updated")
-    assert_eq(@async_fs.read_file(allowed + "/ordinary.txt").text(), "updated")
-    @async_fs.write_file(outside + "/existing.txt", "outside")
+    assert_eq(@async_fs.read_text(allowed + "/ordinary.txt"), "updated")
+    @async_fs.write_text(outside + "/existing.txt", "outside")
     let outside_link = allowed + "/outside-link"
     @async_fs.symlink(outside_link, target=outside + "/existing.txt")
     try test_write_file(context, outside_link, "must not overwrite") catch {
@@ -140,7 +140,7 @@ async test "file creation rejects dangling symlinks without blocking ordinary cr
     } noraise {
       _ => fail("writing an existing outside target was allowed")
     }
-    assert_eq(@async_fs.read_file(outside + "/existing.txt").text(), "outside")
+    assert_eq(@async_fs.read_text(outside + "/existing.txt"), "outside")
   })
 }
 
@@ -150,7 +150,7 @@ async test "kind and remove operate on the final symbolic link when requested" {
   with_fs_test_root((context, allowed, outside) => {
     let target = allowed + "/target.txt"
     let link = allowed + "/link.txt"
-    @async_fs.write_file(target, "keep")
+    @async_fs.write_text(target, "keep")
     @async_fs.symlink(link, target~)
     assert_eq(
       kind(context, { path: link, follow_symlink: Some(false), }).kind,
@@ -161,7 +161,7 @@ async test "kind and remove operate on the final symbolic link when requested" {
       "regular",
     )
     assert_true(remove(context, { path: link, }).removed)
-    assert_eq(@async_fs.read_file(target).text(), "keep")
+    assert_eq(@async_fs.read_text(target), "keep")
     assert_false(@async_fs.exists(link))
     @async_fs.symlink(link, target=outside + "/missing.txt")
     assert_eq(
@@ -180,20 +180,20 @@ async test "rename preserves source and destination symbolic link entry semantic
     let target = allowed + "/target.txt"
     let link = allowed + "/link.txt"
     let moved = allowed + "/moved.txt"
-    @async_fs.write_file(target, "keep")
+    @async_fs.write_text(target, "keep")
     @async_fs.symlink(link, target~)
     ignore(rename(context, { old_path: link, new_path: moved, replace: None, }))
     assert_eq(@async_fs.kind(moved, follow_symlink=false), @async_fs.SymLink)
     assert_false(@async_fs.exists(link))
-    assert_eq(@async_fs.read_file(target).text(), "keep")
-    @async_fs.write_file(outside + "/target.txt", "outside")
+    assert_eq(@async_fs.read_text(target), "keep")
+    @async_fs.write_text(outside + "/target.txt", "outside")
     @async_fs.symlink(link, target=outside + "/target.txt")
     ignore(
       rename(context, { old_path: target, new_path: link, replace: Some(true), }),
     )
     assert_eq(@async_fs.kind(link, follow_symlink=false), @async_fs.Regular)
-    assert_eq(@async_fs.read_file(link).text(), "keep")
-    assert_eq(@async_fs.read_file(outside + "/target.txt").text(), "outside")
+    assert_eq(@async_fs.read_text(link), "keep")
+    assert_eq(@async_fs.read_text(outside + "/target.txt"), "outside")
     let parent_link = allowed + "/parent-link"
     @async_fs.symlink(parent_link, target=outside)
     try ignore(remove(context, { path: parent_link + "/target.txt", })) catch {
@@ -216,14 +216,14 @@ async test "rename preserves source and destination symbolic link entry semantic
     } noraise {
       _ => fail("a rename destination escaped through its parent")
     }
-    assert_eq(@async_fs.read_file(link).text(), "keep")
+    assert_eq(@async_fs.read_text(link), "keep")
   })
 }
 
 ///|
 async test "rename moves an outside directory link without moving its target" {
   with_fs_test_root((context, allowed, outside) => {
-    @async_fs.write_file(outside + "/keep.txt", "keep")
+    @async_fs.write_text(outside + "/keep.txt", "keep")
     let link = allowed + "/link"
     let moved = allowed + "/moved"
     // Windows creates an NTFS junction here without requiring file-symlink
@@ -234,7 +234,7 @@ async test "rename moves an outside directory link without moving its target" {
       @async_fs.kind(outside, follow_symlink=false),
       @async_fs.Directory,
     )
-    assert_eq(@async_fs.read_file(outside + "/keep.txt").text(), "keep")
+    assert_eq(@async_fs.read_text(outside + "/keep.txt"), "keep")
     assert_eq(@async_fs.kind(moved, follow_symlink=false), @async_fs.SymLink)
     assert_eq(@async_fs.realpath(moved), @async_fs.realpath(outside))
     assert_false(@async_fs.exists(link))
@@ -248,7 +248,7 @@ async test "recursive rmdir rejects a linked directory without touching its targ
     let directory = allowed + "/directory"
     @async_fs.mkdir(directory)
     for index, target in [directory, outside] {
-      @async_fs.write_file(target + "/keep.txt", "keep")
+      @async_fs.write_text(target + "/keep.txt", "keep")
       let link = allowed + "/directory-link-\{index}"
       @async_fs.symlink(link, target~)
       try ignore(rmdir(context, { path: link, recursive: Some(true), })) catch {
@@ -257,7 +257,7 @@ async test "recursive rmdir rejects a linked directory without touching its targ
       } noraise {
         _ => fail("rmdir followed a linked directory")
       }
-      assert_eq(@async_fs.read_file(target + "/keep.txt").text(), "keep")
+      assert_eq(@async_fs.read_text(target + "/keep.txt"), "keep")
       assert_eq(@async_fs.kind(link, follow_symlink=false), @async_fs.SymLink)
       @async_fs.remove(link)
     }
@@ -265,6 +265,6 @@ async test "recursive rmdir rejects a linked directory without touching its targ
     assert_true(
       rmdir(context, { path: directory, recursive: Some(true), }).removed,
     )
-    assert_eq(@async_fs.read_file(outside + "/keep.txt").text(), "keep")
+    assert_eq(@async_fs.read_text(outside + "/keep.txt"), "keep")
   })
 }

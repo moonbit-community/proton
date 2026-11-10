@@ -16,7 +16,7 @@ pub async fn[Request : ToJson, Response : @json.FromJson] Client::invoke(
   request : Request,
 ) -> Response raise ClientFailure {
   let outcome : Ref[Result[Response, ClientFailure]?] = Ref(None)
-  let ready = @async.CondVar::Cond()
+  let ready = @async.Cond()
   let cancel = self.invoke_with_callbacks(
     command,
     request,

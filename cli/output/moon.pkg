@@ -1,5 +1,9 @@
 import {
-  "moonbitlang/async/stdio",
+  "moonbitlang/core/async/stdio",
 }
 
 supported_targets = "native+wasm"
+
+options(
+  "allow-experimental-packages": true,
+)

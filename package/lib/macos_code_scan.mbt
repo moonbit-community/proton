@@ -107,11 +107,15 @@ async fn bundle_executable_name(
   bundle~ : String,
 ) -> String? {
   guard path_is_file(info_plist) else { return None }
-  let (code, output) = @process.collect_output_merged("/usr/bin/plutil", [
-    "-extract", "CFBundleExecutable", "raw", "-o", "-", info_plist,
-  ])
+  let output = @process.run(
+    "/usr/bin/plutil",
+    ["-extract", "CFBundleExecutable", "raw", "-o", "-", info_plist],
+    stdout=Collect,
+    stderr=DuplicateStdout,
+  )
+  let code = output.exit_code
   guard code == 0 else { return Some(bundle_stem(bundle)) }
-  let text = output.text() catch { _ => return None }
+  let text = output.stdout_text() catch { _ => return None }
   // `plutil` ends raw output with a newline; the name itself stays exact.
   let name = text.strip_suffix("\n").unwrap_or(text).to_owned()
   if name == "" || name.contains("/") {

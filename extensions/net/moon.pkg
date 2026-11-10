@@ -1,10 +1,10 @@
 import {
   "moonbitlang/core/debug",
   "moonbitlang/core/encoding/utf8",
-  "moonbitlang/async/http",
-  "moonbitlang/async",
-  "moonbitlang/async/fs",
-  "moonbitlang/async/os_error",
+  "moonbitlang/core/async/http",
+  "moonbitlang/core/async",
+  "moonbitlang/core/async/fs",
+  "moonbitlang/core/async/os_error",
   "moonbitlang/core/random",
   "moonbitlang/core/string",
   "moonbitlang/x/path",
@@ -14,7 +14,7 @@ import {
 }
 
 import {
-  "moonbitlang/async/socket",
+  "moonbitlang/core/async/socket",
 } for "test"
 
 supported_targets = "native"
@@ -22,5 +22,6 @@ supported_targets = "native"
 formatter(ignore: [ "extension.g.mbt" ])
 
 options(
+  "allow-experimental-packages": true,
   targets: { "extension.g.mbt": [ "native" ], "extension.mbt": [ "native" ] },
 )

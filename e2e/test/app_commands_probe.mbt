@@ -111,7 +111,7 @@ pub extend ScreenshotProbeResult with Debug::{to_repr}
 
 ///|
 async fn run_app_commands_full_probe(
-  tasks : @async.TaskGroup[Unit],
+  tasks : @async.TaskGroup,
   output_root : String,
   target : String,
   timeout : Int32,
@@ -378,7 +378,7 @@ async fn run_reload_probe(page : @page.Page, timeout : Int32) -> Unit {
 
 ///|
 async fn run_non_proton_probe(
-  tasks : @async.TaskGroup[Unit],
+  tasks : @async.TaskGroup,
   target : String,
   output_root : String,
   timeout : Int32,
@@ -416,6 +416,7 @@ async fn run_http_origin_probe(
   target : String,
   timeout : Int32,
 ) -> OriginProbeResult {
+  let mut result = None
   @async.with_task_group(group => {
     let server = @http.Server(@socket.Addr::parse("127.0.0.1:0"), headers={
       "Content-Type": "text/html; charset=utf-8",
@@ -431,20 +432,22 @@ async fn run_http_origin_probe(
       )
       connection.end_response()
     })
-    let result = navigate_and_read_origin(
-      group,
-      target,
-      "http://127.0.0.1:" + server.addr.port().to_string() + "/probe.html",
-      timeout,
+    result = Some(
+      navigate_and_read_origin(
+        group,
+        target,
+        "http://127.0.0.1:" + server.addr.port().to_string() + "/probe.html",
+        timeout,
+      ),
     )
     server_task.wait()
-    result
   })
+  result.unwrap()
 }
 
 ///|
-async fn[X] navigate_and_read_origin(
-  tasks : @async.TaskGroup[X],
+async fn navigate_and_read_origin(
+  tasks : @async.TaskGroup,
   target : String,
   url : String,
   timeout : Int32,
@@ -466,8 +469,8 @@ async fn[X] navigate_and_read_origin(
 }
 
 ///|
-async fn[X] navigate_page_and_connect(
-  tasks : @async.TaskGroup[X],
+async fn navigate_page_and_connect(
+  tasks : @async.TaskGroup,
   target : String,
   url : String,
   timeout : Int32,
@@ -491,8 +494,8 @@ async fn[X] navigate_page_and_connect(
 }
 
 ///|
-async fn[X] connect_page_matching_expression(
-  tasks : @async.TaskGroup[X],
+async fn connect_page_matching_expression(
+  tasks : @async.TaskGroup,
   target : String,
   url : String,
   allow_prefix : Bool,

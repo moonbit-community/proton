@@ -33,7 +33,7 @@ pub async fn run(
   }
   match output {
     Some(path) =>
-      @async_fs.write_file(path, rendered, create_mode=CreateOrTruncate) catch {
+      @async_fs.write_text(path, rendered, create_mode=CreateOrTruncate) catch {
         error => raise OutputWrite(path~, detail=@debug.render(Repr(error)))
       }
     None => println(rendered)

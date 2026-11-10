@@ -1,6 +1,6 @@
 import {
-  "moonbitlang/async",
-  "moonbitlang/async/fs",
+  "moonbitlang/core/async",
+  "moonbitlang/core/async/fs",
   "moonbitlang/core/env",
   "moonbit-community/proton",
   "e2e/todo_shared" @shared,
@@ -10,3 +10,7 @@ import {
 supported_targets = "native"
 
 pkgtype(kind: "executable")
+
+options(
+  "allow-experimental-packages": true,
+)

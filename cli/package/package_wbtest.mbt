@@ -215,10 +215,7 @@ async test "package prepare uses the configuration directory and host command" {
   )
   run_package_prepare(plan)
   assert_eq(
-    @async_fs.read_file(resolve_path(root, "prepared.txt"))
-    .text()
-    .trim()
-    .to_owned(),
+    @async_fs.read_text(resolve_path(root, "prepared.txt")).trim().to_owned(),
     "prepared",
   )
 }
@@ -228,18 +225,18 @@ async test "package dry-run leaves an unavailable runtime store untouched" {
   let root = @async_fs.tmpdir(prefix="proton-dry-package-")
   defer @async_fs.rmdir(root, recursive=true)
   let store = resolve_path(root, "blocked-store")
-  @async_fs.write_file(store, "not a directory", create_mode=CreateOrTruncate)
+  @async_fs.write_text(store, "not a directory", create_mode=CreateOrTruncate)
   let previous = @env.get_env_var("PROTON_RUNTIME_STORE")
   @env.set_env_var("PROTON_RUNTIME_STORE", store)
   defer (match previous {
     Some(value) => @env.set_env_var("PROTON_RUNTIME_STORE", value)
     None => @env.unset_env_var("PROTON_RUNTIME_STORE")
   })
-  @async_fs.write_file(
+  @async_fs.write_text(
     resolve_path(root, "proton.project.json"),
     "{\"identifier\":\"com.example.dry\",\"package\":{\"product_name\":\"Dry\",\"version\":\"1.0.0\"}}",
     create_mode=CreateOrTruncate,
   )
   run(root, command().parse(argv=["--dry-run"], env=Map([])))
-  assert_eq(@async_fs.read_file(store).text(), "not a directory")
+  assert_eq(@async_fs.read_text(store), "not a directory")
 }

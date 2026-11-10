@@ -6,19 +6,19 @@ extern "C" fn pending_subscription_test(pid : Int32, cancel : Int32) -> Int32 = 
 
 ///|
 async fn start_bus(
-  group : @async.TaskGroup[Unit],
+  group : @async.TaskGroup,
   address : String,
 ) -> @process.Process {
-  let (reader, output) = @process.read_from_process()
-  defer reader.close()
   let child = @process.spawn(
     group,
     "dbus-daemon",
     ["--session", "--nofork", "--address=" + address, "--print-address=1"],
-    stdout=output,
+    stdout=Collect,
   )
   // The daemon prints its address only after listening; no startup sleep.
-  let announced = reader.read_until("\n")
+  let reader = child.stdout
+  defer reader.close()
+  let announced = reader.text.read_until("\n")
   assert_true(
     announced is Some(_),
     msg="dbus-daemon exited before announcing its address",
@@ -29,12 +29,12 @@ async fn start_bus(
 ///|
 async fn expect_event(monitor : @monitor.PowerMonitor, sleeping : Bool) -> Unit {
   let status = @process.run("dbus-send", [
-    "--system",
-    "--type=signal",
-    "/org/freedesktop/login1",
-    "org.freedesktop.login1.Manager.PrepareForSleep",
-    "boolean:" + sleeping.to_string(),
-  ])
+      "--system",
+      "--type=signal",
+      "/org/freedesktop/login1",
+      "org.freedesktop.login1.Manager.PrepareForSleep",
+      "boolean:" + sleeping.to_string(),
+    ]).exit_code
   assert_eq(status, 0, msg="sending PrepareForSleep failed")
   @async.with_timeout(5000, () => {
     while true {
@@ -152,10 +152,14 @@ async test "power watching scopes cancel, time out, release subscriptions and re
         0,
         msg="paused AddMatch must cancel without waiting for the bus",
       )
-      assert_eq(@process.run("kill", ["-STOP", bus.pid.to_string()]), 0)
+      assert_eq(
+        @process.run("kill", ["-STOP", bus.pid.to_string()]).exit_code,
+        0,
+      )
       @async.protect_from_cancel(() => {
         defer @async.protect_from_cancel(() => {
-          @process.run("kill", ["-CONT", bus.pid.to_string()]) |> ignore
+          @process.run("kill", ["-CONT", bus.pid.to_string()]).exit_code
+          |> ignore
         })
         cancel_pending_watch(monitor)
         // This must fail through the startup deadline, without external cancellation.
@@ -210,7 +214,10 @@ async test "power watching scopes cancel, time out, release subscriptions and re
         defer {
           body_cleaned.val = true
         }
-        assert_eq(@process.run("kill", ["-TERM", bus.pid.to_string()]), 0)
+        assert_eq(
+          @process.run("kill", ["-TERM", bus.pid.to_string()]).exit_code,
+          0,
+        )
         @async.pause()
       }) catch {
         @monitor.BackendUnavailable(_) => ()

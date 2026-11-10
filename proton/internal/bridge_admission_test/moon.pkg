@@ -1,7 +1,7 @@
 import {
   "moonbit-community/proton",
   "moonbit-community/proton/internal/native",
-  "moonbitlang/async",
+  "moonbitlang/core/async",
   "moonbitlang/core/env",
   "moonbitlang/x/fs" @mbfs,
 }
@@ -9,3 +9,7 @@ import {
 supported_targets = "native"
 
 pkgtype(kind: "executable")
+
+options(
+  "allow-experimental-packages": true,
+)

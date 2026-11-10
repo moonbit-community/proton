@@ -133,15 +133,17 @@ async fn install_default_subprocess() -> String {
   ]
   report_info("[INFO] Installing Proton subprocess: " + executable)
   let code = @process.run(
-    "moon",
-    args,
-    cwd=build_dir,
-    extra_env=subprocess_moon_environment(),
-    inherit_env=false,
-  ) catch {
-    error =>
-      raise CefSubprocessError::InstallStart(detail=@debug.render(Repr(error)))
-  }
+      "moon",
+      args,
+      cwd=build_dir,
+      extra_env=subprocess_moon_environment(),
+      inherit_env=false,
+    ).exit_code catch {
+      error =>
+        raise CefSubprocessError::InstallStart(
+          detail=@debug.render(Repr(error)),
+        )
+    }
   guard code == 0 else { raise CefSubprocessError::InstallExit(code~) }
   let staged_executable = path_join(staging, executable_name)
   guard subprocess_is_valid(staged_executable) else {

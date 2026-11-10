@@ -139,7 +139,7 @@ async test "packaged configuration retains frontend and platform fields" {
   )
   stage_update_version(plan, root)
   assert_eq(
-    @async_fs.read_file(resolve_path(root, "proton-update-version")).text(),
+    @async_fs.read_text(resolve_path(root, "proton-update-version")),
     "2.0.0\n",
   )
   write_package_manifest(plan, root)

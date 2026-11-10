@@ -7,7 +7,7 @@ struct Extension {
   dependencies : Array[String]
   resolve_permission : (Json, String) -> Json raise @proton_command.PermissionScopeValidationError
   event_source : EventSource?
-  on_start : (@async.TaskGroup[Unit]) -> Unit raise
+  on_start : (@async.TaskGroup) -> Unit raise
   on_destroy : () -> Unit raise
 }
 
@@ -97,7 +97,7 @@ pub fn typed(
     scope
   },
   event_source? : EventSource,
-  on_start~ : (@async.TaskGroup[Unit]) -> Unit raise = fn(_tasks) {  },
+  on_start~ : (@async.TaskGroup) -> Unit raise = fn(_tasks) {  },
   on_destroy~ : () -> Unit raise = fn() {  },
 ) -> Extension {
   Extension::{

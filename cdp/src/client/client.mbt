@@ -26,13 +26,13 @@ pub struct CdpClient {
   priv ws : @websocket.Conn
   priv mut reader : @async.Task[Unit]?
   priv mut lifecycle : CdpClientLifecycle
-  priv lifecycle_changed : @async.CondVar
+  priv lifecycle_changed : @async.Cond
   priv mut next_id : Int32
   priv mut next_event_handler_id : Int32
   priv mut next_close_handler_id : Int32
   priv pending_commands : Map[Int32, CdpPendingCommand]
   priv command_contexts : Map[Int32, CdpCommandContext]
-  priv event_changed : @async.CondVar
+  priv event_changed : @async.Cond
   priv mut last_command_failure : CdpCommandFailure?
   priv cdp_event_handlers : Array[CdpEventHandler]
   priv close_handlers : Array[CdpCloseHandler]
@@ -59,7 +59,7 @@ priv enum CdpPendingCommandState {
 ///|
 priv struct CdpPendingCommand {
   mut state : CdpPendingCommandState
-  changed : @async.CondVar
+  changed : @async.Cond
 }
 
 ///|
@@ -277,8 +277,8 @@ pub fn CdpConnectionError::message(self : CdpConnectionError) -> String {
 /// ```
 /// // let client = CdpClient::connect(tasks, "ws://127.0.0.1:9222/devtools/browser/id")
 /// ```
-pub async fn[X] CdpClient::connect(
-  tasks : @async.TaskGroup[X],
+pub async fn CdpClient::connect(
+  tasks : @async.TaskGroup,
   web_socket_url : String,
 ) -> CdpClient {
   CdpClient::from_websocket(tasks, @websocket.connect(web_socket_url))
@@ -298,8 +298,8 @@ pub async fn[X] CdpClient::connect(
 /// ```
 /// // let client = CdpClient::connect_with_timeout(tasks, url, timeout_ms=5000)
 /// ```
-pub async fn[X] CdpClient::connect_with_timeout(
-  tasks : @async.TaskGroup[X],
+pub async fn CdpClient::connect_with_timeout(
+  tasks : @async.TaskGroup,
   web_socket_url : String,
   timeout_ms~ : Int32 = 25000,
 ) -> CdpClient {
@@ -321,8 +321,8 @@ pub async fn[X] CdpClient::connect_with_timeout(
 
 ///|
 /// Wraps an already-open WebSocket as a CDP client.
-fn[X] CdpClient::from_websocket(
-  tasks : @async.TaskGroup[X],
+fn CdpClient::from_websocket(
+  tasks : @async.TaskGroup,
   ws : @websocket.Conn,
 ) -> CdpClient {
   let client = CdpClient(ws)
@@ -339,13 +339,13 @@ fn CdpClient::CdpClient(ws : @websocket.Conn) -> CdpClient {
     ws,
     reader: None,
     lifecycle: Open,
-    lifecycle_changed: @async.CondVar::Cond(),
+    lifecycle_changed: @async.Cond(),
     next_id: 1,
     next_event_handler_id: 1,
     next_close_handler_id: 1,
     pending_commands: {},
     command_contexts: {},
-    event_changed: @async.CondVar::Cond(),
+    event_changed: @async.Cond(),
     last_command_failure: None,
     cdp_event_handlers: [],
     close_handlers: [],
@@ -372,8 +372,8 @@ fn CdpClient::CdpClient(ws : @websocket.Conn) -> CdpClient {
 /// // let target = parse_cdp_target("9222")
 /// // let client = connect_cdp_target(tasks, target)
 /// ```
-pub async fn[X] connect_cdp_target(
-  tasks : @async.TaskGroup[X],
+pub async fn connect_cdp_target(
+  tasks : @async.TaskGroup,
   target : CdpTarget,
 ) -> CdpClient {
   let web_socket_url = discover_web_socket_url(target)
@@ -391,8 +391,8 @@ pub async fn[X] connect_cdp_target(
 /// ```
 /// // let client = connect_cdp_target_with_timeout(tasks, target, timeout_ms=5000)
 /// ```
-pub async fn[X] connect_cdp_target_with_timeout(
-  tasks : @async.TaskGroup[X],
+pub async fn connect_cdp_target_with_timeout(
+  tasks : @async.TaskGroup,
   target : CdpTarget,
   timeout_ms~ : Int32 = 25000,
 ) -> CdpClient {
@@ -412,8 +412,8 @@ pub async fn[X] connect_cdp_target_with_timeout(
 /// ```
 /// // let client = connect_cdp_browser_target(tasks, parse_cdp_target("9222"))
 /// ```
-pub async fn[X] connect_cdp_browser_target(
-  tasks : @async.TaskGroup[X],
+pub async fn connect_cdp_browser_target(
+  tasks : @async.TaskGroup,
   target : CdpTarget,
 ) -> CdpClient {
   let web_socket_url = discover_browser_web_socket_url(target)
@@ -427,8 +427,8 @@ pub async fn[X] connect_cdp_browser_target(
 /// ```
 /// // let client = connect_cdp_browser_target_with_timeout(tasks, target, timeout_ms=5000)
 /// ```
-pub async fn[X] connect_cdp_browser_target_with_timeout(
-  tasks : @async.TaskGroup[X],
+pub async fn connect_cdp_browser_target_with_timeout(
+  tasks : @async.TaskGroup,
   target : CdpTarget,
   timeout_ms~ : Int32 = 25000,
 ) -> CdpClient {
@@ -451,8 +451,8 @@ pub async fn[X] connect_cdp_browser_target_with_timeout(
 /// ```
 /// // let client = connect_cdp_page_target(tasks, parse_cdp_target("9222"), title="Example")
 /// ```
-pub async fn[X] connect_cdp_page_target(
-  tasks : @async.TaskGroup[X],
+pub async fn connect_cdp_page_target(
+  tasks : @async.TaskGroup,
   target : CdpTarget,
   target_id? : String,
   url? : String,
@@ -474,8 +474,8 @@ pub async fn[X] connect_cdp_page_target(
 /// ```
 /// // let client = connect_cdp_page_target_with_timeout(tasks, target, target_id="page-1", timeout_ms=5000)
 /// ```
-pub async fn[X] connect_cdp_page_target_with_timeout(
-  tasks : @async.TaskGroup[X],
+pub async fn connect_cdp_page_target_with_timeout(
+  tasks : @async.TaskGroup,
   target : CdpTarget,
   target_id? : String,
   url? : String,
@@ -670,12 +670,9 @@ pub async fn CdpClient::send_cdp_command(
   let command = @protocol.cdp_command(id~, method_name~, params?, session_id?)
   self.last_cdp_request = Some(command)
   self.command_contexts[id] = { method_name, session_id, }
-  self.pending_commands[id] = {
-    state: Waiting,
-    changed: @async.CondVar::Cond(),
-  }
+  self.pending_commands[id] = { state: Waiting, changed: @async.Cond(), }
   errdefer self.clear_inflight_command(id)
-  self.ws.send_text(command.stringify())
+  self.write_command(command)
   id
 }
 
@@ -717,10 +714,22 @@ async fn CdpClient::send_cdp_message_no_wait(
   }
   self.pending_commands[command.id] = {
     state: Waiting,
-    changed: @async.CondVar::Cond(),
+    changed: @async.Cond(),
   }
   errdefer self.clear_inflight_command(command.id)
-  self.ws.send_text(command.stringify())
+  self.write_command(command)
+}
+
+///|
+async fn CdpClient::write_command(
+  self : CdpClient,
+  command : @protocol.CdpCommandMessage,
+) -> Unit {
+  // Write a text frame through the binary writer so a closed transport raises
+  // an I/O error. The core UTF-8 writer is invalidated by Conn::close.
+  self.ws.start_message(Text)
+  self.ws.write(@utf8.encode(command.stringify()))
+  self.ws.end_message()
 }
 
 ///|
@@ -975,7 +984,7 @@ async fn CdpClient::read_messages(self : CdpClient) -> Unit {
   let error = try {
     let _ : Unit = for ;; {
       let message = self.ws.recv()
-      let text = message.read_all().text()
+      let text = message.text.read_all()
       match @protocol.parse_cdp_incoming(@json.parse(text)) {
         Response(response) => self.complete_response(response)
         Event(event) => self.record_cdp_event(event)

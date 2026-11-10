@@ -491,9 +491,9 @@ async fn run_manifest(
         session.run()
         outcome.val = session.resolved_exit()
         lifecycle.observe_window_closed()
-        window_tasks.return_immediately(())
+        window_tasks.return_immediately()
       })
-      application_tasks.return_immediately(())
+      application_tasks.return_immediately()
     }) catch {
       error => raise normalize_async_run_error(error)
     }
@@ -982,8 +982,8 @@ fn WindowLifetime::WindowLifetime() -> WindowLifetime {
     ready: false,
     closed: false,
     startup_error: None,
-    ready_signal: @async.CondVar::Cond(),
-    close_signal: @async.CondVar::Cond(),
+    ready_signal: @async.Cond(),
+    close_signal: @async.Cond(),
   }
 }
 
@@ -1054,13 +1054,13 @@ async fn run_window_lifecycle_scope(
     ) catch {
       error => {
         running.lifetime.finish_start(Some(normalize_async_run_error(error)))
-        tasks.return_immediately(())
+        tasks.return_immediately()
         return
       }
     }
     running.lifetime.finish_start(None)
     running.lifetime.wait_until_closed()
-    tasks.return_immediately(())
+    tasks.return_immediately()
   }) catch {
     error => {
       if running.lifetime.ready {

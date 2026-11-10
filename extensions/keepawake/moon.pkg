@@ -1,5 +1,5 @@
 import {
-  "moonbitlang/async",
+  "moonbitlang/core/async",
   "moonbit-community/proton_keepawake" @sys_keepawake,
   "moonbit-community/proton",
   "moonbit-community/proton/extension" @proton_extension,
@@ -16,6 +16,7 @@ supported_targets = "native"
 formatter(ignore: [ "extension.g.mbt" ])
 
 options(
+  "allow-experimental-packages": true,
   targets: {
     "extension.g.mbt": [ "native" ],
     "extension.mbt": [ "native" ],

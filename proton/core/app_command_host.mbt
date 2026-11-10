@@ -4,7 +4,7 @@
 /// native poll and suspension on the condition variable.
 pub struct RuntimeWakeSignal {
   mut revision : Int64
-  condition : @async.CondVar
+  condition : @async.Cond
 }
 
 ///|
@@ -95,7 +95,7 @@ pub fn CommandWindow::titlebar_area(self : CommandWindow) -> Json raise {
 
 ///|
 pub fn RuntimeWakeSignal::RuntimeWakeSignal() -> RuntimeWakeSignal {
-  RuntimeWakeSignal::{ revision: 0L, condition: @async.CondVar::Cond(), }
+  RuntimeWakeSignal::{ revision: 0L, condition: @async.Cond(), }
 }
 
 ///|
@@ -133,7 +133,7 @@ pub struct AppCommandRequestContext {
   page_instance : String?
   permission_extension : String?
   permission_scope_value : Json?
-  tasks : @async.TaskGroup[Unit]
+  tasks : @async.TaskGroup
   wake_signal : RuntimeWakeSignal
   emit_event : async (@proton_contract.ContractRoute, String, Json) -> Unit noraise
   locale_preferences : @locale.LocalePreferences
@@ -142,7 +142,7 @@ pub struct AppCommandRequestContext {
 ///|
 #doc(hidden)
 pub fn AppCommandRequestContext::AppCommandRequestContext(
-  tasks : @async.TaskGroup[Unit],
+  tasks : @async.TaskGroup,
   locale_preferences : @locale.LocalePreferences,
   window? : CommandWindow,
   window_id~ : String = "main",
@@ -177,7 +177,7 @@ pub fn AppCommandRequestContext::AppCommandRequestContext(
 /// Builds a request context that is not attached to an application session.
 #doc(hidden)
 pub fn AppCommandRequestContext::detached(
-  tasks : @async.TaskGroup[Unit],
+  tasks : @async.TaskGroup,
   window_id~ : String = "main",
   source_origin~ : String = "app",
   page_instance~ : String? = None,
@@ -308,7 +308,7 @@ fn clone_permission_json(value : Json) -> Json {
 /// Child tasks are cancelled and joined when the issuing window closes.
 pub fn AppCommandRequestContext::task_group(
   self : AppCommandRequestContext,
-) -> @async.TaskGroup[Unit] {
+) -> @async.TaskGroup {
   self.tasks
 }
 

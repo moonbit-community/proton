@@ -18,8 +18,8 @@ fn RuntimeSession::RuntimeSession(
   forward_menu_events : Bool,
   monitor_bridge : Bool,
   app_instance : @native.AppInstance?,
-  application_tasks : @async.TaskGroup[Unit],
-  window_tasks : @async.TaskGroup[Unit],
+  application_tasks : @async.TaskGroup,
+  window_tasks : @async.TaskGroup,
   lifecycle_failures : Array[AppCleanupError],
   destroy_window : (@native.Window) -> Unit raise @native.NativeError,
 ) -> RuntimeSession {
@@ -911,10 +911,7 @@ async fn RuntimeSession::request_create_window(
 
 ///|
 fn[T] WindowOpenCompletion::WindowOpenCompletion() -> WindowOpenCompletion[T] {
-  WindowOpenCompletion::{
-    state: WindowOpenPending,
-    changed: @async.CondVar::Cond(),
-  }
+  WindowOpenCompletion::{ state: WindowOpenPending, changed: @async.Cond(), }
 }
 
 ///|

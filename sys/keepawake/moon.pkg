@@ -1,13 +1,13 @@
 import {
-  "moonbitlang/async",
-  "moonbitlang/async/process",
-  "moonbitlang/async/os_error",
+  "moonbitlang/core/async",
+  "moonbitlang/core/async/process",
+  "moonbitlang/core/async/os_error",
   "moonbit-community/proton_ffi" @ffi,
   "moonbitlang/core/encoding/utf8",
 }
 
 import {
-  "moonbitlang/async/fs",
+  "moonbitlang/core/async/fs",
   "moonbitlang/core/env",
 } for "wbtest"
 
@@ -20,6 +20,7 @@ supported_targets = "native"
 max_concurrent_tests = 1
 
 options(
+  "allow-experimental-packages": true,
   "native-stub": [
     "native_common.c",
     "native_windows.c",

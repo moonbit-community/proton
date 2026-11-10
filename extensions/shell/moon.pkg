@@ -10,6 +10,7 @@ supported_targets = "native"
 formatter(ignore: [ "extension.g.mbt" ])
 
 options(
+  "allow-experimental-packages": true,
   targets: {
     "extension.g.mbt": [ "native" ],
     "extension.mbt": [ "native" ],
@@ -19,6 +20,6 @@ options(
 
 import {
   "moonbitlang/core/env",
-  "moonbitlang/async",
-  "moonbitlang/async/fs" @async_fs,
+  "moonbitlang/core/async",
+  "moonbitlang/core/async/fs" @async_fs,
 } for "wbtest"

@@ -245,7 +245,7 @@ async fn ResolvedUpdateChannel::poll(
 fn start_update_check(
   updates : ApplicationUpdates,
   handlers : Array[async (PendingUpdate) -> Unit noraise],
-  tasks : @async.TaskGroup[Unit],
+  tasks : @async.TaskGroup,
 ) -> Unit {
   guard updates.channel is Some(channel) else { return }
   guard checks_on_launch(channel, handlers.length()) else { return }
