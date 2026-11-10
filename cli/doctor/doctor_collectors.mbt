@@ -54,7 +54,12 @@ async fn collect_project(project : ProjectDoctorInfo?) -> DoctorSection {
 ///|
 async fn collect_environment() -> DoctorSection {
   let lines : Array[DoctorLine] = []
-  let (status, output) = @process.collect_output_merged("moon", ["version"]) catch {
+  let output = @process.run(
+    "moon",
+    ["version"],
+    stdout=Collect,
+    stderr=DuplicateStdout,
+  ) catch {
     _ => {
       lines.push(
         DoctorLine(
@@ -67,7 +72,8 @@ async fn collect_environment() -> DoctorSection {
       return DoctorSection("environment", "Environment", lines)
     }
   }
-  let version = first_non_empty_line(output.text() catch { _ => "" })
+  let status = output.exit_code
+  let version = first_non_empty_line(output.stdout_text() catch { _ => "" })
   if status == 0 && version is Some(version) {
     lines.push(DoctorLine("environment.moon", Ok, "moon: " + version))
   } else {

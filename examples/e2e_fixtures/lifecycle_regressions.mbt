@@ -2486,7 +2486,7 @@ pub async fn run_navigation_regression() -> Unit {
                 }
                 served.push(request.path)
                 if request.meth is Post {
-                  post_bodies.push(connection.read_all().text())
+                  post_bodies.push(@utf8.decode(connection.read_all()))
                 }
                 if request.path == "/redirect" {
                   connection.send_response(302, "Found", extra_headers={
@@ -2581,7 +2581,7 @@ pub async fn run_navigation_cleanup_regression() -> Unit {
   let disposed = Ref(false)
   let cleaned = Ref(false)
   let late_calls = Ref(0)
-  let tasks : Ref[@async.TaskGroup[Unit]?] = Ref(None)
+  let tasks : Ref[@async.TaskGroup?] = Ref(None)
   let gate = @env.get_env_var("PROTON_E2E_LIFECYCLE_GATE").unwrap()
   let app = @proton.App(
       @proton.WindowConfig(

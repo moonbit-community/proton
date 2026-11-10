@@ -16,8 +16,9 @@ async fn main {
 }
 ```
 
-Import `moonbitlang/async` to use `async fn main`. Proton manages the application
-event loop automatically. `@proton.html` accepts optional
+Import `moonbitlang/core/async` in `moon.pkg` and set
+`options("allow-experimental-packages": true)` to use `async fn main`. Proton
+manages the application event loop automatically. `@proton.html` accepts optional
 `width?`, `height?`, `debug?`, and `resizable?` arguments.
 
 Configuration methods mutate the existing `App` and return `Unit`. Use MoonBit's

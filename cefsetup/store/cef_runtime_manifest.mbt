@@ -101,7 +101,7 @@ fn runtime_manifest(requirement : RuntimeRequirement) -> RuntimeManifest {
 
 ///|
 async fn read_runtime_manifest_json(path : String) -> Json {
-  let content = @async_fs.read_file(path).text() catch {
+  let content = @async_fs.read_text(path) catch {
     err =>
       raise CefRuntimeError::ManifestRead(
         path~,
@@ -120,7 +120,7 @@ async fn read_runtime_manifest_json(path : String) -> Json {
 ///|
 async fn write_runtime_manifest(runtime : InstalledRuntime) -> Unit {
   let path = path_join(runtime.root, runtime_manifest_name)
-  @async_fs.write_file(
+  @async_fs.write_text(
     path,
     runtime_manifest(installed_requirement(runtime)).to_json().stringify() +
     "\n",

@@ -9,7 +9,7 @@ pub async fn info(message : String) -> Unit noraise {
 /// Writes `message` followed by a newline to standard error. Write errors are
 /// ignored so progress reporting and diagnostics never fail the command.
 pub async fn write_stderr_line(message : String) -> Unit noraise {
-  @stdio.stderr.write(message + "\n") catch {
+  @stdio.stderr.text.write(message + "\n") catch {
     _ => ()
   }
 }

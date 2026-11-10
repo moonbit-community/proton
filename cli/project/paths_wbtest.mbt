@@ -28,7 +28,7 @@ async test "loading preserves path spelling without requiring referenced files" 
         ),
       ),
     )
-    @fs.write_file(
+    @fs.write_text(
       source,
       config.to_json().stringify(),
       create_mode=CreateOrTruncate,

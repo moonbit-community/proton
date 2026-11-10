@@ -198,16 +198,12 @@ async fn list_unix_processes() -> Array[ProcessRow] {
   // the tests match on, such as `--type=renderer`.
   let tmp_root = @fs.tmpdir(prefix="proton-e2e-ps-")
   let ps_log = join_path(tmp_root, "ps.out")
-  let output = @process.redirect_to_file(
-    ps_log,
-    create_mode=@fs.CreateOrTruncate,
-  )
   let code = @process.run(
-    "ps",
-    ["-axo", "pid=,ppid=,command=", "-ww"],
-    stdout=output,
-    stderr=output,
-  )
+      "ps",
+      ["-axo", "pid=,ppid=,command=", "-ww"],
+      stdout=ToFile(ps_log),
+      stderr=DuplicateStdout,
+    ).exit_code
   guard code == 0 else { fail("failed to inspect the Unix process tree") }
   let text = @mbfs.read_file_to_string(ps_log, encoding="utf8") catch {
     _ => fail("failed to read Unix process output")
@@ -264,13 +260,16 @@ async fn list_windows_processes() -> Array[ProcessRow] {
     #|    command = (("{0} {1}" -f $_.Name, $_.CommandLine).Trim())
     #|  }
     #|} | ConvertTo-Json -Compress
-  let (code, output) = @process.collect_output_merged(
+  let output = @process.run(
     "powershell",
     ["-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", script],
     no_console_window=true,
+    stdout=Collect,
+    stderr=DuplicateStdout,
   )
+  let code = output.exit_code
   guard code == 0 else { fail("failed to inspect the Windows process tree") }
-  let text = output.text() catch {
+  let text = output.stdout_text() catch {
     _ => fail("failed to decode Windows process output")
   }
   if text.trim() == "" {
@@ -503,7 +502,7 @@ async fn run_event_lifecycle_probe(root : String, timeout : Int32) -> Unit {
 
 ///|
 async fn connect_spawned_page(
-  tasks : @async.TaskGroup[Unit],
+  tasks : @async.TaskGroup,
   app : SpawnedScenarioApp,
   target : String,
   timeout : Int32,

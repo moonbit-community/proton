@@ -3,7 +3,7 @@ package "moonbit-community/proton_cdp/client"
 
 import {
   "moonbit-community/proton_cdp/protocol",
-  "moonbitlang/async",
+  "moonbitlang/core/async",
   "moonbitlang/core/debug",
   "moonbitlang/core/json",
 }
@@ -15,17 +15,17 @@ pub fn chrome_executable_candidates() -> Array[String]
 
 pub fn chrome_launch_args(CdpLaunchOptions) -> Array[String]
 
-pub async fn[X] connect_cdp_browser_target(@async.TaskGroup[X], CdpTarget) -> CdpClient
+pub async fn connect_cdp_browser_target(@async.TaskGroup, CdpTarget) -> CdpClient
 
-pub async fn[X] connect_cdp_browser_target_with_timeout(@async.TaskGroup[X], CdpTarget, timeout_ms? : Int32) -> CdpClient
+pub async fn connect_cdp_browser_target_with_timeout(@async.TaskGroup, CdpTarget, timeout_ms? : Int32) -> CdpClient
 
-pub async fn[X] connect_cdp_page_target(@async.TaskGroup[X], CdpTarget, target_id? : String, url? : String, title? : String) -> CdpClient
+pub async fn connect_cdp_page_target(@async.TaskGroup, CdpTarget, target_id? : String, url? : String, title? : String) -> CdpClient
 
-pub async fn[X] connect_cdp_page_target_with_timeout(@async.TaskGroup[X], CdpTarget, target_id? : String, url? : String, title? : String, timeout_ms? : Int32) -> CdpClient
+pub async fn connect_cdp_page_target_with_timeout(@async.TaskGroup, CdpTarget, target_id? : String, url? : String, title? : String, timeout_ms? : Int32) -> CdpClient
 
-pub async fn[X] connect_cdp_target(@async.TaskGroup[X], CdpTarget) -> CdpClient
+pub async fn connect_cdp_target(@async.TaskGroup, CdpTarget) -> CdpClient
 
-pub async fn[X] connect_cdp_target_with_timeout(@async.TaskGroup[X], CdpTarget, timeout_ms? : Int32) -> CdpClient
+pub async fn connect_cdp_target_with_timeout(@async.TaskGroup, CdpTarget, timeout_ms? : Int32) -> CdpClient
 
 pub fn default_launch_options() -> CdpLaunchOptions
 
@@ -148,8 +148,8 @@ pub async fn CdpClient::attach_to_target(Self, String, flatten? : Bool) -> Strin
 pub fn CdpClient::attached_target(Self, String) -> CdpAttachedTarget?
 pub fn CdpClient::attached_targets(Self) -> Array[CdpAttachedTarget]
 pub async fn CdpClient::close(Self) -> Unit
-pub async fn[X] CdpClient::connect(@async.TaskGroup[X], String) -> Self
-pub async fn[X] CdpClient::connect_with_timeout(@async.TaskGroup[X], String, timeout_ms? : Int32) -> Self
+pub async fn CdpClient::connect(@async.TaskGroup, String) -> Self
+pub async fn CdpClient::connect_with_timeout(@async.TaskGroup, String, timeout_ms? : Int32) -> Self
 pub async fn CdpClient::create_target(Self, url? : String, browser_context_id? : String, new_window? : Bool) -> String
 pub async fn CdpClient::get_targets(Self) -> Array[CdpTargetInfo]
 pub fn CdpClient::last_cdp_event(Self) -> @protocol.CdpEventMessage?

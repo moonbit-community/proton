@@ -52,7 +52,7 @@ pub extend MultiWindowProbe with FromJson::{from_json}
 
 ///|
 async fn run_multi_window_scenario_probe(
-  tasks : @async.TaskGroup[Unit],
+  tasks : @async.TaskGroup,
   app : SpawnedScenarioApp,
   target : String,
   timeout : Int32,
@@ -154,17 +154,12 @@ async fn run_multi_window_page_clients(
   wait_for_ready(page_b, multi_window_ready_expression(), timeout)
   ignore(capture_headless_screenshot(page_a))
   ignore(capture_headless_screenshot(page_b))
-  let (value_a, value_b) = @async.with_task_group(group => {
-    let task_a = group.spawn(
-      () => evaluate_json(page_a, multi_window_probe_expression(220), true),
-      no_wait=true,
-    )
-    let task_b = group.spawn(
-      () => evaluate_json(page_b, multi_window_probe_expression(20), true),
-      no_wait=true,
-    )
-    (task_a.wait(), task_b.wait())
-  })
+  let values = @async.all([
+    () => evaluate_json(page_a, multi_window_probe_expression(220), true),
+    () => evaluate_json(page_b, multi_window_probe_expression(20), true),
+  ])
+  let value_a = values[0]
+  let value_b = values[1]
   let result = MultiWindowProbe::{
     a: decode_probe(value_a, "multi-window A"),
     b: decode_probe(value_b, "multi-window B"),

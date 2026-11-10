@@ -5,8 +5,8 @@ import {
   "moonbit-community/proton/internal/locale",
   "moonbit-community/proton/ipc",
   "moonbit-community/proton_contract",
-  "moonbitlang/async",
-  "moonbitlang/async/cond_var",
+  "moonbitlang/core/async",
+  "moonbitlang/core/async/cond_var",
   "moonbitlang/core/debug",
   "moonbitlang/core/json",
 }
@@ -84,12 +84,12 @@ pub struct AppCommandRequestContext {
   page_instance : String?
   permission_extension : String?
   permission_scope_value : @json.Json?
-  tasks : @async.TaskGroup[Unit]
+  tasks : @async.TaskGroup
   wake_signal : RuntimeWakeSignal
   emit_event : async (@proton_contract.ContractRoute, String, @json.Json) -> Unit noraise
   locale_preferences : @locale.LocalePreferences
 }
-pub fn AppCommandRequestContext::AppCommandRequestContext(@async.TaskGroup[Unit], @locale.LocalePreferences, window? : CommandWindow, window_id? : String, source_origin? : String, page_instance? : String?, permission_extension? : String, permission_scope? : @json.Json, wake_signal? : RuntimeWakeSignal, emit_event? : async (@proton_contract.ContractRoute, String, @json.Json) -> Unit noraise) -> Self
+pub fn AppCommandRequestContext::AppCommandRequestContext(@async.TaskGroup, @locale.LocalePreferences, window? : CommandWindow, window_id? : String, source_origin? : String, page_instance? : String?, permission_extension? : String, permission_scope? : @json.Json, wake_signal? : RuntimeWakeSignal, emit_event? : async (@proton_contract.ContractRoute, String, @json.Json) -> Unit noraise) -> Self
 #alias(emit)
 pub async fn[Payload : @json.ToJson] AppCommandRequestContext::emit_to_caller(Self, @proton_contract.Event[Payload], Payload) -> Unit
 pub fn AppCommandRequestContext::locale(Self) -> @locale.Locale
@@ -97,7 +97,7 @@ pub fn AppCommandRequestContext::page_instance(Self) -> String?
 pub fn AppCommandRequestContext::permission_scope(Self, String) -> @json.Json raise CommandPermissionError
 pub fn AppCommandRequestContext::preferred_languages(Self) -> Array[@locale.Locale]
 pub fn AppCommandRequestContext::source_origin(Self) -> String
-pub fn AppCommandRequestContext::task_group(Self) -> @async.TaskGroup[Unit]
+pub fn AppCommandRequestContext::task_group(Self) -> @async.TaskGroup
 pub async fn AppCommandRequestContext::wait_for_wake(Self, Int64) -> Unit
 pub fn AppCommandRequestContext::wake_revision(Self) -> Int64
 pub fn AppCommandRequestContext::wake_signal(Self) -> RuntimeWakeSignal

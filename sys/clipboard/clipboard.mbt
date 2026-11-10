@@ -238,11 +238,10 @@ async fn read_tool(
   args : Array[String],
 ) -> Result[String?, String] noraise {
   try {
-    let stderr = @process.redirect_to_file("/dev/null")
-    defer stderr.close()
-    let (status, output) = @process.collect_stdout(tool, args, stderr~)
+    let output = @process.run(tool, args, stdout=Collect, stderr=Discard)
+    let status = output.exit_code
     if status == 0 {
-      Ok(decode_optional_text(output.binary()))
+      Ok(decode_optional_text(output.stdout_binary()))
     } else {
       Err("\{tool} exited with status \{status}")
     }
@@ -258,23 +257,22 @@ async fn write_tool(
   text : String,
 ) -> Result[Unit, String] noraise {
   try {
-    let output = @process.redirect_to_file("/dev/null")
-    defer output.close()
-    let (stdin, writer) = @process.write_to_process()
-    defer writer.close()
-    let status = @async.with_task_group(group => {
+    let mut status = 0
+    @async.with_task_group(group => {
       let process = @process.spawn(
         group,
         tool,
         args,
-        stdin~,
-        stdout=output,
-        stderr=output,
+        stdin=FeedFromParent,
+        stdout=Discard,
+        stderr=Discard,
       )
-      writer.write(text)
+      let writer = process.stdin
+      defer writer.close()
+      writer.text.write(text)
       // Clipboard tools consume until EOF before publishing the selection.
       writer.close()
-      process.wait()
+      status = process.wait()
     })
     // A successful tool may have forked an owner that serves later pastes.
     // Only wait for the invoked process; do not terminate its descendants.

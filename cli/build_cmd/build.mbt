@@ -420,13 +420,13 @@ async fn run_frontend_build(
           @output.info("Building frontend: " + command)
           @output.info("Frontend cwd: " + cwd)
           let (program, args) = @project.shell_command(command)
-          let code = @process.run(program, args, cwd~) catch {
-            err =>
-              raise BuildProcessError::Start(
-                command="frontend build",
-                detail=@debug.render(Repr(err)),
-              )
-          }
+          let code = @process.run(program, args, cwd~).exit_code catch {
+              err =>
+                raise BuildProcessError::Start(
+                  command="frontend build",
+                  detail=@debug.render(Repr(err)),
+                )
+            }
           if code != 0 {
             raise BuildProcessError::Exit(command="frontend build", code~)
           }
@@ -537,17 +537,17 @@ async fn run_moon_build(
   )
   @output.info("Building Proton app: moon " + args.join(" "))
   let code = @process.run(
-    "moon",
-    args,
-    cwd=root,
-    extra_env=app_build_process_env(windows_resource),
-  ) catch {
-    err =>
-      raise BuildProcessError::Start(
-        command="MoonBit build",
-        detail=@debug.render(Repr(err)),
-      )
-  }
+      "moon",
+      args,
+      cwd=root,
+      extra_env=app_build_process_env(windows_resource),
+    ).exit_code catch {
+      err =>
+        raise BuildProcessError::Start(
+          command="MoonBit build",
+          detail=@debug.render(Repr(err)),
+        )
+    }
   if code != 0 {
     raise BuildProcessError::Exit(command="MoonBit build", code~)
   }
@@ -638,11 +638,12 @@ async fn run_moon_build_only(
 ) -> String {
   let args = moon_build_only_args(app_package, release)
   @output.info("Building Proton executable: moon " + args.join(" "))
-  let (code, stdout) = @process.collect_stdout(
+  let stdout = @process.run(
     "moon",
     args,
     cwd=root,
     extra_env=app_build_process_env(windows_resource),
+    stdout=Collect,
   ) catch {
     error =>
       raise BuildProcessError::Start(
@@ -650,10 +651,11 @@ async fn run_moon_build_only(
         detail=@debug.render(Repr(error)),
       )
   }
+  let code = stdout.exit_code
   if code != 0 {
     raise BuildProcessError::Exit(command="MoonBit executable build", code~)
   }
-  let output = stdout.text() catch {
+  let output = stdout.stdout_text() catch {
     error =>
       raise BuildProcessError::InvalidOutput(
         command="MoonBit executable build",

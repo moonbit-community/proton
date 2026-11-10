@@ -3,7 +3,6 @@ name = "moonbit-community/proton_codegen"
 version = "0.8.0"
 
 import {
-  "moonbitlang/async@0.22.5",
   "moonbitlang/lexer@0.4.4",
   "moonbitlang/parser@0.4.4",
   "moonbitlang/x@0.5.5",

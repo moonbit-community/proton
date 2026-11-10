@@ -79,21 +79,20 @@ function usePublishedRelease() {
 async function verifyRegistryCdp() {
   const consumer = path.join(tempRoot, "cdp-consumer");
   fs.mkdirSync(consumer);
-  const asyncDependency = fs.readFileSync(path.join(repoRoot, "cdp/moon.mod"), "utf8")
-    .match(/"moonbitlang\/async@[^"]+"/)[0];
   fs.writeFileSync(path.join(consumer, "moon.mod"), `name = "registry/cdp_smoke"
 version = "0.0.0"
-import { "moonbit-community/proton_cdp@${moduleVersion("cdp/moon.mod")}", ${asyncDependency} }
+import { "moonbit-community/proton_cdp@${moduleVersion("cdp/moon.mod")}" }
 preferred_target = "native"
 `);
   fs.writeFileSync(path.join(consumer, "moon.pkg"), `import {
-  "moonbitlang/async",
+  "moonbitlang/core/async",
   "moonbitlang/core/env",
   "moonbit-community/proton_cdp/client",
   "moonbit-community/proton_cdp/page",
 }
 supported_targets = "+native"
-options(is_main: true)
+pkgtype(kind: "executable")
+options("allow-experimental-packages": true)
 `);
   fs.writeFileSync(path.join(consumer, "main.mbt"), `///|
 async fn main {

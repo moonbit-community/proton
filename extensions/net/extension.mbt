@@ -18,7 +18,7 @@ fn parse_method(meth : String) -> @http.RequestMethod raise NetError {
 
 ///|
 /// Splits a URL into `(base_url, path)` where `base_url` has a trailing slash
-/// and is suitable for `@http.Client::Client`.
+/// and is suitable for `@http.ClientConnection::ClientConnection`.
 fn split_url(url : String) -> (String, String) raise NetError {
   let url = match url.split_once("#") {
     Some((without_fragment, _)) => without_fragment.to_owned()
@@ -86,23 +86,23 @@ async fn do_request(request : @net_contract.Request) -> @net_contract.Response {
   let headers = request_headers(request.headers)
   let body_bytes = request.body.map(fn(s) { @utf8.encode(s) }).unwrap_or(b"")
   // Use top-level functions for GET/POST/PUT (they handle full URL parsing).
-  // Use Client for DELETE, PATCH, HEAD, OPTIONS (need URL split + path).
+  // Use ClientConnection for DELETE, PATCH, HEAD, OPTIONS (need URL split + path).
   let (response, data) = match meth {
     Get =>
-      @http.get(request.url, headers~) catch {
+      @http.get_binary(request.url, headers~) catch {
         error => raise RequestFailed(detail=@debug.render(Repr(error)))
       }
     Post =>
-      @http.post(request.url, body_bytes, headers~) catch {
+      @http.post_binary(request.url, body_bytes, headers~) catch {
         error => raise RequestFailed(detail=@debug.render(Repr(error)))
       }
     Put =>
-      @http.put(request.url, body_bytes, headers~) catch {
+      @http.put_binary(request.url, body_bytes, headers~) catch {
         error => raise RequestFailed(detail=@debug.render(Repr(error)))
       }
     _ => {
       let (base_url, path) = split_url(request.url)
-      let client = @http.Client::Client(base_url, headers~) catch {
+      let client = @http.ClientConnection::ClientConnection(base_url, headers~) catch {
         error => raise RequestFailed(detail=@debug.render(Repr(error)))
       }
       defer client.close()
@@ -120,7 +120,7 @@ async fn do_request(request : @net_contract.Request) -> @net_contract.Response {
     status: response.code,
     status_text: response.reason,
     headers: response_headers(response.headers),
-    body: @utf8.decode_lossy(data.binary()),
+    body: @utf8.decode_lossy(data),
   }
 }
 

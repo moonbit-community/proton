@@ -5,20 +5,26 @@ fn linux_appdir_path(spec : PackageSpec) -> String {
 
 ///|
 async fn linux_arch() -> String {
-  let (code, output) = @process.collect_output_merged("uname", ["-m"]) catch {
+  let output = @process.run(
+    "uname",
+    ["-m"],
+    stdout=Collect,
+    stderr=DuplicateStdout,
+  ) catch {
     error =>
       raise LinuxPackagingError::ToolFailure(
         stage="detect architecture",
         detail=@debug.render(Repr(error)),
       )
   }
+  let code = output.exit_code
   guard code == 0 else {
     raise LinuxPackagingError::ToolFailure(
       stage="detect architecture",
       detail="uname exited with code " + code.to_string(),
     )
   }
-  match (output.text() catch { _ => "" }).trim().to_owned() {
+  match (output.stdout_text() catch { _ => "" }).trim().to_owned() {
     "x86_64" | "amd64" => "x86_64"
     "aarch64" | "arm64" => "aarch64"
     arch =>
@@ -137,10 +143,12 @@ async fn package_linux(
   let staging = destination + ".staging"
   remove_tree(staging)
   errdefer discard_tree(staging)
-  let (code, output) = @process.collect_output_merged(
+  let output = @process.run(
     "appimagetool",
     ["--no-appstream", appdir, staging],
     extra_env={ "ARCH": arch },
+    stdout=Collect,
+    stderr=DuplicateStdout,
   ) catch {
     error =>
       raise LinuxPackagingError::ToolFailure(
@@ -148,13 +156,14 @@ async fn package_linux(
         detail=@debug.render(Repr(error)),
       )
   }
+  let code = output.exit_code
   guard code == 0 else {
     raise LinuxPackagingError::ToolFailure(
       stage="create AppImage",
       detail="exit code " +
         code.to_string() +
         ": " +
-        (output.text() catch { _ => "non-UTF-8 output" }),
+        (output.stdout_text() catch { _ => "non-UTF-8 output" }),
     )
   }
   promote(staging, destination)

@@ -1,8 +1,8 @@
 import {
   "moonbit-community/proton/types",
-  "moonbitlang/async",
-  "moonbitlang/async/fs" @async_fs,
-  "moonbitlang/async/external_loop_integration" @extloop,
+  "moonbitlang/core/async",
+  "moonbitlang/core/async/fs" @async_fs,
+  "moonbitlang/core/async/external_loop_integration" @extloop,
   "moonbitlang/core/debug",
   "moonbitlang/core/encoding/utf8",
   "moonbitlang/core/env",
@@ -32,6 +32,7 @@ import {
 supported_targets = "native"
 
 options(
+  "allow-experimental-packages": true,
   "is-main": false,
   targets: {
     "exports.mbt": [ "native" ],

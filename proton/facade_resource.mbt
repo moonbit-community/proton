@@ -30,10 +30,10 @@ async fn resolve_resource_request(
   guard resource_path_is_under_root(canonical, root) else {
     return resource_text_response(404, "Not Found")
   }
-  let data = @async_fs.read_file(canonical) catch {
+  let data = @async_fs.read_binary(canonical) catch {
     _ => return resource_text_response(404, "Not Found")
   }
-  resource_response(200, resource_mime_type(canonical), data.binary())
+  resource_response(200, resource_mime_type(canonical), data)
 }
 
 ///|

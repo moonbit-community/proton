@@ -73,7 +73,7 @@ fn decode_package_config(
 ///|
 async fn load_package_config(path : String) -> (PackageConfig, String) {
   let absolute = @path.Path(path).resolve()
-  let source = @async_fs.read_file(absolute.to_string()).text() catch {
+  let source = @async_fs.read_text(absolute.to_string()) catch {
     error =>
       raise PackageCommandError::InvalidConfig(
         path=absolute.to_string(),

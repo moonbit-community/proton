@@ -2,7 +2,7 @@
 /// Creates a project using moon-new and the templates on Proton's main branch.
 pub async fn run(cwd : String, matches : @argparse.Matches) -> Unit {
   let args = moon_new_arguments(matches)
-  let code = @process.run("moonx", args, cwd~)
+  let code = @process.run("moonx", args, cwd~).exit_code
   if code != 0 {
     raise NewProjectError::GeneratorFailed(code)
   }

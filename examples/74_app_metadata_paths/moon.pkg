@@ -1,5 +1,5 @@
 import {
-  "moonbitlang/async",
+  "moonbitlang/core/async",
   "moonbitlang/core/env",
   "moonbitlang/x/path" @mbpath,
   "moonbit-community/proton",
@@ -10,5 +10,6 @@ supported_targets = "native"
 pkgtype(kind: "executable")
 
 options(
+  "allow-experimental-packages": true,
   targets: { "main.mbt": [ "native" ] },
 )

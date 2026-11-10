@@ -1,5 +1,5 @@
 import {
-  "moonbitlang/async",
+  "moonbitlang/core/async",
   "moonbit-community/proton_ext/process",
   "moonbit-community/proton",
 }
@@ -13,5 +13,6 @@ formatter(ignore: [ "app.mbt" ])
 pkgtype(kind: "executable")
 
 options(
+  "allow-experimental-packages": true,
   targets: { "main.mbt": [ "native" ] },
 )

@@ -46,10 +46,12 @@ fn windows_signing_config() -> WindowsSigningConfig raise WindowsPackagingError 
 
 ///|
 async fn run_signtool(args : Array[String], stage : String) -> Unit {
-  let (code, output) = @process.collect_output_merged(
+  let output = @process.run(
     "signtool",
     args,
     no_console_window=true,
+    stdout=Collect,
+    stderr=DuplicateStdout,
   ) catch {
     error =>
       raise WindowsPackagingError::ToolFailure(
@@ -57,13 +59,14 @@ async fn run_signtool(args : Array[String], stage : String) -> Unit {
         detail=@debug.render(Repr(error)),
       )
   }
+  let code = output.exit_code
   guard code == 0 else {
     raise WindowsPackagingError::ToolFailure(
       stage~,
       detail="exit code " +
         code.to_string() +
         ": " +
-        (output.text() catch { _ => "non-UTF-8 output" }),
+        (output.stdout_text() catch { _ => "non-UTF-8 output" }),
     )
   }
 }
@@ -116,7 +119,7 @@ async fn create_windows_zip(source : String, destination : String) -> Unit {
     #|  $ErrorActionPreference = "Stop"
     #|  Compress-Archive -LiteralPath $env:PROTON_PACKAGE_ZIP_SOURCE -DestinationPath $env:PROTON_PACKAGE_ZIP_DESTINATION -Force
     #|}
-  let (code, output) = @process.collect_output_merged(
+  let output = @process.run(
     "powershell",
     ["-NoProfile", "-NonInteractive", "-Command", script],
     extra_env={
@@ -124,6 +127,8 @@ async fn create_windows_zip(source : String, destination : String) -> Unit {
       "PROTON_PACKAGE_ZIP_DESTINATION": staging,
     },
     no_console_window=true,
+    stdout=Collect,
+    stderr=DuplicateStdout,
   ) catch {
     error =>
       raise WindowsPackagingError::ToolFailure(
@@ -131,13 +136,14 @@ async fn create_windows_zip(source : String, destination : String) -> Unit {
         detail=@debug.render(Repr(error)),
       )
   }
+  let code = output.exit_code
   guard code == 0 else {
     raise WindowsPackagingError::ToolFailure(
       stage="create Windows zip",
       detail="exit code " +
         code.to_string() +
         ": " +
-        (output.text() catch { _ => "non-UTF-8 output" }),
+        (output.stdout_text() catch { _ => "non-UTF-8 output" }),
     )
   }
   promote(staging, destination)

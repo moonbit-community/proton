@@ -6,11 +6,14 @@ Proton's runtime or CEF. Applications do not need this package to open DevTools.
 
 ## Install
 
+These examples use the current source API with `moonbitlang/core/async`.
+For the published 0.8.0 release, use the standalone `moonbitlang/async`
+package and its task group instead.
+
 In a separate automation project:
 
 ```sh
 moon add moonbit-community/proton_cdp
-moon add moonbitlang/async
 ```
 
 The network client and page helpers support the **native** target on macOS,
@@ -20,13 +23,14 @@ Add these imports to the executable's `moon.pkg`:
 
 ```moonbit
 import {
-  "moonbitlang/async",
+  "moonbitlang/core/async",
   "moonbitlang/core/env",
   "moonbit-community/proton_cdp/client",
   "moonbit-community/proton_cdp/page",
 }
 supported_targets = "+native"
-options(is_main: true)
+pkgtype(kind: "executable")
+options("allow-experimental-packages": true)
 ```
 
 ## Connect to a Proton application

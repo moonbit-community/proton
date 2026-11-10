@@ -3,10 +3,14 @@ import {
   "moonbit-community/proton_cli/project",
   "moonbit-community/proton_cli/fsutil",
   "moonbit-community/proton_cefsetup/store" @cef_store,
-  "moonbitlang/async/fs" @async_fs,
-  "moonbitlang/async/process",
+  "moonbitlang/core/async/fs" @async_fs,
+  "moonbitlang/core/async/process",
   "moonbitlang/core/debug",
   "moonbitlang/x/path",
 }
 
 supported_targets = "native+wasm"
+
+options(
+  "allow-experimental-packages": true,
+)

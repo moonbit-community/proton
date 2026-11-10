@@ -365,7 +365,7 @@ async fn create_windows_installer(
   let staging = windows_installer_staging_path(plan)
   let script = windows_installer_script_path(plan)
   remove_tree(staging)
-  @async_fs.write_file(
+  @async_fs.write_text(
     script,
     windows_installer_script(plan, source),
     create_mode=CreateOrTruncate,
@@ -376,22 +376,26 @@ async fn create_windows_installer(
         detail="\{script}: \{@debug.render(Repr(error))}",
       )
   }
-  let (code, output) = @process.collect_output_merged(windows_installer_tool, [
-    "/V2", script,
-  ]) catch {
+  let output = @process.run(
+    windows_installer_tool,
+    ["/V2", script],
+    stdout=Collect,
+    stderr=DuplicateStdout,
+  ) catch {
     _ =>
       raise WindowsPackagingError::ToolFailure(
         stage="create Windows installer",
         detail="\{windows_installer_tool} is not available; install NSIS to build the installer target",
       )
   }
+  let code = output.exit_code
   guard code == 0 else {
     raise WindowsPackagingError::ToolFailure(
       stage="create Windows installer",
       detail="exit code " +
         code.to_string() +
         ": " +
-        (output.text() catch { _ => "non-UTF-8 output" }),
+        (output.stdout_text() catch { _ => "non-UTF-8 output" }),
     )
   }
   guard path_exists(staging) else {

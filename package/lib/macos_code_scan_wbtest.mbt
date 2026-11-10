@@ -77,7 +77,7 @@ fn bundle_info(executable : String) -> Bytes {
 async fn write_fixture(root : String, path : String, bytes : Bytes) -> Unit {
   let file = path_join(root, path)
   @async_fs.mkdir(path_parent(file), recursive=true, allow_exist=true)
-  @async_fs.write_file(file, bytes, create_mode=CreateOrTruncate)
+  @async_fs.write_binary(file, bytes, create_mode=CreateOrTruncate)
 }
 
 ///|
@@ -250,19 +250,19 @@ async test "macOS packaging signs every code object in a resource tree" {
   let root = @async_fs.tmpdir(prefix="proton-package-sign-tree-")
   defer discard_tree(root)
   let source = path_join(root, "main.c")
-  @async_fs.write_file(source, "int main(void) { return 0; }")
+  @async_fs.write_text(source, "int main(void) { return 0; }")
   let executable = path_join(root, "main")
-  assert_eq(@process.run("cc", [source, "-o", executable]), 0)
+  assert_eq(@process.run("cc", [source, "-o", executable]).exit_code, 0)
   let payload = path_join(root, "payload")
   let tool = path_join(payload, "bin/tool")
   ensure_dir(path_parent(tool))
-  assert_eq(@process.run("cc", [source, "-o", tool]), 0)
+  assert_eq(@process.run("cc", [source, "-o", tool]).exit_code, 0)
   write_fixture(payload, "share/notes.txt", b"not code\n")
   let foo = path_join(payload, "lib/Foo.framework")
   let version = path_join(foo, "Versions/A")
   ensure_dir(path_join(version, "Libraries"))
   let library = path_join(root, "library.c")
-  @async_fs.write_file(library, "int foo(void) { return 1; }")
+  @async_fs.write_text(library, "int foo(void) { return 1; }")
   for output in ["Foo", "Libraries/libx.dylib"] {
     assert_eq(
       @process.run("cc", [
@@ -270,7 +270,7 @@ async test "macOS packaging signs every code object in a resource tree" {
         library,
         "-o",
         path_join(version, output),
-      ]),
+      ]).exit_code,
       0,
     )
   }
@@ -304,11 +304,11 @@ async test "macOS packaging signs every code object in a resource tree" {
       library,
       "-o",
       path_join(plugin, "MacOS/A-plugin"),
-    ]),
+    ]).exit_code,
     0,
   )
   assert_eq(
-    @process.run("cc", [source, "-o", path_join(plugin, "MacOS/Z-helper")]),
+    @process.run("cc", [source, "-o", path_join(plugin, "MacOS/Z-helper")]).exit_code,
     0,
   )
   @async_fs.symlink(target="Versions/Current/Foo", path_join(foo, "Foo"))
@@ -321,25 +321,31 @@ async test "macOS packaging signs every code object in a resource tree" {
   ensure_dir(flat)
   write_fixture(flat, "Info.plist", bundle_info("A-main"))
   assert_eq(
-    @process.run("cc", ["-bundle", library, "-o", path_join(flat, "A-main")]),
+    @process.run("cc", ["-bundle", library, "-o", path_join(flat, "A-main")]).exit_code,
     0,
   )
-  assert_eq(@process.run("cc", [source, "-o", path_join(flat, "Z-helper")]), 0)
+  assert_eq(
+    @process.run("cc", [source, "-o", path_join(flat, "Z-helper")]).exit_code,
+    0,
+  )
   // A tree rooted at a bundle, with code shallower than its main executable.
   let app = path_join(root, "Root.app/Contents")
   ensure_dir(path_join(app, "MacOS"))
   write_fixture(app, "Info.plist", bundle_info("A-main"))
   assert_eq(
-    @process.run("cc", [source, "-o", path_join(app, "MacOS/A-main")]),
+    @process.run("cc", [source, "-o", path_join(app, "MacOS/A-main")]).exit_code,
     0,
   )
-  assert_eq(@process.run("cc", [source, "-o", path_join(app, "helper")]), 0)
+  assert_eq(
+    @process.run("cc", [source, "-o", path_join(app, "helper")]).exit_code,
+    0,
+  )
   // A tree rooted at a framework without Info.plist.
   let bare = path_join(root, "Bare.framework")
   ensure_dir(path_join(bare, "Libraries"))
   for output in ["Bare", "Libraries/libx.dylib"] {
     assert_eq(
-      @process.run("cc", ["-dynamiclib", library, "-o", path_join(bare, output)]),
+      @process.run("cc", ["-dynamiclib", library, "-o", path_join(bare, output)]).exit_code,
       0,
     )
   }
@@ -365,12 +371,17 @@ async test "macOS packaging signs every code object in a resource tree" {
     ]),
     fn(_) {  },
   )
-  let (_, details) = @process.collect_output_merged("/usr/bin/codesign", [
-    "--display",
-    "--verbose=2",
-    path_join(artifacts[0], "Contents/Resources/payload/bin/tool"),
-  ])
-  assert_true(details.text().contains("flags=0x10002(adhoc,runtime)"))
+  let details = @process.run(
+    "/usr/bin/codesign",
+    [
+      "--display",
+      "--verbose=2",
+      path_join(artifacts[0], "Contents/Resources/payload/bin/tool"),
+    ],
+    stdout=Collect,
+    stderr=DuplicateStdout,
+  )
+  assert_true(details.stdout_text().contains("flags=0x10002(adhoc,runtime)"))
   // Signing out of order leaves a bundle's seal invalid.
   for
     bundle in [
@@ -383,7 +394,7 @@ async test "macOS packaging signs every code object in a resource tree" {
         "--deep",
         "--strict",
         path_join(artifacts[0], "Contents/Resources/" + bundle),
-      ]),
+      ]).exit_code,
       0,
     )
   }

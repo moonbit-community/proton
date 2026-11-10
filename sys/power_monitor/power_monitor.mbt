@@ -179,7 +179,7 @@ async fn PowerMonitor::begin_watching(
       self.finish_watching(Some(reader))
     }
   })()
-  let notice = reader.read_some(max_len=1) catch {
+  let notice = reader.read() catch {
     error =>
       raise OperationFailed(operation="with_watching", detail=error.to_string())
   }

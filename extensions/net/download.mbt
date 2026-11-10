@@ -44,8 +44,7 @@ async fn create_download_file(destination : String) -> (String, @fs.File) {
       let file = @fs.create(temporary, allow_existing=false, permission=0o600)
       return (temporary, file)
     } catch {
-      @os_error.OSError(_) as error if error.is_EEXIST() =>
-        continue download_random.uint64()
+      @os_error.OsError(AlreadyExists, ..) => continue download_random.uint64()
       error => raise error
     }
   }
@@ -129,10 +128,7 @@ pub async fn download(
   let resolved_destination = @path.Path(directory)
     .join(@path.Path(filename.to_owned()))
     .to_string()
-  let (response, client) = @http.get_stream(
-    origin + target[1:].to_owned(),
-    headers~,
-  ) catch {
+  let (response, client) = @http.get(origin + target[1:].to_owned(), headers~) catch {
     error => raise NetworkFailed(detail=@debug.render(Repr(error)))
   }
   defer client.close()
@@ -185,7 +181,7 @@ pub async fn download(
       notify({ received_bytes: received, total_bytes, })
       notified = received
     }
-    while (client.read_some(max_len=65536) catch {
+    while (client.read() catch {
             error => raise NetworkFailed(detail=@debug.render(Repr(error)))
           })
           is Some(chunk) {
@@ -213,7 +209,7 @@ pub async fn download(
       @fs.rename(temporary, resolved_destination, replace=overwrite)
       committed = true
     }) catch {
-      @os_error.OSError(_) as error if error.is_EEXIST() =>
+      @os_error.OsError(AlreadyExists, ..) =>
         raise DestinationExists(path=destination)
       error => raise FileFailed(detail=@debug.render(Repr(error)))
     }

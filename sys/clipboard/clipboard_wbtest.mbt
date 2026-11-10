@@ -197,9 +197,9 @@ async test "clipboard tool wait yields and cancelling blocked I/O reaps the chil
         @async.sleep(1)
       }
       // The operation cannot finish until another task gets to release it.
-      @async_fs.write_file(dir + "/release", "")
+      @async_fs.write_text(dir + "/release", "")
       assert_eq(task.wait(), Ok(()))
-      assert_eq(@async_fs.read_file(dir + "/text").text(), "hello")
+      assert_eq(@async_fs.read_text(dir + "/text"), "hello")
     })
     @async_fs.remove(dir + "/release")
     for reading in [false, true] {
@@ -217,7 +217,7 @@ async test "clipboard tool wait yields and cancelling blocked I/O reaps the chil
         while !@async_fs.exists(dir + "/ready") {
           @async.sleep(1)
         }
-        let pid = @async_fs.read_file(dir + "/ready").text()
+        let pid = @async_fs.read_text(dir + "/ready")
         task.cancel()
         let cancelled = try {
           task.wait()
@@ -228,10 +228,13 @@ async test "clipboard tool wait yields and cancelling blocked I/O reaps the chil
         }
         assert_true(cancelled)
         assert_false(returned.val)
-        assert_eq(@async_fs.read_file(dir + "/stopped").text(), "stopped")
-        let (status, _, _) = @process.collect_output("/bin/sh", [
-          "-c", "kill -0 \"$1\"", "clipboard-test", pid,
-        ])
+        assert_eq(@async_fs.read_text(dir + "/stopped"), "stopped")
+        let status = @process.run(
+            "/bin/sh",
+            ["-c", "kill -0 \"$1\"", "clipboard-test", pid],
+            stdout=Discard,
+            stderr=Discard,
+          ).exit_code
         assert_true(status != 0)
       })
       @async_fs.remove(dir + "/stopped")

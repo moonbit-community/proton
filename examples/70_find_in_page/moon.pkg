@@ -1,5 +1,5 @@
 import {
-  "moonbitlang/async",
+  "moonbitlang/core/async",
   "moonbitlang/core/json",
   "moonbit-community/proton_contract",
   "moonbit-community/proton",
@@ -12,5 +12,6 @@ warnings = "-unused_async"
 pkgtype(kind: "executable")
 
 options(
+  "allow-experimental-packages": true,
   targets: { "main.mbt": [ "native" ] },
 )

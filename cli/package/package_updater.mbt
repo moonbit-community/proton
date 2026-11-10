@@ -70,7 +70,7 @@ fn path_basename(path : String) -> String {
 
 ///|
 async fn write_updater_file(path : String, text : String) -> Unit {
-  @async_fs.write_file(path, text, create_mode=CreateOrTruncate)
+  @async_fs.write_text(path, text, create_mode=CreateOrTruncate)
 }
 
 ///|
@@ -96,7 +96,7 @@ async fn artifact_digest_and_size(
   let buffer = FixedArray::make(1024 * 1024, b'\x00')
   let mut size = 0L
   for ;; {
-    let read = file.read(buffer) catch {
+    let read = file.read_into(buffer) catch {
       error =>
         raise UnreadableArtifact(path~, detail=@debug.render(Repr(error)))
     }

@@ -5,7 +5,7 @@ async test "loaded configuration remains a complete independent snapshot" {
   let path = @mbpath.Path(dir).join("proton.project.json").to_string()
   let source =
     #|{"identifier":"com.example.snapshot","backend":{"path":"backend","package":"app"},"frontend":{"path":"frontend","dev_url":"http://localhost:4300","dist":"dist"},"package":{"product_name":"Snapshot","version":"1.2.3","resources":["assets"]},"platforms":{"macos":{"package":{"resources":["mac-assets"]}},"windows":{"package":{"resources":["win-assets"]}},"linux":{"package":{"resources":["linux-assets"]}}}}
-  @async_fs.write_file(path, source, create_mode=CreateOrTruncate)
+  @async_fs.write_text(path, source, create_mode=CreateOrTruncate)
   let previous = @env.get_env_var("PROTON_PROJECT_CONFIG")
   @env.set_env_var("PROTON_PROJECT_CONFIG", path)
   defer (match previous {

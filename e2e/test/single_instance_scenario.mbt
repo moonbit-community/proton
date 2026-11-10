@@ -1,6 +1,6 @@
 ///|
 async fn spawn_single_instance_probe(
-  group : @async.TaskGroup[Unit],
+  group : @async.TaskGroup,
   root : String,
   output_root : String,
   run_id : Int32,
@@ -11,10 +11,6 @@ async fn spawn_single_instance_probe(
 ) -> SpawnedScenarioApp {
   let (program, args) = scenario_app_command()
   let output_path = join_path(output_root, role + ".log")
-  let output = @process.redirect_to_file(
-    output_path,
-    create_mode=@fs.CreateOrTruncate,
-  )
   let env = app_process_env(root, output_root, "single_instance", run_id)
   env["PROTON_INSTANCE_TEST_IDENTIFIER"] = "dev.proton.e2e.single-instance.p" +
     run_id.to_string()
@@ -45,8 +41,8 @@ async fn spawn_single_instance_probe(
     args,
     cwd=root,
     extra_env=env,
-    stdout=output,
-    stderr=output,
+    stdout=ToFile(output_path),
+    stderr=DuplicateStdout,
     cancel_handler=app_cancel_handler(),
     no_wait=true,
   )

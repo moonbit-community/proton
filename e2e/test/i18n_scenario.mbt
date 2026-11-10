@@ -1,6 +1,6 @@
 ///|
 async fn run_i18n_scenario_page_probe(
-  tasks : @async.TaskGroup[Unit],
+  tasks : @async.TaskGroup,
   app : SpawnedScenarioApp,
   target : String,
   timeout : Int32,

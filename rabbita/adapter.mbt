@@ -26,7 +26,7 @@ pub fn[Request : ToJson, Response : @json.FromJson] invoke(
   client~ : @proton_client.Client = @proton_client.desktop,
 ) -> @cmd.Cmd {
   @cmd.custom_cmd(scheduler => {
-    // Rabbita runs raw JS async functions outside moonbitlang/async's task
+    // Rabbita runs raw JS async functions outside the async runtime's task
     // context. Use the callback boundary for this one-shot effect.
     ignore(
       client.invoke_with_callbacks(

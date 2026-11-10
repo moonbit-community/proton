@@ -79,7 +79,7 @@ fn runtime_store_root() -> String raise CefRuntimeError {
 
 ///|
 async fn report_info(message : String) -> Unit noraise {
-  @stdio.stderr.write(message + "\n") catch {
+  @stdio.stderr.text.write(message + "\n") catch {
     _ => ()
   }
 }

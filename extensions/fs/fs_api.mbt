@@ -82,7 +82,7 @@ fn file_kind_to_string(kind : @async_fs.FileKind) -> String {
     Pipe => "pipe"
     BlockDevice => "block_device"
     CharDevice => "char_device"
-    Unknown => "unknown"
+    _ => "unknown"
   }
 }
 
@@ -91,11 +91,10 @@ async fn read_text_file(
   payload : ReadFilePayload,
 ) -> ReadFileReply raise FsError {
   try {
-    let data = @async_fs.read_file(
+    let content = @async_fs.read_text(
       payload.path,
       sync_timestamp=option_bool(payload.sync_timestamp, false),
     )
-    let content = data.text()
     {
       path: payload.path,
       content,
@@ -117,7 +116,7 @@ async fn write_text_file(
   let sync = sync_mode_from_string(payload.sync)
   let permission = payload.permission
   try {
-    @async_fs.write_file(
+    @async_fs.write_text(
       payload.path,
       payload.content,
       create_mode?,
@@ -203,7 +202,7 @@ async fn mkdir_path(payload : MkdirPayload) -> Bool raise FsError {
 ///|
 async fn path_entry_kind(path : String) -> @async_fs.FileKind? {
   Some(@async_fs.kind(path, follow_symlink=false)) catch {
-    @os_error.OSError(_) as error if error.is_ENOENT() => None
+    @os_error.OsError(NotFound, ..) => None
     error => raise error
   }
 }

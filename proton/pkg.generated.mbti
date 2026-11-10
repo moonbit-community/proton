@@ -12,7 +12,7 @@ import {
   "moonbit-community/proton/updater",
   "moonbit-community/proton_config",
   "moonbit-community/proton_contract",
-  "moonbitlang/async",
+  "moonbitlang/core/async",
   "moonbitlang/core/debug",
   "moonbitlang/core/json",
 }
@@ -334,7 +334,7 @@ pub fn AppPathKind::not_equal(Self, Self) -> Bool
 pub fn AppPathKind::to_repr(Self) -> @debug.Repr
 
 pub struct ApplicationContext {
-  tasks : @async.TaskGroup[Unit]
+  tasks : @async.TaskGroup
   windows : WindowManager
   locale_preferences : @locale.LocalePreferences
   request_quit : (Int32) -> Unit
@@ -372,7 +372,7 @@ pub fn ApplicationContext::session(Self) -> SessionHandle
 pub fn ApplicationContext::set_as_default_protocol_client(Self, String, executable? : String, arguments? : Array[String]) -> Bool raise AppControlError
 pub fn ApplicationContext::set_badge_count(Self, Int32) -> Bool raise AppControlError
 pub fn ApplicationContext::show(Self) -> Unit raise AppControlError
-pub fn ApplicationContext::task_group(Self) -> @async.TaskGroup[Unit]
+pub fn ApplicationContext::task_group(Self) -> @async.TaskGroup
 pub fn ApplicationContext::task_metrics(Self) -> Array[@types.AppTaskMetric] raise AppControlError
 pub fn ApplicationContext::windows(Self) -> WindowManager
 
@@ -926,7 +926,7 @@ pub struct WindowContext {
   id : String
   handle : WindowHandle
   windows : WindowManager
-  tasks : @async.TaskGroup[Unit]
+  tasks : @async.TaskGroup
   events : WindowEventEmitter
   locale_preferences : @locale.LocalePreferences
   // private fields
@@ -937,7 +937,7 @@ pub fn WindowContext::handle(Self) -> WindowHandle
 pub fn WindowContext::id(Self) -> String
 pub fn WindowContext::locale(Self) -> @locale.Locale
 pub fn WindowContext::preferred_languages(Self) -> Array[@locale.Locale]
-pub fn WindowContext::task_group(Self) -> @async.TaskGroup[Unit]
+pub fn WindowContext::task_group(Self) -> @async.TaskGroup
 pub fn WindowContext::windows(Self) -> WindowManager
 
 #derive(Eq, @debug.Debug)

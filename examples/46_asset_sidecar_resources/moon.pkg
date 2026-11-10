@@ -1,6 +1,6 @@
 import {
   "moonbitlang/core/json",
-  "moonbitlang/async",
+  "moonbitlang/core/async",
   "moonbit-community/proton/extension" @proton_extension,
   "moonbit-community/proton_contract",
   "moonbit-community/proton",
@@ -25,6 +25,7 @@ formatter(ignore: [ "commands.g.mbt", "extension_identity.g.mbt" ])
 pkgtype(kind: "executable")
 
 options(
+  "allow-experimental-packages": true,
   targets: {
     "commands.g.mbt": [ "native" ],
     "commands.mbt": [ "native" ],

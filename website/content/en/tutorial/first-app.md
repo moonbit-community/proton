@@ -95,7 +95,7 @@ Run `proton_cli dev` again. You should see “Hello from MoonBit”, a short par
 
 `..config(@proton.load_config())` loads the complete application configuration, including its required identity, and installs it on the application. The display title alone is not an application identity.
 
-`.run_or_abort()` runs until the app exits and reports startup/runtime failures. The entry is async, so retain the template's `moonbitlang/async` import.
+`.run_or_abort()` runs until the app exits and reports startup/runtime failures. The entry is async, so keep the generated package's async import and package options.
 
 ## 4. Check and build
 

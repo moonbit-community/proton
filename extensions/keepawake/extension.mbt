@@ -8,7 +8,7 @@ let release_command = @keepawake_contract.release
 let status_command = @keepawake_contract.status
 
 ///|
-let owner_tasks : Ref[@async.TaskGroup[Unit]?] = Ref(None)
+let owner_tasks : Ref[@async.TaskGroup?] = Ref(None)
 
 ///|
 let guard_lock : @async.Mutex = @async.Mutex()

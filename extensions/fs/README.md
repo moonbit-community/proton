@@ -1,7 +1,7 @@
 # FS Extension
 
 `moonbit-community/proton_ext/fs` contains a thin command-extension wrapper around
-`moonbitlang/async/fs`.
+`moonbitlang/core/async/fs`.
 
 It is exposed as an app command extension, so filesystem calls run through the
 same async command bridge used by the other native Proton extensions.

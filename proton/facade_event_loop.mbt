@@ -1,9 +1,9 @@
 ///|
-/// Proton's event loop, handed to `moonbitlang/async` so the two can share the
+/// Proton's event loop, handed to `moonbitlang/core/async` so the two can share the
 /// main thread.
 ///
 /// AppKit and its peers insist on owning the process's main thread, and
-/// `moonbitlang/async` wants a thread for its own loop. Installing this loop
+/// `moonbitlang/core/async` wants a thread for its own loop. Installing this loop
 /// settles the argument: every line of MoonBit, this `poll` included, keeps
 /// running on the main thread, and `async` moves only its waiting half onto a
 /// thread of its own.
@@ -29,7 +29,7 @@ let host_event_loop : ProtonEventLoop = ProtonEventLoop::{
 ///|
 /// Installs the loop before anything else in the process runs.
 ///
-/// `fn init` is the one place guaranteed to run before `moonbitlang/async`
+/// `fn init` is the one place guaranteed to run before `moonbitlang/core/async`
 /// starts its loop, which is the deadline `set_external_event_loop` imposes --
 /// installing afterwards aborts. Doing it here rather than asking every
 /// application to spell it out as the first line of `async fn main` means the
@@ -46,7 +46,7 @@ fn init {
 }
 
 ///|
-/// Hands Proton's event loop to `moonbitlang/async`. Call once, from `fn init`:
+/// Hands Proton's event loop to `moonbitlang/core/async`. Call once, from `fn init`:
 /// `async` aborts on a second install.
 fn install_event_loop() -> Unit raise AppRunError {
   // Begin first. A failure here leaves nothing installed, whereas installing

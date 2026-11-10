@@ -189,7 +189,7 @@ async test "application context forwards orderly and forced exit requests" {
     assert_true(context.has_single_instance_lock())
     context.release_single_instance_lock()
     assert_false(context.has_single_instance_lock())
-    group.return_immediately(())
+    group.return_immediately()
   })
   assert_eq(requested.val, 5)
   assert_eq(forced.val, 9)
@@ -242,7 +242,7 @@ async test "application context validates protocol declarations and relaunch opt
       context.relaunch_command(Some(RelaunchOptions(executable="/tmp/helper"))),
       ("/tmp/helper", []),
     )
-    group.return_immediately(())
+    group.return_immediately()
   })
 }
 
@@ -752,7 +752,7 @@ async test "bridge cancellation targets only the matching handler task" {
     assert_true(pending[0].state is Running)
     assert_true(pending[1].state is Cancelled)
     first_task.cancel()
-    group.return_immediately(())
+    group.return_immediately()
   })
 }
 
@@ -1887,7 +1887,7 @@ async test "setup runs in order and registered cleanup runs in reverse order" {
         @locale.LocalePreferences::resolve(None, []),
       ),
     )
-    group.return_immediately(())
+    group.return_immediately()
   })
   assert_eq(calls, [
     "start:first", "start:second", "start:without-cleanup", "stop:second", "stop:first",
@@ -1949,7 +1949,7 @@ async test "dialog completion wakes only its registered waiter" {
       ),
     )
     assert_eq(waiting.wait(), "selected")
-    group.return_immediately(())
+    group.return_immediately()
   })
   assert_true(completions.pending.is_empty())
 }
@@ -1980,7 +1980,7 @@ async test "dialog completion propagates native failure" {
       ),
     )
     waiting.wait()
-    group.return_immediately(())
+    group.return_immediately()
   })
   assert_eq(
     observed.val,
@@ -2028,7 +2028,7 @@ async test "cookie completion wakes only its registered waiter" {
       ),
     )
     assert_eq(waiting.wait(), [selected])
-    group.return_immediately(())
+    group.return_immediately()
   })
   assert_true(completions.pending.is_empty())
 }
@@ -2935,7 +2935,7 @@ async test "application context exposes an immutable locale snapshot" {
       application.preferred_languages().map(locale => locale.to_string()),
       ["zh-CN", "en-GB", "en-US"],
     )
-    group.return_immediately(())
+    group.return_immediately()
   })
 }
 

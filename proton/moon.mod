@@ -8,7 +8,6 @@ import {
   "moonbit-community/proton_contract@0.8.0",
   "moonbit-community/proton_updater@0.8.0",
   "moonbit-community/proton_rsa@0.8.0",
-  "moonbitlang/async@0.22.5",
   "moonbitlang/x@0.5.5",
   "moonbitlang/lexer@0.4.4",
   "tonyfettes/xlog@0.4.2",

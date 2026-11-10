@@ -11,7 +11,7 @@ fn DialogCompletionStore::register(
   let completion = PendingDialogCompletion::{
     dialog,
     state: Waiting,
-    changed: @async.CondVar::Cond(),
+    changed: @async.Cond(),
   }
   self.pending.push(completion)
   completion

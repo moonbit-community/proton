@@ -50,9 +50,9 @@ async fn run_tool(
   tool : String,
   args : Array[String],
 ) -> Unit raise ShellError {
-  let status = @process.run(tool, args) catch {
-    error => raise ShellError(operation~, target~, reason=error.to_string())
-  }
+  let status = @process.run(tool, args).exit_code catch {
+      error => raise ShellError(operation~, target~, reason=error.to_string())
+    }
   if status != 0 {
     raise ShellError(
       operation~,

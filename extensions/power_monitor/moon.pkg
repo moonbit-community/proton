@@ -1,5 +1,5 @@
 import {
-  "moonbitlang/async",
+  "moonbitlang/core/async",
   "moonbit-community/proton_power_monitor" @sys_power_monitor,
   "moonbit-community/proton",
   "moonbit-community/proton/extension" @proton_extension,
@@ -16,6 +16,7 @@ import {
 } for "wbtest"
 
 options(
+  "allow-experimental-packages": true,
   targets: {
     "extension.g.mbt": [ "native" ],
     "extension.mbt": [ "native" ],

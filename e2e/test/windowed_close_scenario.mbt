@@ -1,16 +1,12 @@
 ///|
 async fn spawn_windowed_close_probe(
-  group : @async.TaskGroup[Unit],
+  group : @async.TaskGroup,
   root : String,
   output_root : String,
   run_id : Int32,
 ) -> SpawnedScenarioApp {
   let (program, args) = scenario_app_command()
   let output_path = join_path(output_root, "windowed-close.log")
-  let output = @process.redirect_to_file(
-    output_path,
-    create_mode=@fs.CreateOrTruncate,
-  )
   let env = app_process_env(root, output_root, "windowed_close", run_id)
   env["PROTON_HEADLESS"] = "0"
   let process = @process.spawn(
@@ -19,8 +15,8 @@ async fn spawn_windowed_close_probe(
     args,
     cwd=root,
     extra_env=env,
-    stdout=output,
-    stderr=output,
+    stdout=ToFile(output_path),
+    stderr=DuplicateStdout,
     cancel_handler=app_cancel_handler(),
     no_wait=true,
   )

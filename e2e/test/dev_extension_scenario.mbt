@@ -115,7 +115,7 @@ pub extend DevExtensionReloadProbe with FromJson::{from_json}
 
 ///|
 async fn run_dev_extension_page_probe(
-  tasks : @async.TaskGroup[Unit],
+  tasks : @async.TaskGroup,
   app : SpawnedScenarioApp,
   target : String,
   frontend_url : String,
@@ -138,7 +138,7 @@ async fn run_dev_extension_page_probe(
 
 ///|
 async fn run_dev_extension_production_page_probe(
-  tasks : @async.TaskGroup[Unit],
+  tasks : @async.TaskGroup,
   app : SpawnedScenarioApp,
   target : String,
   timeout : Int32,
@@ -385,7 +385,7 @@ fn dev_extension_reload_probe_expression() -> String {
 
 ///|
 async fn run_dev_extension_non_proton_probe(
-  tasks : @async.TaskGroup[Unit],
+  tasks : @async.TaskGroup,
   target : String,
   output_root : String,
   timeout : Int32,

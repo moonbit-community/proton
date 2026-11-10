@@ -780,7 +780,7 @@ async test "runtime probe rejects legacy CEF library layouts" {
     if dir != "" {
       @async_fs.mkdir(path)
     }
-    @async_fs.write_file(
+    @async_fs.write_text(
       @path.Path(path).join(@path.Path(library)).to_string(),
       "legacy library placeholder",
       create_mode=CreateOrTruncate,
@@ -816,7 +816,7 @@ async test "runtime probe accepts Windows store and packaged library layouts" {
     if dir != "" {
       @async_fs.mkdir(library_dir)
     }
-    @async_fs.write_file(
+    @async_fs.write_text(
       @path.Path(library_dir).join(@path.Path("libcef.dll")).to_string(),
       "library placeholder",
       create_mode=CreateOrTruncate,

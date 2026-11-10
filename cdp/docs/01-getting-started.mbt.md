@@ -1,19 +1,20 @@
 # Getting started
 
 This page covers the minimum setup needed to connect `moonbit-community/proton_cdp` to a
-Chrome-family browser with remote debugging enabled.
+Chrome-family browser with remote debugging enabled. The imports below apply
+to the source version. The published 0.8.0 release uses the standalone
+`moonbitlang/async` package.
 
 ## Requirements
 
 - MoonBit with native target support.
-- `moonbitlang/async`.
+- `moonbitlang/core/async`.
 - Chrome, Edge, or Chromium when using a real browser.
 
 Install the library in your automation project:
 
 ```bash
 moon add moonbit-community/proton_cdp
-moon add moonbitlang/async
 ```
 
 ## Package imports
@@ -22,7 +23,7 @@ For an executable package that connects to CDP:
 
 ```moonbit
 import {
-  "moonbitlang/async",
+  "moonbitlang/core/async",
   "moonbit-community/proton_cdp/client",
   "moonbit-community/proton_cdp/page",
   "moonbit-community/proton_cdp/protocol",
@@ -30,6 +31,7 @@ import {
 }
 
 supported_targets = "+native"
+options("allow-experimental-packages": true)
 ```
 
 Use only the packages you need. For example, a discovery-only tool usually

@@ -29,7 +29,7 @@ pub extend AssetSidecarScenarioProbe with FromJson::{from_json}
 
 ///|
 async fn run_asset_sidecar_scenario_page_probe(
-  tasks : @async.TaskGroup[Unit],
+  tasks : @async.TaskGroup,
   app : SpawnedScenarioApp,
   target : String,
   timeout : Int32,
@@ -87,12 +87,12 @@ async fn run_asset_sidecar_scenario_page_probe(
     } else {
     fail("authored base resources were not loaded: " + resources.stringify())
   }
-  let source = @fs.read_file(
+  let source = @fs.read_text(
     join_path(
       repository_root(),
       "examples/46_asset_sidecar_resources/app/app.html",
     ),
-  ).text()
+  )
   assert_eq(
     evaluate_json(
       page, "fetch(location.href).then(response => response.text())", true,

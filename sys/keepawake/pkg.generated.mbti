@@ -2,12 +2,12 @@
 package "moonbit-community/proton_keepawake"
 
 import {
-  "moonbitlang/async",
+  "moonbitlang/core/async",
   "moonbitlang/core/debug",
 }
 
 // Values
-pub async fn[G] acquire(@async.TaskGroup[G], reason? : String, scope? : Scope) -> Guard raise KeepAwakeError
+pub async fn acquire(@async.TaskGroup, reason? : String, scope? : Scope) -> Guard raise KeepAwakeError
 
 pub let default_reason : String
 

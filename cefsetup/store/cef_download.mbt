@@ -21,11 +21,12 @@ async fn download_file(
 ) -> Unit {
   report_info("[INFO] Downloading CEF: " + url)
   let code = @process.run("curl", [
-    "-L", "--fail", "--retry", "5", "--retry-all-errors", "--retry-delay", "2", "--connect-timeout",
-    "30", "--output", destination, url,
-  ]) catch {
-    err => raise CefDownloadError::Start(url~, detail=@debug.render(Repr(err)))
-  }
+      "-L", "--fail", "--retry", "5", "--retry-all-errors", "--retry-delay", "2",
+      "--connect-timeout", "30", "--output", destination, url,
+    ]).exit_code catch {
+      err =>
+        raise CefDownloadError::Start(url~, detail=@debug.render(Repr(err)))
+    }
   guard code == 0 else { raise CefDownloadError::CurlExit(url~, code~) }
   verify_file_sha256(destination, expected_sha256)
 }
@@ -43,7 +44,7 @@ async fn verify_file_sha256(path : String, expected : String) -> Unit {
   defer file.close()
   let hasher = @crypto.SHA256::new()
   let buffer = FixedArray::make(1024 * 1024, b'\x00')
-  while file.read(buffer) is read && read > 0 {
+  while file.read_into(buffer) is read && read > 0 {
     hasher.update(buffer.unsafe_reinterpret_as_bytes()[:read])
   }
   let actual = @crypto.bytes_to_hex_string(hasher.finalize())
@@ -55,13 +56,13 @@ async fn verify_file_sha256(path : String, expected : String) -> Unit {
 ///|
 async fn extract_tar_bz2(archive_path : String, destination : String) -> Unit {
   report_info("[INFO] Extracting: " + archive_path)
-  let code = @process.run("tar", ["-xjf", archive_path, "-C", destination]) catch {
-    err =>
-      raise CefDownloadError::ExtractStart(
-        path=archive_path,
-        detail=@debug.render(Repr(err)),
-      )
-  }
+  let code = @process.run("tar", ["-xjf", archive_path, "-C", destination]).exit_code catch {
+      err =>
+        raise CefDownloadError::ExtractStart(
+          path=archive_path,
+          detail=@debug.render(Repr(err)),
+        )
+    }
   guard code == 0 else {
     raise CefDownloadError::ExtractExit(path=archive_path, code~)
   }

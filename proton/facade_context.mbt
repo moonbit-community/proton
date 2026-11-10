@@ -4,7 +4,7 @@ pub struct ApplicationContext {
   priv browser_session : SessionHandle
   priv updates : ApplicationUpdates
   priv close_coordinator : CloseCoordinator
-  tasks : @async.TaskGroup[Unit]
+  tasks : @async.TaskGroup
   priv cleanup_failures : Array[AppCleanupError]
   windows : WindowManager
   locale_preferences : @locale.LocalePreferences
@@ -25,7 +25,7 @@ pub struct WindowContext {
   id : String
   handle : WindowHandle
   windows : WindowManager
-  tasks : @async.TaskGroup[Unit]
+  tasks : @async.TaskGroup
   priv cleanup_failures : Array[AppCleanupError]
   events : WindowEventEmitter
   locale_preferences : @locale.LocalePreferences
@@ -43,7 +43,7 @@ fn ApplicationContext::ApplicationContext(
   cleanup_failures~ : Array[AppCleanupError] = [],
   updates~ : ApplicationUpdates = ApplicationUpdates(None),
   close_coordinator~ : CloseCoordinator = CloseCoordinator(),
-  tasks : @async.TaskGroup[Unit],
+  tasks : @async.TaskGroup,
   windows : WindowManager,
   locale_preferences : @locale.LocalePreferences,
   request_quit~ : (Int32) -> Unit = fn(_exit_code) {  },
@@ -89,7 +89,7 @@ fn WindowContext::WindowContext(
   id : String,
   handle : WindowHandle,
   windows : WindowManager,
-  tasks : @async.TaskGroup[Unit],
+  tasks : @async.TaskGroup,
   events : WindowEventEmitter,
   locale_preferences : @locale.LocalePreferences,
   cleanup_failures~ : Array[AppCleanupError] = [],
@@ -151,7 +151,7 @@ fn WindowEventEmitter::WindowEventEmitter(
 /// Returns the structured task group owned by this application.
 pub fn ApplicationContext::task_group(
   self : ApplicationContext,
-) -> @async.TaskGroup[Unit] {
+) -> @async.TaskGroup {
   self.tasks
 }
 
@@ -382,9 +382,7 @@ pub fn WindowContext::windows(self : WindowContext) -> WindowManager {
 
 ///|
 /// Returns the structured task group owned by this window.
-pub fn WindowContext::task_group(
-  self : WindowContext,
-) -> @async.TaskGroup[Unit] {
+pub fn WindowContext::task_group(self : WindowContext) -> @async.TaskGroup {
   self.tasks
 }
 

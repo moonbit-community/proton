@@ -451,27 +451,27 @@ async fn copy_file(source : String, destination : String) -> Unit {
     Windows => None
   }
   if tool is Some(tool) {
-    let code = @process.run(tool, ["--", source, destination]) catch {
-      error =>
-        raise PackageFileSystemError::Copy(
-          source~,
-          destination~,
-          detail=@debug.render(Repr(error)),
-        )
-    }
+    let code = @process.run(tool, ["--", source, destination]).exit_code catch {
+        error =>
+          raise PackageFileSystemError::Copy(
+            source~,
+            destination~,
+            detail=@debug.render(Repr(error)),
+          )
+      }
     guard code == 0 else {
       raise PackageToolError::Exit(tool~, code~, detail=source)
     }
     return
   }
-  let data = @async_fs.read_file(source) catch {
+  let data = @async_fs.read_binary(source) catch {
     error =>
       raise PackageFileSystemError::Read(
         path=source,
         detail=@debug.render(Repr(error)),
       )
   }
-  @async_fs.write_file(destination, data, create_mode=CreateOrTruncate) catch {
+  @async_fs.write_binary(destination, data, create_mode=CreateOrTruncate) catch {
     error =>
       raise PackageFileSystemError::Write(
         path=destination,
@@ -501,14 +501,14 @@ async fn copy_tree(source : String, destination : String) -> Unit {
     Macos => ("ditto", ["--", source, destination])
     Linux => ("cp", ["-R", "--", source, destination])
   }
-  let (code, _) = @process.collect_output_merged(tool, args) catch {
-    error =>
-      raise PackageFileSystemError::Copy(
-        source~,
-        destination~,
-        detail=@debug.render(Repr(error)),
-      )
-  }
+  let code = @process.run(tool, args, stdout=Discard, stderr=Discard).exit_code catch {
+      error =>
+        raise PackageFileSystemError::Copy(
+          source~,
+          destination~,
+          detail=@debug.render(Repr(error)),
+        )
+    }
   guard code == 0 || (tool == "robocopy" && code < 8) else {
     raise PackageToolError::Exit(tool~, code~, detail=source)
   }
@@ -534,7 +534,7 @@ async fn copy_payloads(
 ///|
 async fn write_text(path : String, text : String) -> Unit {
   ensure_dir(path_parent(path))
-  @async_fs.write_file(path, @utf8.encode(text), create_mode=CreateOrTruncate) catch {
+  @async_fs.write_binary(path, @utf8.encode(text), create_mode=CreateOrTruncate) catch {
     error =>
       raise PackageFileSystemError::Write(
         path~,

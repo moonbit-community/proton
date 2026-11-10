@@ -1,17 +1,17 @@
 ///|
 priv struct NotificationResultBroker {
   mut busy : Bool
-  gate : @async.CondVar
+  gate : @async.Cond
   results : Array[@native.NativeNotificationResult]
-  result_ready : @async.CondVar
+  result_ready : @async.Cond
 }
 
 ///|
 let notification_result_broker : NotificationResultBroker = NotificationResultBroker::{
   busy: false,
-  gate: @async.CondVar::Cond(),
+  gate: @async.Cond(),
   results: [],
-  result_ready: @async.CondVar::Cond(),
+  result_ready: @async.Cond(),
 }
 
 ///|

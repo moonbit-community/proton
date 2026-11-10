@@ -111,7 +111,7 @@ pub extend EventReloadScenarioProbe with FromJson::{from_json}
 
 ///|
 async fn run_event_scenario_page_probe(
-  tasks : @async.TaskGroup[Unit],
+  tasks : @async.TaskGroup,
   app : SpawnedScenarioApp,
   target : String,
   timeout : Int32,

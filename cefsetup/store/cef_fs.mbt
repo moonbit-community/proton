@@ -1,14 +1,14 @@
 ///|
 async fn copy_file(src : String, dest : String) -> Unit {
   if @path.sep != '\\' {
-    let code = @process.run("cp", ["-p", src, dest]) catch {
-      err =>
-        raise CefFileSystemError::Copy(
-          source=src,
-          destination=dest,
-          detail=@debug.render(Repr(err)),
-        )
-    }
+    let code = @process.run("cp", ["-p", src, dest]).exit_code catch {
+        err =>
+          raise CefFileSystemError::Copy(
+            source=src,
+            destination=dest,
+            detail=@debug.render(Repr(err)),
+          )
+      }
     guard code == 0 else {
       raise CefFileSystemError::Copy(
         source=src,
@@ -18,7 +18,7 @@ async fn copy_file(src : String, dest : String) -> Unit {
     }
     return
   }
-  let data = @async_fs.read_file(src) catch {
+  let data = @async_fs.read_binary(src) catch {
     err =>
       raise CefFileSystemError::Copy(
         source=src,
@@ -26,7 +26,7 @@ async fn copy_file(src : String, dest : String) -> Unit {
         detail="read failed: " + @debug.render(Repr(err)),
       )
   }
-  @async_fs.write_file(dest, data, create_mode=CreateOrTruncate) catch {
+  @async_fs.write_binary(dest, data, create_mode=CreateOrTruncate) catch {
     err =>
       raise CefFileSystemError::Copy(
         source=src,

@@ -25,7 +25,7 @@ pub struct AppCommandExtensionSpec {
   dependencies : Array[String]
   register : (CommandRegistrar) -> Unit raise
   resolve_permission : (Json, String) -> Json raise PermissionScopeValidationError
-  on_start : (@async.TaskGroup[Unit]) -> Unit raise
+  on_start : (@async.TaskGroup) -> Unit raise
   on_destroy : () -> Unit raise
 }
 
@@ -60,7 +60,7 @@ pub fn AppCommandExtensionSpec::typed(
   scripts~ : Array[String] = [],
   dependencies~ : Array[String] = [],
   resolve_permission? : (Json, String) -> Json raise PermissionScopeValidationError,
-  on_start~ : (@async.TaskGroup[Unit]) -> Unit raise = fn(_tasks) {  },
+  on_start~ : (@async.TaskGroup) -> Unit raise = fn(_tasks) {  },
   on_destroy~ : () -> Unit raise = fn() {  },
 ) -> AppCommandExtensionSpec raise ExtensionSpecError {
   contract.validate() catch {
@@ -225,7 +225,7 @@ fn copy_strings(values : Array[String]) -> Array[String] {
 /// Called after registration and before application startup hooks.
 pub fn AppCommandExtensionSpec::start(
   self : AppCommandExtensionSpec,
-  tasks : @async.TaskGroup[Unit],
+  tasks : @async.TaskGroup,
 ) -> Unit raise {
   (self.on_start)(tasks)
 }

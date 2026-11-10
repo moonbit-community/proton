@@ -3,7 +3,6 @@ name = "moonbit-community/proton_clipboard"
 version = "0.8.0"
 
 import {
-  "moonbitlang/async@0.22.5",
 }
 
 readme = "README.mbt.md"

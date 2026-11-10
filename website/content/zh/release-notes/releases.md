@@ -1,5 +1,17 @@
 # Release Notes
 
+## 尚未发布
+
+Proton 改用 MoonBit 内置的 `moonbitlang/core/async` 运行时。使用异步 API 或
+`async fn main` 的包，需要在 `moon.pkg` 中将 `moonbitlang/async` 导入替换为
+对应的 `moonbitlang/core/async`，并加入
+`options("allow-experimental-packages": true)`。请使用包含这组实验包的 MoonBit 工具链。
+
+`ApplicationContext::task_group()`、`WindowContext::task_group()`、扩展启动钩子、
+KeepAwake 和 CDP 现在使用不带类型参数的 `@async.TaskGroup`。任务组返回 `Unit`，
+`return_immediately()` 不接收参数。并发任务的结果可以通过 `@async.all` 收集。
+如果依赖仍导入 `moonbitlang/async`，将其解析到 `0.22.7` 或更新版本，让它共享同一运行时。
+
 ## 0.8.0
 
 HTTP(S) bridge 授权与 `proton_cli dev` 就绪探测采用与浏览器一致的主机和端口

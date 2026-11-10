@@ -156,7 +156,7 @@ async fn wait_keepawake_file(path : String) -> Unit {
 ///|
 async fn fake_inhibitor(root : String, result : String) -> String {
   let tool = root + "/systemd-inhibit"
-  @fs.write_file(
+  @fs.write_text(
     tool,
     "#!/bin/sh\n" +
     "printf '%s' \"$$\" > '" +
@@ -186,7 +186,7 @@ async test "Linux inhibition waits for acknowledgement and releases idempotently
       wait_keepawake_file(root + "/pid")
       // The backend is alive, but has not yet acquired inhibition.
       assert_true(acquiring.try_wait() is None)
-      @fs.write_file(root + "/proceed", "")
+      @fs.write_text(root + "/proceed", "")
       let keep_guard = acquiring.wait()
       assert_true(keep_guard.active())
       assert_eq(keep_guard.scope(), PreventSystemSleep)
@@ -214,7 +214,7 @@ async test "Linux inhibition reports delayed failure before entering protected w
       })
       wait_keepawake_file(root + "/pid")
       assert_true(acquiring.try_wait() is None)
-      @fs.write_file(root + "/proceed", "")
+      @fs.write_text(root + "/proceed", "")
       try acquiring.wait() catch {
         OperationFailed(operation="acquire", detail~) =>
           assert_true(detail.contains("status 7"))
@@ -238,7 +238,7 @@ async test "Linux inhibition startup cancellation yields and reaps the helper" {
         acquire_linux(group, tool, "test", PreventSystemSleep)
       })
       wait_keepawake_file(root + "/pid")
-      let pid = @fs.read_file(root + "/pid").text()
+      let pid = @fs.read_text(root + "/pid")
       // This coroutine can run while the backend is stalled before readiness.
       acquiring.cancel()
       try acquiring.wait() catch {
@@ -250,7 +250,7 @@ async test "Linux inhibition startup cancellation yields and reaps the helper" {
       assert_true(
         @process.run("/bin/sh", [
           "-c", "kill -0 \"$1\" 2>/dev/null", "kill-check", pid,
-        ]) !=
+        ]).exit_code !=
         0,
       )
     })
@@ -269,11 +269,11 @@ async test "Linux guard stops reporting active after helper exit" {
       root +
       "/exit' ]; do /bin/sleep 0.01; done; exit 9",
     )
-    @fs.write_file(root + "/proceed", "")
+    @fs.write_text(root + "/proceed", "")
     @async.with_task_group(group => {
       let keep_guard = acquire_linux(group, tool, "test", PreventSystemSleep)
       assert_true(keep_guard.active())
-      @fs.write_file(root + "/exit", "")
+      @fs.write_text(root + "/exit", "")
       guard keep_guard.backend is Linux(child, _) else {
         fail("expected Linux backend")
       }
@@ -296,7 +296,7 @@ async test "Linux helper loss cancels protected work and group exit releases a g
       root +
       "/exit' ]; do /bin/sleep 0.01; done; exit 9",
     )
-    @fs.write_file(root + "/proceed", "")
+    @fs.write_text(root + "/proceed", "")
     let cleaned = Ref(false)
     @async.with_task_group(group => {
       let keep_guard = acquire_linux(group, tool, "test", PreventSystemSleep)
@@ -305,7 +305,7 @@ async test "Linux helper loss cancels protected work and group exit releases a g
           defer {
             cleaned.val = true
           }
-          @fs.write_file(root + "/exit", "")
+          @fs.write_text(root + "/exit", "")
           @async.Semaphore(1, initial_value=0).acquire()
         })
       catch {
@@ -319,9 +319,13 @@ async test "Linux helper loss cancels protected work and group exit releases a g
       assert_false(keep_guard.active())
     })
     let waiting_tool = fake_inhibitor(root, "shift 6; exec \"$@\"")
-    let keep_guard = @async.with_task_group(group => {
-      acquire_linux(group, waiting_tool, "test", PreventSystemSleep)
+    let mut acquired = None
+    @async.with_task_group(group => {
+      acquired = Some(
+        acquire_linux(group, waiting_tool, "test", PreventSystemSleep),
+      )
     })
+    let keep_guard = acquired.unwrap()
     assert_false(keep_guard.active())
     guard keep_guard.backend is Linux(child, _) else {
       fail("expected Linux backend")
@@ -340,19 +344,25 @@ async test "Linux logind inhibition is present throughout scoped work" {
     let reason = "proton-keepawake-integration"
     with_keepawake(
       () => {
-        let (status, output) = @process.collect_stdout("systemd-inhibit", [
-          "--list", "--no-pager",
-        ])
+        let output = @process.run(
+          "systemd-inhibit",
+          ["--list", "--no-pager"],
+          stdout=Collect,
+        )
+        let status = output.exit_code
         assert_eq(status, 0)
-        assert_true(output.text().contains(reason))
+        assert_true(output.stdout_text().contains(reason))
       },
       reason~,
     )
-    let (status, output) = @process.collect_stdout("systemd-inhibit", [
-      "--list", "--no-pager",
-    ])
+    let output = @process.run(
+      "systemd-inhibit",
+      ["--list", "--no-pager"],
+      stdout=Collect,
+    )
+    let status = output.exit_code
     assert_eq(status, 0)
-    assert_false(output.text().contains(reason))
+    assert_false(output.stdout_text().contains(reason))
   })
 }
 
@@ -363,7 +373,7 @@ async test "released Linux guards finish their owner tasks before the applicatio
     let root = @fs.tmpdir(prefix="proton-inhibit-")
     defer @fs.rmdir(root, recursive=true)
     let tool = fake_inhibitor(root, "shift 6; exec \"$@\"")
-    @fs.write_file(root + "/proceed", "")
+    @fs.write_text(root + "/proceed", "")
     @async.with_task_group(group => {
       for _ in 0..<32 {
         let keep_guard = acquire_linux(group, tool, "test", PreventSystemSleep)
@@ -382,7 +392,8 @@ async test "released Linux guards finish their owner tasks before the applicatio
 async test "native guards finish ownership on explicit release and group exit" {
   guard @async.platform is (MacOS | Windows) else { return }
   @async.with_timeout(10000, () => {
-    let remaining = @async.with_task_group(group => {
+    let mut remaining = None
+    @async.with_task_group(group => {
       for _ in 0..<8 {
         let keep_guard = acquire(group, reason="Proton keep-awake regression")
         keep_guard.release()
@@ -390,8 +401,9 @@ async test "native guards finish ownership on explicit release and group exit" {
         assert_false(keep_guard.active())
         keep_guard.release()
       }
-      acquire(group, reason="Proton keep-awake group cleanup")
+      remaining = Some(acquire(group, reason="Proton keep-awake group cleanup"))
     })
+    let remaining = remaining.unwrap()
     assert_eq(remaining.lifetime.try_wait(), Some(()))
     assert_false(remaining.active())
   })
@@ -404,7 +416,8 @@ async test "explicit release failure is retryable without cancelling the owner" 
     for retry in [true, false] {
       let attempts = Ref(0)
       let sibling_stopped = Ref(false)
-      let keep_guard = @async.with_task_group(group => {
+      let mut acquired = None
+      @async.with_task_group(group => {
         group.spawn_bg(no_wait=true, () => {
           defer {
             sibling_stopped.val = true
@@ -445,8 +458,9 @@ async test "explicit release failure is retryable without cancelling the owner" 
           assert_eq(keep_guard.lifetime.try_wait(), Some(()))
           keep_guard.release()
         }
-        keep_guard
+        acquired = Some(keep_guard)
       })
+      let keep_guard = acquired.unwrap()
       // Without an explicit retry, exiting the owner still releases the guard.
       assert_false(keep_guard.active())
       assert_eq(keep_guard.lifetime.try_wait(), Some(()))

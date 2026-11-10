@@ -8,7 +8,7 @@ pub(all) struct Project {
 ///|
 /// Loads project configuration using the same decoder as the application.
 pub async fn load(path : String) -> Project raise @proton_config.AppConfigError {
-  let source = @fs.read_file(path).text() catch {
+  let source = @fs.read_text(path) catch {
     error =>
       raise @proton_config.FileRead(path~, detail=@debug.render(Repr(error)))
   }

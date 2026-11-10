@@ -11,7 +11,7 @@ pub async fn run_pdf_regression() -> Unit {
   let printing = Ref(false)
   let release_print = Ref(false)
   let replied = Ref(false)
-  let gate_changed = @async.CondVar::Cond()
+  let gate_changed = @async.Cond()
   let application : Ref[@proton.ApplicationContext?] = Ref(None)
   let pdf_secondary_config = @proton.WindowConfig(
     "PDF lifecycle",
@@ -105,7 +105,7 @@ pub async fn run_pdf_regression() -> Unit {
           group.spawn(() => {
             let path = output + "." + name + ".pdf"
             contents.print_to_pdf(path)
-            let file = @fs.read_file(path).binary()
+            let file = @fs.read_binary(path)
             assert_true(file.length() > 5)
             assert_eq(file[0:5].to_owned(), b"%PDF-")
           }),
@@ -210,7 +210,7 @@ pub async fn run_pdf_regression() -> Unit {
           let next = path + ".next.pdf"
           main.print_to_pdf(next)
           for printed in [path, next] {
-            assert_eq(@fs.read_file(printed).binary()[0:5].to_owned(), b"%PDF-")
+            assert_eq(@fs.read_binary(printed)[0:5].to_owned(), b"%PDF-")
           }
         }
         if cancel || is_view {

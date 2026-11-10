@@ -12,9 +12,9 @@ pub let maximum_metadata_bytes : Int32 = 1024 * 1024
 /// Public fetch entry points require HTTPS before calling this helper.
 async fn open_update_stream(
   url : String,
-) -> (@http.Response, @http.Client) raise UpdateError {
+) -> (@http.ResponseHeader, @http.ClientConnection) raise UpdateError {
   for current = url, redirects = 0 {
-    let (response, client) = @http.get_stream(current) catch {
+    let (response, client) = @http.get(current) catch {
       error => raise FetchFailed(url=current, detail=@debug.render(Repr(error)))
     }
     if response.code == 200 {
@@ -128,7 +128,7 @@ async fn fetch_metadata_stream(url : String) -> Bytes raise UpdateError {
   let (_, client) = open_update_stream(url)
   defer client.close()
   let buffer = @buffer.Buffer()
-  while (client.read_some(max_len=8192) catch {
+  while (client.read() catch {
           error => raise FetchFailed(url~, detail=@debug.render(Repr(error)))
         })
         is Some(chunk) {
@@ -172,7 +172,7 @@ pub async fn http_fetch_artifact(
     None => ()
   }
   let mut received = 0L
-  while (client.read_some() catch {
+  while (client.read() catch {
           error => raise FetchFailed(url~, detail=@debug.render(Repr(error)))
         })
         is Some(chunk) {

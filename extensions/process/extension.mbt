@@ -11,7 +11,7 @@ let kill_command = @process_contract.kill
 priv struct ProcessOwner {
   processes : Map[Int32, @async_process.Process]
   mut next_id : Int32
-  mut tasks : @async.TaskGroup[Unit]?
+  mut tasks : @async.TaskGroup?
 }
 
 ///|
@@ -20,8 +20,8 @@ fn ProcessOwner::ProcessOwner() -> ProcessOwner {
 }
 
 ///|
-async fn[X] spawn_process(
-  group : @async.TaskGroup[X],
+async fn spawn_process(
+  group : @async.TaskGroup,
   request : @process_contract.SpawnRequest,
 ) -> @async_process.Process {
   @async_process.spawn(

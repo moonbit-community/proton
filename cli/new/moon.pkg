@@ -1,7 +1,11 @@
 import {
-  "moonbitlang/async/process",
+  "moonbitlang/core/async/process",
   "moonbitlang/core/argparse",
   "moonbitlang/core/debug",
 }
 
 supported_targets = "native+wasm"
+
+options(
+  "allow-experimental-packages": true,
+)

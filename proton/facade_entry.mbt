@@ -25,7 +25,7 @@ async fn prepare_file_entry(
     error =>
       raise ReadFailed(path=resolved_text, detail=@debug.render(Repr(error)))
   }
-  let content = @async_fs.read_file(canonical).binary() catch {
+  let content = @async_fs.read_binary(canonical) catch {
     error => raise ReadFailed(path=canonical, detail=@debug.render(Repr(error)))
   }
   let document = ResourceDocument::{

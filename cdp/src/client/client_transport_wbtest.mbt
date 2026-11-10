@@ -11,14 +11,12 @@ async test "response diagnostics precede consumption and cancellation clears sta
       let request = connection.read_request()
       let websocket = @websocket.from_http_server(request, connection)
       defer websocket.close()
-      ignore(websocket.recv().read_all().text())
+      ignore(websocket.recv().text.read_all())
       websocket.send_text("{\"id\":1,\"result\":{\"ok\":true}}")
-      ignore(websocket.recv().read_all().text())
+      ignore(websocket.recv().text.read_all())
       ignore(websocket.recv()) catch {
-        error => {
-          inspect(error, content="ConnectionClosed(Normal, None)")
-          peer_closed.val = true
-        }
+        @websocket.ConnectionClosed(Normal, None) => peer_closed.val = true
+        error => raise error
       }
     })
 
@@ -46,7 +44,7 @@ async test "response diagnostics precede consumption and cancellation clears sta
 
     let second = client.send_cdp_command("Runtime.enable")
     let mut waiting = false
-    let wait_started = @async.CondVar::Cond()
+    let wait_started = @async.Cond()
     let wait_task = group.spawn(() => {
       waiting = true
       wait_started.broadcast()
@@ -83,7 +81,7 @@ async test "send failure clears registered command state" {
       let request = connection.read_request()
       let websocket = @websocket.from_http_server(request, connection)
       defer websocket.close()
-      ignore(websocket.recv().read_all().text()) catch {
+      ignore(websocket.recv().text.read_all()) catch {
         _ => ()
       }
     })

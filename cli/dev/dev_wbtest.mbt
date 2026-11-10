@@ -327,8 +327,7 @@ async test "dev starts the selected script from the CLI-overridden frontend dire
     assert_eq(child.wait(), 0)
   })
   assert_eq(
-    @async_fs.read_file(@fsutil.path_join(frontend, "ready.txt"))
-    .text()
+    @async_fs.read_text(@fsutil.path_join(frontend, "ready.txt"))
     .trim()
     .to_owned(),
     "dev-ready",
@@ -340,14 +339,14 @@ async test "dev prepares the runtime without an opt-in flag" {
   let root = @async_fs.tmpdir(prefix="proton-auto-dev-")
   defer @async_fs.rmdir(root, recursive=true)
   let store = @fsutil.path_join(root, "blocked-store")
-  @async_fs.write_file(store, "not a directory", create_mode=CreateOrTruncate)
+  @async_fs.write_text(store, "not a directory", create_mode=CreateOrTruncate)
   let previous = @env.get_env_var("PROTON_RUNTIME_STORE")
   @env.set_env_var("PROTON_RUNTIME_STORE", store)
   defer (match previous {
     Some(value) => @env.set_env_var("PROTON_RUNTIME_STORE", value)
     None => @env.unset_env_var("PROTON_RUNTIME_STORE")
   })
-  @async_fs.write_file(
+  @async_fs.write_text(
     @fsutil.path_join(root, "proton.project.json"),
     "{\"identifier\":\"com.example.auto\"}",
     create_mode=CreateOrTruncate,
