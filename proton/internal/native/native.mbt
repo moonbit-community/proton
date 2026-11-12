@@ -572,6 +572,7 @@ pub fn Runtime::Runtime(
     runtime_config_remote_debugging(config.remote_debugging),
     runtime_config_bool(config.headless),
     runtime_config_accessibility(config.accessibility_mode),
+    runtime_config_bool(config.macos_render_when_occluded),
     runtime_config_bool(config.persist_session_cookies),
     out_runtime,
   )

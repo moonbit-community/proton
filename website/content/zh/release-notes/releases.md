@@ -1,5 +1,14 @@
 # Release Notes
 
+## 未发布
+
+macOS 应用可在启动前调用 `App.macos_render_when_occluded()`，使窗口被完全遮挡或
+位于另一个 Space 时，原生窗口截图仍能获取更新后的页面内容。此设置作用于所有
+窗口和子视图，默认关闭。它保留真实焦点，但遮挡不再通过 Page Visibility 将页面
+标为隐藏，后台工作可能增加功耗。最小化或显式隐藏的页面也可能保持 `visible`，
+这些状态下的原生截图可用性不受保证。参见
+[应用配置](../introduction/application-api.md#macos-遮挡时继续绘制未发布)。
+
 ## 0.9.0
 
 **异步运行时迁移（破坏性 API 变更）**

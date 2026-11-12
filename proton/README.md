@@ -872,6 +872,32 @@ Native dialogs, menus, title bars, and other window-bound UI are unavailable in
 headless mode. In particular, open, save, and directory dialogs fail with an
 unsupported-operation error instead of displaying unparented system UI.
 
+## Rendering while occluded on macOS (unreleased)
+
+macOS normally lets Chromium throttle and reclaim rendering resources for a
+fully covered window or a window on another Space. Native window captures may
+then contain only the page background even though the DOM remains available.
+Applications that need updating native captures can opt in before startup:
+
+```moonbit
+@proton.html("Capture", "<h1>Hello</h1>")
+..identifier("dev.example.capture")
+..macos_render_when_occluded()
+.run_or_abort()
+```
+
+The default is `false`; `..macos_render_when_occluded(enabled=false)` restores
+that setting before startup. The option applies to the entire runtime, including
+later windows and child views. It does not activate windows or simulate focus,
+but occlusion no longer makes `document.visibilityState` become `hidden`.
+Background animations can continue, increasing CPU/GPU activity and power use.
+Minimize, hide and restore still control the native window, but minimized or
+explicitly hidden pages can also remain `visible` to Page Visibility. Native
+capture in those states is not guaranteed. The option has no effect outside macOS
+or in headless mode. Changing it requires a new runtime;
+it is not a live window setting. See the opt-in
+[native capture regression](../e2e/repro_occlusion/README.md).
+
 ## Accessibility
 
 Proton uses Chromium's accessibility tree for web content. Use semantic HTML,

@@ -141,6 +141,21 @@ pub fn App::accessibility(self : App, mode : AccessibilityMode) -> Unit {
 }
 
 ///|
+/// Keeps macOS pages rendering when their windows are fully occluded or on
+/// another Space. Defaults to false; configure before running the app.
+/// Applies to all windows and views, including those created later.
+/// Occlusion no longer makes Page Visibility hidden, but focus is unchanged.
+/// This can increase power use. Minimized or explicitly hidden pages can also
+/// remain visible to Page Visibility; native capture in those states is not
+/// guaranteed. Has no effect on other platforms or in headless mode.
+pub fn App::macos_render_when_occluded(
+  self : App,
+  enabled~ : Bool = true,
+) -> Unit {
+  self.macos_render_when_occluded_value = enabled
+}
+
+///|
 /// Selects the immutable locale used by this application runtime.
 pub fn App::locale(self : App, locale : @locale.Locale) -> Unit {
   self.explicit_locale = Some(locale)

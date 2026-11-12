@@ -622,6 +622,18 @@ test "accessibility mode defaults to automatic and is configurable" {
 }
 
 ///|
+test "occluded rendering is opt-in and survives app configuration resolution" {
+  let app = html("Capture", "<main>content</main>")..identifier(
+    "dev.proton.capture",
+  )
+  assert_false(app.resolved_app_config().macos_render_when_occluded)
+  app.macos_render_when_occluded()
+  assert_true(app.resolved_app_config().macos_render_when_occluded)
+  app.macos_render_when_occluded(enabled=false)
+  assert_false(app.resolved_app_config().macos_render_when_occluded)
+}
+
+///|
 async test "headless mode rejects titlebar overlay before runtime startup" {
   let manifest = @manifest.AppManifest(
     @manifest.WindowManifest(

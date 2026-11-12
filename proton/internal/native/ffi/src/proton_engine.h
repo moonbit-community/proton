@@ -54,6 +54,7 @@ typedef struct {
   int32_t remote_debugging_port;
   int32_t headless;
   int32_t accessibility_mode;
+  int32_t macos_render_when_occluded;
   int32_t persist_session_cookies;
 } proton_engine_runtime_config_t;
 

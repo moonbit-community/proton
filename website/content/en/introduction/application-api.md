@@ -305,6 +305,29 @@ Web content uses Chromium's native accessibility tree. Use semantic HTML, ARIA, 
 
 `App.headless()` or `PROTON_HEADLESS=1` selects off-screen rendering without native top-level windows. Native dialogs, menus, titlebars and other window-bound UI are unavailable. Linux still requires an X11 display, such as Xvfb. Browser automation and native-window behavior therefore require different validation environments.
 
+**Rendering while occluded on macOS (unreleased)**
+
+By default, a fully covered window or a window on another Space can stop
+rendering; native window captures may contain only its page background. To keep
+page content updating for native capture, configure the app before startup:
+
+```moonbit
+let app = @proton.html("Capture", "<h1>Hello</h1>")
+  ..identifier("dev.example.capture")
+  ..macos_render_when_occluded()
+```
+
+This application-wide option defaults to `false` and includes windows and child
+views created later. It does not activate windows or simulate focus. Occlusion
+no longer makes `document.visibilityState` become `hidden`, so animations and
+other visibility-dependent work may continue and consume more power. It does
+not prevent minimizing or hiding native windows, but those pages can also remain
+`visible` to Page Visibility. Native capture in those states is not guaranteed.
+It has no effect on other platforms or in headless mode. Set it before `run()`;
+changing it requires
+restarting the application. Use `enabled=false` to restore the default before
+startup. This option is not included in the published 0.9.0 release.
+
 ## Extensions and capabilities
 
 Extensions register reusable host operations. A renderer capability installs an extension's backend and grants a permission scope to selected renderer targets. Adding `proton_ext` as a module dependency only makes code available; it does not install handlers or grant access.

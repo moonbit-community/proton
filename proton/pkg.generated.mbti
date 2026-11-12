@@ -273,6 +273,7 @@ pub fn App::headless(Self, enabled? : Bool) -> Unit
 pub fn App::identifier(Self, String) -> Unit
 pub fn App::last_window_closed_policy(Self, LastWindowClosedPolicy) -> Unit
 pub fn App::locale(Self, @locale.Locale) -> Unit
+pub fn App::macos_render_when_occluded(Self, enabled? : Bool) -> Unit
 pub fn App::main_window(Self, WindowConfig) -> Unit
 pub fn App::menu(Self, MenuBar) -> Unit
 pub fn App::name(Self) -> String raise @proton_config.AppConfigError
