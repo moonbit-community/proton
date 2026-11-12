@@ -1392,6 +1392,7 @@ struct RuntimeConfig {
   use_bundled : Bool
   headless : Bool
   accessibility_mode : AccessibilityMode
+  macos_render_when_occluded : Bool
   persist_session_cookies : Bool
   runtime_root : String?
   subprocess_path : String?
@@ -1461,12 +1462,14 @@ pub fn RuntimeConfig::RuntimeConfig(
   remote_debugging~ : RemoteDebugging = Disabled,
   headless~ : Bool = false,
   accessibility_mode~ : AccessibilityMode = Automatic,
+  macos_render_when_occluded~ : Bool = false,
   persist_session_cookies~ : Bool = true,
 ) -> RuntimeConfig {
   {
     use_bundled: false,
     headless,
     accessibility_mode,
+    macos_render_when_occluded,
     persist_session_cookies,
     runtime_root,
     subprocess_path,
@@ -1499,12 +1502,14 @@ pub fn RuntimeConfig::bundled(
   remote_debugging~ : RemoteDebugging = Disabled,
   headless~ : Bool = false,
   accessibility_mode~ : AccessibilityMode = Automatic,
+  macos_render_when_occluded~ : Bool = false,
   persist_session_cookies~ : Bool = true,
 ) -> RuntimeConfig {
   {
     use_bundled: true,
     headless,
     accessibility_mode,
+    macos_render_when_occluded,
     persist_session_cookies,
     runtime_root: None,
     subprocess_path,
@@ -1569,6 +1574,7 @@ pub fn RuntimeConfig::with_framework_dialog_labels(
     use_bundled: self.use_bundled,
     headless: self.headless,
     accessibility_mode: self.accessibility_mode,
+    macos_render_when_occluded: self.macos_render_when_occluded,
     persist_session_cookies: self.persist_session_cookies,
     runtime_root: self.runtime_root,
     subprocess_path: self.subprocess_path,

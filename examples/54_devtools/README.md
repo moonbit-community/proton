@@ -3,6 +3,12 @@
 Manual review for Electron-style web contents focus and DevTools controls on
 both the main browser and an embedded `WebContentsView`.
 
+On macOS this example opts into `..macos_render_when_occluded()` so native
+window captures retain updating page content when covered or on another Space.
+It does not simulate focus: both pages should still report blur when another
+application is active. The option applies before startup and has no effect on
+other platforms. It requires an unreleased Proton source build.
+
 Run from the repository root:
 
 ```sh

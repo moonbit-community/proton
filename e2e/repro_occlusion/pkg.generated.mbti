@@ -1,0 +1,18 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbit-community/proton/e2e/repro_occlusion"
+
+import {
+  "moonbitlang/core/json",
+}
+
+// Values
+
+// Errors
+
+// Types and methods
+#derive(@json.ToJson)
+type NativeState
+
+// Type aliases
+
+// Traits

@@ -5,6 +5,10 @@ CDP-based end-to-end tests for the source-built native bridge route.
 The module is part of the root `moon.work`. Do not mutate the workspace before
 running E2E tests.
 
+For the opt-in macOS graphical capture test, see
+[native occlusion capture](repro_occlusion/README.md). It covers fully occluded
+windows and optionally another Space, which headless OSR tests cannot verify.
+
 ## Self-update
 
 `self_update/` installs a signed release of a signed application over itself and

@@ -428,6 +428,7 @@ pub extern "C" fn runtime_create(
   remote_debugging_port : Int32,
   headless : Int32,
   accessibility_mode : Int32,
+  macos_render_when_occluded : Int32,
   persist_session_cookies : Int32,
   out_runtime : Ref[RuntimeHandle],
 ) -> Int32 = "proton_internal_runtime_create"

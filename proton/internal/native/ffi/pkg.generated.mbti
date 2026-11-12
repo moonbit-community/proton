@@ -450,7 +450,7 @@ pub fn runtime_bridge_request_pending(RuntimeHandle, Int64, @ref.Ref[Int32]) -> 
 
 pub fn runtime_complete_resource_request(RuntimeHandle, Int64, Int32, Bytes, Bytes, Int32) -> Int32
 
-pub fn runtime_create(Int32, Bytes, Bytes, Bytes, Bytes, Bytes, Bytes, Bytes, Bytes, Bytes, Bytes, Bytes, Int32, Int32, Int32, Int32, @ref.Ref[RuntimeHandle]) -> Int32
+pub fn runtime_create(Int32, Bytes, Bytes, Bytes, Bytes, Bytes, Bytes, Bytes, Bytes, Bytes, Bytes, Bytes, Int32, Int32, Int32, Int32, Int32, @ref.Ref[RuntimeHandle]) -> Int32
 
 pub fn runtime_null() -> RuntimeHandle
 

@@ -247,6 +247,7 @@ async fn run_manifest(
       remote_debugging~,
       headless=config.headless,
       accessibility_mode=config.accessibility_mode,
+      macos_render_when_occluded=config.macos_render_when_occluded,
     ).with_framework_dialog_labels(catalog.dialog_ok, catalog.dialog_cancel),
   ) catch {
     error => raise native_run_error("create runtime", error)

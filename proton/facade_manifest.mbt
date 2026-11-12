@@ -7,6 +7,7 @@ pub fn App::App(main_window : WindowConfig) -> App {
     debug_level_value: 0,
     headless_value: false,
     accessibility_mode_value: AccessibilityMode::Automatic,
+    macos_render_when_occluded_value: false,
     application_identity: None,
     single_instance_enabled: false,
     session_partition_value: None,
@@ -118,6 +119,7 @@ fn App::resolved_app_config(self : App) -> ResolvedAppConfig {
     bridge_startup_timeout_ms: self.bridge_startup_timeout_value_ms,
     headless: self.resolved_headless(),
     accessibility_mode: self.accessibility_mode_value,
+    macos_render_when_occluded: self.macos_render_when_occluded_value,
     proxy_server: self.proxy_server_value,
     proxy_bypass: self.proxy_bypass_value,
     window_configs: {

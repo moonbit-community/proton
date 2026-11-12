@@ -234,6 +234,7 @@ int32_t proton_internal_runtime_create(
     const char *dialog_ok_label, const char *dialog_cancel_label,
     int32_t remote_debugging_port, int32_t headless,
     int32_t accessibility_mode,
+    int32_t macos_render_when_occluded,
     int32_t persist_session_cookies, proton_runtime_handle_t *out_runtime) {
   if (out_runtime == NULL) {
     return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
@@ -251,6 +252,7 @@ int32_t proton_internal_runtime_create(
     return status;
   }
   config.proxy_server = proxy_server;
+  config.macos_render_when_occluded = macos_render_when_occluded != 0;
   config.proxy_bypass = proxy_bypass;
   if (proton_has_active_runtime()) {
     return proton_set_error(PROTON_ERR_ALREADY_INITIALIZED,
