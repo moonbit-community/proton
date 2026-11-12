@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+Applications on macOS can opt into `App.macos_render_when_occluded()` before
+startup to keep page content updating in native window captures while fully
+covered or on another Space. The setting applies to all windows and child views
+and defaults to off. It preserves real focus, but occlusion no longer hides the
+page through Page Visibility and background work can use more power. Minimized
+or explicitly hidden pages can also remain `visible`; native capture in those
+states is not guaranteed. See
+[application configuration](../introduction/application-api.md#rendering-while-occluded-on-macos-unreleased).
+
 **MoonBit 0.10.21 toolchain (breaking toolchain change)**
 
 Proton now builds with MoonBit `0.10.21+f125caab5`, currently published on the

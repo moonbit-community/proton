@@ -640,10 +640,15 @@ test "runtime config preserves typed native ABI values" {
     remote_debugging=RemoteDebugging::Ephemeral,
     headless=true,
     accessibility_mode=AccessibilityMode::AlwaysEnabled,
+    macos_render_when_occluded=true,
   )
   assert_eq(runtime_config.subprocess_path, Some("cef_process.exe"))
   assert_eq(runtime_config.cache_dir, Some(cache_dir))
   assert_true(runtime_config.headless)
+  assert_true(runtime_config.macos_render_when_occluded)
+  assert_true(
+    runtime_config.with_framework_dialog_labels("Yes", "No").macos_render_when_occluded,
+  )
   assert_eq(runtime_config.accessibility_mode, AccessibilityMode::AlwaysEnabled)
   assert_true(runtime_config.persist_session_cookies)
   assert_eq(runtime_config.locale, Some("zh-CN"))
@@ -656,6 +661,10 @@ test "runtime config preserves typed native ABI values" {
   assert_eq(bundled.runtime_root, None)
   assert_eq(bundled.subprocess_path, None)
   assert_false(bundled.headless)
+  assert_false(bundled.macos_render_when_occluded)
+  assert_true(
+    RuntimeConfig::bundled(macos_render_when_occluded=true).macos_render_when_occluded,
+  )
   assert_eq(bundled.accessibility_mode, AccessibilityMode::Automatic)
   assert_true(bundled.persist_session_cookies)
   assert_true(RuntimeConfig::bundled(headless=true).headless)

@@ -164,6 +164,7 @@ async fn main {
     debug=true,
   )
   ..commands(register_commands)
+  ..macos_render_when_occluded()
   ..setup_window(context => {
     let window = context.handle()
     browser_slot.val = Some(window.web_contents())

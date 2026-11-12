@@ -87,6 +87,7 @@ struct App {
   mut debug_level_value : Int32
   mut headless_value : Bool
   mut accessibility_mode_value : AccessibilityMode
+  mut macos_render_when_occluded_value : Bool
   mut application_identity : ApplicationIdentitySource?
   mut single_instance_enabled : Bool
   mut session_partition_value : String?
@@ -239,6 +240,7 @@ priv struct ResolvedAppConfig {
   bridge_startup_timeout_ms : Int32
   headless : Bool
   accessibility_mode : AccessibilityMode
+  macos_render_when_occluded : Bool
   proxy_server : String?
   proxy_bypass : String?
   window_configs : Map[String, WindowConfig]

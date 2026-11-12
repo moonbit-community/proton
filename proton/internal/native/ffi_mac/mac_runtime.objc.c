@@ -473,6 +473,12 @@ void proton_engine_on_before_command_line_processing(
   proton_engine_append_switch(command_line, "disable-background-networking");
   const proton_engine_runtime_config_t *startup = g_proton_initializing_config;
   if (startup != NULL) {
+    // Chromium otherwise retires the window's compositor when fully occluded.
+    // Keep this opt-in and process-wide; do not emulate page focus through CDP.
+    if (startup->macos_render_when_occluded && !startup->headless) {
+      proton_engine_append_switch(command_line,
+                                 "disable-backgrounding-occluded-windows");
+    }
     proton_engine_append_switch_with_value(command_line, "proxy-server",
                                            startup->proxy_server);
     proton_engine_append_switch_with_value(command_line, "proxy-bypass-list",
