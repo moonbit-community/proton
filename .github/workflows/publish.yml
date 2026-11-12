@@ -43,7 +43,9 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  # Keep in sync with ci.yml; Proton requires this core async API.
+  # Temporary pin: Proton needs the 0.10.21 core/async API, which is only on
+  # the pre-release channel. Return to `latest` (here and in ci.yml)
+  # once 0.10.21 reaches stable.
   MOONBIT_VERSION: 0.10.21+f125caab5
 
 jobs:
