@@ -12,7 +12,7 @@ async test "metadata streaming accepts the exact limit and closes oversized chun
           ignore(conn.read_request())
           conn.send_response(200, "OK")
           conn.write(Bytes::make(size, b'x'))
-          conn.flush()
+          conn.flush_partial_data()
           if size == maximum_metadata_bytes {
             conn.end_response()
           }
@@ -55,7 +55,7 @@ async test "metadata cancellation closes the streaming connection" {
         ignore(conn.read_request())
         conn.send_response(200, "OK")
         conn.write_string("partial metadata")
-        conn.flush()
+        conn.flush_partial_data()
         started.val = true
         ignore(conn.read_request()) catch {
           _ => closed.val = true

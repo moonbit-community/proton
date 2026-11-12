@@ -12,12 +12,12 @@ import {
 // Types and methods
 #derive(@json.FromJson, @json.ToJson)
 type SetLimitReply
-pub fn SetLimitReply::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn SetLimitReply::from_json(@json.Json, @json.DecodeContext) -> Self raise @json.JsonDecodeError
 pub fn SetLimitReply::to_json(Self) -> @json.Json
 
 #derive(@json.FromJson, @json.ToJson)
 type SetLimitRequest
-pub fn SetLimitRequest::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn SetLimitRequest::from_json(@json.Json, @json.DecodeContext) -> Self raise @json.JsonDecodeError
 pub fn SetLimitRequest::to_json(Self) -> @json.Json
 
 // Type aliases

@@ -37,7 +37,7 @@ async fn run_i18n_scenario_page_probe(
       navigate_page_and_connect(
         group,
         target,
-        "http://127.0.0.1:" + server.addr.port().to_string() + "/i18n",
+        "http://127.0.0.1:" + server.addr.port.to_string() + "/i18n",
         timeout,
       ),
     )

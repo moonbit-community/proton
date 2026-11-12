@@ -33,7 +33,7 @@ pub(all) struct GlobalHotkeyActivity {
   accelerator : String
 }
 pub fn GlobalHotkeyActivity::equal(Self, Self) -> Bool
-pub fn GlobalHotkeyActivity::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn GlobalHotkeyActivity::from_json(@json.Json, @json.DecodeContext) -> Self raise @json.JsonDecodeError
 pub fn GlobalHotkeyActivity::not_equal(Self, Self) -> Bool
 pub fn GlobalHotkeyActivity::to_json(Self) -> @json.Json
 pub fn GlobalHotkeyActivity::to_repr(Self) -> @debug.Repr
@@ -43,7 +43,7 @@ pub(all) struct GlobalHotkeyListReply {
   accelerators : Array[String]
 }
 pub fn GlobalHotkeyListReply::equal(Self, Self) -> Bool
-pub fn GlobalHotkeyListReply::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn GlobalHotkeyListReply::from_json(@json.Json, @json.DecodeContext) -> Self raise @json.JsonDecodeError
 pub fn GlobalHotkeyListReply::not_equal(Self, Self) -> Bool
 pub fn GlobalHotkeyListReply::to_json(Self) -> @json.Json
 pub fn GlobalHotkeyListReply::to_repr(Self) -> @debug.Repr
@@ -53,7 +53,7 @@ pub(all) struct GlobalHotkeyReply {
   registered : Bool
 }
 pub fn GlobalHotkeyReply::equal(Self, Self) -> Bool
-pub fn GlobalHotkeyReply::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn GlobalHotkeyReply::from_json(@json.Json, @json.DecodeContext) -> Self raise @json.JsonDecodeError
 pub fn GlobalHotkeyReply::not_equal(Self, Self) -> Bool
 pub fn GlobalHotkeyReply::to_json(Self) -> @json.Json
 pub fn GlobalHotkeyReply::to_repr(Self) -> @debug.Repr
@@ -63,7 +63,7 @@ pub(all) struct GlobalHotkeyRequest {
   accelerator : String
 }
 pub fn GlobalHotkeyRequest::equal(Self, Self) -> Bool
-pub fn GlobalHotkeyRequest::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn GlobalHotkeyRequest::from_json(@json.Json, @json.DecodeContext) -> Self raise @json.JsonDecodeError
 pub fn GlobalHotkeyRequest::not_equal(Self, Self) -> Bool
 pub fn GlobalHotkeyRequest::to_json(Self) -> @json.Json
 pub fn GlobalHotkeyRequest::to_repr(Self) -> @debug.Repr
@@ -73,7 +73,7 @@ pub(all) struct GlobalHotkeyTriggered {
   accelerator : String
 }
 pub fn GlobalHotkeyTriggered::equal(Self, Self) -> Bool
-pub fn GlobalHotkeyTriggered::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn GlobalHotkeyTriggered::from_json(@json.Json, @json.DecodeContext) -> Self raise @json.JsonDecodeError
 pub fn GlobalHotkeyTriggered::not_equal(Self, Self) -> Bool
 pub fn GlobalHotkeyTriggered::to_json(Self) -> @json.Json
 pub fn GlobalHotkeyTriggered::to_repr(Self) -> @debug.Repr
@@ -83,7 +83,7 @@ pub(all) struct UnregisterAllReply {
   count : Int32
 }
 pub fn UnregisterAllReply::equal(Self, Self) -> Bool
-pub fn UnregisterAllReply::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn UnregisterAllReply::from_json(@json.Json, @json.DecodeContext) -> Self raise @json.JsonDecodeError
 pub fn UnregisterAllReply::not_equal(Self, Self) -> Bool
 pub fn UnregisterAllReply::to_json(Self) -> @json.Json
 pub fn UnregisterAllReply::to_repr(Self) -> @debug.Repr

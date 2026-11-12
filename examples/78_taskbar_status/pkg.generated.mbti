@@ -12,32 +12,32 @@ import {
 // Types and methods
 #derive(@json.FromJson, @json.ToJson)
 type ButtonsRequest
-pub fn ButtonsRequest::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn ButtonsRequest::from_json(@json.Json, @json.DecodeContext) -> Self raise @json.JsonDecodeError
 pub fn ButtonsRequest::to_json(Self) -> @json.Json
 
 #derive(@json.FromJson, @json.ToJson)
 type JumpListRequest
-pub fn JumpListRequest::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn JumpListRequest::from_json(@json.Json, @json.DecodeContext) -> Self raise @json.JsonDecodeError
 pub fn JumpListRequest::to_json(Self) -> @json.Json
 
 #derive(@json.FromJson, @json.ToJson)
 type OverlayRequest
-pub fn OverlayRequest::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn OverlayRequest::from_json(@json.Json, @json.DecodeContext) -> Self raise @json.JsonDecodeError
 pub fn OverlayRequest::to_json(Self) -> @json.Json
 
 #derive(@json.FromJson, @json.ToJson)
 type ProgressRequest
-pub fn ProgressRequest::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn ProgressRequest::from_json(@json.Json, @json.DecodeContext) -> Self raise @json.JsonDecodeError
 pub fn ProgressRequest::to_json(Self) -> @json.Json
 
 #derive(@json.FromJson, @json.ToJson)
 type Reply
-pub fn Reply::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn Reply::from_json(@json.Json, @json.DecodeContext) -> Self raise @json.JsonDecodeError
 pub fn Reply::to_json(Self) -> @json.Json
 
 #derive(@json.FromJson, @json.ToJson)
 type TooltipRequest
-pub fn TooltipRequest::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn TooltipRequest::from_json(@json.Json, @json.DecodeContext) -> Self raise @json.JsonDecodeError
 pub fn TooltipRequest::to_json(Self) -> @json.Json
 
 // Type aliases

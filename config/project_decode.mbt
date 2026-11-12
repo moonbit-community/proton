@@ -31,7 +31,8 @@ pub fn current_platform() -> Platform {
   match @async.platform {
     MacOS => Macos
     Windows => Windows
-    Linux => Linux
+    // A future Unix-like host shares Linux's desktop conventions.
+    Linux | @types.Platform::.. => Linux
   }
 }
 

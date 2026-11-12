@@ -23,7 +23,7 @@ pub(all) struct Request {
   body : String?
 }
 pub fn Request::equal(Self, Self) -> Bool
-pub fn Request::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn Request::from_json(@json.Json, @json.DecodeContext) -> Self raise @json.JsonDecodeError
 pub fn Request::not_equal(Self, Self) -> Bool
 pub fn Request::to_json(Self) -> @json.Json
 pub fn Request::to_repr(Self) -> @debug.Repr
@@ -36,7 +36,7 @@ pub(all) struct Response {
   body : String
 }
 pub fn Response::equal(Self, Self) -> Bool
-pub fn Response::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn Response::from_json(@json.Json, @json.DecodeContext) -> Self raise @json.JsonDecodeError
 pub fn Response::not_equal(Self, Self) -> Bool
 pub fn Response::to_json(Self) -> @json.Json
 pub fn Response::to_repr(Self) -> @debug.Repr

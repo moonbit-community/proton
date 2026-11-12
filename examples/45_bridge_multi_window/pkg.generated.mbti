@@ -12,12 +12,12 @@ import {
 // Types and methods
 #derive(@json.FromJson, @json.ToJson)
 type IdentifyPayload
-pub fn IdentifyPayload::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn IdentifyPayload::from_json(@json.Json, @json.DecodeContext) -> Self raise @json.JsonDecodeError
 pub fn IdentifyPayload::to_json(Self) -> @json.Json
 
 #derive(@json.FromJson, @json.ToJson)
 type IdentifyReply
-pub fn IdentifyReply::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn IdentifyReply::from_json(@json.Json, @json.DecodeContext) -> Self raise @json.JsonDecodeError
 pub fn IdentifyReply::to_json(Self) -> @json.Json
 
 // Type aliases

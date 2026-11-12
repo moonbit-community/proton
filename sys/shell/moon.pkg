@@ -1,6 +1,7 @@
 import {
   "moonbitlang/core/async",
   "moonbitlang/core/async/process",
+  "moonbitlang/core/async/types",
   "moonbitlang/core/env",
   "moonbitlang/core/encoding/percent",
   "moonbit-community/proton_ffi" @ffi,

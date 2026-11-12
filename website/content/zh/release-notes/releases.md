@@ -1,5 +1,25 @@
 # Release Notes
 
+## 未发布
+
+**MoonBit 0.10.21 工具链（破坏性工具链变更）**
+
+Proton 改用 MoonBit `0.10.21+f125caab5`（目前发布在 pre-release 通道）及其修订后的
+`moonbitlang/core/async` API 构建。更早的工具链，包括 0.10.20 的 `latest` 通道，
+无法构建。请显式安装该工具链，例如
+`curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash -s -- 0.10.21+f125caab5`
+（Windows 上在运行 PowerShell 安装脚本前设置 `MOONBIT_INSTALL_VERSION`）。
+
+直接调用 core async API 的应用代码需要随工具链一起迁移。常见变化：`@http.get`、
+`post_binary` 和 `put_binary` 返回 `MessageBody`（用 `.binary()`、`.text()` 或
+`.json()` 读取），流式请求改用 `@http.get_stream`；套接字地址的端口是 `UInt16`
+字段 `addr.port`；`@io.ReaderClosed` 改为 `@io.UnexpectedEof`；
+`@fs.mkdir(allow_exist=)` 改为 `allow_existing=`；对 `@async.platform` 的 `match`
+需要为未来平台添加 `@types.Platform::..` 分支（导入 `moonbitlang/core/async/types`）。派生 `FromJson` 的类型现在实现
+`from_json(Json, @json.DecodeContext)`，直接调用 `from_json` 的代码需要传入新参数。
+
+Proton 自带命令的行为保持不变。`fs` 扩展读取文本文件时仍然遵循 `sync_timestamp`。
+
 ## 0.9.0
 
 **异步运行时迁移（破坏性 API 变更）**

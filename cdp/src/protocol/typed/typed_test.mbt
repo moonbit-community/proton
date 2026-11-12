@@ -222,8 +222,8 @@ test "generated typed event decoders parse schema-aware params" {
       @protocol.ProtocolSchemaError::InvalidParameterType(
         "Page.loadEventFired",
         "timestamp",
-        "Network.MonotonicTime"
-      )
+        "Network.MonotonicTime",
+      ),
     ) else {
     fail("expected invalid timestamp")
   }
@@ -265,7 +265,7 @@ test "generated typed command result decoders parse schema-aware results" {
   }
   guard missing
     is Err(
-      @protocol.ProtocolSchemaError::MissingReturn("Page.navigate", "frameId")
+      @protocol.ProtocolSchemaError::MissingReturn("Page.navigate", "frameId"),
     ) else {
     fail("expected missing frameId")
   }

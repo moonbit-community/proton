@@ -436,7 +436,7 @@ async fn run_http_origin_probe(
       navigate_and_read_origin(
         group,
         target,
-        "http://127.0.0.1:" + server.addr.port().to_string() + "/probe.html",
+        "http://127.0.0.1:" + server.addr.port.to_string() + "/probe.html",
         timeout,
       ),
     )

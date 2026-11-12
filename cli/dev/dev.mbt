@@ -687,8 +687,9 @@ fn frontend_exit_code(process : @process.Process?) -> Int32? {
 
 ///|
 async fn tcp_ready(host : String, port : Int32) -> Bool {
+  guard port >= 0 && port <= 65535 else { return false }
   let result = @async.with_timeout_opt(ready_probe_timeout_ms, () => {
-    let conn = @socket.Tcp::connect_to_host(host, port~)
+    let conn = @socket.Tcp::connect_to_host(host, port=port.to_uint16())
     conn.close()
     true
   }) catch {

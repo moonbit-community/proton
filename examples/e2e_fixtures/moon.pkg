@@ -5,7 +5,6 @@ import {
   "moonbitlang/core/async/socket",
   "moonbitlang/core/async/fs",
   "moonbitlang/core/async/os_error",
-  "moonbitlang/core/async/pipe",
   "moonbitlang/core/env",
   "moonbitlang/core/json",
   "moonbitlang/core/encoding/utf8",

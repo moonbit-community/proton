@@ -52,3 +52,18 @@ async test "destroyed power monitor cannot restart watching or take events" {
   assert_true(monitor.drain_events().is_empty())
   monitor.destroy()
 }
+
+///|
+#cfg(not(platform="windows"))
+async test "completion pipe read end reaches EOF through a raw-fd stream" {
+  let monitor = PowerMonitor::{ handle: native_create(), watching: false, }
+  let write_fd = Ref(-1)
+  let read_fd = native_open_completion_pipe(monitor.handle, write_fd)
+  assert_true(read_fd >= 0 && write_fd.val >= 0)
+  let reader = @raw_fd.RawFdStream(native_completion_fd(read_fd))
+  defer reader.close()
+  // Closing the only write end is how the native watcher reports teardown.
+  native_close_fd(write_fd.val)
+  assert_eq(reader.read_all(), b"")
+  monitor.destroy()
+}

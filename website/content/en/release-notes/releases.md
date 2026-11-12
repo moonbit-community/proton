@@ -1,5 +1,31 @@
 # Release Notes
 
+## Unreleased
+
+**MoonBit 0.10.21 toolchain (breaking toolchain change)**
+
+Proton now builds with MoonBit `0.10.21+f125caab5`, currently published on the
+pre-release channel, and its revised `moonbitlang/core/async` API. Earlier
+toolchains, including the 0.10.20 `latest` channel, cannot build it. Install the
+toolchain explicitly, for example with
+`curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash -s -- 0.10.21+f125caab5`
+(on Windows, set `MOONBIT_INSTALL_VERSION` before running the PowerShell
+installer).
+
+Application code that calls core async APIs directly must be migrated with the
+toolchain. Common changes: `@http.get`, `post_binary`, and `put_binary` return
+a `MessageBody` (read it with `.binary()`, `.text()`, or `.json()`), and
+streaming requests use `@http.get_stream`; a socket address port is the
+`UInt16` field `addr.port`; `@io.ReaderClosed` is `@io.UnexpectedEof`;
+`@fs.mkdir(allow_exist=)` is `allow_existing=`; and a `match` on
+`@async.platform` needs an `@types.Platform::..` arm for future platforms
+(import `moonbitlang/core/async/types`). Types that
+derive `FromJson` now implement `from_json(Json, @json.DecodeContext)`; code
+that calls `from_json` directly must pass the new argument.
+
+Proton's own commands keep their behavior. The `fs` extension still honors
+`sync_timestamp` when reading a text file.
+
 ## 0.9.0
 
 **Async runtime migration (breaking API change)**

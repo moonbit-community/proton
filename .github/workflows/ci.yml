@@ -7,6 +7,8 @@ on:
   pull_request:
 
 env:
+  # Keep in sync with publish.yml; Proton requires this core async API.
+  MOONBIT_VERSION: 0.10.21+f125caab5
   PROTON_NO_UPDATE_CHECK: 1
   PROTON_RUNTIME_STORE: ${{ github.workspace }}/.proton-runtime-store
 
@@ -24,7 +26,7 @@ jobs:
 
       - name: Install MoonBit
         run: |
-          curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash -s latest
+          curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash -s -- "$MOONBIT_VERSION"
           echo "$HOME/.moon/bin" >> "$GITHUB_PATH"
 
       - name: moon version
@@ -66,13 +68,13 @@ jobs:
       - name: Install MoonBit
         if: ${{ matrix.os != 'windows-latest' }}
         run: |
-          curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash -s latest
+          curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash -s -- "$MOONBIT_VERSION"
           echo "$HOME/.moon/bin" >> $GITHUB_PATH
 
       - name: Install MoonBit on Windows
         if: ${{ matrix.os == 'windows-latest' }}
         env:
-          MOONBIT_INSTALL_VERSION: latest
+          MOONBIT_INSTALL_VERSION: ${{ env.MOONBIT_VERSION }}
         run: |
           Set-ExecutionPolicy RemoteSigned -Scope CurrentUser; irm https://cli.moonbitlang.com/install/powershell.ps1 | iex
           "$env:USERPROFILE\.moon\bin" | Out-File -FilePath $env:GITHUB_PATH -Append

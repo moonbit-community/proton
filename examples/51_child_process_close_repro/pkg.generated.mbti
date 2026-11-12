@@ -12,12 +12,12 @@ import {
 // Types and methods
 #derive(@json.FromJson, @json.ToJson)
 type HoldRequest
-pub fn HoldRequest::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn HoldRequest::from_json(@json.Json, @json.DecodeContext) -> Self raise @json.JsonDecodeError
 pub fn HoldRequest::to_json(Self) -> @json.Json
 
 #derive(@json.FromJson, @json.ToJson)
 type HoldResult
-pub fn HoldResult::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn HoldResult::from_json(@json.Json, @json.DecodeContext) -> Self raise @json.JsonDecodeError
 pub fn HoldResult::to_json(Self) -> @json.Json
 
 // Type aliases

@@ -592,7 +592,7 @@ priv enum WindowSessionCommand {
     String,
     WindowConfig,
     PreparedEntry,
-    WindowOpenCompletion[WindowHandle]
+    WindowOpenCompletion[WindowHandle],
   )
 }
 
@@ -1090,13 +1090,13 @@ pub(all) enum WebContentsEvent {
   ResourceRequested(
     url~ : String,
     request_method~ : String,
-    will_cancel~ : Bool
+    will_cancel~ : Bool,
   )
   RendererProcessTerminated(
     url~ : String,
     status~ : Int32,
     error_code~ : Int32,
-    detail~ : String
+    detail~ : String,
   )
 }
 
@@ -1314,11 +1314,11 @@ pub(all) suberror AppConfigurationError {
   ExtensionUnavailable(
     extension_id~ : String,
     requested_by~ : String?,
-    state~ : String
+    state~ : String,
   )
   ExtensionAdaptationFailed(
     extension_id~ : String,
-    error~ : @proton_extension.ExtensionAdapterError
+    error~ : @proton_extension.ExtensionAdapterError,
   )
   InvalidJavaScriptNamespace(js_namespace~ : String)
   InvalidJavaScriptApi(js_namespace~ : String, api_name~ : String)

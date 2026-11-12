@@ -14,7 +14,7 @@ async fn open_update_stream(
   url : String,
 ) -> (@http.ResponseHeader, @http.ClientConnection) raise UpdateError {
   for current = url, redirects = 0 {
-    let (response, client) = @http.get(current) catch {
+    let (response, client) = @http.get_stream(current) catch {
       error => raise FetchFailed(url=current, detail=@debug.render(Repr(error)))
     }
     if response.code == 200 {
@@ -129,7 +129,7 @@ async fn fetch_metadata_stream(url : String) -> Bytes raise UpdateError {
   defer client.close()
   let buffer = @buffer.Buffer()
   while (client.read() catch {
-          error => raise FetchFailed(url~, detail=@debug.render(Repr(error)))
+          error => raise FetchFailed(url~, detail=read_error_detail(error))
         })
         is Some(chunk) {
     guard chunk.length() <= maximum_metadata_bytes - buffer.length() else {
@@ -173,7 +173,7 @@ pub async fn http_fetch_artifact(
   }
   let mut received = 0L
   while (client.read() catch {
-          error => raise FetchFailed(url~, detail=@debug.render(Repr(error)))
+          error => raise FetchFailed(url~, detail=read_error_detail(error))
         })
         is Some(chunk) {
     let chunk_size = chunk.length().to_int64()
@@ -189,4 +189,16 @@ pub async fn http_fetch_artifact(
   guard received == expected_size else {
     raise ArtifactSizeMismatch(expected=expected_size, actual=received)
   }
+}
+
+///|
+/// Renders a body read failure as the underlying transport error, so the
+/// detail does not depend on how the reader wraps it.
+fn read_error_detail(error : @io.ReaderError) -> String {
+  let error : Error = if error is TransportError(cause, ..) {
+    cause
+  } else {
+    error
+  }
+  @debug.render(Repr(error))
 }

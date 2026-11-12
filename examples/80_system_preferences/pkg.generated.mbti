@@ -12,22 +12,22 @@ import {
 // Types and methods
 #derive(@json.FromJson, @json.ToJson)
 type ReadRequest
-pub fn ReadRequest::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn ReadRequest::from_json(@json.Json, @json.DecodeContext) -> Self raise @json.JsonDecodeError
 pub fn ReadRequest::to_json(Self) -> @json.Json
 
 #derive(@json.FromJson, @json.ToJson)
 type Snapshot
-pub fn Snapshot::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn Snapshot::from_json(@json.Json, @json.DecodeContext) -> Self raise @json.JsonDecodeError
 pub fn Snapshot::to_json(Self) -> @json.Json
 
 #derive(@json.FromJson, @json.ToJson)
 type TrustReply
-pub fn TrustReply::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn TrustReply::from_json(@json.Json, @json.DecodeContext) -> Self raise @json.JsonDecodeError
 pub fn TrustReply::to_json(Self) -> @json.Json
 
 #derive(@json.FromJson, @json.ToJson)
 type TrustRequest
-pub fn TrustRequest::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn TrustRequest::from_json(@json.Json, @json.DecodeContext) -> Self raise @json.JsonDecodeError
 pub fn TrustRequest::to_json(Self) -> @json.Json
 
 // Type aliases

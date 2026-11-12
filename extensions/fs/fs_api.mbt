@@ -37,6 +37,12 @@ fn bytes_written_for_text(content : String) -> Int32 {
 
 ///|
 fn fs_error_detail(error : Error) -> String {
+  // Report the underlying failure rather than the stream wrapper around it.
+  let error : Error = match error {
+    @io.ReaderError::TransportError(cause, ..) => cause
+    @io.WriterError::TransportError(cause, ..) => cause
+    _ => error
+  }
   @debug.render(Repr(error))
 }
 
@@ -91,10 +97,13 @@ async fn read_text_file(
   payload : ReadFilePayload,
 ) -> ReadFileReply raise FsError {
   try {
-    let content = @async_fs.read_text(
-      payload.path,
-      sync_timestamp=option_bool(payload.sync_timestamp, false),
-    )
+    let file = @async_fs.open(payload.path, mode=ReadOnly)
+    defer file.close()
+    let content = file.text.read_all()
+    // `sync_timestamp` waits until the read's access-time update is durable.
+    if option_bool(payload.sync_timestamp, false) {
+      file.sync(only_data=false)
+    }
     {
       path: payload.path,
       content,

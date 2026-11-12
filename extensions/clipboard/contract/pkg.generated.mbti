@@ -26,7 +26,7 @@ pub(all) struct ClearReply {
   cleared : Bool
 }
 pub fn ClearReply::equal(Self, Self) -> Bool
-pub fn ClearReply::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn ClearReply::from_json(@json.Json, @json.DecodeContext) -> Self raise @json.JsonDecodeError
 pub fn ClearReply::not_equal(Self, Self) -> Bool
 pub fn ClearReply::to_json(Self) -> @json.Json
 pub fn ClearReply::to_repr(Self) -> @debug.Repr
@@ -35,7 +35,7 @@ pub fn ClearReply::to_repr(Self) -> @debug.Repr
 pub(all) struct ClearRequest {
 }
 pub fn ClearRequest::equal(Self, Self) -> Bool
-pub fn ClearRequest::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn ClearRequest::from_json(@json.Json, @json.DecodeContext) -> Self raise @json.JsonDecodeError
 pub fn ClearRequest::not_equal(Self, Self) -> Bool
 pub fn ClearRequest::to_json(Self) -> @json.Json
 pub fn ClearRequest::to_repr(Self) -> @debug.Repr
@@ -46,7 +46,7 @@ pub(all) struct ClipboardActivity {
   text_length : Int32?
 }
 pub fn ClipboardActivity::equal(Self, Self) -> Bool
-pub fn ClipboardActivity::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn ClipboardActivity::from_json(@json.Json, @json.DecodeContext) -> Self raise @json.JsonDecodeError
 pub fn ClipboardActivity::not_equal(Self, Self) -> Bool
 pub fn ClipboardActivity::to_json(Self) -> @json.Json
 pub fn ClipboardActivity::to_repr(Self) -> @debug.Repr
@@ -56,7 +56,7 @@ pub(all) struct ReadTextReply {
   text : String?
 }
 pub fn ReadTextReply::equal(Self, Self) -> Bool
-pub fn ReadTextReply::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn ReadTextReply::from_json(@json.Json, @json.DecodeContext) -> Self raise @json.JsonDecodeError
 pub fn ReadTextReply::not_equal(Self, Self) -> Bool
 pub fn ReadTextReply::to_json(Self) -> @json.Json
 pub fn ReadTextReply::to_repr(Self) -> @debug.Repr
@@ -65,7 +65,7 @@ pub fn ReadTextReply::to_repr(Self) -> @debug.Repr
 pub(all) struct ReadTextRequest {
 }
 pub fn ReadTextRequest::equal(Self, Self) -> Bool
-pub fn ReadTextRequest::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn ReadTextRequest::from_json(@json.Json, @json.DecodeContext) -> Self raise @json.JsonDecodeError
 pub fn ReadTextRequest::not_equal(Self, Self) -> Bool
 pub fn ReadTextRequest::to_json(Self) -> @json.Json
 pub fn ReadTextRequest::to_repr(Self) -> @debug.Repr
@@ -75,7 +75,7 @@ pub(all) struct WriteTextReply {
   written : Bool
 }
 pub fn WriteTextReply::equal(Self, Self) -> Bool
-pub fn WriteTextReply::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn WriteTextReply::from_json(@json.Json, @json.DecodeContext) -> Self raise @json.JsonDecodeError
 pub fn WriteTextReply::not_equal(Self, Self) -> Bool
 pub fn WriteTextReply::to_json(Self) -> @json.Json
 pub fn WriteTextReply::to_repr(Self) -> @debug.Repr
@@ -85,7 +85,7 @@ pub(all) struct WriteTextRequest {
   text : String
 }
 pub fn WriteTextRequest::equal(Self, Self) -> Bool
-pub fn WriteTextRequest::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn WriteTextRequest::from_json(@json.Json, @json.DecodeContext) -> Self raise @json.JsonDecodeError
 pub fn WriteTextRequest::not_equal(Self, Self) -> Bool
 pub fn WriteTextRequest::to_json(Self) -> @json.Json
 pub fn WriteTextRequest::to_repr(Self) -> @debug.Repr

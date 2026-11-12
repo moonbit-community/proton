@@ -143,7 +143,7 @@ pub async fn[T] PowerMonitor::with_watching(
 #cfg(platform="windows")
 fn PowerMonitor::begin_watching(
   self : PowerMonitor,
-) -> @pipe.PipeRead? raise PowerMonitorError {
+) -> @raw_fd.RawFdStream? raise PowerMonitorError {
   let status = native_start_watching(self.handle, -1)
   if status != native_status_ok {
     raise self.classify_status(status, "with_watching")
@@ -155,7 +155,7 @@ fn PowerMonitor::begin_watching(
 #cfg(not(platform="windows"))
 async fn PowerMonitor::begin_watching(
   self : PowerMonitor,
-) -> @pipe.PipeRead? raise PowerMonitorError {
+) -> @raw_fd.RawFdStream? raise PowerMonitorError {
   if !(@async.platform is Linux) {
     let status = native_start_watching(self.handle, -1)
     if status != native_status_ok {
@@ -163,12 +163,21 @@ async fn PowerMonitor::begin_watching(
     }
     return None
   }
-  let (reader, writer) = @pipe.pipe() catch {
-    error =>
-      raise OperationFailed(operation="with_watching", detail=error.to_string())
+  // The native watcher needs a real OS pipe: it writes one readiness byte and
+  // closes its duplicate of the write end once teardown has completed.
+  let write_fd = Ref(-1)
+  let read_fd = native_open_completion_pipe(self.handle, write_fd)
+  if read_fd < 0 {
+    raise self.classify_status(native_status_operation_failed, "with_watching")
   }
-  let status = native_start_watching(self.handle, writer.fd())
-  writer.close()
+  let reader = @raw_fd.RawFdStream(native_completion_fd(read_fd)) catch {
+    error => {
+      native_close_fd(write_fd.val)
+      raise OperationFailed(operation="with_watching", detail=error.to_string())
+    }
+  }
+  let status = native_start_watching(self.handle, write_fd.val)
+  native_close_fd(write_fd.val)
   if status != native_status_ok {
     reader.close()
     raise self.classify_status(status, "with_watching")
@@ -180,8 +189,14 @@ async fn PowerMonitor::begin_watching(
     }
   })()
   let notice = reader.read() catch {
-    error =>
+    error => {
+      let error : Error = if error is TransportError(cause, ..) {
+        cause
+      } else {
+        error
+      }
       raise OperationFailed(operation="with_watching", detail=error.to_string())
+    }
   }
   let status = native_watch_status(self.handle)
   if notice is None || status != native_status_ok {
@@ -194,7 +209,7 @@ async fn PowerMonitor::begin_watching(
 ///|
 async fn PowerMonitor::finish_watching(
   self : PowerMonitor,
-  completion : @pipe.PipeRead?,
+  completion : @raw_fd.RawFdStream?,
 ) -> Unit raise PowerMonitorError + nocancel {
   ignore(native_stop_watching(self.handle))
   if completion is Some(reader) {

@@ -24,7 +24,7 @@ pub(all) struct UpdateDownloaded {
   version : String
 }
 pub fn UpdateDownloaded::equal(Self, Self) -> Bool
-pub fn UpdateDownloaded::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn UpdateDownloaded::from_json(@json.Json, @json.DecodeContext) -> Self raise @json.JsonDecodeError
 pub fn UpdateDownloaded::not_equal(Self, Self) -> Bool
 pub fn UpdateDownloaded::to_json(Self) -> @json.Json
 pub fn UpdateDownloaded::to_repr(Self) -> @debug.Repr
@@ -35,7 +35,7 @@ pub(all) struct UpdateProgress {
   total : Int64
 }
 pub fn UpdateProgress::equal(Self, Self) -> Bool
-pub fn UpdateProgress::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn UpdateProgress::from_json(@json.Json, @json.DecodeContext) -> Self raise @json.JsonDecodeError
 pub fn UpdateProgress::not_equal(Self, Self) -> Bool
 pub fn UpdateProgress::to_json(Self) -> @json.Json
 pub fn UpdateProgress::to_repr(Self) -> @debug.Repr
@@ -48,7 +48,7 @@ pub(all) struct UpdateStatus {
   size : Int64?
 }
 pub fn UpdateStatus::equal(Self, Self) -> Bool
-pub fn UpdateStatus::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn UpdateStatus::from_json(@json.Json, @json.DecodeContext) -> Self raise @json.JsonDecodeError
 pub fn UpdateStatus::not_equal(Self, Self) -> Bool
 pub fn UpdateStatus::to_json(Self) -> @json.Json
 pub fn UpdateStatus::to_repr(Self) -> @debug.Repr

@@ -12,12 +12,12 @@ import {
 // Types and methods
 #derive(@json.FromJson, @json.ToJson)
 type SetProgressReply
-pub fn SetProgressReply::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn SetProgressReply::from_json(@json.Json, @json.DecodeContext) -> Self raise @json.JsonDecodeError
 pub fn SetProgressReply::to_json(Self) -> @json.Json
 
 #derive(@json.FromJson, @json.ToJson)
 type SetProgressRequest
-pub fn SetProgressRequest::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn SetProgressRequest::from_json(@json.Json, @json.DecodeContext) -> Self raise @json.JsonDecodeError
 pub fn SetProgressRequest::to_json(Self) -> @json.Json
 
 // Type aliases

@@ -55,7 +55,7 @@ async fn macho_read(
 ) -> Bytes {
   let available = file.size() - position
   guard position >= 0 && available > 0 else { return b"" }
-  file.read_exactly_at(@cmp.minimum(length, available).to_int(), position~)
+  file.at(position).read_exactly(@cmp.minimum(length, available).to_int())
 }
 
 ///|

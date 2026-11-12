@@ -38,7 +38,7 @@ pub(all) struct IdleStateReply {
   state : String
 }
 pub fn IdleStateReply::equal(Self, Self) -> Bool
-pub fn IdleStateReply::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn IdleStateReply::from_json(@json.Json, @json.DecodeContext) -> Self raise @json.JsonDecodeError
 pub fn IdleStateReply::not_equal(Self, Self) -> Bool
 pub fn IdleStateReply::to_json(Self) -> @json.Json
 pub fn IdleStateReply::to_repr(Self) -> @debug.Repr
@@ -48,7 +48,7 @@ pub(all) struct IdleStateRequest {
   idle_threshold : Int32
 }
 pub fn IdleStateRequest::equal(Self, Self) -> Bool
-pub fn IdleStateRequest::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn IdleStateRequest::from_json(@json.Json, @json.DecodeContext) -> Self raise @json.JsonDecodeError
 pub fn IdleStateRequest::not_equal(Self, Self) -> Bool
 pub fn IdleStateRequest::to_json(Self) -> @json.Json
 pub fn IdleStateRequest::to_repr(Self) -> @debug.Repr
@@ -58,7 +58,7 @@ pub(all) struct IdleTimeReply {
   idle_seconds : Int32
 }
 pub fn IdleTimeReply::equal(Self, Self) -> Bool
-pub fn IdleTimeReply::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn IdleTimeReply::from_json(@json.Json, @json.DecodeContext) -> Self raise @json.JsonDecodeError
 pub fn IdleTimeReply::not_equal(Self, Self) -> Bool
 pub fn IdleTimeReply::to_json(Self) -> @json.Json
 pub fn IdleTimeReply::to_repr(Self) -> @debug.Repr
@@ -68,7 +68,7 @@ pub(all) struct PowerMonitorActivity {
   operation : String
 }
 pub fn PowerMonitorActivity::equal(Self, Self) -> Bool
-pub fn PowerMonitorActivity::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn PowerMonitorActivity::from_json(@json.Json, @json.DecodeContext) -> Self raise @json.JsonDecodeError
 pub fn PowerMonitorActivity::not_equal(Self, Self) -> Bool
 pub fn PowerMonitorActivity::to_json(Self) -> @json.Json
 pub fn PowerMonitorActivity::to_repr(Self) -> @debug.Repr
@@ -77,7 +77,7 @@ pub fn PowerMonitorActivity::to_repr(Self) -> @debug.Repr
 pub(all) struct PowerMonitorEventPayload {
 }
 pub fn PowerMonitorEventPayload::equal(Self, Self) -> Bool
-pub fn PowerMonitorEventPayload::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn PowerMonitorEventPayload::from_json(@json.Json, @json.DecodeContext) -> Self raise @json.JsonDecodeError
 pub fn PowerMonitorEventPayload::not_equal(Self, Self) -> Bool
 pub fn PowerMonitorEventPayload::to_json(Self) -> @json.Json
 pub fn PowerMonitorEventPayload::to_repr(Self) -> @debug.Repr
@@ -88,7 +88,7 @@ pub(all) struct PowerSourceReply {
   battery_percent : Int32?
 }
 pub fn PowerSourceReply::equal(Self, Self) -> Bool
-pub fn PowerSourceReply::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn PowerSourceReply::from_json(@json.Json, @json.DecodeContext) -> Self raise @json.JsonDecodeError
 pub fn PowerSourceReply::not_equal(Self, Self) -> Bool
 pub fn PowerSourceReply::to_json(Self) -> @json.Json
 pub fn PowerSourceReply::to_repr(Self) -> @debug.Repr
