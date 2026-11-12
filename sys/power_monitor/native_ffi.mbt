@@ -40,7 +40,6 @@ extern "C" fn native_open_completion_pipe(
 ) -> Int32 = "moonbit_power_monitor_open_completion_pipe"
 
 ///|
-#cfg(not(platform="windows"))
 extern "C" fn native_completion_fd(fd : Int32) -> @types.Fd = "moonbit_power_monitor_completion_fd"
 
 ///|

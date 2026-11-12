@@ -140,19 +140,8 @@ pub async fn[T] PowerMonitor::with_watching(
 }
 
 ///|
-#cfg(platform="windows")
-fn PowerMonitor::begin_watching(
-  self : PowerMonitor,
-) -> @raw_fd.RawFdStream? raise PowerMonitorError {
-  let status = native_start_watching(self.handle, -1)
-  if status != native_status_ok {
-    raise self.classify_status(status, "with_watching")
-  }
-  None
-}
-
-///|
-#cfg(not(platform="windows"))
+/// Only the Linux watcher reports readiness and teardown through a pipe;
+/// macOS and Windows start synchronously and return no completion stream.
 async fn PowerMonitor::begin_watching(
   self : PowerMonitor,
 ) -> @raw_fd.RawFdStream? raise PowerMonitorError {

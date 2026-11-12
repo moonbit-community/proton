@@ -315,9 +315,19 @@ int32_t moonbit_power_monitor_open_completion_pipe(void *handle,
 #endif
 }
 
-/* Retypes a POSIX descriptor for MoonBit's raw-fd stream; ownership moves. */
+/* Retypes a POSIX descriptor for MoonBit's raw-fd stream; ownership moves.
+   MoonBit's Windows descriptor type is a HANDLE. Windows never opens a
+   completion pipe, so that variant only satisfies the shared declaration. */
+#if defined(_WIN32)
+MOONBIT_FFI_EXPORT
+HANDLE moonbit_power_monitor_completion_fd(int32_t fd) {
+  (void)fd;
+  return INVALID_HANDLE_VALUE;
+}
+#else
 MOONBIT_FFI_EXPORT
 int32_t moonbit_power_monitor_completion_fd(int32_t fd) { return fd; }
+#endif
 
 MOONBIT_FFI_EXPORT
 void moonbit_power_monitor_close_fd(int32_t fd) {
