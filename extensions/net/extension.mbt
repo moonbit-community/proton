@@ -84,37 +84,20 @@ fn response_headers(
 async fn do_request(request : @net_contract.Request) -> @net_contract.Response {
   let meth = parse_method(request.http_method)
   let headers = request_headers(request.headers)
-  let body_bytes = request.body.map(fn(s) { @utf8.encode(s) }).unwrap_or(b"")
-  // Use top-level functions for GET/POST/PUT (they handle full URL parsing).
-  // Use ClientConnection for DELETE, PATCH, HEAD, OPTIONS (need URL split + path).
-  let (response, data) = match meth {
-    Get =>
-      @http.get_binary(request.url, headers~) catch {
-        error => raise RequestFailed(detail=@debug.render(Repr(error)))
-      }
-    Post =>
-      @http.post_binary(request.url, body_bytes, headers~) catch {
-        error => raise RequestFailed(detail=@debug.render(Repr(error)))
-      }
-    Put =>
-      @http.put_binary(request.url, body_bytes, headers~) catch {
-        error => raise RequestFailed(detail=@debug.render(Repr(error)))
-      }
-    _ => {
-      let (base_url, path) = split_url(request.url)
-      let client = @http.ClientConnection::ClientConnection(base_url, headers~) catch {
-        error => raise RequestFailed(detail=@debug.render(Repr(error)))
-      }
-      defer client.close()
-      let response = client
-        ..request(meth, path)
-        ..write(body_bytes)
-        .end_request() catch {
-          error => raise RequestFailed(detail=@debug.render(Repr(error)))
-        }
-      let data = client.read_all()
-      (response, data)
+  let body_bytes = match meth {
+    Get => b""
+    _ => request.body.map(fn(s) { @utf8.encode(s) }).unwrap_or(b"")
+  }
+  let (base_url, path) = split_url(request.url)
+  let client = @http.ClientConnection(base_url, headers~) catch {
+    error => raise RequestFailed(detail=@debug.render(Repr(error)))
+  }
+  defer client.close()
+  let response = client..request(meth, path)..write(body_bytes).end_request() catch {
+      error => raise RequestFailed(detail=@debug.render(Repr(error)))
     }
+  let data = client.read_all() catch {
+    error => raise RequestFailed(detail=@debug.render(Repr(error)))
   }
   @net_contract.Response::{
     status: response.code,

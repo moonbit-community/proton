@@ -524,8 +524,10 @@ fn parse_discovered_target(
 ///|
 // Fetch a JSON discovery endpoint and reject non-2xx HTTP statuses.
 async fn fetch_discovery_json(base_url : String, path : String) -> Json {
-  let url = "\{strip_trailing_slash(base_url)}\{path}"
-  let (response, body) = @http.get_binary(url)
+  let connection = @http.ClientConnection(strip_trailing_slash(base_url))
+  defer connection.close()
+  let response = connection..request(Get, path).end_request()
+  let body = connection.read_all()
   if response.code < 200 || response.code >= 300 {
     raise HttpStatus(response.code, response.reason)
   }
