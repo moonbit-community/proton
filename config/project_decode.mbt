@@ -28,12 +28,10 @@ pub extend Platform with Debug::{to_repr}
 ///|
 /// Returns the operating system on which the configuration is being used.
 pub fn current_platform() -> Platform {
-  if @async.platform is MacOS {
-    Macos
-  } else if @async.platform is Windows {
-    Windows
-  } else {
-    Linux
+  match @async.platform {
+    MacOS => Macos
+    Windows => Windows
+    _ => Linux
   }
 }
 
