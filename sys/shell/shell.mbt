@@ -103,20 +103,21 @@ fn file_uri(path : String) -> String raise ShellError {
 /// cancellation terminates and reaps the tool using async's process lifecycle.
 /// Success means the platform accepted the request, not that the target app
 /// finished starting.
-// Keep the fallback compatible with both exhaustive and non-exhaustive Platform.
-#warnings("-unreachable_code-unused_pattern")
 pub async fn open(target : String) -> Unit raise ShellError {
   match @async.platform {
     Windows =>
       check_native_result(open_ffi(@ffi.to_cstr(target)), "open", target)
     MacOS => run_tool("open", target, "/usr/bin/open", ["--", target])
-    Linux => run_tool("open", target, "gio", ["open", "--", target])
     _ =>
-      raise ShellError(
-        operation="open",
-        target~,
-        reason=unsupported_error_message(),
-      )
+      if @async.platform is Linux {
+        run_tool("open", target, "gio", ["open", "--", target])
+      } else {
+        raise ShellError(
+          operation="open",
+          target~,
+          reason=unsupported_error_message(),
+        )
+      }
   }
 }
 
@@ -127,8 +128,6 @@ pub async fn open(target : String) -> Unit raise ShellError {
 /// ShowItems via dbus-send on Linux. Linux requires dbus-send and a file manager
 /// implementing that session-bus interface. Raises ShellError on failure.
 /// External-tool waits yield and participate in task cancellation.
-// Keep the fallback compatible with both exhaustive and non-exhaustive Platform.
-#warnings("-unreachable_code-unused_pattern")
 pub async fn reveal_item(path : String) -> Unit raise ShellError {
   match @async.platform {
     Windows =>
@@ -138,22 +137,24 @@ pub async fn reveal_item(path : String) -> Unit raise ShellError {
         path,
       )
     MacOS => run_tool("revealItem", path, "/usr/bin/open", ["-R", "--", path])
-    Linux =>
-      run_tool("revealItem", path, "dbus-send", [
-        "--session",
-        "--print-reply=literal",
-        "--dest=org.freedesktop.FileManager1",
-        "/org/freedesktop/FileManager1",
-        "org.freedesktop.FileManager1.ShowItems",
-        "array:string:" + file_uri(path),
-        "string:",
-      ])
     _ =>
-      raise ShellError(
-        operation="revealItem",
-        target=path,
-        reason=unsupported_error_message(),
-      )
+      if @async.platform is Linux {
+        run_tool("revealItem", path, "dbus-send", [
+          "--session",
+          "--print-reply=literal",
+          "--dest=org.freedesktop.FileManager1",
+          "/org/freedesktop/FileManager1",
+          "org.freedesktop.FileManager1.ShowItems",
+          "array:string:" + file_uri(path),
+          "string:",
+        ])
+      } else {
+        raise ShellError(
+          operation="revealItem",
+          target=path,
+          reason=unsupported_error_message(),
+        )
+      }
   }
 }
 
@@ -163,19 +164,23 @@ pub async fn reveal_item(path : String) -> Unit raise ShellError {
 /// Uses the recycle bin on Windows, Finder Trash on macOS, and gio trash on
 /// Linux. Raises ShellError on failure. The Linux tool wait yields and
 /// participates in task cancellation.
-// Keep the fallback compatible with both exhaustive and non-exhaustive Platform.
-#warnings("-unreachable_code-unused_pattern")
 pub async fn trash_item(path : String) -> Unit raise ShellError {
   match @async.platform {
     Linux => run_tool("trashItem", path, "gio", ["trash", "--", path])
-    Windows | MacOS =>
-      check_native_result(trash_item_ffi(@ffi.to_cstr(path)), "trashItem", path)
     _ =>
-      raise ShellError(
-        operation="trashItem",
-        target=path,
-        reason=unsupported_error_message(),
-      )
+      if @async.platform is Windows || @async.platform is MacOS {
+        check_native_result(
+          trash_item_ffi(@ffi.to_cstr(path)),
+          "trashItem",
+          path,
+        )
+      } else {
+        raise ShellError(
+          operation="trashItem",
+          target=path,
+          reason=unsupported_error_message(),
+        )
+      }
   }
 }
 
