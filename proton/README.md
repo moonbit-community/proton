@@ -848,7 +848,7 @@ re-adds a removed item until the next successful call.
 
 ## Logging
 
-Use `tonyfettes/xlog@0.4.2` directly for application logs. Proton configures the
+Use `tonyfettes/xlog@0.5.1` directly for application logs. Proton configures the
 global logger before native runtime creation. Packaged applications write to
 their platform log directory; direct launches and `proton_cli dev` use stderr.
 xlog initializes filtering from `MOON_XLOG` (default: `Info`). Proton preserves
