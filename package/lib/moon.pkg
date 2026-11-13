@@ -1,5 +1,5 @@
 import {
-  "moonbitlang/async/fs" @scan_fs,
+  "moonbitlang/async/fs" @legacy_async_fs,
   "moonbitlang/core/async",
   "moonbitlang/core/async/fs" @async_fs,
   "moonbitlang/core/async/process",
