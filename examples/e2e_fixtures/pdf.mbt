@@ -6,7 +6,7 @@ pub async fn run_pdf_regression() -> Unit {
     "Content-Type": "text/html",
   })
   defer server.close()
-  let url = "http://127.0.0.1:" + server.addr.port.to_string()
+  let url = "http://127.0.0.1:" + server.addr.port().to_string()
   let loaded : Array[String] = []
   let printing = Ref(false)
   let release_print = Ref(false)
@@ -46,7 +46,7 @@ pub async fn run_pdf_regression() -> Unit {
         .spawn_bg(no_wait=true, () => {
           defer connection.close()
           let request = connection.read_request() catch {
-            @io.UnexpectedEof => return
+            @io.ReaderClosed => return
             error => raise error
           }
           if request.path.has_prefix("/ready/") {

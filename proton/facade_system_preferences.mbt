@@ -7,7 +7,7 @@ pub(all) suberror SystemPreferencesError {
   SystemPreferencesUnavailable(
     query~ : String,
     status~ : Int32,
-    detail~ : String,
+    detail~ : String
   )
 }
 

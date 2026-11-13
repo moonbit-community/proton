@@ -12,12 +12,12 @@ import {
 // Types and methods
 #derive(@json.FromJson, @json.ToJson)
 type SetWindowThemeRequest
-pub fn SetWindowThemeRequest::from_json(@json.Json, @json.DecodeContext) -> Self raise @json.JsonDecodeError
+pub fn SetWindowThemeRequest::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
 pub fn SetWindowThemeRequest::to_json(Self) -> @json.Json
 
 #derive(@json.FromJson, @json.ToJson)
 type ThemeState
-pub fn ThemeState::from_json(@json.Json, @json.DecodeContext) -> Self raise @json.JsonDecodeError
+pub fn ThemeState::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
 pub fn ThemeState::to_json(Self) -> @json.Json
 
 // Type aliases

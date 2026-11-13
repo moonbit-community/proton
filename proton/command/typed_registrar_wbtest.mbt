@@ -122,7 +122,7 @@ test "typed extension specs reject foreign command routes" {
   } catch {
     ExtensionSpecError::ForeignCommandRoute(
       extension_id="example/typed",
-      operation_name="ext:foreign/ping",
+      operation_name="ext:foreign/ping"
     ) => ()
     _ => fail("expected foreign command route")
   }

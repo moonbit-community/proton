@@ -27,11 +27,11 @@ pub fn DesktopCapturerError::to_repr(Self) -> @debug.Repr
 // Types and methods
 #derive(@json.FromJson)
 type WindowSourceWire
-pub fn WindowSourceWire::from_json(@json.Json, @json.DecodeContext) -> Self raise @json.JsonDecodeError
+pub fn WindowSourceWire::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
 
 #derive(@json.FromJson)
 type WindowSourcesWire
-pub fn WindowSourcesWire::from_json(@json.Json, @json.DecodeContext) -> Self raise @json.JsonDecodeError
+pub fn WindowSourcesWire::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
 
 // Type aliases
 

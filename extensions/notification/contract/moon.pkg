@@ -1,5 +1,6 @@
 import {
   "moonbit-community/proton_contract",
+  "moonbitlang/core/json",
 }
 
 supported_targets = "js+native"

@@ -36,11 +36,11 @@ pub fn DisplayInfo::to_repr(Self) -> @debug.Repr
 
 #derive(@json.FromJson)
 type DisplayWire
-pub fn DisplayWire::from_json(@json.Json, @json.DecodeContext) -> Self raise @json.JsonDecodeError
+pub fn DisplayWire::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
 
 #derive(@json.FromJson)
 type DisplaysWire
-pub fn DisplaysWire::from_json(@json.Json, @json.DecodeContext) -> Self raise @json.JsonDecodeError
+pub fn DisplaysWire::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
 
 #derive(Eq, @debug.Debug)
 pub struct Point {
@@ -53,7 +53,7 @@ pub fn Point::to_repr(Self) -> @debug.Repr
 
 #derive(@json.FromJson)
 type PointWire
-pub fn PointWire::from_json(@json.Json, @json.DecodeContext) -> Self raise @json.JsonDecodeError
+pub fn PointWire::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
 
 #derive(Eq, @debug.Debug)
 pub struct Rect {

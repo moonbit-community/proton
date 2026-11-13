@@ -159,17 +159,24 @@ async fn PowerMonitor::begin_watching(
   if read_fd < 0 {
     raise self.classify_status(native_status_operation_failed, "with_watching")
   }
-  let reader = @raw_fd.RawFdStream(native_completion_fd(read_fd)) catch {
-    error => {
-      native_close_fd(write_fd.val)
-      raise OperationFailed(operation="with_watching", detail=error.to_string())
+  let reader = {
+    defer native_close_fd(write_fd.val)
+    // Finish transferring the read descriptor before cancellation can unwind.
+    let reader = @async.protect_from_cancel(() => {
+      @raw_fd.RawFdStream(native_completion_fd(read_fd))
+    }) catch {
+      error =>
+        raise OperationFailed(
+          operation="with_watching",
+          detail=error.to_string(),
+        )
     }
-  }
-  let status = native_start_watching(self.handle, write_fd.val)
-  native_close_fd(write_fd.val)
-  if status != native_status_ok {
-    reader.close()
-    raise self.classify_status(status, "with_watching")
+    let status = native_start_watching(self.handle, write_fd.val)
+    if status != native_status_ok {
+      reader.close()
+      raise self.classify_status(status, "with_watching")
+    }
+    reader
   }
   let mut ready = false
   defer (async fn() -> Unit raise PowerMonitorError + nocancel {
@@ -179,11 +186,7 @@ async fn PowerMonitor::begin_watching(
   })()
   let notice = reader.read() catch {
     error => {
-      let error : Error = if error is TransportError(cause, ..) {
-        cause
-      } else {
-        error
-      }
+      let error : Error = error
       raise OperationFailed(operation="with_watching", detail=error.to_string())
     }
   }

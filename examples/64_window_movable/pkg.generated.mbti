@@ -12,12 +12,12 @@ import {
 // Types and methods
 #derive(@json.FromJson, @json.ToJson)
 type MovableReply
-pub fn MovableReply::from_json(@json.Json, @json.DecodeContext) -> Self raise @json.JsonDecodeError
+pub fn MovableReply::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
 pub fn MovableReply::to_json(Self) -> @json.Json
 
 #derive(@json.FromJson, @json.ToJson)
 type MovableRequest
-pub fn MovableRequest::from_json(@json.Json, @json.DecodeContext) -> Self raise @json.JsonDecodeError
+pub fn MovableRequest::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
 pub fn MovableRequest::to_json(Self) -> @json.Json
 
 // Type aliases

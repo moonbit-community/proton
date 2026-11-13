@@ -152,7 +152,7 @@ pub(all) struct AppActivation {
 pub fn AppActivation::AppActivation(urls? : Array[String], files? : Array[String], reopen? : Bool) -> Self
 pub fn AppActivation::equal(Self, Self) -> Bool
 pub fn AppActivation::files(Self) -> Array[String]
-pub fn AppActivation::from_json(@json.Json, @json.DecodeContext) -> Self raise @json.JsonDecodeError
+pub fn AppActivation::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
 pub fn AppActivation::not_equal(Self, Self) -> Bool
 pub fn AppActivation::reopen(Self) -> Bool
 pub fn AppActivation::to_json(Self) -> @json.Json
@@ -465,7 +465,7 @@ pub(all) struct NavigationEntry {
   http_status_code : Int32
 }
 pub fn NavigationEntry::equal(Self, Self) -> Bool
-pub fn NavigationEntry::from_json(@json.Json, @json.DecodeContext) -> Self raise @json.JsonDecodeError
+pub fn NavigationEntry::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
 pub fn NavigationEntry::not_equal(Self, Self) -> Bool
 pub fn NavigationEntry::to_repr(Self) -> @debug.Repr
 
@@ -475,7 +475,7 @@ pub(all) struct NavigationHistory {
   active_index : Int32
 }
 pub fn NavigationHistory::equal(Self, Self) -> Bool
-pub fn NavigationHistory::from_json(@json.Json, @json.DecodeContext) -> Self raise @json.JsonDecodeError
+pub fn NavigationHistory::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
 pub fn NavigationHistory::not_equal(Self, Self) -> Bool
 pub fn NavigationHistory::to_repr(Self) -> @debug.Repr
 

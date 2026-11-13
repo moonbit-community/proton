@@ -74,7 +74,7 @@ test "typed parameter helpers reject bad shapes and numeric types" {
   }
   guard not_object
     is Err(
-      @protocol.ProtocolSchemaError::ExpectedParamsObject("Runtime.evaluate"),
+      @protocol.ProtocolSchemaError::ExpectedParamsObject("Runtime.evaluate")
     ) else {
     fail("expected params object error")
   }
@@ -93,8 +93,8 @@ test "typed parameter helpers reject bad shapes and numeric types" {
     is Err(
       @protocol.ProtocolSchemaError::MissingParameter(
         "Runtime.evaluate",
-        "missing",
-      ),
+        "missing"
+      )
     ) else {
     fail("expected missing parameter")
   }
@@ -108,8 +108,8 @@ test "typed parameter helpers reject bad shapes and numeric types" {
       @protocol.ProtocolSchemaError::InvalidParameterType(
         "Runtime.evaluate",
         "fraction",
-        "integer",
-      ),
+        "integer"
+      )
     ) else {
     fail("expected invalid integer")
   }
@@ -123,8 +123,8 @@ test "typed parameter helpers reject bad shapes and numeric types" {
       @protocol.ProtocolSchemaError::InvalidParameterType(
         "Runtime.evaluate",
         "string",
-        "integer",
-      ),
+        "integer"
+      )
     ) else {
     fail("expected invalid integer shape")
   }
@@ -138,8 +138,8 @@ test "typed parameter helpers reject bad shapes and numeric types" {
       @protocol.ProtocolSchemaError::InvalidParameterType(
         "Runtime.evaluate",
         "fraction",
-        "integer",
-      ),
+        "integer"
+      )
     ) else {
     fail("expected invalid optional integer")
   }
@@ -153,8 +153,8 @@ test "typed parameter helpers reject bad shapes and numeric types" {
       @protocol.ProtocolSchemaError::InvalidParameterType(
         "Runtime.evaluate",
         "string",
-        "integer",
-      ),
+        "integer"
+      )
     ) else {
     fail("expected invalid optional integer shape")
   }
@@ -187,8 +187,8 @@ test "typed parameter helpers reject bad shapes and numeric types" {
       @protocol.ProtocolSchemaError::InvalidParameterType(
         "Runtime.evaluate",
         "items",
-        "string",
-      ),
+        "string"
+      )
     ) else {
     fail("expected invalid array string")
   }
@@ -202,8 +202,8 @@ test "typed parameter helpers reject bad shapes and numeric types" {
       @protocol.ProtocolSchemaError::InvalidParameterType(
         "Runtime.evaluate",
         "fraction",
-        "string",
-      ),
+        "string"
+      )
     ) else {
     fail("expected invalid required string")
   }
@@ -217,8 +217,8 @@ test "typed parameter helpers reject bad shapes and numeric types" {
       @protocol.ProtocolSchemaError::InvalidParameterType(
         "Runtime.evaluate",
         "fraction",
-        "string",
-      ),
+        "string"
+      )
     ) else {
     fail("expected invalid optional string")
   }
@@ -232,8 +232,8 @@ test "typed parameter helpers reject bad shapes and numeric types" {
       @protocol.ProtocolSchemaError::InvalidParameterType(
         "Runtime.evaluate",
         "string",
-        "number",
-      ),
+        "number"
+      )
     ) else {
     fail("expected invalid required double")
   }
@@ -247,8 +247,8 @@ test "typed parameter helpers reject bad shapes and numeric types" {
       @protocol.ProtocolSchemaError::InvalidParameterType(
         "Runtime.evaluate",
         "string",
-        "number",
-      ),
+        "number"
+      )
     ) else {
     fail("expected invalid optional double")
   }
@@ -262,8 +262,8 @@ test "typed parameter helpers reject bad shapes and numeric types" {
       @protocol.ProtocolSchemaError::InvalidParameterType(
         "Runtime.evaluate",
         "string",
-        "boolean",
-      ),
+        "boolean"
+      )
     ) else {
     fail("expected invalid required bool")
   }
@@ -277,8 +277,8 @@ test "typed parameter helpers reject bad shapes and numeric types" {
       @protocol.ProtocolSchemaError::InvalidParameterType(
         "Runtime.evaluate",
         "string",
-        "boolean",
-      ),
+        "boolean"
+      )
     ) else {
     fail("expected invalid optional bool")
   }
@@ -292,8 +292,8 @@ test "typed parameter helpers reject bad shapes and numeric types" {
       @protocol.ProtocolSchemaError::InvalidParameterType(
         "Runtime.evaluate",
         "items",
-        "array",
-      ),
+        "array"
+      )
     ) else {
     fail("expected invalid param array")
   }
@@ -307,8 +307,8 @@ test "typed parameter helpers reject bad shapes and numeric types" {
       @protocol.ProtocolSchemaError::InvalidParameterType(
         "Runtime.evaluate",
         "items",
-        "integer",
-      ),
+        "integer"
+      )
     ) else {
     fail("expected invalid array int")
   }
@@ -322,8 +322,8 @@ test "typed parameter helpers reject bad shapes and numeric types" {
       @protocol.ProtocolSchemaError::InvalidParameterType(
         "Runtime.evaluate",
         "items",
-        "integer",
-      ),
+        "integer"
+      )
     ) else {
     fail("expected invalid array int shape")
   }
@@ -337,8 +337,8 @@ test "typed parameter helpers reject bad shapes and numeric types" {
       @protocol.ProtocolSchemaError::InvalidParameterType(
         "Runtime.evaluate",
         "items",
-        "number",
-      ),
+        "number"
+      )
     ) else {
     fail("expected invalid array double")
   }
@@ -463,7 +463,7 @@ test "typed result helpers reject bad shapes and return types" {
   }
   guard missing
     is Err(
-      @protocol.ProtocolSchemaError::MissingReturn("Page.navigate", "missing"),
+      @protocol.ProtocolSchemaError::MissingReturn("Page.navigate", "missing")
     ) else {
     fail("expected missing return")
   }
@@ -477,8 +477,8 @@ test "typed result helpers reject bad shapes and return types" {
       @protocol.ProtocolSchemaError::InvalidReturnType(
         "Page.navigate",
         "fraction",
-        "integer",
-      ),
+        "integer"
+      )
     ) else {
     fail("expected invalid return integer")
   }
@@ -492,8 +492,8 @@ test "typed result helpers reject bad shapes and return types" {
       @protocol.ProtocolSchemaError::InvalidReturnType(
         "Page.navigate",
         "string",
-        "integer",
-      ),
+        "integer"
+      )
     ) else {
     fail("expected invalid return integer shape")
   }
@@ -507,8 +507,8 @@ test "typed result helpers reject bad shapes and return types" {
       @protocol.ProtocolSchemaError::InvalidReturnType(
         "Page.navigate",
         "fraction",
-        "integer",
-      ),
+        "integer"
+      )
     ) else {
     fail("expected invalid optional return integer")
   }
@@ -522,8 +522,8 @@ test "typed result helpers reject bad shapes and return types" {
       @protocol.ProtocolSchemaError::InvalidReturnType(
         "Page.navigate",
         "string",
-        "integer",
-      ),
+        "integer"
+      )
     ) else {
     fail("expected invalid optional return integer shape")
   }
@@ -537,8 +537,8 @@ test "typed result helpers reject bad shapes and return types" {
       @protocol.ProtocolSchemaError::InvalidReturnType(
         "Page.navigate",
         "fraction",
-        "string",
-      ),
+        "string"
+      )
     ) else {
     fail("expected invalid optional return string")
   }
@@ -552,8 +552,8 @@ test "typed result helpers reject bad shapes and return types" {
       @protocol.ProtocolSchemaError::InvalidReturnType(
         "Page.navigate",
         "items",
-        "array",
-      ),
+        "array"
+      )
     ) else {
     fail("expected invalid result array")
   }
@@ -572,8 +572,8 @@ test "typed result helpers reject bad shapes and return types" {
       @protocol.ProtocolSchemaError::InvalidReturnType(
         "Page.navigate",
         "items",
-        "integer",
-      ),
+        "integer"
+      )
     ) else {
     fail("expected invalid result array integer")
   }
@@ -592,8 +592,8 @@ test "typed result helpers reject bad shapes and return types" {
       @protocol.ProtocolSchemaError::InvalidReturnType(
         "Page.navigate",
         "items",
-        "integer",
-      ),
+        "integer"
+      )
     ) else {
     fail("expected invalid result array integer shape")
   }
@@ -607,8 +607,8 @@ test "typed result helpers reject bad shapes and return types" {
       @protocol.ProtocolSchemaError::InvalidReturnType(
         "Page.navigate",
         "fraction",
-        "string",
-      ),
+        "string"
+      )
     ) else {
     fail("expected invalid required return string")
   }
@@ -622,8 +622,8 @@ test "typed result helpers reject bad shapes and return types" {
       @protocol.ProtocolSchemaError::InvalidReturnType(
         "Page.navigate",
         "string",
-        "number",
-      ),
+        "number"
+      )
     ) else {
     fail("expected invalid required return double")
   }
@@ -637,8 +637,8 @@ test "typed result helpers reject bad shapes and return types" {
       @protocol.ProtocolSchemaError::InvalidReturnType(
         "Page.navigate",
         "string",
-        "boolean",
-      ),
+        "boolean"
+      )
     ) else {
     fail("expected invalid required return bool")
   }
@@ -652,8 +652,8 @@ test "typed result helpers reject bad shapes and return types" {
       @protocol.ProtocolSchemaError::InvalidReturnType(
         "Page.navigate",
         "string",
-        "boolean",
-      ),
+        "boolean"
+      )
     ) else {
     fail("expected invalid optional return bool")
   }
@@ -672,8 +672,8 @@ test "typed result helpers reject bad shapes and return types" {
       @protocol.ProtocolSchemaError::InvalidReturnType(
         "Page.navigate",
         "items",
-        "string",
-      ),
+        "string"
+      )
     ) else {
     fail("expected invalid result array string")
   }

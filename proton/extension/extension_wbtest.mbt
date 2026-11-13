@@ -73,7 +73,7 @@ test "extension event encoding rejects application routes" {
     fail("expected application event rejection")
   } catch {
     @proton_contract.ContractDefinitionError::ExpectedExtensionEvent(
-      route="app:application-changed",
+      route="app:application-changed"
     ) => ()
     _ => fail("expected ExpectedExtensionEvent")
   }

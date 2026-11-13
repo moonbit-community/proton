@@ -2198,7 +2198,7 @@ test "command host rejects missing extension dependencies" {
       test_build_command_host([], [test_extension_capability(feature_spec)])
     }) {
     ConfigurationError(
-      ExtensionUnavailable(extension_id=missing_id, requested_by~, state~),
+      ExtensionUnavailable(extension_id=missing_id, requested_by~, state~)
     ) => {
       assert_eq(missing_id, dependency_id)
       assert_eq(requested_by, Some(extension_id))
@@ -3243,7 +3243,7 @@ test "extension registration failure cleans up the failing extension and depende
     fail("expected registration failure")
   } catch {
     AppRunError::CommandExtensionLifecycleError(
-      RegistrationFailed(extension_id="example/failing", detail~),
+      RegistrationFailed(extension_id="example/failing", detail~)
     ) => {
       assert_true(detail.contains("ForeignCommandRoute"))
       assert_true(detail.contains("app:foreign"))

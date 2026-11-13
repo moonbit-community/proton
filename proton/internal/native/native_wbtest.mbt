@@ -1326,7 +1326,7 @@ test "native renderer publisher preserves status and error code independently" {
     is BrowserEvent(
       7L,
       Some(11L),
-      RendererProcessTerminated(url, status, code, detail),
+      RendererProcessTerminated(url, status, code, detail)
     ) else {
     fail("expected a child-view renderer termination")
   }
@@ -1354,7 +1354,7 @@ test "native new-window publisher reports Chromium dispositions as ABI codes" {
       is BrowserRequest(
         7L,
         Some(11L),
-        NewWindow(user_gesture~, disposition~, ..),
+        NewWindow(user_gesture~, disposition~, ..)
       ) else {
       fail("expected a child-view new-window request for \{name}")
     }

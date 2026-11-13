@@ -42,7 +42,7 @@ pub(all) struct ExistsReply {
   exists : Bool
 }
 pub fn ExistsReply::equal(Self, Self) -> Bool
-pub fn ExistsReply::from_json(@json.Json, @json.DecodeContext) -> Self raise @json.JsonDecodeError
+pub fn ExistsReply::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
 pub fn ExistsReply::not_equal(Self, Self) -> Bool
 pub fn ExistsReply::to_json(Self) -> @json.Json
 pub fn ExistsReply::to_repr(Self) -> @debug.Repr
@@ -54,7 +54,7 @@ pub(all) struct FsActivity {
   bytes : Int32?
 }
 pub fn FsActivity::equal(Self, Self) -> Bool
-pub fn FsActivity::from_json(@json.Json, @json.DecodeContext) -> Self raise @json.JsonDecodeError
+pub fn FsActivity::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
 pub fn FsActivity::not_equal(Self, Self) -> Bool
 pub fn FsActivity::to_json(Self) -> @json.Json
 pub fn FsActivity::to_repr(Self) -> @debug.Repr
@@ -65,7 +65,7 @@ pub(all) struct KindReply {
   kind : String
 }
 pub fn KindReply::equal(Self, Self) -> Bool
-pub fn KindReply::from_json(@json.Json, @json.DecodeContext) -> Self raise @json.JsonDecodeError
+pub fn KindReply::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
 pub fn KindReply::not_equal(Self, Self) -> Bool
 pub fn KindReply::to_json(Self) -> @json.Json
 pub fn KindReply::to_repr(Self) -> @debug.Repr
@@ -76,7 +76,7 @@ pub(all) struct KindRequest {
   follow_symlink : Bool?
 }
 pub fn KindRequest::equal(Self, Self) -> Bool
-pub fn KindRequest::from_json(@json.Json, @json.DecodeContext) -> Self raise @json.JsonDecodeError
+pub fn KindRequest::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
 pub fn KindRequest::not_equal(Self, Self) -> Bool
 pub fn KindRequest::to_json(Self) -> @json.Json
 pub fn KindRequest::to_repr(Self) -> @debug.Repr
@@ -87,7 +87,7 @@ pub(all) struct MkdirReply {
   created : Bool
 }
 pub fn MkdirReply::equal(Self, Self) -> Bool
-pub fn MkdirReply::from_json(@json.Json, @json.DecodeContext) -> Self raise @json.JsonDecodeError
+pub fn MkdirReply::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
 pub fn MkdirReply::not_equal(Self, Self) -> Bool
 pub fn MkdirReply::to_json(Self) -> @json.Json
 pub fn MkdirReply::to_repr(Self) -> @debug.Repr
@@ -99,7 +99,7 @@ pub(all) struct MkdirRequest {
   recursive : Bool?
 }
 pub fn MkdirRequest::equal(Self, Self) -> Bool
-pub fn MkdirRequest::from_json(@json.Json, @json.DecodeContext) -> Self raise @json.JsonDecodeError
+pub fn MkdirRequest::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
 pub fn MkdirRequest::not_equal(Self, Self) -> Bool
 pub fn MkdirRequest::to_json(Self) -> @json.Json
 pub fn MkdirRequest::to_repr(Self) -> @debug.Repr
@@ -109,7 +109,7 @@ pub(all) struct PathRequest {
   path : String
 }
 pub fn PathRequest::equal(Self, Self) -> Bool
-pub fn PathRequest::from_json(@json.Json, @json.DecodeContext) -> Self raise @json.JsonDecodeError
+pub fn PathRequest::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
 pub fn PathRequest::not_equal(Self, Self) -> Bool
 pub fn PathRequest::to_json(Self) -> @json.Json
 pub fn PathRequest::to_repr(Self) -> @debug.Repr
@@ -121,7 +121,7 @@ pub(all) struct ReadFileReply {
   bytes_read : Int32
 }
 pub fn ReadFileReply::equal(Self, Self) -> Bool
-pub fn ReadFileReply::from_json(@json.Json, @json.DecodeContext) -> Self raise @json.JsonDecodeError
+pub fn ReadFileReply::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
 pub fn ReadFileReply::not_equal(Self, Self) -> Bool
 pub fn ReadFileReply::to_json(Self) -> @json.Json
 pub fn ReadFileReply::to_repr(Self) -> @debug.Repr
@@ -132,7 +132,7 @@ pub(all) struct ReadFileRequest {
   sync_timestamp : Bool?
 }
 pub fn ReadFileRequest::equal(Self, Self) -> Bool
-pub fn ReadFileRequest::from_json(@json.Json, @json.DecodeContext) -> Self raise @json.JsonDecodeError
+pub fn ReadFileRequest::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
 pub fn ReadFileRequest::not_equal(Self, Self) -> Bool
 pub fn ReadFileRequest::to_json(Self) -> @json.Json
 pub fn ReadFileRequest::to_repr(Self) -> @debug.Repr
@@ -143,7 +143,7 @@ pub(all) struct ReaddirReply {
   entries : Array[String]
 }
 pub fn ReaddirReply::equal(Self, Self) -> Bool
-pub fn ReaddirReply::from_json(@json.Json, @json.DecodeContext) -> Self raise @json.JsonDecodeError
+pub fn ReaddirReply::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
 pub fn ReaddirReply::not_equal(Self, Self) -> Bool
 pub fn ReaddirReply::to_json(Self) -> @json.Json
 pub fn ReaddirReply::to_repr(Self) -> @debug.Repr
@@ -156,7 +156,7 @@ pub(all) struct ReaddirRequest {
   sort : Bool?
 }
 pub fn ReaddirRequest::equal(Self, Self) -> Bool
-pub fn ReaddirRequest::from_json(@json.Json, @json.DecodeContext) -> Self raise @json.JsonDecodeError
+pub fn ReaddirRequest::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
 pub fn ReaddirRequest::not_equal(Self, Self) -> Bool
 pub fn ReaddirRequest::to_json(Self) -> @json.Json
 pub fn ReaddirRequest::to_repr(Self) -> @debug.Repr
@@ -166,7 +166,7 @@ pub(all) struct RealpathReply {
   path : String
 }
 pub fn RealpathReply::equal(Self, Self) -> Bool
-pub fn RealpathReply::from_json(@json.Json, @json.DecodeContext) -> Self raise @json.JsonDecodeError
+pub fn RealpathReply::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
 pub fn RealpathReply::not_equal(Self, Self) -> Bool
 pub fn RealpathReply::to_json(Self) -> @json.Json
 pub fn RealpathReply::to_repr(Self) -> @debug.Repr
@@ -176,7 +176,7 @@ pub(all) struct RemoveFileReply {
   removed : Bool
 }
 pub fn RemoveFileReply::equal(Self, Self) -> Bool
-pub fn RemoveFileReply::from_json(@json.Json, @json.DecodeContext) -> Self raise @json.JsonDecodeError
+pub fn RemoveFileReply::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
 pub fn RemoveFileReply::not_equal(Self, Self) -> Bool
 pub fn RemoveFileReply::to_json(Self) -> @json.Json
 pub fn RemoveFileReply::to_repr(Self) -> @debug.Repr
@@ -187,7 +187,7 @@ pub(all) struct RemovePathReply {
   removed : Bool
 }
 pub fn RemovePathReply::equal(Self, Self) -> Bool
-pub fn RemovePathReply::from_json(@json.Json, @json.DecodeContext) -> Self raise @json.JsonDecodeError
+pub fn RemovePathReply::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
 pub fn RemovePathReply::not_equal(Self, Self) -> Bool
 pub fn RemovePathReply::to_json(Self) -> @json.Json
 pub fn RemovePathReply::to_repr(Self) -> @debug.Repr
@@ -198,7 +198,7 @@ pub(all) struct RemovePathRequest {
   recursive : Bool?
 }
 pub fn RemovePathRequest::equal(Self, Self) -> Bool
-pub fn RemovePathRequest::from_json(@json.Json, @json.DecodeContext) -> Self raise @json.JsonDecodeError
+pub fn RemovePathRequest::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
 pub fn RemovePathRequest::not_equal(Self, Self) -> Bool
 pub fn RemovePathRequest::to_json(Self) -> @json.Json
 pub fn RemovePathRequest::to_repr(Self) -> @debug.Repr
@@ -210,7 +210,7 @@ pub(all) struct RenameReply {
   renamed : Bool
 }
 pub fn RenameReply::equal(Self, Self) -> Bool
-pub fn RenameReply::from_json(@json.Json, @json.DecodeContext) -> Self raise @json.JsonDecodeError
+pub fn RenameReply::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
 pub fn RenameReply::not_equal(Self, Self) -> Bool
 pub fn RenameReply::to_json(Self) -> @json.Json
 pub fn RenameReply::to_repr(Self) -> @debug.Repr
@@ -222,7 +222,7 @@ pub(all) struct RenameRequest {
   replace : Bool?
 }
 pub fn RenameRequest::equal(Self, Self) -> Bool
-pub fn RenameRequest::from_json(@json.Json, @json.DecodeContext) -> Self raise @json.JsonDecodeError
+pub fn RenameRequest::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
 pub fn RenameRequest::not_equal(Self, Self) -> Bool
 pub fn RenameRequest::to_json(Self) -> @json.Json
 pub fn RenameRequest::to_repr(Self) -> @debug.Repr
@@ -233,7 +233,7 @@ pub(all) struct SizeReply {
   size : Int64
 }
 pub fn SizeReply::equal(Self, Self) -> Bool
-pub fn SizeReply::from_json(@json.Json, @json.DecodeContext) -> Self raise @json.JsonDecodeError
+pub fn SizeReply::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
 pub fn SizeReply::not_equal(Self, Self) -> Bool
 pub fn SizeReply::to_json(Self) -> @json.Json
 pub fn SizeReply::to_repr(Self) -> @debug.Repr
@@ -244,7 +244,7 @@ pub(all) struct WriteFileReply {
   bytes_written : Int32
 }
 pub fn WriteFileReply::equal(Self, Self) -> Bool
-pub fn WriteFileReply::from_json(@json.Json, @json.DecodeContext) -> Self raise @json.JsonDecodeError
+pub fn WriteFileReply::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
 pub fn WriteFileReply::not_equal(Self, Self) -> Bool
 pub fn WriteFileReply::to_json(Self) -> @json.Json
 pub fn WriteFileReply::to_repr(Self) -> @debug.Repr
@@ -259,7 +259,7 @@ pub(all) struct WriteFileRequest {
   sync : String?
 }
 pub fn WriteFileRequest::equal(Self, Self) -> Bool
-pub fn WriteFileRequest::from_json(@json.Json, @json.DecodeContext) -> Self raise @json.JsonDecodeError
+pub fn WriteFileRequest::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
 pub fn WriteFileRequest::not_equal(Self, Self) -> Bool
 pub fn WriteFileRequest::to_json(Self) -> @json.Json
 pub fn WriteFileRequest::to_repr(Self) -> @debug.Repr

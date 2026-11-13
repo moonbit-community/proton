@@ -20,7 +20,7 @@ pub(all) struct GetSourcesReply {
   sources : Array[Source]
 }
 pub fn GetSourcesReply::equal(Self, Self) -> Bool
-pub fn GetSourcesReply::from_json(@json.Json, @json.DecodeContext) -> Self raise @json.JsonDecodeError
+pub fn GetSourcesReply::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
 pub fn GetSourcesReply::not_equal(Self, Self) -> Bool
 pub fn GetSourcesReply::to_json(Self) -> @json.Json
 pub fn GetSourcesReply::to_repr(Self) -> @debug.Repr
@@ -32,7 +32,7 @@ pub(all) struct GetSourcesRequest {
   thumbnail_height : Int32?
 }
 pub fn GetSourcesRequest::equal(Self, Self) -> Bool
-pub fn GetSourcesRequest::from_json(@json.Json, @json.DecodeContext) -> Self raise @json.JsonDecodeError
+pub fn GetSourcesRequest::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
 pub fn GetSourcesRequest::not_equal(Self, Self) -> Bool
 pub fn GetSourcesRequest::to_json(Self) -> @json.Json
 pub fn GetSourcesRequest::to_repr(Self) -> @debug.Repr
@@ -49,7 +49,7 @@ pub(all) struct Source {
   thumbnail : String?
 }
 pub fn Source::equal(Self, Self) -> Bool
-pub fn Source::from_json(@json.Json, @json.DecodeContext) -> Self raise @json.JsonDecodeError
+pub fn Source::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
 pub fn Source::not_equal(Self, Self) -> Bool
 pub fn Source::to_json(Self) -> @json.Json
 pub fn Source::to_repr(Self) -> @debug.Repr

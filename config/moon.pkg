@@ -3,7 +3,6 @@ import {
   "moonbitlang/core/json",
   "moonbitlang/x/fs" @mbfs,
   "moonbitlang/core/async",
-  "moonbitlang/core/async/types",
   "tonyfettes/url",
 }
 

@@ -88,28 +88,18 @@ async fn do_request(request : @net_contract.Request) -> @net_contract.Response {
   // Use top-level functions for GET/POST/PUT (they handle full URL parsing).
   // Use ClientConnection for DELETE, PATCH, HEAD, OPTIONS (need URL split + path).
   let (response, data) = match meth {
-    Get => {
-      let (response, body) = @http.get(request.url, headers~) catch {
+    Get =>
+      @http.get_binary(request.url, headers~) catch {
         error => raise RequestFailed(detail=@debug.render(Repr(error)))
       }
-      (response, body.binary())
-    }
-    Post => {
-      let (response, body) = @http.post_binary(
-        request.url,
-        body_bytes,
-        headers~,
-      ) catch {
+    Post =>
+      @http.post_binary(request.url, body_bytes, headers~) catch {
         error => raise RequestFailed(detail=@debug.render(Repr(error)))
       }
-      (response, body.binary())
-    }
-    Put => {
-      let (response, body) = @http.put_binary(request.url, body_bytes, headers~) catch {
+    Put =>
+      @http.put_binary(request.url, body_bytes, headers~) catch {
         error => raise RequestFailed(detail=@debug.render(Repr(error)))
       }
-      (response, body.binary())
-    }
     _ => {
       let (base_url, path) = split_url(request.url)
       let client = @http.ClientConnection::ClientConnection(base_url, headers~) catch {

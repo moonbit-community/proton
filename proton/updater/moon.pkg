@@ -1,6 +1,5 @@
 import {
   "moonbitlang/core/async/http",
-  "moonbitlang/core/async/io",
   "marianoguerra/uri",
   "moonbit-community/proton_rsa" @rsa,
   "moonbit-community/proton/internal/native",
@@ -16,6 +15,7 @@ import {
 
 import {
   "moonbitlang/core/async",
+  "moonbitlang/core/encoding/utf8",
   "moonbitlang/core/async/socket",
   "moonbitlang/core/async/fs" @async_fs,
   "moonbitlang/x/path",

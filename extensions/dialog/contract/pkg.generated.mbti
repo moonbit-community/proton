@@ -30,7 +30,7 @@ pub(all) struct ConfirmReply {
   confirmed : Bool
 }
 pub fn ConfirmReply::equal(Self, Self) -> Bool
-pub fn ConfirmReply::from_json(@json.Json, @json.DecodeContext) -> Self raise @json.JsonDecodeError
+pub fn ConfirmReply::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
 pub fn ConfirmReply::not_equal(Self, Self) -> Bool
 pub fn ConfirmReply::to_json(Self) -> @json.Json
 pub fn ConfirmReply::to_repr(Self) -> @debug.Repr
@@ -42,7 +42,7 @@ pub(all) struct DialogActivity {
   level : String?
 }
 pub fn DialogActivity::equal(Self, Self) -> Bool
-pub fn DialogActivity::from_json(@json.Json, @json.DecodeContext) -> Self raise @json.JsonDecodeError
+pub fn DialogActivity::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
 pub fn DialogActivity::not_equal(Self, Self) -> Bool
 pub fn DialogActivity::to_json(Self) -> @json.Json
 pub fn DialogActivity::to_repr(Self) -> @debug.Repr
@@ -53,7 +53,7 @@ pub(all) struct ErrorBoxRequest {
   content : String
 }
 pub fn ErrorBoxRequest::equal(Self, Self) -> Bool
-pub fn ErrorBoxRequest::from_json(@json.Json, @json.DecodeContext) -> Self raise @json.JsonDecodeError
+pub fn ErrorBoxRequest::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
 pub fn ErrorBoxRequest::not_equal(Self, Self) -> Bool
 pub fn ErrorBoxRequest::to_json(Self) -> @json.Json
 pub fn ErrorBoxRequest::to_repr(Self) -> @debug.Repr
@@ -63,7 +63,7 @@ pub(all) struct FileDialogReply {
   path : String?
 }
 pub fn FileDialogReply::equal(Self, Self) -> Bool
-pub fn FileDialogReply::from_json(@json.Json, @json.DecodeContext) -> Self raise @json.JsonDecodeError
+pub fn FileDialogReply::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
 pub fn FileDialogReply::not_equal(Self, Self) -> Bool
 pub fn FileDialogReply::to_json(Self) -> @json.Json
 pub fn FileDialogReply::to_repr(Self) -> @debug.Repr
@@ -74,7 +74,7 @@ pub(all) struct FileDialogRequest {
   path : String?
 }
 pub fn FileDialogRequest::equal(Self, Self) -> Bool
-pub fn FileDialogRequest::from_json(@json.Json, @json.DecodeContext) -> Self raise @json.JsonDecodeError
+pub fn FileDialogRequest::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
 pub fn FileDialogRequest::not_equal(Self, Self) -> Bool
 pub fn FileDialogRequest::to_json(Self) -> @json.Json
 pub fn FileDialogRequest::to_repr(Self) -> @debug.Repr
@@ -84,7 +84,7 @@ pub(all) struct MessageReply {
   acknowledged : Bool
 }
 pub fn MessageReply::equal(Self, Self) -> Bool
-pub fn MessageReply::from_json(@json.Json, @json.DecodeContext) -> Self raise @json.JsonDecodeError
+pub fn MessageReply::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
 pub fn MessageReply::not_equal(Self, Self) -> Bool
 pub fn MessageReply::to_json(Self) -> @json.Json
 pub fn MessageReply::to_repr(Self) -> @debug.Repr
@@ -96,7 +96,7 @@ pub(all) struct MessageRequest {
   level : String?
 }
 pub fn MessageRequest::equal(Self, Self) -> Bool
-pub fn MessageRequest::from_json(@json.Json, @json.DecodeContext) -> Self raise @json.JsonDecodeError
+pub fn MessageRequest::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
 pub fn MessageRequest::not_equal(Self, Self) -> Bool
 pub fn MessageRequest::to_json(Self) -> @json.Json
 pub fn MessageRequest::to_repr(Self) -> @debug.Repr

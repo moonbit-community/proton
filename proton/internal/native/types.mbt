@@ -300,13 +300,13 @@ pub(all) enum NativeBrowserRequest {
     request_id~ : Int64,
     url~ : String,
     user_gesture~ : Bool,
-    disposition~ : Int32,
+    disposition~ : Int32
   )
   Download(
     request_id~ : Int64,
     download_id~ : Int32,
     url~ : String,
-    suggested_name~ : String,
+    suggested_name~ : String
   )
   Certificate(request_id~ : Int64, url~ : String, error_code~ : Int32)
   Media(request_id~ : Int64, origin~ : String, permissions~ : Int32)
@@ -888,7 +888,7 @@ pub fn RuntimeEvent::renderer_process_termination(
     BrowserEvent(
       _,
       _,
-      RendererProcessTerminated(url, status, error_code, detail),
+      RendererProcessTerminated(url, status, error_code, detail)
     ) => Some({ url, status, error_code, detail, })
     _ => None
   }

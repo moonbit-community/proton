@@ -26,7 +26,7 @@ pub(all) struct KillReply {
   killed : Bool
 }
 pub fn KillReply::equal(Self, Self) -> Bool
-pub fn KillReply::from_json(@json.Json, @json.DecodeContext) -> Self raise @json.JsonDecodeError
+pub fn KillReply::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
 pub fn KillReply::not_equal(Self, Self) -> Bool
 pub fn KillReply::to_json(Self) -> @json.Json
 pub fn KillReply::to_repr(Self) -> @debug.Repr
@@ -36,7 +36,7 @@ pub(all) struct KillRequest {
   process_id : Int32
 }
 pub fn KillRequest::equal(Self, Self) -> Bool
-pub fn KillRequest::from_json(@json.Json, @json.DecodeContext) -> Self raise @json.JsonDecodeError
+pub fn KillRequest::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
 pub fn KillRequest::not_equal(Self, Self) -> Bool
 pub fn KillRequest::to_json(Self) -> @json.Json
 pub fn KillRequest::to_repr(Self) -> @debug.Repr
@@ -47,7 +47,7 @@ pub(all) struct ProcessActivity {
   process_id : Int32
 }
 pub fn ProcessActivity::equal(Self, Self) -> Bool
-pub fn ProcessActivity::from_json(@json.Json, @json.DecodeContext) -> Self raise @json.JsonDecodeError
+pub fn ProcessActivity::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
 pub fn ProcessActivity::not_equal(Self, Self) -> Bool
 pub fn ProcessActivity::to_json(Self) -> @json.Json
 pub fn ProcessActivity::to_repr(Self) -> @debug.Repr
@@ -58,7 +58,7 @@ pub(all) struct SpawnReply {
   pid : Int32
 }
 pub fn SpawnReply::equal(Self, Self) -> Bool
-pub fn SpawnReply::from_json(@json.Json, @json.DecodeContext) -> Self raise @json.JsonDecodeError
+pub fn SpawnReply::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
 pub fn SpawnReply::not_equal(Self, Self) -> Bool
 pub fn SpawnReply::to_json(Self) -> @json.Json
 pub fn SpawnReply::to_repr(Self) -> @debug.Repr
@@ -70,7 +70,7 @@ pub(all) struct SpawnRequest {
   cwd : String?
 }
 pub fn SpawnRequest::equal(Self, Self) -> Bool
-pub fn SpawnRequest::from_json(@json.Json, @json.DecodeContext) -> Self raise @json.JsonDecodeError
+pub fn SpawnRequest::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
 pub fn SpawnRequest::not_equal(Self, Self) -> Bool
 pub fn SpawnRequest::to_json(Self) -> @json.Json
 pub fn SpawnRequest::to_repr(Self) -> @debug.Repr
@@ -80,7 +80,7 @@ pub(all) struct WaitReply {
   exit_code : Int32
 }
 pub fn WaitReply::equal(Self, Self) -> Bool
-pub fn WaitReply::from_json(@json.Json, @json.DecodeContext) -> Self raise @json.JsonDecodeError
+pub fn WaitReply::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
 pub fn WaitReply::not_equal(Self, Self) -> Bool
 pub fn WaitReply::to_json(Self) -> @json.Json
 pub fn WaitReply::to_repr(Self) -> @debug.Repr
@@ -90,7 +90,7 @@ pub(all) struct WaitRequest {
   process_id : Int32
 }
 pub fn WaitRequest::equal(Self, Self) -> Bool
-pub fn WaitRequest::from_json(@json.Json, @json.DecodeContext) -> Self raise @json.JsonDecodeError
+pub fn WaitRequest::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
 pub fn WaitRequest::not_equal(Self, Self) -> Bool
 pub fn WaitRequest::to_json(Self) -> @json.Json
 pub fn WaitRequest::to_repr(Self) -> @debug.Repr

@@ -2,24 +2,25 @@
 async test "metadata streaming accepts the exact limit and closes oversized chunked responses early" {
   for size in [maximum_metadata_bytes, maximum_metadata_bytes + 1] {
     @async.with_timeout(5000, () => {
-      let server = @http.Server(@socket.Addr::parse("127.0.0.1:0"))
+      let server = @socket.TcpServer(@socket.Addr::parse("127.0.0.1:0"))
       defer server.close()
       @async.with_task_group(group => {
         let peer_closed = Ref(false)
         let sender = group.spawn(() => {
           let (conn, _) = server.accept()
           defer conn.close()
-          ignore(conn.read_request())
-          conn.send_response(200, "OK")
+          ignore(conn.read_until(b"\r\n\r\n"))
+          conn.write(b"HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n")
+          conn.write(@utf8.encode("\{size.to_string(radix=16)}\r\n"))
           conn.write(Bytes::make(size, b'x'))
-          conn.flush_partial_data()
+          conn.write(b"\r\n")
           if size == maximum_metadata_bytes {
-            conn.end_response()
+            conn.write(b"0\r\n\r\n")
           }
           // Oversized responses deliberately never finish. Rejection must
           // close the connection without waiting for EOF from the server.
-          ignore(conn.read_request()) catch {
-            _ => peer_closed.val = true
+          peer_closed.val = try (conn.read() is None) catch {
+            _ => true
           }
         })
         let url = "http://\{server.addr}"
@@ -44,7 +45,7 @@ async test "metadata streaming accepts the exact limit and closes oversized chun
 ///|
 async test "metadata cancellation closes the streaming connection" {
   @async.with_timeout(5000, () => {
-    let server = @http.Server(@socket.Addr::parse("127.0.0.1:0"))
+    let server = @socket.TcpServer(@socket.Addr::parse("127.0.0.1:0"))
     defer server.close()
     @async.with_task_group(group => {
       let started = Ref(false)
@@ -52,13 +53,13 @@ async test "metadata cancellation closes the streaming connection" {
       let sender = group.spawn(() => {
         let (conn, _) = server.accept()
         defer conn.close()
-        ignore(conn.read_request())
-        conn.send_response(200, "OK")
-        conn.write_string("partial metadata")
-        conn.flush_partial_data()
+        ignore(conn.read_until(b"\r\n\r\n"))
+        conn.write(
+          b"HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n10\r\npartial metadata\r\n",
+        )
         started.val = true
-        ignore(conn.read_request()) catch {
-          _ => closed.val = true
+        closed.val = try (conn.read() is None) catch {
+          _ => true
         }
       })
       let reader = group.spawn(allow_failure=true, () => {

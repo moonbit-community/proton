@@ -196,7 +196,7 @@ test "remote schema command builder reports unsupported local-only commands" {
   }
   guard unsupported
     is Err(
-      @protocol.ProtocolSchemaError::UnsupportedRemoteCommand("Page.navigate"),
+      @protocol.ProtocolSchemaError::UnsupportedRemoteCommand("Page.navigate")
     ) else {
     fail("expected UnsupportedRemoteCommand")
   }
@@ -275,7 +275,7 @@ test "schema-aware command builder rejects invalid params" {
   }
   guard missing
     is Err(
-      @protocol.ProtocolSchemaError::MissingParameter("Page.navigate", "url"),
+      @protocol.ProtocolSchemaError::MissingParameter("Page.navigate", "url")
     ) else {
     fail("expected missing url")
   }
@@ -289,7 +289,7 @@ test "schema-aware command builder rejects invalid params" {
   }
   guard unknown
     is Err(
-      @protocol.ProtocolSchemaError::UnknownParameter("Page.navigate", "bad"),
+      @protocol.ProtocolSchemaError::UnknownParameter("Page.navigate", "bad")
     ) else {
     fail("expected unknown param")
   }
@@ -302,7 +302,7 @@ test "schema-aware command builder rejects invalid params" {
   }
   guard bad_shape
     is Err(
-      @protocol.ProtocolSchemaError::ExpectedParamsObject("Runtime.enable"),
+      @protocol.ProtocolSchemaError::ExpectedParamsObject("Runtime.enable")
     ) else {
     fail("expected params object")
   }
@@ -327,8 +327,8 @@ test "schema-aware command builder rejects invalid params" {
       @protocol.ProtocolSchemaError::InvalidParameterType(
         "Runtime.evaluate",
         "expression",
-        "string",
-      ),
+        "string"
+      )
     ) else {
     fail("expected invalid expression type")
   }
@@ -339,7 +339,7 @@ test "schema-aware command builder rejects invalid params" {
   }
   guard empty_params
     is Err(
-      @protocol.ProtocolSchemaError::MissingParameter("Page.navigate", "url"),
+      @protocol.ProtocolSchemaError::MissingParameter("Page.navigate", "url")
     ) else {
     fail("expected missing url from empty params")
   }
@@ -360,7 +360,7 @@ test "schema-aware response validator rejects invalid returns" {
   }
   guard missing_result
     is Err(
-      @protocol.ProtocolSchemaError::MissingReturn("Page.navigate", "frameId"),
+      @protocol.ProtocolSchemaError::MissingReturn("Page.navigate", "frameId")
     ) else {
     fail("expected missing frameId")
   }
@@ -400,8 +400,8 @@ test "schema-aware response validator rejects invalid returns" {
       @protocol.ProtocolSchemaError::InvalidReturnType(
         "Page.navigate",
         "frameId",
-        "FrameId",
-      ),
+        "FrameId"
+      )
     ) else {
     fail("expected invalid frameId type")
   }
@@ -422,7 +422,7 @@ test "schema-aware response validator rejects invalid returns" {
   }
   guard bad_shape_result
     is Err(
-      @protocol.ProtocolSchemaError::ExpectedResultObject("Runtime.enable"),
+      @protocol.ProtocolSchemaError::ExpectedResultObject("Runtime.enable")
     ) else {
     fail("expected result object")
   }
@@ -461,7 +461,7 @@ test "schema-aware response validator rejects invalid returns" {
   }
   guard no_required_result
     is Err(
-      @protocol.ProtocolSchemaError::MissingReturn("Page.navigate", "frameId"),
+      @protocol.ProtocolSchemaError::MissingReturn("Page.navigate", "frameId")
     ) else {
     fail("expected missing frameId without result")
   }
@@ -490,8 +490,8 @@ test "schema-aware event builder rejects invalid params" {
     is Err(
       @protocol.ProtocolSchemaError::MissingParameter(
         "Page.loadEventFired",
-        "timestamp",
-      ),
+        "timestamp"
+      )
     ) else {
     fail("expected missing timestamp")
   }
@@ -507,8 +507,8 @@ test "schema-aware event builder rejects invalid params" {
       @protocol.ProtocolSchemaError::InvalidParameterType(
         "Page.loadEventFired",
         "timestamp",
-        "Network.MonotonicTime",
-      ),
+        "Network.MonotonicTime"
+      )
     ) else {
     fail("expected invalid event timestamp")
   }

@@ -109,12 +109,6 @@ pub async fn open(target : String) -> Unit raise ShellError {
       check_native_result(open_ffi(@ffi.to_cstr(target)), "open", target)
     MacOS => run_tool("open", target, "/usr/bin/open", ["--", target])
     Linux => run_tool("open", target, "gio", ["open", "--", target])
-    @types.Platform::.. =>
-      raise ShellError(
-        operation="open",
-        target~,
-        reason=unsupported_error_message(),
-      )
   }
 }
 
@@ -144,12 +138,6 @@ pub async fn reveal_item(path : String) -> Unit raise ShellError {
         "array:string:" + file_uri(path),
         "string:",
       ])
-    @types.Platform::.. =>
-      raise ShellError(
-        operation="revealItem",
-        target=path,
-        reason=unsupported_error_message(),
-      )
   }
 }
 
@@ -164,12 +152,6 @@ pub async fn trash_item(path : String) -> Unit raise ShellError {
     Linux => run_tool("trashItem", path, "gio", ["trash", "--", path])
     Windows | MacOS =>
       check_native_result(trash_item_ffi(@ffi.to_cstr(path)), "trashItem", path)
-    @types.Platform::.. =>
-      raise ShellError(
-        operation="trashItem",
-        target=path,
-        reason=unsupported_error_message(),
-      )
   }
 }
 

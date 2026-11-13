@@ -23,7 +23,7 @@ struct SpawnedScenarioApp {
 async fn choose_frontend_port() -> Int32 {
   let server = @socket.TcpServer(@socket.Addr::parse("127.0.0.1:0"))
   defer server.close()
-  server.addr.port.to_int()
+  server.addr.port()
 }
 
 ///|

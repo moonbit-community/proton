@@ -12,12 +12,12 @@ import {
 // Types and methods
 #derive(@json.FromJson, @json.ToJson)
 type AspectReply
-pub fn AspectReply::from_json(@json.Json, @json.DecodeContext) -> Self raise @json.JsonDecodeError
+pub fn AspectReply::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
 pub fn AspectReply::to_json(Self) -> @json.Json
 
 #derive(@json.FromJson, @json.ToJson)
 type AspectRequest
-pub fn AspectRequest::from_json(@json.Json, @json.DecodeContext) -> Self raise @json.JsonDecodeError
+pub fn AspectRequest::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
 pub fn AspectRequest::to_json(Self) -> @json.Json
 
 // Type aliases

@@ -128,10 +128,7 @@ pub async fn download(
   let resolved_destination = @path.Path(directory)
     .join(@path.Path(filename.to_owned()))
     .to_string()
-  let (response, client) = @http.get_stream(
-    origin + target[1:].to_owned(),
-    headers~,
-  ) catch {
+  let (response, client) = @http.get(origin + target[1:].to_owned(), headers~) catch {
     error => raise NetworkFailed(detail=@debug.render(Repr(error)))
   }
   defer client.close()

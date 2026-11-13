@@ -12,22 +12,22 @@ import {
 // Types and methods
 #derive(@json.FromJson, @json.ToJson)
 type DoublePayload
-pub fn DoublePayload::from_json(@json.Json, @json.DecodeContext) -> Self raise @json.JsonDecodeError
+pub fn DoublePayload::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
 pub fn DoublePayload::to_json(Self) -> @json.Json
 
 #derive(@json.FromJson, @json.ToJson)
 type DoubleReply
-pub fn DoubleReply::from_json(@json.Json, @json.DecodeContext) -> Self raise @json.JsonDecodeError
+pub fn DoubleReply::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
 pub fn DoubleReply::to_json(Self) -> @json.Json
 
 #derive(@json.FromJson, @json.ToJson)
 type SlowAddPayload
-pub fn SlowAddPayload::from_json(@json.Json, @json.DecodeContext) -> Self raise @json.JsonDecodeError
+pub fn SlowAddPayload::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
 pub fn SlowAddPayload::to_json(Self) -> @json.Json
 
 #derive(@json.FromJson, @json.ToJson)
 type SlowAddReply
-pub fn SlowAddReply::from_json(@json.Json, @json.DecodeContext) -> Self raise @json.JsonDecodeError
+pub fn SlowAddReply::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
 pub fn SlowAddReply::to_json(Self) -> @json.Json
 
 // Type aliases

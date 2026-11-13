@@ -17,17 +17,17 @@ pub fn register_commands(@command.CommandRegistrar) -> Unit raise
 // Types and methods
 #derive(@json.FromJson, @json.ToJson)
 type AddFinished
-pub fn AddFinished::from_json(@json.Json, @json.DecodeContext) -> Self raise @json.JsonDecodeError
+pub fn AddFinished::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
 pub fn AddFinished::to_json(Self) -> @json.Json
 
 #derive(@json.FromJson, @json.ToJson)
 type AddReply
-pub fn AddReply::from_json(@json.Json, @json.DecodeContext) -> Self raise @json.JsonDecodeError
+pub fn AddReply::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
 pub fn AddReply::to_json(Self) -> @json.Json
 
 #derive(@json.FromJson, @json.ToJson)
 type AddRequest
-pub fn AddRequest::from_json(@json.Json, @json.DecodeContext) -> Self raise @json.JsonDecodeError
+pub fn AddRequest::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
 pub fn AddRequest::to_json(Self) -> @json.Json
 
 // Type aliases

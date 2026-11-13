@@ -12,12 +12,12 @@ import {
 // Types and methods
 #derive(@json.FromJson, @json.ToJson)
 type MenuStateReply
-pub fn MenuStateReply::from_json(@json.Json, @json.DecodeContext) -> Self raise @json.JsonDecodeError
+pub fn MenuStateReply::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
 pub fn MenuStateReply::to_json(Self) -> @json.Json
 
 #derive(@json.FromJson, @json.ToJson)
 type MenuStateRequest
-pub fn MenuStateRequest::from_json(@json.Json, @json.DecodeContext) -> Self raise @json.JsonDecodeError
+pub fn MenuStateRequest::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
 pub fn MenuStateRequest::to_json(Self) -> @json.Json
 
 // Type aliases

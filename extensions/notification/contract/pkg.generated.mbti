@@ -28,7 +28,7 @@ pub(all) struct NotificationActivity {
   level : String?
 }
 pub fn NotificationActivity::equal(Self, Self) -> Bool
-pub fn NotificationActivity::from_json(@json.Json, @json.DecodeContext) -> Self raise @json.JsonDecodeError
+pub fn NotificationActivity::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
 pub fn NotificationActivity::not_equal(Self, Self) -> Bool
 pub fn NotificationActivity::to_json(Self) -> @json.Json
 pub fn NotificationActivity::to_repr(Self) -> @debug.Repr
@@ -38,7 +38,7 @@ pub(all) struct NotificationBadgeReply {
   count : Int32
 }
 pub fn NotificationBadgeReply::equal(Self, Self) -> Bool
-pub fn NotificationBadgeReply::from_json(@json.Json, @json.DecodeContext) -> Self raise @json.JsonDecodeError
+pub fn NotificationBadgeReply::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
 pub fn NotificationBadgeReply::not_equal(Self, Self) -> Bool
 pub fn NotificationBadgeReply::to_json(Self) -> @json.Json
 pub fn NotificationBadgeReply::to_repr(Self) -> @debug.Repr
@@ -48,7 +48,7 @@ pub(all) struct NotificationBadgeRequest {
   count : Int32
 }
 pub fn NotificationBadgeRequest::equal(Self, Self) -> Bool
-pub fn NotificationBadgeRequest::from_json(@json.Json, @json.DecodeContext) -> Self raise @json.JsonDecodeError
+pub fn NotificationBadgeRequest::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
 pub fn NotificationBadgeRequest::not_equal(Self, Self) -> Bool
 pub fn NotificationBadgeRequest::to_json(Self) -> @json.Json
 pub fn NotificationBadgeRequest::to_repr(Self) -> @debug.Repr
@@ -58,7 +58,7 @@ pub(all) struct NotificationClick {
   payload : String?
 }
 pub fn NotificationClick::equal(Self, Self) -> Bool
-pub fn NotificationClick::from_json(@json.Json, @json.DecodeContext) -> Self raise @json.JsonDecodeError
+pub fn NotificationClick::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
 pub fn NotificationClick::not_equal(Self, Self) -> Bool
 pub fn NotificationClick::to_json(Self) -> @json.Json
 pub fn NotificationClick::to_repr(Self) -> @debug.Repr
@@ -68,7 +68,7 @@ pub(all) struct NotificationReply {
   shown : Bool
 }
 pub fn NotificationReply::equal(Self, Self) -> Bool
-pub fn NotificationReply::from_json(@json.Json, @json.DecodeContext) -> Self raise @json.JsonDecodeError
+pub fn NotificationReply::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
 pub fn NotificationReply::not_equal(Self, Self) -> Bool
 pub fn NotificationReply::to_json(Self) -> @json.Json
 pub fn NotificationReply::to_repr(Self) -> @debug.Repr
@@ -81,7 +81,7 @@ pub(all) struct NotificationRequest {
   payload : String?
 }
 pub fn NotificationRequest::equal(Self, Self) -> Bool
-pub fn NotificationRequest::from_json(@json.Json, @json.DecodeContext) -> Self raise @json.JsonDecodeError
+pub fn NotificationRequest::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
 pub fn NotificationRequest::not_equal(Self, Self) -> Bool
 pub fn NotificationRequest::to_json(Self) -> @json.Json
 pub fn NotificationRequest::to_repr(Self) -> @debug.Repr

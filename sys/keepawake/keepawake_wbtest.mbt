@@ -39,8 +39,8 @@ test "raise_native_error uses fallback detail for empty payloads" {
     is Err(
       OperationFailed(
         operation="release",
-        detail="The native backend did not provide extra details.",
-      ),
+        detail="The native backend did not provide extra details."
+      )
     ) else {
     fail("expected an operation failure with fallback detail")
   }
@@ -58,7 +58,7 @@ test "finish_release raises release failures" {
   }
   guard result
     is Err(
-      OperationFailed(operation="release", detail="synthetic release failure"),
+      OperationFailed(operation="release", detail="synthetic release failure")
     ) else {
     fail("expected the release failure to surface")
   }
@@ -441,7 +441,7 @@ async test "explicit release failure is retryable without cancelling the owner" 
         try keep_guard.release_with(release) catch {
           OperationFailed(
             operation="release",
-            detail="injected release failure",
+            detail="injected release failure"
           ) => ()
           error => raise error
         } noraise {
