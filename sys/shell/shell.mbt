@@ -168,7 +168,7 @@ pub async fn trash_item(path : String) -> Unit raise ShellError {
   match @async.platform {
     Linux => run_tool("trashItem", path, "gio", ["trash", "--", path])
     _ =>
-      if @async.platform is Windows || @async.platform is MacOS {
+      if @async.platform is (Windows | MacOS) {
         check_native_result(
           trash_item_ffi(@ffi.to_cstr(path)),
           "trashItem",
