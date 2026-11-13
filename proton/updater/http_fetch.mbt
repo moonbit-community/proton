@@ -14,7 +14,25 @@ async fn open_update_stream(
   url : String,
 ) -> (@http.ResponseHeader, @http.ClientConnection) raise UpdateError {
   for current = url, redirects = 0 {
-    let (response, client) = @http.get(current) catch {
+    let uri = @uri.Uri::parse(current) catch {
+      error => raise FetchFailed(url=current, detail=@debug.render(Repr(error)))
+    }
+    guard uri.authority is Some(authority) else {
+      raise FetchFailed(url=current, detail="update URL has no host")
+    }
+    let (response, client) = try {
+      let path = uri.path.as_str()
+      let query = uri.query.map(query => "?" + query.as_str()).unwrap_or("")
+      let target = (if path.is_empty() { "/" } else { path }) + query
+      // The connection API is shared by stable and pre-release core/async;
+      // their top-level GET helpers return different response body types.
+      let client = @http.ClientConnection(
+        "\{uri.scheme.as_str()}://\{authority.as_str()}",
+      )
+      errdefer client.close()
+      client.request(Get, target)
+      (client.end_request(), client)
+    } catch {
       error => raise FetchFailed(url=current, detail=@debug.render(Repr(error)))
     }
     if response.code == 200 {

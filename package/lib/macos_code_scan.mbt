@@ -49,7 +49,7 @@ fn macho_thin_is_code(header : Bytes) -> Bool {
 /// the end of the file (a Java class file shares the universal magic) comes
 /// back short instead of failing the scan.
 async fn macho_read(
-  file : @async_fs.File,
+  file : @legacy_async_fs.File,
   position : Int64,
   length : Int64,
 ) -> Bytes {
@@ -61,7 +61,8 @@ async fn macho_read(
 ///|
 /// Whether a file is Mach-O code. A universal file counts when any slice does.
 async fn macho_file_is_code(path : String) -> Bool {
-  let file = @async_fs.open(path, mode=ReadOnly)
+  // Keep positioned reads on the versioned API shared by both toolchains.
+  let file = @legacy_async_fs.open(path, mode=ReadOnly)
   defer file.close()
   let header = macho_read(file, 0, 16)
   guard header.length() >= 8 else { return false }

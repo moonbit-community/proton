@@ -31,7 +31,7 @@ pub fn current_platform() -> Platform {
   match @async.platform {
     MacOS => Macos
     Windows => Windows
-    Linux => Linux
+    _ => Linux
   }
 }
 

@@ -33,6 +33,19 @@ extern "C" fn native_last_error(handle : State) -> Bytes = "moonbit_power_monito
 extern "C" fn native_start_watching(handle : State, fd : Int32) -> Int32 = "moonbit_power_monitor_start_watching"
 
 ///|
+#borrow(handle, out_write_fd)
+extern "C" fn native_open_completion_pipe(
+  handle : State,
+  out_write_fd : Ref[Int32],
+) -> Int32 = "moonbit_power_monitor_open_completion_pipe"
+
+///|
+extern "C" fn native_completion_fd(fd : Int32) -> @types.Fd = "moonbit_power_monitor_completion_fd"
+
+///|
+extern "C" fn native_close_fd(fd : Int32) -> Unit = "moonbit_power_monitor_close_fd"
+
+///|
 #borrow(handle)
 extern "C" fn native_stop_watching(handle : State) -> Int32 = "moonbit_power_monitor_stop_watching"
 
