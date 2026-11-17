@@ -4,7 +4,7 @@ Status: implemented.
 
 ## Decision
 
-Proton uses `tonyfettes/xlog` 0.4.1 as its logging API and implementation model.
+Proton uses `tonyfettes/xlog` 0.5.1 as its logging API and implementation model.
 It does not define parallel `LogLevel`, `LoggingConfig`, `Logger`, record,
 filter, or handler abstractions.
 
@@ -32,7 +32,7 @@ constructed logger instances remain available:
 }
 ```
 
-Proton follows the xlog 0.4.1 model:
+Proton follows the xlog 0.5.1 model:
 
 - levels are `Fatal`, `Error`, `Warn`, `Info`, `Debug`, and `Trace`;
 - categories are hierarchical and use longest-prefix configuration matching;
