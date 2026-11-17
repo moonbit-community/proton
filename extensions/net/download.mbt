@@ -128,10 +128,13 @@ pub async fn download(
   let resolved_destination = @path.Path(directory)
     .join(@path.Path(filename.to_owned()))
     .to_string()
-  let (response, client) = @http.get(origin + target[1:].to_owned(), headers~) catch {
+  let client = @http.ClientConnection(origin, headers~) catch {
     error => raise NetworkFailed(detail=@debug.render(Repr(error)))
   }
   defer client.close()
+  let response = client..request(Get, target).end_request() catch {
+      error => raise NetworkFailed(detail=@debug.render(Repr(error)))
+    }
   guard response.code == 200 else { raise HttpStatus(status=response.code) }
   if response.headers.get("Content-Encoding") is Some(encoding) &&
     encoding.trim().to_owned().to_lower() != "identity" {

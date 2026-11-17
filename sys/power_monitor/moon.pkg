@@ -1,6 +1,7 @@
 import {
   "moonbitlang/core/async",
-  "moonbitlang/core/async/pipe",
+  "moonbitlang/core/async/raw_fd",
+  "moonbitlang/core/async/types",
   "moonbit-community/proton_ffi" @ffi,
   "moonbitlang/core/encoding/utf8",
 }

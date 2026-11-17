@@ -54,13 +54,13 @@ fn windows_protocol_install_script(
   for scheme in plan.url_schemes {
     let scheme = windows_installer_quote(scheme)
     builder <+
-      $|  WriteRegStr SHCTX "Software\\Classes\\\{scheme}" "" "URL:\{scheme}"
+      $|  WriteRegStr SHCTX "Software\{'\\'}Classes\{'\\'}\{scheme}" "" "URL:\{scheme}"
     builder.write_char('\n')
     builder <+
-      $|  WriteRegStr SHCTX "Software\\Classes\\\{scheme}" "URL Protocol" ""
+      $|  WriteRegStr SHCTX "Software\{'\\'}Classes\{'\\'}\{scheme}" "URL Protocol" ""
     builder.write_char('\n')
     builder <+
-      $|  WriteRegStr SHCTX "Software\\Classes\\\{scheme}\\shell\\open\\command" "" "\{command}"
+      $|  WriteRegStr SHCTX "Software\{'\\'}Classes\{'\\'}\{scheme}\{'\\'}shell\{'\\'}open\{'\\'}command" "" "\{command}"
     builder.write_char('\n')
   }
   builder.to_string()
@@ -76,13 +76,13 @@ fn windows_protocol_uninstall_script(
   for scheme in plan.url_schemes {
     let scheme = windows_installer_quote(scheme)
     builder <+
-      $|  ReadRegStr $0 SHCTX "Software\\Classes\\\{scheme}\\shell\\open\\command" ""
+      $|  ReadRegStr $0 SHCTX "Software\{'\\'}Classes\{'\\'}\{scheme}\{'\\'}shell\{'\\'}open\{'\\'}command" ""
     builder.write_char('\n')
     builder <+
       $|  ${If} $0 == "\{command}"
     builder.write_char('\n')
     builder <+
-      $|    DeleteRegKey SHCTX "Software\\Classes\\\{scheme}"
+      $|    DeleteRegKey SHCTX "Software\{'\\'}Classes\{'\\'}\{scheme}"
     builder.write_char('\n')
     builder <+
       #|  ${EndIf}
@@ -250,10 +250,10 @@ fn windows_installer_script(plan : PackageSpec, source : String) -> String {
     $|  RMDir /r "$INSTDIR.proton-next"
     $|  SetOutPath "$INSTDIR.proton-next"
     $|  ClearErrors
-    $|  File /r "\{windows_installer_quote(source)}\\*.*"
+    $|  File /r "\{windows_installer_quote(source)}\{'\\'}*.*"
     $|  IfErrors install_failed
     $|  ClearErrors
-    $|  WriteUninstaller "$INSTDIR.proton-next\\Uninstall.exe"
+    $|  WriteUninstaller "$INSTDIR.proton-next\{'\\'}Uninstall.exe"
     $|  IfErrors install_failed
     $|  ; SetOutPath also changes the working directory, which Windows locks.
     $|  SetOutPath "$TEMP"
@@ -261,7 +261,7 @@ fn windows_installer_script(plan : PackageSpec, source : String) -> String {
     $|  ; Reaching a later update proves the current tree started successfully,
     $|  ; so its predecessor is no longer needed as the recovery copy.
     $|  RMDir /r "$INSTDIR.proton-previous"
-    $|  IfFileExists "$INSTDIR\\*.*" 0 promote_update
+    $|  IfFileExists "$INSTDIR\{'\\'}*.*" 0 promote_update
     $|  ; Automatic updates wait for orderly shutdown. The creation time avoids
     $|  ; waiting on a reused PID. Older Proton releases supplied only the PID.
     $|  ${If} $ProtonUpdate == "1"
@@ -317,21 +317,21 @@ fn windows_installer_script(plan : PackageSpec, source : String) -> String {
     $|  WriteRegStr SHCTX "\{windows_installer_quote(windows_installer_registry_key(plan))}" "Version" "\{windows_installer_quote(plan.version)}"
     $|  WriteRegStr SHCTX "\{windows_installer_quote(windows_uninstall_registry_key(plan))}" "DisplayName" "\{product}"
     $|  WriteRegStr SHCTX "\{windows_installer_quote(windows_uninstall_registry_key(plan))}" "DisplayVersion" "\{windows_installer_quote(plan.version)}"
-    $|  WriteRegStr SHCTX "\{windows_installer_quote(windows_uninstall_registry_key(plan))}" "UninstallString" "$\\"$INSTDIR\\Uninstall.exe$\\"\{if plan.nsis_install_mode == Both { " /$MultiUser.InstallMode" } else { "" }}"
+    $|  WriteRegStr SHCTX "\{windows_installer_quote(windows_uninstall_registry_key(plan))}" "UninstallString" "$\{'\\'}"$INSTDIR\{'\\'}Uninstall.exe$\{'\\'}"\{if plan.nsis_install_mode == Both { " /$MultiUser.InstallMode" } else { "" }}"
     $|  WriteRegStr SHCTX "\{windows_installer_quote(windows_uninstall_registry_key(plan))}" "InstallLocation" "$INSTDIR"
-    $|  WriteRegStr SHCTX "\{windows_installer_quote(windows_uninstall_registry_key(plan))}" "DisplayIcon" "$INSTDIR\\\{executable}"
+    $|  WriteRegStr SHCTX "\{windows_installer_quote(windows_uninstall_registry_key(plan))}" "DisplayIcon" "$INSTDIR\{'\\'}\{executable}"
     $|  WriteRegDWORD SHCTX "\{windows_installer_quote(windows_uninstall_registry_key(plan))}" "NoModify" 1
     $|  WriteRegDWORD SHCTX "\{windows_installer_quote(windows_uninstall_registry_key(plan))}" "NoRepair" 1
     $|
   builder.write_char('\n')
   builder.write_string(windows_protocol_install_script(plan, executable))
   builder <+
-    $|  CreateShortCut "$SMPROGRAMS\\\{product}.lnk" "$INSTDIR\\\{executable}"
+    $|  CreateShortCut "$SMPROGRAMS\{'\\'}\{product}.lnk" "$INSTDIR\{'\\'}\{executable}"
     $|  ${If} $ProtonUpdate == "1"
     $|    ${If} $ProtonInstanceLock != ""
     $|      System::Call 'kernel32::CloseHandle(p $ProtonInstanceLock)'
     $|    ${EndIf}
-    $|    Exec '"$INSTDIR\\\{executable}"'
+    $|    Exec '"$INSTDIR\{'\\'}\{executable}"'
     $|    Delete /REBOOTOK "$EXEPATH"
     $|  ${EndIf}
     $|SectionEnd
@@ -340,7 +340,7 @@ fn windows_installer_script(plan : PackageSpec, source : String) -> String {
     $|Section "Uninstall"
     $|  nsExec::Exec 'taskkill /F /IM "\{executable}"'
     $|  Pop $0
-    $|  Delete "$SMPROGRAMS\\\{product}.lnk"
+    $|  Delete "$SMPROGRAMS\{'\\'}\{product}.lnk"
     $|  RMDir /r "$INSTDIR"
     $|  RMDir /r "$INSTDIR.proton-previous"
     $|  RMDir /r "$INSTDIR.proton-next"

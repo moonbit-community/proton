@@ -2,7 +2,7 @@
 async test "response diagnostics precede consumption and cancellation clears state" {
   @async.with_task_group(group => {
     let server = @http.Server(@socket.Addr::parse("127.0.0.1:0"))
-    let port = server.addr.port()
+    let address = server.addr.to_string()
     let peer_closed = Ref(false)
     let server_task = group.spawn(() => {
       defer server.close()
@@ -20,7 +20,7 @@ async test "response diagnostics precede consumption and cancellation clears sta
       }
     })
 
-    let client = CdpClient::connect(group, "ws://127.0.0.1:\{port}")
+    let client = CdpClient::connect(group, "ws://\{address}")
     let first = client.send_cdp_command("Browser.getVersion")
     guard client.pending_commands.get(first) is Some(first_pending) else {
       fail("first CDP command was not registered")
@@ -73,7 +73,7 @@ async test "response diagnostics precede consumption and cancellation clears sta
 async test "send failure clears registered command state" {
   @async.with_task_group(group => {
     let server = @http.Server(@socket.Addr::parse("127.0.0.1:0"))
-    let port = server.addr.port()
+    let address = server.addr.to_string()
     let server_task = group.spawn(() => {
       defer server.close()
       let (connection, _) = server.accept()
@@ -86,7 +86,7 @@ async test "send failure clears registered command state" {
       }
     })
 
-    let websocket = @websocket.connect("ws://127.0.0.1:\{port}")
+    let websocket = @websocket.connect("ws://\{address}")
     let client = CdpClient(websocket)
     websocket.close()
     let mut failed = false
@@ -106,7 +106,7 @@ async test "send failure clears registered command state" {
 async test "task group exit closes client after cancelling reader" {
   @async.with_task_group(outer => {
     let server = @http.Server(@socket.Addr::parse("127.0.0.1:0"))
-    let port = server.addr.port()
+    let address = server.addr.to_string()
     let peer_closed = Ref(false)
     let server_task = outer.spawn(() => {
       defer server.close()
@@ -121,7 +121,7 @@ async test "task group exit closes client after cancelling reader" {
     })
 
     @async.with_task_group(inner => {
-      ignore(CdpClient::connect(inner, "ws://127.0.0.1:\{port}"))
+      ignore(CdpClient::connect(inner, "ws://\{address}"))
     })
     server_task.wait()
     assert_true(peer_closed.val)

@@ -76,7 +76,7 @@ fn bundle_info(executable : String) -> Bytes {
 ///|
 async fn write_fixture(root : String, path : String, bytes : Bytes) -> Unit {
   let file = path_join(root, path)
-  @async_fs.mkdir(path_parent(file), recursive=true, allow_exist=true)
+  @legacy_async_fs.mkdir(path_parent(file), recursive=true, allow_exist=true)
   @async_fs.write_binary(file, bytes, create_mode=CreateOrTruncate)
 }
 

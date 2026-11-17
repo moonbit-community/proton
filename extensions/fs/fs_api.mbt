@@ -91,10 +91,12 @@ async fn read_text_file(
   payload : ReadFilePayload,
 ) -> ReadFileReply raise FsError {
   try {
-    let content = @async_fs.read_text(
-      payload.path,
-      sync_timestamp=option_bool(payload.sync_timestamp, false),
-    )
+    let file = @async_fs.open(payload.path, mode=ReadOnly)
+    defer file.close()
+    let content = file.text.read_all()
+    if option_bool(payload.sync_timestamp, false) {
+      file.sync(only_data=false)
+    }
     {
       path: payload.path,
       content,

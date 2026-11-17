@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#if !defined(_WIN32) && !defined(__APPLE__)
+#if !defined(_WIN32)
 #include <unistd.h>
 #include <fcntl.h>
 #include <errno.h>
@@ -281,6 +281,61 @@ int32_t moonbit_power_monitor_start_watching(void *handle, int32_t fd) {
     power_monitor_set_error(state, state->watch_error);
   }
   return status;
+}
+
+/* Opens the readiness/teardown pipe used by the Linux watcher. The
+   nonblocking read end becomes a MoonBit raw-fd stream; the write end is
+   duplicated by start_watching and then closed by the caller. Returns the
+   read end, or -1 with last_error set. */
+MOONBIT_FFI_EXPORT
+int32_t moonbit_power_monitor_open_completion_pipe(void *handle,
+                                                   int32_t *out_write_fd) {
+  power_monitor_state_t *state = handle;
+#if !defined(_WIN32)
+  int fds[2];
+  if (pipe(fds) != 0) {
+    power_monitor_set_error(state, strerror(errno));
+    return -1;
+  }
+  int read_flags = fcntl(fds[0], F_GETFL);
+  if (fcntl(fds[0], F_SETFD, FD_CLOEXEC) != 0 ||
+      fcntl(fds[1], F_SETFD, FD_CLOEXEC) != 0 || read_flags < 0 ||
+      fcntl(fds[0], F_SETFL, read_flags | O_NONBLOCK) != 0) {
+    power_monitor_set_error(state, strerror(errno));
+    close(fds[0]);
+    close(fds[1]);
+    return -1;
+  }
+  *out_write_fd = fds[1];
+  return fds[0];
+#else
+  (void)out_write_fd;
+  power_monitor_set_error(state, "completion pipes are unavailable on Windows");
+  return -1;
+#endif
+}
+
+/* Retypes a POSIX descriptor for MoonBit's raw-fd stream; ownership moves.
+   MoonBit's Windows descriptor type is a HANDLE. Windows never opens a
+   completion pipe, so that variant only satisfies the shared declaration. */
+#if defined(_WIN32)
+MOONBIT_FFI_EXPORT
+HANDLE moonbit_power_monitor_completion_fd(int32_t fd) {
+  (void)fd;
+  return INVALID_HANDLE_VALUE;
+}
+#else
+MOONBIT_FFI_EXPORT
+int32_t moonbit_power_monitor_completion_fd(int32_t fd) { return fd; }
+#endif
+
+MOONBIT_FFI_EXPORT
+void moonbit_power_monitor_close_fd(int32_t fd) {
+#if !defined(_WIN32)
+  close(fd);
+#else
+  (void)fd;
+#endif
 }
 
 MOONBIT_FFI_EXPORT
