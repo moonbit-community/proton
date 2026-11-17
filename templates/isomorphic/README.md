@@ -26,7 +26,7 @@ update frontend titles where applicable. The initial values are `Proton App`,
 
 ## Setup
 
-This template uses Proton 0.8.0. Use the matching CLI version. `dev`, `build`,
+This template uses Proton 0.9.1. Use the matching CLI version. `dev`, `build`,
 and `package` prepare the runtime and subprocess executable automatically.
 Use optional `proton_cli setup` to prepare them in advance, including before
 direct `moon` builds.
