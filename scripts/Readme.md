@@ -43,7 +43,8 @@ Run this before publishing `proton` or `proton_ext`, and after changing any of:
 
 Checks workspace lockstep versions, internal dependency requirements and the
 CLI's embedded version string. Templates independently reference published
-dependencies; their compilation is checked by the scaffold smoke test.
+dependencies; their registry compilation is checked by the release scaffold
+smoke test.
 
 ```sh
 node ./scripts/verify_release_metadata.mjs
@@ -52,8 +53,11 @@ node ./scripts/verify_release_metadata.mjs
 ## `e2e_scaffold_source_smoke.mjs`
 
 Generates both templates using `moonx moonbit-community/moon-new` against a
-local Git snapshot of `templates/`, then checks registry compilation and existing
-project protection. `--scaffold-only` stops after these checks on any platform.
+local Git snapshot of `templates/`, then checks compilation against this checkout's
+source modules and existing project protection. Each generated project's temporary
+workspace resolves Proton modules from this checkout before compilation, including
+with `--scaffold-only`, which stops after these checks on any platform. Published
+dependency resolution is checked separately by the release registry smoke test.
 
 The full run also checks the default Todo scaffold's explicit command bindings, local-source
 compilation, Warren frontend, native backend, typed commands, business errors,
