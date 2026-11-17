@@ -1,7 +1,7 @@
 ///|
 async test "loaded configuration remains a complete independent snapshot" {
   let dir = @async_fs.tmpdir(prefix="proton-config-")
-  defer @async_fs.rmdir(dir, recursive=true)
+  defer @async_fs.remove(dir, recursive=true)
   let path = @mbpath.Path(dir).join("proton.project.json").to_string()
   let source =
     #|{"identifier":"com.example.snapshot","backend":{"path":"backend","package":"app"},"frontend":{"path":"frontend","dev_url":"http://localhost:4300","dist":"dist"},"package":{"product_name":"Snapshot","version":"1.2.3","resources":["assets"]},"platforms":{"macos":{"package":{"resources":["mac-assets"]}},"windows":{"package":{"resources":["win-assets"]}},"linux":{"package":{"resources":["linux-assets"]}}}}
@@ -98,7 +98,7 @@ test "explicit configuration must match bundled identity" {
 ///|
 async test "configuration loading reports errors before application construction" {
   let dir = @async_fs.tmpdir(prefix="proton-config-errors-")
-  defer @async_fs.rmdir(dir, recursive=true)
+  defer @async_fs.remove(dir, recursive=true)
   let path = @mbpath.Path(dir).join("proton.project.json").to_string()
   let previous = @env.get_env_var("PROTON_PROJECT_CONFIG")
   @env.set_env_var("PROTON_PROJECT_CONFIG", path)

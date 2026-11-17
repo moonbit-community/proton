@@ -179,7 +179,7 @@ test "typed codegen requires an unqualified contract reference" {
   } catch {
     @lib.CommandCodegenError::Attribute(
       kind="command",
-      detail="MoonBit attributes cannot contain package-qualified values; import the contract with `using` and pass its unqualified name"
+      detail="MoonBit attributes cannot contain package-qualified values; import the contract with `using` and pass its unqualified name",
     ) => ()
     _ => fail("expected unqualified contract reference error")
   }

@@ -12,12 +12,12 @@ import {
 // Types and methods
 #derive(@json.FromJson, @json.ToJson)
 type QuitReply
-pub fn QuitReply::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn QuitReply::from_json(@json.Json, @json.DecodeContext) -> Self raise @json.JsonDecodeError
 pub fn QuitReply::to_json(Self) -> @json.Json
 
 #derive(@json.FromJson, @json.ToJson)
 type QuitRequest
-pub fn QuitRequest::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn QuitRequest::from_json(@json.Json, @json.DecodeContext) -> Self raise @json.JsonDecodeError
 pub fn QuitRequest::to_json(Self) -> @json.Json
 
 // Type aliases

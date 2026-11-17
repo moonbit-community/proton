@@ -773,7 +773,7 @@ test "runtime create does not fake engine configs" {
 ///|
 async test "runtime probe rejects legacy CEF library layouts" {
   let root = @async_fs.tmpdir(prefix="proton-runtime-layout-")
-  defer (@async_fs.rmdir(root, recursive=true) catch { _ => () })
+  defer (@async_fs.remove(root, recursive=true) catch { _ => () })
   let (legacy_dirs, library, installed_dir) = match runtime_info().platform {
     "windows" => (["Release"], "libcef.dll", "bin")
     "linux" => (["", "lib"], "libcef.so", "bin")
@@ -820,7 +820,7 @@ async test "runtime probe accepts Windows store and packaged library layouts" {
   }
   for dir in ["bin", ""] {
     let root = @async_fs.tmpdir(prefix="proton-runtime-layout-")
-    defer (@async_fs.rmdir(root, recursive=true) catch { _ => () })
+    defer (@async_fs.remove(root, recursive=true) catch { _ => () })
     let library_dir = @path.Path(root).join(@path.Path(dir)).to_string()
     if dir != "" {
       @async_fs.mkdir(library_dir)
@@ -1326,7 +1326,7 @@ test "native renderer publisher preserves status and error code independently" {
     is BrowserEvent(
       7L,
       Some(11L),
-      RendererProcessTerminated(url, status, code, detail)
+      RendererProcessTerminated(url, status, code, detail),
     ) else {
     fail("expected a child-view renderer termination")
   }
@@ -1354,7 +1354,7 @@ test "native new-window publisher reports Chromium dispositions as ABI codes" {
       is BrowserRequest(
         7L,
         Some(11L),
-        NewWindow(user_gesture~, disposition~, ..)
+        NewWindow(user_gesture~, disposition~, ..),
       ) else {
       fail("expected a child-view new-window request for \{name}")
     }

@@ -8,7 +8,7 @@ pub(all) enum State[Input, Value] {
   Failed(
     input~ : Input,
     error~ : @proton_client.ClientFailure,
-    previous~ : (Input, Value)?
+    previous~ : (Input, Value)?,
   )
 }
 

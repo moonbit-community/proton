@@ -51,7 +51,7 @@ test "parse dev args accepts an isolated Moon target directory" {
 ///|
 async test "dev requires a project config" {
   let root = @async_fs.tmpdir(prefix="proton-dev-config-")
-  defer (@async_fs.rmdir(root, recursive=true) catch { _ => () })
+  defer (@async_fs.remove(root, recursive=true) catch { _ => () })
   try resolve_dev_config_path(root, parse_dev_args([])) catch {
     DevConfigError::NotFound(path~) =>
       @debug.assert_eq(path, @fsutil.path_join(root, default_config_file))
@@ -299,7 +299,7 @@ test "native CLI path overrides survive the application snapshot" {
 ///|
 async test "dev starts the selected script from the CLI-overridden frontend directory" {
   let root = @async_fs.tmpdir(prefix="proton frontend dev-")
-  defer @async_fs.rmdir(root, recursive=true)
+  defer @async_fs.remove(root, recursive=true)
   let frontend = @fsutil.path_join(root, "cli frontend")
   @async_fs.mkdir(frontend)
   let source = @proton_config.AppConfig::decode({
@@ -337,7 +337,7 @@ async test "dev starts the selected script from the CLI-overridden frontend dire
 ///|
 async test "dev prepares the runtime without an opt-in flag" {
   let root = @async_fs.tmpdir(prefix="proton-auto-dev-")
-  defer @async_fs.rmdir(root, recursive=true)
+  defer @async_fs.remove(root, recursive=true)
   let store = @fsutil.path_join(root, "blocked-store")
   @async_fs.write_text(store, "not a directory", create_mode=CreateOrTruncate)
   let previous = @env.get_env_var("PROTON_RUNTIME_STORE")

@@ -20,7 +20,7 @@ pub fn Client::Client(
 /// The default client resolves Proton's bridge when an operation starts.
 pub let desktop : Client = Client(
   invoke=fn(route, request, success, failure) {
-    let controller = @js_async.AbortController::new()
+    let controller = @js_async.AbortController()
     invoke_json_with_callbacks(route, request, controller.signal(), success, raw => {
       failure(decode_bridge_failure(raw))
     })

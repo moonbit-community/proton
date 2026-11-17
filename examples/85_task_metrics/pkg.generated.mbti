@@ -12,17 +12,17 @@ import {
 // Types and methods
 #derive(@json.FromJson, @json.ToJson)
 type MetricRow
-pub fn MetricRow::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn MetricRow::from_json(@json.Json, @json.DecodeContext) -> Self raise @json.JsonDecodeError
 pub fn MetricRow::to_json(Self) -> @json.Json
 
 #derive(@json.FromJson, @json.ToJson)
 type SampleReply
-pub fn SampleReply::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn SampleReply::from_json(@json.Json, @json.DecodeContext) -> Self raise @json.JsonDecodeError
 pub fn SampleReply::to_json(Self) -> @json.Json
 
 #derive(@json.FromJson, @json.ToJson)
 type SampleRequest
-pub fn SampleRequest::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn SampleRequest::from_json(@json.Json, @json.DecodeContext) -> Self raise @json.JsonDecodeError
 pub fn SampleRequest::to_json(Self) -> @json.Json
 
 // Type aliases

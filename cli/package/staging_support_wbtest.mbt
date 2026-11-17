@@ -119,7 +119,7 @@ test "Mach-O rejection reports the discovered filetype" {
 ///|
 async test "packaged configuration retains frontend and platform fields" {
   let root = @async_fs.tmpdir(prefix="proton-package-config-")
-  defer @async_fs.rmdir(root, recursive=true)
+  defer @async_fs.remove(root, recursive=true)
   let config = @proton_config.AppConfig::parse(
     (
       #|{"identifier":"com.example.package","backend":{"path":".","package":"app1"},"frontend":{"dev_url":"http://localhost:4300","path":"ui","dist":"dist"},"package":{"product_name":"Original","version":"1.0.0","formats":["app"]}}

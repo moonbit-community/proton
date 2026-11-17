@@ -1359,7 +1359,7 @@ pub async fn run_proxy_regression(case : ProxySource) -> Unit {
   // specific speculative connection behavior.
   let speculative = @socket.Tcp::connect(server.addr)
   speculative.close()
-  let proxy = "http://127.0.0.1:" + server.addr.port().to_string()
+  let proxy = "http://127.0.0.1:" + server.addr.port.to_string()
   let configured = case is Explicit
   let environment_proxy = if configured { "http://127.0.0.1:1" } else { proxy }
   @env.set_env_var("PROTON_PROXY_SERVER", environment_proxy)
@@ -1399,7 +1399,7 @@ pub async fn run_proxy_regression(case : ProxySource) -> Unit {
                 // A browser may close a speculative connection before sending
                 // a request. This does not satisfy the proxy success assertion.
                 let request = connection.read_request() catch {
-                  @io.ReaderClosed => {
+                  @io.UnexpectedEof => {
                     eprintln("PROXY_CONNECTION closed without a request")
                     return
                   }
@@ -2434,8 +2434,8 @@ pub async fn run_navigation_regression() -> Unit {
     "Content-Type": "text/html; charset=utf-8",
   })
   defer second.close()
-  let origin = "http://127.0.0.1:" + first.addr.port().to_string()
-  let other = "http://127.0.0.1:" + second.addr.port().to_string()
+  let origin = "http://127.0.0.1:" + first.addr.port.to_string()
+  let other = "http://127.0.0.1:" + second.addr.port.to_string()
   let requests : Array[(@proton.NavigationRequest, String?)] = []
   let served : Array[String] = []
   let failures : Array[String] = []
@@ -2481,7 +2481,7 @@ pub async fn run_navigation_regression() -> Unit {
               .spawn(no_wait=true, () => {
                 defer connection.close()
                 let request = connection.read_request() catch {
-                  @io.ReaderClosed => return
+                  @io.UnexpectedEof => return
                   error => raise error
                 }
                 served.push(request.path)

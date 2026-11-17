@@ -76,14 +76,14 @@ fn bundle_info(executable : String) -> Bytes {
 ///|
 async fn write_fixture(root : String, path : String, bytes : Bytes) -> Unit {
   let file = path_join(root, path)
-  @async_fs.mkdir(path_parent(file), recursive=true, allow_exist=true)
+  @async_fs.mkdir(path_parent(file), recursive=true, allow_existing=true)
   @async_fs.write_binary(file, bytes, create_mode=CreateOrTruncate)
 }
 
 ///|
 async fn with_scan_root(body : async (String) -> Unit) -> Unit {
   let root = @async_fs.tmpdir(prefix="proton-code-scan-")
-  defer (@async_fs.rmdir(root, recursive=true) catch { _ => () })
+  defer (@async_fs.remove(root, recursive=true) catch { _ => () })
   body(root)
 }
 

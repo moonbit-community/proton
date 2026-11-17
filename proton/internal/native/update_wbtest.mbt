@@ -40,7 +40,7 @@ fn update_test_reset() -> Unit {
 #cfg(platform="linux")
 async test "Linux updater replaces AppImages transactionally" {
   let root = update_test_temp_dir("proton-update-linux-")
-  defer (@async_fs.rmdir(root, recursive=true) catch { _ => () })
+  defer (@async_fs.remove(root, recursive=true) catch { _ => () })
   let appimage = update_test_path(root, "Demo.AppImage")
   let version = appimage + ".proton-version"
   @async_fs.write_text(appimage, "release-1", create_mode=CreateOrTruncate)
@@ -71,7 +71,7 @@ async test "Linux updater replaces AppImages transactionally" {
 #cfg(platform="windows")
 async test "Windows updater prepares NSIS installers" {
   let root = update_test_temp_dir("proton-update-windows-")
-  defer (@async_fs.rmdir(root, recursive=true) catch { _ => () })
+  defer (@async_fs.remove(root, recursive=true) catch { _ => () })
   let executable = update_test_path(root, "Demo.exe")
   let uninstaller = update_test_path(root, "Uninstall.exe")
   let version = update_test_path(root, "proton-update-version")
@@ -104,7 +104,7 @@ async test "Windows updater prepares NSIS installers" {
 #cfg(all(not(platform="linux"), not(platform="windows")))
 async test "updater refuses package-managed installations before staging" {
   let root = update_test_temp_dir("proton-update-managed-")
-  defer (@async_fs.rmdir(root, recursive=true) catch { _ => () })
+  defer (@async_fs.remove(root, recursive=true) catch { _ => () })
   let executable = update_test_path(root, "Demo")
   @async_fs.write_text(executable, "application", create_mode=CreateOrTruncate)
   update_test_set_current_bundle(executable)

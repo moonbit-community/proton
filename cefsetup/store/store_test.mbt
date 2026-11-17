@@ -6,7 +6,7 @@ async test "resolve_default reports a missing installation without project state
     None => @env.unset_env_var("PROTON_RUNTIME_STORE")
   })
   let store = @async_fs.tmpdir(prefix="proton-empty-store-")
-  defer (@async_fs.rmdir(store, recursive=true) catch { _ => () })
+  defer (@async_fs.remove(store, recursive=true) catch { _ => () })
   @env.set_env_var("PROTON_RUNTIME_STORE", store)
   try ignore(@store.resolve_default()) catch {
     error => assert_true(error.to_string().contains("is not installed"))

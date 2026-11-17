@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#if !defined(_WIN32) && !defined(__APPLE__)
+#if !defined(_WIN32)
 #include <unistd.h>
 #include <fcntl.h>
 #include <errno.h>
@@ -249,6 +249,36 @@ moonbit_bytes_t moonbit_power_monitor_last_error(void *handle) {
   memcpy(bytes, text, (size_t)len);
   return bytes;
 }
+
+#if !defined(_WIN32)
+/* RawFdStream takes ownership of the read end. MoonBit closes the write end
+   after start_watching duplicates it for the native watcher. */
+MOONBIT_FFI_EXPORT
+int32_t moonbit_power_monitor_completion_pipe(void *handle, int32_t *out_writer) {
+  power_monitor_state_t *state = handle;
+  int fds[2];
+  *out_writer = -1;
+  if (pipe(fds) != 0) {
+    power_monitor_set_error(state, strerror(errno));
+    return -1;
+  }
+  if (fcntl(fds[0], F_SETFD, FD_CLOEXEC) < 0 ||
+      fcntl(fds[1], F_SETFD, FD_CLOEXEC) < 0 ||
+      fcntl(fds[0], F_SETFL, O_NONBLOCK) < 0) {
+    power_monitor_set_error(state, strerror(errno));
+    close(fds[0]);
+    close(fds[1]);
+    return -1;
+  }
+  *out_writer = fds[1];
+  return fds[0];
+}
+
+MOONBIT_FFI_EXPORT
+void moonbit_power_monitor_close_completion_writer(int32_t fd) {
+  close(fd);
+}
+#endif
 
 MOONBIT_FFI_EXPORT
 int32_t moonbit_power_monitor_start_watching(void *handle, int32_t fd) {

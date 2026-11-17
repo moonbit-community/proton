@@ -190,7 +190,7 @@ async test "project resolution does not require frontend build output" {
 ///|
 async test "frontend build executes the host override from frontend.path" {
   let root = @async_fs.tmpdir(prefix="proton frontend build-")
-  defer @async_fs.rmdir(root, recursive=true)
+  defer @async_fs.remove(root, recursive=true)
   let frontend = @fsutil.path_join(root, "frontend with spaces")
   let tools = @fsutil.path_join(root, "tools")
   @async_fs.mkdir(frontend)
@@ -231,7 +231,7 @@ async test "frontend build executes the host override from frontend.path" {
 ///|
 async test "build prepares the runtime before starting Moon" {
   let root = @async_fs.tmpdir(prefix="proton-auto-build-")
-  defer @async_fs.rmdir(root, recursive=true)
+  defer @async_fs.remove(root, recursive=true)
   let store = @fsutil.path_join(root, "blocked-store")
   @async_fs.write_text(store, "not a directory", create_mode=CreateOrTruncate)
   let previous = @env.get_env_var("PROTON_RUNTIME_STORE")

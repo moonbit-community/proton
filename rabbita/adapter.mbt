@@ -11,7 +11,7 @@ priv suberror EventSubscription {
     client~ : @proton_client.Client,
     callbacks~ : EventCallbacks,
     ready~ : @cmd.Cmd,
-    invalid~ : String?
+    invalid~ : String?,
   )
 }
 

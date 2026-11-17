@@ -12,22 +12,22 @@ import {
 // Types and methods
 #derive(@json.FromJson, @json.ToJson)
 type AdvancedReply
-pub fn AdvancedReply::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn AdvancedReply::from_json(@json.Json, @json.DecodeContext) -> Self raise @json.JsonDecodeError
 pub fn AdvancedReply::to_json(Self) -> @json.Json
 
 #derive(@json.FromJson, @json.ToJson)
 type AdvancedRequest
-pub fn AdvancedRequest::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn AdvancedRequest::from_json(@json.Json, @json.DecodeContext) -> Self raise @json.JsonDecodeError
 pub fn AdvancedRequest::to_json(Self) -> @json.Json
 
 #derive(@json.FromJson, @json.ToJson)
 type Reply
-pub fn Reply::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn Reply::from_json(@json.Json, @json.DecodeContext) -> Self raise @json.JsonDecodeError
 pub fn Reply::to_json(Self) -> @json.Json
 
 #derive(@json.FromJson, @json.ToJson)
 type Request
-pub fn Request::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn Request::from_json(@json.Json, @json.DecodeContext) -> Self raise @json.JsonDecodeError
 pub fn Request::to_json(Self) -> @json.Json
 
 // Type aliases

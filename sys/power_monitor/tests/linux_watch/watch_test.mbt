@@ -118,7 +118,7 @@ suberror BodyFailed
 async test "power watching scopes cancel, time out, release subscriptions and recover" {
   guard @async.platform is Linux else { return }
   let dir = @fs.tmpdir(prefix="proton-power-bus-")
-  defer @fs.rmdir(dir, recursive=true)
+  defer @fs.remove(dir, recursive=true)
   let address = "unix:path=" + dir + "/bus"
   let original = @env.get_env_var("DBUS_SYSTEM_BUS_ADDRESS")
   defer (match original {

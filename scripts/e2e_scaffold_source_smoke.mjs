@@ -182,7 +182,10 @@ function buildDirectoryFixture() {
   fs.writeFileSync(path.join(publicDir, "directory.html"), '<!doctype html><html><head><meta name="viewport" content="width=device-width, initial-scale=1"><title>Directory browser</title><link rel="stylesheet" href="./styles.css"></head><body><main id="app"></main><script src="./directory.js"></script></body></html>');
 }
 
-function connectLocalSourceModules() {
+function connectLocalSourceModules(destination, template) {
+  const applicationMembers = template === "minimal"
+    ? ["."]
+    : ["./shared", "./frontend", "./backend"];
   const localMembers = [
     "contract",
     "client",
@@ -195,14 +198,12 @@ function connectLocalSourceModules() {
   ].map((name) => path.join(repoRoot, name));
   const work = [
     "members = [",
-    '  "./shared",',
-    '  "./frontend",',
-    '  "./backend",',
+    ...applicationMembers.map((member) => `  ${JSON.stringify(member)},`),
     ...localMembers.map((member) => `  ${JSON.stringify(member)},`),
     "]",
     "",
   ].join("\n");
-  fs.writeFileSync(path.join(projectDir, "moon.work"), work);
+  fs.writeFileSync(path.join(destination, "moon.work"), work);
 }
 
 function verifyPackagedApp() {
@@ -830,20 +831,23 @@ async function main() {
     const retry = spawnSync("moonx", args, { encoding: "utf8", timeout: 60000 });
     assert(!retry.error && retry.status !== 0, "existing project must be rejected");
     assert(fs.readFileSync(entry, "utf8") === original, "existing application must be preserved");
+    // Templates keep published dependency versions until the next release is
+    // available. PR checks must exercise this checkout; the separate registry
+    // smoke validates published dependencies after release.
+    connectLocalSourceModules(destination, template);
     run("moon", ["check", "--target", template === "minimal" ? "native" : "js,native", "--deny-warn"], { cwd: destination });
     run("moon", ["fmt", "--check"], { cwd: destination });
   }
   run("moon", ["fmt", "--check"], { cwd: projectDir });
   if (scaffoldOnly) {
     succeeded = true;
-    console.log("Both moon-new templates passed generation and compilation.");
+    console.log("Both moon-new templates passed generation and source compilation.");
     return;
   }
   const configPath = path.join(projectDir, "proton.project.json");
   const config = JSON.parse(fs.readFileSync(configPath, "utf8"));
   config.identifier = "dev.proton.scaffold-e2e";
   fs.writeFileSync(configPath, JSON.stringify(config, null, 2) + "\n");
-  connectLocalSourceModules();
   run("moon", ["fmt"], { cwd: projectDir });
   localCli(["-C", projectDir, "setup"]);
 

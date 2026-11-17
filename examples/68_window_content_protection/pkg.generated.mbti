@@ -12,12 +12,12 @@ import {
 // Types and methods
 #derive(@json.FromJson, @json.ToJson)
 type ProtectionReply
-pub fn ProtectionReply::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn ProtectionReply::from_json(@json.Json, @json.DecodeContext) -> Self raise @json.JsonDecodeError
 pub fn ProtectionReply::to_json(Self) -> @json.Json
 
 #derive(@json.FromJson, @json.ToJson)
 type ProtectionRequest
-pub fn ProtectionRequest::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn ProtectionRequest::from_json(@json.Json, @json.DecodeContext) -> Self raise @json.JsonDecodeError
 pub fn ProtectionRequest::to_json(Self) -> @json.Json
 
 // Type aliases

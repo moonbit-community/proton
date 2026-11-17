@@ -39,8 +39,8 @@ test "raise_native_error uses fallback detail for empty payloads" {
     is Err(
       OperationFailed(
         operation="release",
-        detail="The native backend did not provide extra details."
-      )
+        detail="The native backend did not provide extra details.",
+      ),
     ) else {
     fail("expected an operation failure with fallback detail")
   }
@@ -58,7 +58,7 @@ test "finish_release raises release failures" {
   }
   guard result
     is Err(
-      OperationFailed(operation="release", detail="synthetic release failure")
+      OperationFailed(operation="release", detail="synthetic release failure"),
     ) else {
     fail("expected the release failure to surface")
   }
@@ -177,7 +177,7 @@ async test "Linux inhibition waits for acknowledgement and releases idempotently
   guard @async.platform is (Linux | MacOS) else { return }
   @async.with_timeout(10000, () => {
     let root = @fs.tmpdir(prefix="proton-inhibit-")
-    defer @fs.rmdir(root, recursive=true)
+    defer @fs.remove(root, recursive=true)
     let tool = fake_inhibitor(root, "shift 6; exec \"$@\"")
     @async.with_task_group(group => {
       let acquiring = group.spawn(() => {
@@ -206,7 +206,7 @@ async test "Linux inhibition reports delayed failure before entering protected w
   guard @async.platform is (Linux | MacOS) else { return }
   @async.with_timeout(10000, () => {
     let root = @fs.tmpdir(prefix="proton-inhibit-")
-    defer @fs.rmdir(root, recursive=true)
+    defer @fs.remove(root, recursive=true)
     let tool = fake_inhibitor(root, "exit 7")
     @async.with_task_group(group => {
       let acquiring = group.spawn(allow_failure=true, () => {
@@ -231,7 +231,7 @@ async test "Linux inhibition startup cancellation yields and reaps the helper" {
   guard @async.platform is (Linux | MacOS) else { return }
   @async.with_timeout(10000, () => {
     let root = @fs.tmpdir(prefix="proton-inhibit-")
-    defer @fs.rmdir(root, recursive=true)
+    defer @fs.remove(root, recursive=true)
     let tool = fake_inhibitor(root, "exit 7")
     @async.with_task_group(group => {
       let acquiring = group.spawn(() => {
@@ -262,7 +262,7 @@ async test "Linux guard stops reporting active after helper exit" {
   guard @async.platform is (Linux | MacOS) else { return }
   @async.with_timeout(10000, () => {
     let root = @fs.tmpdir(prefix="proton-inhibit-")
-    defer @fs.rmdir(root, recursive=true)
+    defer @fs.remove(root, recursive=true)
     let tool = fake_inhibitor(
       root,
       "printf 'ready\\n'; while [ ! -e '" +
@@ -289,7 +289,7 @@ async test "Linux helper loss cancels protected work and group exit releases a g
   guard @async.platform is (Linux | MacOS) else { return }
   @async.with_timeout(10000, () => {
     let root = @fs.tmpdir(prefix="proton-inhibit-")
-    defer @fs.rmdir(root, recursive=true)
+    defer @fs.remove(root, recursive=true)
     let tool = fake_inhibitor(
       root,
       "printf 'ready\\n'; while [ ! -e '" +
@@ -371,7 +371,7 @@ async test "released Linux guards finish their owner tasks before the applicatio
   guard @async.platform is (Linux | MacOS) else { return }
   @async.with_timeout(10000, () => {
     let root = @fs.tmpdir(prefix="proton-inhibit-")
-    defer @fs.rmdir(root, recursive=true)
+    defer @fs.remove(root, recursive=true)
     let tool = fake_inhibitor(root, "shift 6; exec \"$@\"")
     @fs.write_text(root + "/proceed", "")
     @async.with_task_group(group => {
@@ -441,7 +441,7 @@ async test "explicit release failure is retryable without cancelling the owner" 
         try keep_guard.release_with(release) catch {
           OperationFailed(
             operation="release",
-            detail="injected release failure"
+            detail="injected release failure",
           ) => ()
           error => raise error
         } noraise {

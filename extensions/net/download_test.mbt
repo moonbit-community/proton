@@ -21,7 +21,7 @@ async fn with_download_server(
 ///|
 async test "download streams authenticated binary content and reports written bytes" {
   let root = @fs.tmpdir(prefix="proton-net-download-")
-  defer @fs.rmdir(root, recursive=true)
+  defer @fs.remove(root, recursive=true)
   let destination = root + "/下载.bin"
   let content = Bytes::make(2 * 1024 * 1024, b'\xff')
   let progress : Array[@net.DownloadProgress] = []
@@ -62,7 +62,7 @@ async test "download streams authenticated binary content and reports written by
 ///|
 async test "download handles empty chunked and unknown-length identity responses" {
   let root = @fs.tmpdir(prefix="proton-net-download-")
-  defer @fs.rmdir(root, recursive=true)
+  defer @fs.remove(root, recursive=true)
   let cases = [
     ("Content-Length: 0\r\n", b"", b"", Some(0L)),
     (
@@ -102,7 +102,7 @@ async test "download handles empty chunked and unknown-length identity responses
 ///|
 async test "HTTP failures redirects and partial responses preserve existing files" {
   let root = @fs.tmpdir(prefix="proton-net-download-")
-  defer @fs.rmdir(root, recursive=true)
+  defer @fs.remove(root, recursive=true)
   let destination = root + "/file"
   @fs.write_text(destination, "old")
   for status in [401, 403, 404, 302, 206] {
@@ -132,7 +132,7 @@ async test "HTTP failures redirects and partial responses preserve existing file
 ///|
 async test "truncated downloads clean up without replacing the old file" {
   let root = @fs.tmpdir(prefix="proton-net-download-")
-  defer @fs.rmdir(root, recursive=true)
+  defer @fs.remove(root, recursive=true)
   let destination = root + "/file"
   @fs.write_text(destination, "old")
   with_download_server(
@@ -156,7 +156,7 @@ async test "truncated downloads clean up without replacing the old file" {
 ///|
 async test "overwrite is explicit and failed file submission cleans up" {
   let root = @fs.tmpdir(prefix="proton-net-download-")
-  defer @fs.rmdir(root, recursive=true)
+  defer @fs.remove(root, recursive=true)
   // Error paths preserve the caller's spelling, including redundant components.
   let destination = root + "/./file"
   @fs.write_text(destination, "old")
@@ -201,7 +201,7 @@ async test "overwrite is explicit and failed file submission cleans up" {
 ///|
 async test "cancellation closes a stalled response and removes its temporary file" {
   let root = @fs.tmpdir(prefix="proton-net-download-")
-  defer @fs.rmdir(root, recursive=true)
+  defer @fs.remove(root, recursive=true)
   let destination = root + "/file"
   @fs.write_text(destination, "old")
   let ready : @async.Queue[Unit] = @async.Queue(kind=Unbounded)
@@ -245,7 +245,7 @@ async test "cancellation closes a stalled response and removes its temporary fil
 ///|
 async test "concurrent downloads cannot both claim the same destination" {
   let root = @fs.tmpdir(prefix="proton-net-download-")
-  defer @fs.rmdir(root, recursive=true)
+  defer @fs.remove(root, recursive=true)
   let destination = root + "/file"
   @async.with_timeout(10000, () => {
     let server = @socket.TcpServer(@socket.Addr::parse("127.0.0.1:0"))
@@ -297,7 +297,7 @@ async test "concurrent downloads cannot both claim the same destination" {
 ///|
 async test "cancellation at the final progress notification does not submit the file" {
   let root = @fs.tmpdir(prefix="proton-net-download-")
-  defer @fs.rmdir(root, recursive=true)
+  defer @fs.remove(root, recursive=true)
   let destination = root + "/file"
   @fs.write_text(destination, "old")
   with_download_server(
@@ -332,7 +332,7 @@ async test "cancellation at the final progress notification does not submit the 
 ///|
 async test "download rejects invalid requests before creating files" {
   let root = @fs.tmpdir(prefix="proton-net-download-")
-  defer @fs.rmdir(root, recursive=true)
+  defer @fs.remove(root, recursive=true)
   for
     (url, headers) in [
       ("file:///tmp/input", {}),
@@ -373,7 +373,7 @@ async test "download rejects invalid requests before creating files" {
 ///|
 async test "relative destination paths are resolved before file submission" {
   let root = @fs.tmpdir(prefix="proton-net-download-")
-  defer @fs.rmdir(root, recursive=true)
+  defer @fs.remove(root, recursive=true)
   let destination = @path.Path(root + "/relative.bin")
     .relative(base=@path.Path(".").resolve())
     .to_string()
@@ -391,7 +391,7 @@ async test "relative destination paths are resolved before file submission" {
 ///|
 async test "encoded responses are rejected instead of saving gzip bytes" {
   let root = @fs.tmpdir(prefix="proton-net-download-")
-  defer @fs.rmdir(root, recursive=true)
+  defer @fs.remove(root, recursive=true)
   let destination = root + "/file"
   @fs.write_text(destination, "old")
   // async#672: even a valid gzip stream can bypass decoding with close framing.
@@ -458,7 +458,7 @@ async test "encoded responses are rejected instead of saving gzip bytes" {
 async test "download preserves symlink parent traversal for existing and new files" {
   guard @async.platform is (MacOS | Linux) else { return }
   let root = @fs.tmpdir(prefix="proton-net-download-")
-  defer @fs.rmdir(root, recursive=true)
+  defer @fs.remove(root, recursive=true)
   @fs.mkdir(root + "/local")
   @fs.mkdir(root + "/other/child", recursive=true)
   @fs.symlink(target="../other/child", root + "/local/link")
@@ -504,7 +504,7 @@ async test "download preserves symlink parent traversal for existing and new fil
 async test "download replaces a final symlink without changing its target" {
   guard @async.platform is (MacOS | Linux) else { return }
   let root = @fs.tmpdir(prefix="proton-net-download-")
-  defer @fs.rmdir(root, recursive=true)
+  defer @fs.remove(root, recursive=true)
   @fs.write_text(root + "/target", "original")
   @fs.symlink(target="target", root + "/link")
   for overwrite in [false, true] {
@@ -534,7 +534,7 @@ async test "download replaces a final symlink without changing its target" {
 ///|
 async test "download resolves directory links including Windows junctions" {
   let root = @fs.tmpdir(prefix="proton-net-download-")
-  defer @fs.rmdir(root, recursive=true)
+  defer @fs.remove(root, recursive=true)
   @fs.mkdir(root + "/parent")
   @fs.symlink(target=root + "/parent", root + "/alias")
   with_download_server(
@@ -552,7 +552,7 @@ async test "download resolves directory links including Windows junctions" {
 async test "download does not require permission to list the parent directory" {
   guard @async.platform is (MacOS | Linux) else { return }
   let root = @fs.tmpdir(prefix="proton-net-download-")
-  defer @fs.rmdir(root, recursive=true)
+  defer @fs.remove(root, recursive=true)
   @fs.chmod(root, 0o300)
   defer @async.protect_from_cancel(() => @fs.chmod(root, 0o700))
   with_download_server(
@@ -569,7 +569,7 @@ async test "download does not require permission to list the parent directory" {
 async test "download preserves Windows extended and junction paths to dotted directories" {
   guard @async.platform is Windows else { return }
   let root = @fs.tmpdir(prefix="proton-net-download-")
-  defer @fs.rmdir(root, recursive=true)
+  defer @fs.remove(root, recursive=true)
   let absolute = @path.Path(root).resolve().to_string()
   let extended = if absolute.has_prefix("\\\\?\\") {
     absolute
@@ -585,7 +585,7 @@ async test "download preserves Windows extended and junction paths to dotted dir
     for name in @fs.readdir(parent) {
       @fs.remove(parent + "\\" + name)
     }
-    @fs.rmdir(parent)
+    @fs.remove(parent)
   })
   let junction = absolute + "\\alias"
   // async creates an NTFS junction for an existing local directory target.

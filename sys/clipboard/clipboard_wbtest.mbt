@@ -156,7 +156,7 @@ async test "clipboard tool early exit reports an error without SIGPIPE terminati
 async test "clipboard tools transfer large UTF-8 text and preserve empty output" {
   guard @async.platform is (Linux | MacOS) else { return }
   let dir = @async_fs.tmpdir(prefix="proton-clipboard-text-")
-  defer @async_fs.rmdir(dir, recursive=true)
+  defer @async_fs.remove(dir, recursive=true)
   let file = dir + "/clipboard"
   let text = "你好 🌙\n".repeat(100000)
   @async.with_timeout(10000, () => {
@@ -178,7 +178,7 @@ async test "clipboard tools transfer large UTF-8 text and preserve empty output"
 async test "clipboard tool wait yields and cancelling blocked I/O reaps the child" {
   guard @async.platform is (Linux | MacOS) else { return }
   let dir = @async_fs.tmpdir(prefix="proton-clipboard-wait-")
-  defer @async_fs.rmdir(dir, recursive=true)
+  defer @async_fs.remove(dir, recursive=true)
   let script =
     #|trap 'printf stopped > "$1/stopped"; exit 0' TERM
     #|printf '%s' "$$" > "$1/ready"

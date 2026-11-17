@@ -1,5 +1,4 @@
 import {
-  "moonbitlang/core/json",
   "moonbitlang/core/async",
   "moonbit-community/proton/extension" @proton_extension,
   "moonbit-community/proton_contract",
