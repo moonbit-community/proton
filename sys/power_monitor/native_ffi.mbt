@@ -33,6 +33,19 @@ extern "C" fn native_last_error(handle : State) -> Bytes = "moonbit_power_monito
 extern "C" fn native_start_watching(handle : State, fd : Int32) -> Int32 = "moonbit_power_monitor_start_watching"
 
 ///|
+// The returned descriptor is owned by RawFdStream; the caller closes the writer.
+#cfg(not(platform="windows"))
+#borrow(handle, out_writer)
+extern "C" fn native_completion_pipe(
+  handle : State,
+  out_writer : Ref[Int32],
+) -> @async_types.Fd = "moonbit_power_monitor_completion_pipe"
+
+///|
+#cfg(not(platform="windows"))
+extern "C" fn native_close_completion_writer(fd : Int32) -> Unit = "moonbit_power_monitor_close_completion_writer"
+
+///|
 #borrow(handle)
 extern "C" fn native_stop_watching(handle : State) -> Int32 = "moonbit_power_monitor_stop_watching"
 
