@@ -46,6 +46,11 @@ extern "C" fn native_completion_pipe(
 extern "C" fn native_close_completion_writer(fd : Int32) -> Unit = "moonbit_power_monitor_close_completion_writer"
 
 ///|
+// The completion-pipe FFI is excluded on Windows; keep its type import used.
+#cfg(platform="windows")
+let _unused_async_types : Unit = ignore((_ : @async_types.Fd) => ())
+
+///|
 #borrow(handle)
 extern "C" fn native_stop_watching(handle : State) -> Int32 = "moonbit_power_monitor_stop_watching"
 
