@@ -2,7 +2,7 @@
 async test "tool wait yields and cancellation reaps the child" {
   guard @async.platform is (Linux | MacOS) else { return }
   let dir = @async_fs.tmpdir(prefix="proton-shell-wait-")
-  defer @async_fs.rmdir(dir, recursive=true)
+  defer @async_fs.remove(dir, recursive=true)
   let script =
     #|trap 'printf stopped > "$1/stopped"; exit 0' TERM
     #|printf '%s' "$$" > "$1/ready"

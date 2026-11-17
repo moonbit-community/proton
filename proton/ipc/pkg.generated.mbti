@@ -36,7 +36,7 @@ pub(all) struct IpcCommandError {
   message : String
   detail : String?
 }
-pub fn IpcCommandError::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn IpcCommandError::from_json(@json.Json, @json.DecodeContext) -> Self raise @json.JsonDecodeError
 pub fn IpcCommandError::to_json(Self) -> @json.Json
 
 #derive(Eq, @debug.Debug, @json.FromJson, @json.ToJson)
@@ -45,7 +45,7 @@ pub(all) struct IpcExtensionApi {
 }
 pub fn IpcExtensionApi::IpcExtensionApi(String) -> Self
 pub fn IpcExtensionApi::equal(Self, Self) -> Bool
-pub fn IpcExtensionApi::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn IpcExtensionApi::from_json(@json.Json, @json.DecodeContext) -> Self raise @json.JsonDecodeError
 pub fn IpcExtensionApi::not_equal(Self, Self) -> Bool
 pub fn IpcExtensionApi::to_json(Self) -> @json.Json
 pub fn IpcExtensionApi::to_repr(Self) -> @debug.Repr
@@ -59,7 +59,7 @@ pub(all) struct IpcExtensionDescriptor {
 }
 pub fn IpcExtensionDescriptor::IpcExtensionDescriptor(String, String, Array[IpcExtensionApi], scripts? : Array[String]) -> Self
 pub fn IpcExtensionDescriptor::equal(Self, Self) -> Bool
-pub fn IpcExtensionDescriptor::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn IpcExtensionDescriptor::from_json(@json.Json, @json.DecodeContext) -> Self raise @json.JsonDecodeError
 pub fn IpcExtensionDescriptor::not_equal(Self, Self) -> Bool
 pub fn IpcExtensionDescriptor::to_json(Self) -> @json.Json
 pub fn IpcExtensionDescriptor::to_repr(Self) -> @debug.Repr
@@ -73,7 +73,7 @@ pub(all) struct IpcExtensionEvent {
 }
 pub fn IpcExtensionEvent::IpcExtensionEvent(String, String, @json.Json) -> Self
 pub fn IpcExtensionEvent::equal(Self, Self) -> Bool
-pub fn IpcExtensionEvent::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn IpcExtensionEvent::from_json(@json.Json, @json.DecodeContext) -> Self raise @json.JsonDecodeError
 pub fn IpcExtensionEvent::not_equal(Self, Self) -> Bool
 pub fn IpcExtensionEvent::to_json(Self) -> @json.Json
 pub fn IpcExtensionEvent::to_repr(Self) -> @debug.Repr
@@ -88,7 +88,7 @@ pub(all) struct IpcOpRequest {
 }
 pub fn IpcOpRequest::IpcOpRequest(String, String, @json.Json) -> Self
 pub fn IpcOpRequest::equal(Self, Self) -> Bool
-pub fn IpcOpRequest::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn IpcOpRequest::from_json(@json.Json, @json.DecodeContext) -> Self raise @json.JsonDecodeError
 pub fn IpcOpRequest::not_equal(Self, Self) -> Bool
 pub fn IpcOpRequest::stringify(Self) -> String
 pub fn IpcOpRequest::to_json(Self) -> @json.Json
@@ -104,7 +104,7 @@ pub(all) struct IpcOpResponse {
 }
 pub fn IpcOpResponse::equal(Self, Self) -> Bool
 pub fn IpcOpResponse::err(String, IpcCommandError) -> Self
-pub fn IpcOpResponse::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn IpcOpResponse::from_json(@json.Json, @json.DecodeContext) -> Self raise @json.JsonDecodeError
 pub fn IpcOpResponse::is_ok(Self) -> Bool
 pub fn IpcOpResponse::not_equal(Self, Self) -> Bool
 pub fn IpcOpResponse::ok(String, @json.Json) -> Self

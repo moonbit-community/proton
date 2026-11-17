@@ -32,6 +32,7 @@ pub fn current_platform() -> Platform {
     MacOS => Macos
     Windows => Windows
     Linux => Linux
+    @async_types.Platform::.. => abort("unsupported host platform")
   }
 }
 

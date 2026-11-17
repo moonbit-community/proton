@@ -839,5 +839,5 @@ fn decode_bytes(bytes : Bytes) -> String? {
 ///|
 /// Returns the sentinel handle value used for simulated or destroyed trays.
 fn zero_handle() -> Int64 {
-  Int64::from_int(0)
+  0L
 }

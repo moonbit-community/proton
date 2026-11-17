@@ -12,12 +12,12 @@ import {
 // Types and methods
 #derive(@json.FromJson, @json.ToJson)
 type EditReply
-pub fn EditReply::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn EditReply::from_json(@json.Json, @json.DecodeContext) -> Self raise @json.JsonDecodeError
 pub fn EditReply::to_json(Self) -> @json.Json
 
 #derive(@json.FromJson, @json.ToJson)
 type EditRequest
-pub fn EditRequest::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn EditRequest::from_json(@json.Json, @json.DecodeContext) -> Self raise @json.JsonDecodeError
 pub fn EditRequest::to_json(Self) -> @json.Json
 
 // Type aliases

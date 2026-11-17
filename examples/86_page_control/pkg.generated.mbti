@@ -12,17 +12,17 @@ import {
 // Types and methods
 #derive(@json.FromJson, @json.ToJson)
 type ControlReply
-pub fn ControlReply::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn ControlReply::from_json(@json.Json, @json.DecodeContext) -> Self raise @json.JsonDecodeError
 pub fn ControlReply::to_json(Self) -> @json.Json
 
 #derive(@json.FromJson, @json.ToJson)
 type ControlRequest
-pub fn ControlRequest::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn ControlRequest::from_json(@json.Json, @json.DecodeContext) -> Self raise @json.JsonDecodeError
 pub fn ControlRequest::to_json(Self) -> @json.Json
 
 #derive(@json.FromJson, @json.ToJson)
 type EntryRow
-pub fn EntryRow::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn EntryRow::from_json(@json.Json, @json.DecodeContext) -> Self raise @json.JsonDecodeError
 pub fn EntryRow::to_json(Self) -> @json.Json
 
 // Type aliases
