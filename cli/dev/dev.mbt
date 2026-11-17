@@ -148,7 +148,7 @@ pub async fn run(cwd : String, matches : @argparse.Matches) -> Unit {
     .unwrap_or(default_package)
   let (runtime, subprocess_path) = prepare_dev_installation()
   let snapshot_dir = @async_fs.tmpdir(prefix="proton-dev-config-")
-  defer @async_fs.rmdir(snapshot_dir, recursive=true)
+  defer @async_fs.remove(snapshot_dir, recursive=true)
   let snapshot_path = @fsutil.path_join(snapshot_dir, "proton.project.json")
   @async_fs.write_text(
     snapshot_path,
@@ -687,8 +687,9 @@ fn frontend_exit_code(process : @process.Process?) -> Int32? {
 
 ///|
 async fn tcp_ready(host : String, port : Int32) -> Bool {
+  guard port is (1..<65536) else { return false }
   let result = @async.with_timeout_opt(ready_probe_timeout_ms, () => {
-    let conn = @socket.Tcp::connect_to_host(host, port~)
+    let conn = @socket.Tcp::connect_to_host(host, port=port.to_uint16())
     conn.close()
     true
   }) catch {

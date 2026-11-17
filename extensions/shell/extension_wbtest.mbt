@@ -16,7 +16,7 @@ test "shell target validation rejects empty strings" {
 async test "shell delegates literal targets and reports launcher failures" {
   guard @async.platform is Linux else { return }
   let dir = @async_fs.tmpdir(prefix="proton-shell-")
-  defer @async_fs.rmdir(dir, recursive=true)
+  defer @async_fs.remove(dir, recursive=true)
   let previous_path = @env.get_env_var("PATH")
   defer (match previous_path {
     Some(value) => @env.set_env_var("PATH", value)
@@ -91,7 +91,7 @@ async test "shell delegates literal targets and reports launcher failures" {
 async test "macOS shell propagates missing-path failures" {
   guard @async.platform is MacOS else { return }
   let dir = @async_fs.tmpdir(prefix="proton-shell-")
-  defer @async_fs.rmdir(dir, recursive=true)
+  defer @async_fs.remove(dir, recursive=true)
   // These calls reach /usr/bin/open but cannot launch a browser or Finder.
   assert_true(
     try {

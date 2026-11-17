@@ -25,7 +25,7 @@ async fn with_update_stage_test(action : async (String) -> Unit) -> Unit {
   update_stage_test_mutex.acquire()
   defer update_stage_test_mutex.release()
   let root = @async_fs.tmpdir(prefix="proton-prepared-update-")
-  defer (@async_fs.rmdir(root, recursive=true) catch { _ => () })
+  defer (@async_fs.remove(root, recursive=true) catch { _ => () })
   let current = prepare_update_test_installation(root)
   install_test_current(@ffi.to_cstr(current))
   install_test_medium(b"appimage\x00")

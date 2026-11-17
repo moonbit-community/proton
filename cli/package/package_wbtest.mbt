@@ -194,7 +194,7 @@ async test "macOS minimum resolves project configuration and CLI override" {
 ///|
 async test "package prepare uses the configuration directory and host command" {
   let root = @async_fs.tmpdir(prefix="proton package prepare-")
-  defer @async_fs.rmdir(root, recursive=true)
+  defer @async_fs.remove(root, recursive=true)
   let config = @proton_config.AppConfig::decode({
     "identifier": "com.example.prepare",
     "package": {
@@ -223,7 +223,7 @@ async test "package prepare uses the configuration directory and host command" {
 ///|
 async test "package dry-run leaves an unavailable runtime store untouched" {
   let root = @async_fs.tmpdir(prefix="proton-dry-package-")
-  defer @async_fs.rmdir(root, recursive=true)
+  defer @async_fs.remove(root, recursive=true)
   let store = resolve_path(root, "blocked-store")
   @async_fs.write_text(store, "not a directory", create_mode=CreateOrTruncate)
   let previous = @env.get_env_var("PROTON_RUNTIME_STORE")

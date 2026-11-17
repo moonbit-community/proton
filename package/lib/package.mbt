@@ -417,7 +417,7 @@ async fn remove_tree(path : String) -> Unit {
         )
     }
   } else {
-    @async_fs.rmdir(path, recursive=true) catch {
+    @async_fs.remove(path, recursive=true) catch {
       error =>
         raise PackageFileSystemError::Remove(
           path~,

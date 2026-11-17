@@ -14,7 +14,7 @@ async fn open_update_stream(
   url : String,
 ) -> (@http.ResponseHeader, @http.ClientConnection) raise UpdateError {
   for current = url, redirects = 0 {
-    let (response, client) = @http.get(current) catch {
+    let (response, client) = @http.get_stream(current) catch {
       error => raise FetchFailed(url=current, detail=@debug.render(Repr(error)))
     }
     if response.code == 200 {

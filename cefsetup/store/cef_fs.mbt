@@ -181,7 +181,7 @@ async fn remove_tree(path : String) -> Unit {
         raise CefFileSystemError::Remove(path~, detail=@debug.render(Repr(err)))
     }
   } else if path_is_dir(path) {
-    @async_fs.rmdir(path, recursive=true) catch {
+    @async_fs.remove(path, recursive=true) catch {
       err =>
         raise CefFileSystemError::Remove(path~, detail=@debug.render(Repr(err)))
     }

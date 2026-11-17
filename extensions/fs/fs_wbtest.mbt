@@ -46,7 +46,7 @@ async fn with_fs_test_root(
   action : async (@proton.CommandContext, String, String) -> Unit,
 ) -> Unit {
   let temporary = @async_fs.tmpdir(prefix="proton-fs-permission-")
-  defer @async_fs.rmdir(temporary, recursive=true)
+  defer @async_fs.remove(temporary, recursive=true)
   let base = @async_fs.realpath(temporary)
   let allowed = base + "/allowed"
   let outside = base + "/outside"

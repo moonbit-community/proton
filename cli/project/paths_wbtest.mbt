@@ -1,7 +1,7 @@
 ///|
 async test "loading preserves path spelling without requiring referenced files" {
   let root = @fs.tmpdir(prefix="proton-project-paths-")
-  defer @fs.rmdir(root, recursive=true)
+  defer @fs.remove(root, recursive=true)
   let source = @fsutil.path_join(root, "proton.project.json")
   for
     path in [
