@@ -4,10 +4,10 @@ version = "0.1.0"
 
 import {
   "{{username}}/{{module}}_shared@0.1.0",
-  // Proton 0.8.0 uses the standalone API. This version shares core/async's runtime.
+  // Keep standalone async dependencies on the core/async compatibility bridge.
   "moonbitlang/async@0.22.7",
-  "moonbit-community/proton@0.8.0",
-  "moonbit-community/proton_contract@0.8.0",
+  "moonbit-community/proton@0.9.1",
+  "moonbit-community/proton_contract@0.9.1",
 }
 
 license = "Apache-2.0"
