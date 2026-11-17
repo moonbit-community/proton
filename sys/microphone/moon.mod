@@ -1,9 +1,9 @@
 name = "moonbit-community/proton_microphone"
 
-version = "0.9.0"
+version = "0.9.1"
 
 import {
-  "moonbit-community/proton_ffi@0.9.0",
+  "moonbit-community/proton_ffi@0.9.1",
 }
 
 readme = "README.mbt.md"
