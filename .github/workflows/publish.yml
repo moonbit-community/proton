@@ -35,6 +35,9 @@ on:
           - cli
           - cdp
 
+env:
+  MOON_SEPARATE_COMPILATION: "1"
+
 permissions:
   contents: read
 
