@@ -7,6 +7,7 @@ on:
   pull_request:
 
 env:
+  MOON_SEPARATE_COMPILATION: "1"
   PROTON_NO_UPDATE_CHECK: 1
   PROTON_RUNTIME_STORE: ${{ github.workspace }}/.proton-runtime-store
 
