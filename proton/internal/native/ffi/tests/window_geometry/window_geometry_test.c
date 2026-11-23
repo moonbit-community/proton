@@ -462,6 +462,181 @@ cleanup:
   return result;
 }
 
+static LRESULT custom_titlebar_hit(HWND hwnd, POINT point) {
+  ClientToScreen(hwnd, &point);
+  return SendMessageW(hwnd, WM_NCHITTEST, 0, MAKELPARAM(point.x, point.y));
+}
+
+static const wchar_t titlebar_preview_child_class[] =
+    L"ProtonTitlebarPreviewChild";
+
+static LRESULT CALLBACK titlebar_preview_child(HWND hwnd, UINT msg,
+                                               WPARAM wparam, LPARAM lparam) {
+  if (msg == WM_PAINT) {
+    const proton_engine_window_t *window =
+        (proton_engine_window_t *)GetWindowLongPtrW(GetParent(hwnd),
+                                                    GWLP_USERDATA);
+    PAINTSTRUCT paint;
+    HDC dc = BeginPaint(hwnd, &paint);
+    RECT row;
+    GetClientRect(hwnd, &row);
+    FillRect(dc, &row, (HBRUSH)GetStockObject(WHITE_BRUSH));
+    const UINT dpi = proton_win_window_dpi(hwnd);
+    row.bottom = proton_win_pixels(window->custom_titlebar.height, dpi);
+    SetDCBrushColor(dc, window->custom_titlebar.background);
+    FillRect(dc, &row, (HBRUSH)GetStockObject(DC_BRUSH));
+    row.left += proton_win_pixels(16, dpi);
+    SetBkMode(dc, TRANSPARENT);
+    SetTextColor(dc, window->custom_titlebar.foreground);
+    DrawTextW(dc, L"Proton titlebar preview - F6 changes height and theme", -1,
+              &row, DT_SINGLELINE | DT_VCENTER | DT_NOPREFIX);
+    EndPaint(hwnd, &paint);
+    return 0;
+  }
+  return DefWindowProcW(hwnd, msg, wparam, lparam);
+}
+
+/* Optional real input/painting check. The child stands in for the browser's
+ * paint surface but runs through the same HWND clipping and subclassing. */
+static int preview_custom_titlebar(proton_engine_window_t *window,
+                                   proton_engine_view_t *view,
+                                   proton_win_titlebar_region_t *drag_region) {
+  const HWND hwnd = window->hwnd;
+  ShowWindow(view->hwnd, SW_SHOWNA);
+  ShowWindow(hwnd, SW_SHOW);
+  MSG msg;
+  while (IsWindow(hwnd)) {
+    if (GetMessageW(&msg, NULL, 0, 0) <= 0) {
+      return 0;
+    }
+    if (msg.message == WM_KEYDOWN && msg.wParam == VK_F6) {
+      const int tall = window->custom_titlebar.height == 64;
+      window->custom_titlebar = (proton_win_custom_titlebar_t){
+          .height = tall ? 32 : 64,
+          .background = tall ? RGB(236, 240, 247) : RGB(36, 49, 68),
+          .foreground = tall ? RGB(25, 33, 46) : RGB(242, 245, 249),
+      };
+      drag_region->height = window->custom_titlebar.height;
+      proton_engine_custom_titlebar_relayout(window);
+      InvalidateRect(view->hwnd, NULL, FALSE);
+    } else {
+      TranslateMessage(&msg);
+      DispatchMessageW(&msg);
+    }
+    RECT client;
+    if (!IsIconic(hwnd) && GetClientRect(hwnd, &client)) {
+      const UINT dpi = proton_win_window_dpi(hwnd);
+      int width = proton_win_logical(client.right, dpi);
+      int height = proton_win_logical(client.bottom, dpi);
+      if (width != view->width || height != view->height) {
+        view->width = width;
+        view->height = height;
+        proton_engine_custom_titlebar_relayout(window);
+      }
+    }
+  }
+  return 1;
+}
+
+int32_t proton_test_custom_titlebar_overlay(void) {
+  int result = 0;
+  HWND hwnd = NULL;
+  HRGN region = NULL;
+  ATOM child_class = 0;
+  const HINSTANCE instance = GetModuleHandleW(NULL);
+  DPI_AWARENESS_CONTEXT previous =
+      SetThreadDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
+  CHECK(previous != NULL);
+  proton_engine_register_window_class();
+  proton_win_titlebar_region_t regions[] = {{0, 0, 160, 32, 1},
+                                            {14, 10, 28, 18, 0}};
+  proton_engine_window_t window = {0};
+  window.resizable = window.movable = window.closable = window.focusable = 1;
+  window.titlebar_overlay = 1;
+  window.custom_titlebar = (proton_win_custom_titlebar_t){
+      .height = 32,
+      .background = RGB(236, 240, 247),
+      .foreground = RGB(25, 33, 46),
+  };
+  window.draggable_regions_reported = 1;
+  window.draggable_regions = regions;
+  window.draggable_region_count = 2;
+  hwnd = CreateWindowExW(0, PROTON_ENGINE_WINDOW_CLASS,
+                         L"Proton custom titlebar preview",
+                         WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN, 100, 100, 880,
+                         480, NULL, NULL, GetModuleHandleW(NULL), &window);
+  CHECK(hwnd != NULL);
+  proton_engine_overlay_apply_frame(&window);
+  CHECK(SetWindowPos(hwnd, NULL, 0, 0, 0, 0,
+                     SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE |
+                         SWP_FRAMECHANGED));
+  WNDCLASSW cls = {.lpfnWndProc = titlebar_preview_child,
+                   .hInstance = instance,
+                   .lpszClassName = titlebar_preview_child_class};
+  child_class = RegisterClassW(&cls);
+  CHECK(child_class != 0);
+  HWND child = CreateWindowExW(0, cls.lpszClassName, L"", WS_CHILD, 0, 0, 1, 1,
+                               hwnd, NULL, instance, NULL);
+  CHECK(child != NULL);
+  region = CreateRectRgn(0, 0, 0, 0);
+  CHECK(region != NULL);
+  const UINT dpi = proton_win_window_dpi(hwnd);
+  RECT client;
+  CHECK(GetClientRect(hwnd, &client));
+  proton_engine_view_t view = {0};
+  view.window = &window;
+  view.hwnd = child;
+  view.width = proton_win_logical(client.right, dpi);
+  view.height = proton_win_logical(client.bottom, dpi);
+  window.views = &view;
+  for (int height = 64; height >= 32; height -= 32) {
+    window.custom_titlebar.height = height;
+    regions[0].height = height;
+    proton_engine_custom_titlebar_relayout(&window);
+    int32_t x, y, width, band_height, zoom;
+    CHECK(proton_engine_window_get_titlebar_area(&window, &x, &y, &width,
+                                                 &band_height, &zoom, NULL,
+                                                 0) == PROTON_OK);
+    const int button_width = proton_win_pixels(46, dpi);
+    const int controls_left = client.right - 3 * button_width;
+    const int bottom = proton_win_pixels(height, dpi);
+    CHECK(x == 0 && y == 0 && band_height == height && zoom == 100);
+    CHECK(width == proton_win_logical(controls_left, dpi));
+    const POINT max_top = {controls_left + button_width, 0};
+    const POINT max_bottom = {max_top.x, bottom - 1};
+    const POINT below = {max_top.x, bottom};
+    CHECK(custom_titlebar_hit(hwnd, max_top) == HTMAXBUTTON);
+    CHECK(custom_titlebar_hit(hwnd, max_bottom) == HTMAXBUTTON);
+    CHECK(custom_titlebar_hit(hwnd, below) == HTCLIENT);
+    CHECK(GetWindowRgn(child, region) == COMPLEXREGION);
+    CHECK(!PtInRegion(region, max_bottom.x, max_bottom.y));
+    CHECK(PtInRegion(region, below.x, below.y));
+    const int expected_y = proton_win_pixels(20, dpi);
+    CHECK(custom_titlebar_hit(hwnd, (POINT){proton_win_pixels(28, dpi),
+                                            expected_y}) == HTCLIENT);
+    CHECK(custom_titlebar_hit(hwnd, (POINT){proton_win_pixels(80, dpi),
+                                            expected_y}) == HTCAPTION);
+    CHECK(custom_titlebar_hit(hwnd, (POINT){proton_win_pixels(80, dpi), 0}) ==
+          HTTOP);
+  }
+  wchar_t preview[2];
+  if (GetEnvironmentVariableW(L"PROTON_TEST_TITLEBAR_PREVIEW", preview, 2) ==
+          1 &&
+      preview[0] == L'1') {
+    CHECK(preview_custom_titlebar(&window, &view, &regions[0]));
+  }
+cleanup:
+  if (region != NULL)
+    DeleteObject(region);
+  if (hwnd != NULL && IsWindow(hwnd))
+    DestroyWindow(hwnd);
+  if (child_class != 0)
+    UnregisterClassW(titlebar_preview_child_class, instance);
+  if (previous != NULL)
+    SetThreadDpiAwarenessContext(previous);
+  return result;
+}
+
 /* No CEF or visible windows: replay OnBeforeClose's posted HWND destruction
  * through the production window procedure, with a collection pass in between. */
 int32_t proton_test_closed_modal_window_collection(void) {

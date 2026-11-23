@@ -101,6 +101,16 @@ test "titlebar button pixels and edges respect 100 through 250 percent DPI" {
 
 ///|
 #cfg(platform="windows")
+extern "C" fn custom_titlebar_test() -> Int32 = "proton_test_custom_titlebar_overlay"
+
+///|
+#cfg(platform="windows")
+test "custom titlebar height drives hit testing and child clipping" {
+  assert_eq(custom_titlebar_test(), 0)
+}
+
+///|
+#cfg(platform="windows")
 extern "C" fn closed_modal_collection_test() -> Int32 = "proton_test_closed_modal_window_collection"
 
 ///|

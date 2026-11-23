@@ -110,6 +110,9 @@ struct proton_engine_window {
   int max_height;
   double aspect_ratio;
   int titlebar_overlay;
+  proton_win_custom_titlebar_t custom_titlebar;
+  LRESULT titlebar_hot_button;
+  LRESULT titlebar_pressed_button;
   proton_window_theme_preference_t theme_preference;
   proton_window_theme_t current_theme;
   int fullscreen;
@@ -301,7 +304,14 @@ void proton_engine_overlay_subclass_browser(proton_engine_window_t *window,
 void proton_engine_overlay_clip_browser(proton_engine_window_t *window,
                                        HWND browser_hwnd);
 int proton_engine_overlay_frame_top_thickness(HWND hwnd);
-void proton_engine_overlay_apply_frame(HWND hwnd);
+void proton_engine_overlay_apply_frame(proton_engine_window_t *window);
+int proton_engine_overlay_controls_rect(const proton_engine_window_t *window,
+                                        RECT *out);
+void proton_engine_custom_titlebar_paint(proton_engine_window_t *window,
+                                         HDC dc);
+int proton_engine_custom_titlebar_mouse(proton_engine_window_t *window,
+                                        UINT msg, WPARAM wparam, LPARAM lparam);
+void proton_engine_custom_titlebar_relayout(proton_engine_window_t *window);
 LRESULT proton_engine_overlay_hit_test(HWND hwnd, LPARAM lparam);
 void proton_engine_resize_browser(proton_engine_window_t *window,
                                   int width,

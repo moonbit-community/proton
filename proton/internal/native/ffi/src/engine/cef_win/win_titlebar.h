@@ -44,6 +44,13 @@ int proton_win_titlebar_point_in_draggable_regions(
     size_t region_count,
     const proton_win_titlebar_region_t *regions);
 
+typedef struct {
+  /* Zero leaves caption button drawing to DWM. Height is in window DIPs. */
+  int height;
+  COLORREF background;
+  COLORREF foreground;
+} proton_win_custom_titlebar_t;
+
 int proton_engine_overlay_caption_band_height(HWND hwnd);
 int proton_engine_overlay_caption_buttons_rect(HWND hwnd, RECT *out);
 
