@@ -1669,6 +1669,32 @@ pub fn WindowHandle::set_background_color(
 }
 
 ///|
+/// Configures host-drawn caption buttons on a live Windows `Overlay` window.
+/// `None` restores the default DWM buttons. Other platforms, headless windows,
+/// and windows without `TitlebarStyle::Overlay` raise `WindowSessionError`.
+/// Read `titlebar_area()` after the change for the effective layout.
+pub fn WindowHandle::set_titlebar_overlay(
+  self : WindowHandle,
+  overlay : TitlebarOverlay?,
+) -> Unit raise WindowSessionError {
+  self.with_window("set titlebar overlay", window => {
+    window.set_titlebar_overlay(overlay)
+  })
+}
+
+///|
+/// Returns the current usable titlebar area in CSS pixels, or `None` when no
+/// usable overlay is available (for example in fullscreen).
+pub fn WindowHandle::titlebar_area(
+  self : WindowHandle,
+) -> TitlebarArea? raise WindowSessionError {
+  let running = self.session.resolve_window(self.id, self.native_id)
+  running.window.as_ref().titlebar_area() catch {
+    error => raise window_operation_failed("read titlebar area", error)
+  }
+}
+
+///|
 /// Sets the native window chrome theme.
 ///
 /// `System` follows platform appearance changes. Explicit `Light` and `Dark`

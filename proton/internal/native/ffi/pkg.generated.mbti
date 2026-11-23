@@ -436,6 +436,8 @@ pub fn proton_window_set_thumbnail_tooltip_ffi(WindowHandle, Bytes) -> Int32
 
 pub fn proton_window_set_title_ffi(WindowHandle, Bytes) -> Int32
 
+pub fn proton_window_set_titlebar_overlay_ffi(WindowHandle, Int32, UInt32, UInt32) -> Int32
+
 pub fn proton_window_set_visible_on_all_workspaces_ffi(WindowHandle, Int32) -> Int32
 
 pub fn proton_window_set_zoom_percent_ffi(WindowHandle, Int32) -> Int32

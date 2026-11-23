@@ -51,6 +51,10 @@ typedef struct {
   COLORREF foreground;
 } proton_win_custom_titlebar_t;
 
+/* Computes the reserved caption-button cluster in client device pixels. */
+int proton_win_custom_titlebar_controls_rect(const RECT *client, int height,
+                                             UINT dpi, RECT *out);
+
 int proton_engine_overlay_caption_band_height(HWND hwnd);
 int proton_engine_overlay_caption_buttons_rect(HWND hwnd, RECT *out);
 

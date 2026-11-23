@@ -1188,18 +1188,6 @@ struct WindowRef {
 }
 
 ///|
-#derive(ToJson)
-pub(all) struct TitlebarArea {
-  x : Double
-  y : Double
-  width : Double
-  height : Double
-}
-
-///|
-pub extend TitlebarArea with ToJson::{to_json}
-
-///|
 pub impl Eq for WindowRef with fn equal(self : WindowRef, other : WindowRef) -> Bool {
   self.id == other.id
 }
@@ -1936,6 +1924,8 @@ pub using @types {
   type RuntimeLaunchInput,
   type ScreenInfo,
   type ThumbarButtonFlag,
+  type TitlebarArea,
+  type TitlebarOverlay,
   type TitlebarStyle,
   type ViewState,
   type WindowMonitor,

@@ -343,6 +343,9 @@ int32_t proton_engine_window_set_ignore_mouse_events(
 int32_t proton_engine_window_set_background_color(
     proton_engine_window_t *window, uint32_t color, char *error,
     size_t error_len);
+int32_t proton_engine_window_set_titlebar_overlay(
+    proton_engine_window_t *window, int32_t height, uint32_t background,
+    uint32_t symbol, char *error, size_t error_len);
 int32_t proton_engine_window_set_theme(
     proton_engine_window_t *window,
     proton_window_theme_preference_t theme_preference, char *error,

@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+Windows overlay windows can opt into host-drawn caption buttons with
+`WindowHandle::set_titlebar_overlay()`. Applications can update the height and
+colors at runtime to align their own titlebar with the window controls. The
+system buttons remain the default. See
+[custom titlebar overlay on Windows](../introduction/application-api.md#custom-titlebar-overlay-on-windows-unreleased).
+
 Applications on macOS can opt into `App.macos_render_when_occluded()` before
 startup to keep page content updating in native window captures while fully
 covered or on another Space. The setting applies to all windows and child views

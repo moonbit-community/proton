@@ -101,6 +101,16 @@ test "titlebar button pixels and edges respect 100 through 250 percent DPI" {
 
 ///|
 #cfg(platform="windows")
+extern "C" fn custom_titlebar_dpi_test() -> Int32 = "proton_test_custom_titlebar_dpi"
+
+///|
+#cfg(platform="windows")
+test "custom titlebar geometry scales both axes at 100, 150, and 250 percent" {
+  assert_eq(custom_titlebar_dpi_test(), 0)
+}
+
+///|
+#cfg(platform="windows")
 extern "C" fn custom_titlebar_test() -> Int32 = "proton_test_custom_titlebar_overlay"
 
 ///|

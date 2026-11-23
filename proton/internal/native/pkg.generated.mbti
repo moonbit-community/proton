@@ -644,15 +644,6 @@ pub(all) struct ThumbarButton {
   flags : Array[@types.ThumbarButtonFlag]
 }
 
-#derive(@json.ToJson)
-pub(all) struct TitlebarArea {
-  x : Double
-  y : Double
-  width : Double
-  height : Double
-}
-pub fn TitlebarArea::to_json(Self) -> @json.Json
-
 #derive(Eq, @debug.Debug)
 pub enum UpdateInstallOutcome {
   Installed
@@ -768,6 +759,7 @@ pub fn Window::set_theme(Self, @types.WindowThemePreference) -> Unit raise Nativ
 pub fn Window::set_thumbar_buttons(Self, Array[ThumbarButton]) -> Bool raise NativeError
 pub fn Window::set_thumbnail_tooltip(Self, String) -> Unit raise NativeError
 pub fn Window::set_title(Self, String) -> Unit raise NativeError
+pub fn Window::set_titlebar_overlay(Self, @types.TitlebarOverlay?) -> Unit raise NativeError
 pub fn Window::set_visible_on_all_workspaces(Self, Bool) -> Unit raise NativeError
 pub fn Window::set_zoom_percent(Self, Int32) -> Unit raise NativeError
 pub fn Window::show(Self) -> Unit raise NativeError
@@ -792,7 +784,7 @@ pub fn WindowRef::begin_save_file_dialog(Self, String?, String?) -> Int64 raise 
 pub fn WindowRef::cancel_dialog(Self, Int64) -> Unit raise NativeError
 pub fn WindowRef::equal(Self, Self) -> Bool
 pub fn WindowRef::not_equal(Self, Self) -> Bool
-pub fn WindowRef::titlebar_area(Self) -> TitlebarArea? raise NativeError
+pub fn WindowRef::titlebar_area(Self) -> @types.TitlebarArea? raise NativeError
 pub fn WindowRef::to_repr(Self) -> @debug.Repr
 pub impl Eq for WindowRef
 pub impl @debug.Debug for WindowRef
@@ -841,6 +833,10 @@ pub using @types {type RuntimeLaunchInput}
 pub using @types {type ScreenInfo}
 
 pub using @types {type ThumbarButtonFlag}
+
+pub using @types {type TitlebarArea}
+
+pub using @types {type TitlebarOverlay}
 
 pub using @types {type TitlebarStyle}
 

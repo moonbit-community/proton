@@ -111,6 +111,11 @@ struct proton_engine_window {
   double aspect_ratio;
   int titlebar_overlay;
   proton_win_custom_titlebar_t custom_titlebar;
+  HWND titlebar_buttons[3];
+  wchar_t titlebar_minimize_label[PROTON_ENGINE_MAX_LABEL_BYTES];
+  wchar_t titlebar_maximize_label[PROTON_ENGINE_MAX_LABEL_BYTES];
+  wchar_t titlebar_restore_label[PROTON_ENGINE_MAX_LABEL_BYTES];
+  wchar_t titlebar_close_label[PROTON_ENGINE_MAX_LABEL_BYTES];
   LRESULT titlebar_hot_button;
   LRESULT titlebar_pressed_button;
   proton_window_theme_preference_t theme_preference;
@@ -304,11 +309,12 @@ void proton_engine_overlay_subclass_browser(proton_engine_window_t *window,
 void proton_engine_overlay_clip_browser(proton_engine_window_t *window,
                                        HWND browser_hwnd);
 int proton_engine_overlay_frame_top_thickness(HWND hwnd);
-void proton_engine_overlay_apply_frame(proton_engine_window_t *window);
+HRESULT proton_engine_overlay_apply_frame(proton_engine_window_t *window);
 int proton_engine_overlay_controls_rect(const proton_engine_window_t *window,
                                         RECT *out);
-void proton_engine_custom_titlebar_paint(proton_engine_window_t *window,
-                                         HDC dc);
+void proton_engine_custom_titlebar_layout(proton_engine_window_t *window);
+int proton_engine_custom_titlebar_click(proton_engine_window_t *window,
+                                        HWND button);
 int proton_engine_custom_titlebar_mouse(proton_engine_window_t *window,
                                         UINT msg, WPARAM wparam, LPARAM lparam);
 void proton_engine_custom_titlebar_relayout(proton_engine_window_t *window);

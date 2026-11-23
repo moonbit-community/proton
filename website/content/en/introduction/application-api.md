@@ -299,6 +299,34 @@ A view declaration sets initial geometry; it does not provide automatic layout. 
 
 `TitlebarStyle::Overlay` is available on macOS, Windows and Linux. In an overlay page, `await window.__MoonBit__.getTitlebarArea()` returns the usable titlebar area as `{ x, y, width, height }` in CSS pixels, or `null` when unavailable. Query it during layout and after resizing; the application applies the result to its CSS. Interactive controls inside draggable regions need `-webkit-app-region: no-drag`.
 
+### Custom titlebar overlay on Windows (unreleased)
+
+On a live Windows window created with `TitlebarStyle::Overlay`, the host can
+opt into drawing the caption buttons to match the app's titlebar:
+
+```moonbit
+window.set_titlebar_overlay(Some({
+  height: 48,
+  background_color: "#2b2b2b",
+  symbol_color: "#f0f0f0",
+}))
+```
+
+`height` is a positive number of window DIPs, independent of browser zoom.
+Both colors must be opaque `#RRGGBB` values. Reapply the option when the app
+changes its titlebar height or theme, and use the extent reported by
+`window.titlebar_area()` (MoonBit) or `getTitlebarArea()` (JavaScript) for the
+page layout. Both report the same usable rectangle in **CSS pixels**, or no
+rectangle in fullscreen. The buttons stay hidden in fullscreen and return with
+the same appearance when the window leaves it.
+
+Omitting the configuration keeps the default system buttons. Pass `None` to
+restore them after opting in. Calling the setter on a non-overlay window, in
+headless mode, or on another platform raises `WindowSessionError`. The setter
+belongs to the application host, not the default JavaScript bridge. The
+[titlebar overlay example](https://github.com/moonbit-community/proton/tree/main/examples/48_titlebar_overlay)
+shows how to expose an app command and apply the resulting area to the page.
+
 **Accessibility and headless execution**
 
 Web content uses Chromium's native accessibility tree. Use semantic HTML, ARIA, keyboard navigation and visible focus. Accessibility follows the platform's policy by default; `App.accessibility(AccessibilityMode::AlwaysEnabled)` keeps the tree available throughout the runtime. See [platform accessibility behavior](https://github.com/moonbit-community/proton/blob/9a0c5a9300f293015288acc1ff5f186f563e6a77/proton/README.md#accessibility).

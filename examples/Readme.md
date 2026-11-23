@@ -85,7 +85,8 @@ moon -C examples run 01_run --target native
 - `47_dev_extension_js`: Warren dev-server injection smoke for extension
   JavaScript helpers and events.
 - `48_titlebar_overlay`: cross-platform overlay demo with native window
-  controls and compact web-rendered application chrome.
+  controls and compact web-rendered application chrome. On Windows, switch
+  between 32-DIP, 64-DIP and system buttons at runtime, or enter and leave fullscreen.
 - `49_app_menu`: app-level typed native menu roles, dynamic command states, and menu command events with
   the optional focused window id.
 - [50_browser_control](50_browser_control/README.md): page-local new-window

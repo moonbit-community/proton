@@ -35,6 +35,8 @@ pub using @types {
   type RuntimeLaunchInput,
   type ScreenInfo,
   type ThumbarButtonFlag,
+  type TitlebarArea,
+  type TitlebarOverlay,
   type TitlebarStyle,
   type ViewState,
   type WindowMonitor,

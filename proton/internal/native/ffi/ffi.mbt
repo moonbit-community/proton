@@ -1018,6 +1018,14 @@ pub extern "C" fn proton_window_set_background_color_ffi(
 ) -> Int32 = "proton_window_set_background_color"
 
 ///|
+pub extern "C" fn proton_window_set_titlebar_overlay_ffi(
+  window : WindowHandle,
+  height : Int32,
+  background : UInt32,
+  symbol : UInt32,
+) -> Int32 = "proton_window_set_titlebar_overlay"
+
+///|
 pub extern "C" fn proton_window_set_theme_ffi(
   window : WindowHandle,
   theme_preference : Int32,
