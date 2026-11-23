@@ -44,7 +44,7 @@ async fn verify_file_sha256(path : String, expected : String) -> Unit {
   defer file.close()
   let hasher = @crypto.SHA256::new()
   let buffer = FixedArray::make(1024 * 1024, b'\x00')
-  while file.read_into(buffer) is read && read > 0 {
+  while file.read_into(buffer.mut_view()) is read && read > 0 {
     hasher.update(buffer.unsafe_reinterpret_as_bytes()[:read])
   }
   let actual = @crypto.bytes_to_hex_string(hasher.finalize())

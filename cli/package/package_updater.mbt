@@ -96,7 +96,7 @@ async fn artifact_digest_and_size(
   let buffer = FixedArray::make(1024 * 1024, b'\x00')
   let mut size = 0L
   for ;; {
-    let read = file.read_into(buffer) catch {
+    let read = file.read_into(buffer.mut_view()) catch {
       error =>
         raise UnreadableArtifact(path~, detail=@debug.render(Repr(error)))
     }
