@@ -1,5 +1,4 @@
 import {
-  "moonbitlang/core/async",
   "moonbit-community/proton_ext/microphone",
   "moonbit-community/proton",
 }
