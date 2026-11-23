@@ -3,7 +3,8 @@
 ## 未发布
 
 Windows 叠加标题栏窗口可通过 `WindowHandle::set_titlebar_overlay()` 选择由宿主绘制
-窗口按钮，并在运行时更新高度和颜色，使窗口按钮与应用标题栏对齐。默认仍使用系统按钮。
+窗口按钮，并在运行时更新高度（至少 16 DIP）和颜色，使窗口按钮与应用标题栏对齐。
+默认仍使用系统按钮。
 参见 [Windows 自定义叠加标题栏](../introduction/application-api.md#windows-自定义叠加标题栏未发布)。
 
 macOS 应用可在启动前调用 `App.macos_render_when_occluded()`，使窗口被完全遮挡或

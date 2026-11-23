@@ -611,6 +611,15 @@ int32_t proton_test_custom_titlebar_overlay(void) {
                                                   0xff19212e, NULL, 0) ==
         PROTON_ERR_INVALID_ARGUMENT);
   CHECK(window.titlebar_buttons[0] == NULL);
+  CHECK(proton_engine_window_set_titlebar_overlay(
+            &window, 16, 0xffecf0f7, 0xff19212e, NULL, 0) == PROTON_OK);
+  CHECK(proton_engine_window_set_titlebar_overlay(&window, 15, 0xffecf0f7,
+                                                  0xff19212e, NULL, 0) ==
+        PROTON_ERR_INVALID_ARGUMENT);
+  CHECK(proton_engine_window_get_titlebar_area(&window, &x, &y, &width,
+                                               &band_height, &zoom, NULL,
+                                               0) == PROTON_OK);
+  CHECK(band_height == 16);
   for (int height = 64; height >= 32; height -= 32) {
     regions[0].height = height;
     CHECK(proton_engine_window_set_titlebar_overlay(
@@ -709,6 +718,55 @@ cleanup:
     UnregisterClassW(titlebar_preview_child_class, instance);
   if (previous != NULL)
     SetThreadDpiAwarenessContext(previous);
+  return result;
+}
+
+int32_t proton_test_custom_titlebar_close_interception(void) {
+  int result = 0;
+  HWND hwnd = NULL;
+  proton_engine_window_t window = {0};
+  window.titlebar_overlay = 1;
+  window.closable = 1;
+  proton_engine_register_window_class();
+  hwnd = CreateWindowExW(0, PROTON_ENGINE_WINDOW_CLASS, L"Overlay close test",
+                         WS_OVERLAPPEDWINDOW, 100, 100, 640, 480, NULL, NULL,
+                         GetModuleHandleW(NULL), &window);
+  CHECK(hwnd != NULL);
+  CHECK(proton_engine_window_set_titlebar_overlay(
+            &window, 32, 0xffecf0f7, 0xff19212e, NULL, 0) == PROTON_OK);
+  CHECK(proton_engine_window_set_close_interception(&window, 1, NULL, 0) ==
+        PROTON_OK);
+
+  // Follow the physical caption-button path through capture and release.
+  RECT controls;
+  CHECK(proton_engine_overlay_controls_rect(&window, &controls));
+  const POINT client_point = {controls.right - 1, (controls.bottom - 1) / 2};
+  POINT screen_point = client_point;
+  CHECK(ClientToScreen(hwnd, &screen_point));
+  const LPARAM screen = MAKELPARAM(screen_point.x, screen_point.y);
+  CHECK(SendMessageW(hwnd, WM_NCHITTEST, 0, screen) == HTCLOSE);
+  uint64_t last_request = 0;
+  MSG msg;
+  for (int allow = 0; allow <= 1; ++allow) {
+    SendMessageW(hwnd, WM_NCLBUTTONDOWN, HTCLOSE, screen);
+    SendMessageW(hwnd, WM_LBUTTONUP, 0,
+                 MAKELPARAM(client_point.x, client_point.y));
+    CHECK(IsWindow(hwnd) && window.close_request_pending &&
+          window.close_request_id != last_request);
+    last_request = window.close_request_id;
+    CHECK(proton_engine_window_respond_close_request(
+              &window, last_request, allow, NULL, 0) == PROTON_OK);
+    CHECK(IsWindow(hwnd) && !window.close_request_pending);
+    if (!allow) {
+      CHECK(!PeekMessageW(&msg, hwnd, WM_CLOSE, WM_CLOSE, PM_NOREMOVE));
+    }
+  }
+  CHECK(PeekMessageW(&msg, hwnd, WM_CLOSE, WM_CLOSE, PM_REMOVE));
+  DispatchMessageW(&msg);
+  CHECK(!IsWindow(hwnd));
+cleanup:
+  if (hwnd != NULL && IsWindow(hwnd))
+    DestroyWindow(hwnd);
   return result;
 }
 

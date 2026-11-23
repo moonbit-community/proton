@@ -301,8 +301,8 @@ window.set_titlebar_overlay(Some({
 }))
 ```
 
-`height` 是正数，单位是窗口 DIP，不随浏览器缩放变化。两种颜色都必须是
-不透明的 `#RRGGBB`。应用标题栏的高度或主题变化时，可重新调用接口，再以
+`height` 的单位是窗口 DIP，不随浏览器缩放变化；低于 16 DIP 的高度会被拒绝。
+两种颜色都必须是不透明的 `#RRGGBB`。应用标题栏的高度或主题变化时，可重新调用接口，再以
 `window.titlebar_area()`（MoonBit）或 `getTitlebarArea()`（JavaScript）查询页面布局区域。
 两者返回相同的可用矩形，单位是 **CSS 像素**；全屏时不返回矩形，也不显示按钮。
 退出全屏时，按钮恢复为进入前的样式。

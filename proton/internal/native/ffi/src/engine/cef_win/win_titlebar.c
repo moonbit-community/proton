@@ -532,11 +532,14 @@ int32_t proton_engine_window_set_titlebar_overlay(
     proton_engine_set_message(error, error_len, "window is not initialized");
     return PROTON_ERR_INVALID_HANDLE;
   }
-  if (height < 0 ||
-      (height > 0 && ((background >> 24) != 0xff || (symbol >> 24) != 0xff))) {
+  if (height != 0 && height < 16) {
     proton_engine_set_message(
-        error, error_len,
-        "custom titlebar requires positive height and opaque colors");
+        error, error_len, "custom titlebar height must be at least 16 DIPs");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  if (height != 0 && ((background >> 24) != 0xff || (symbol >> 24) != 0xff)) {
+    proton_engine_set_message(error, error_len,
+                              "custom titlebar requires opaque colors");
     return PROTON_ERR_INVALID_ARGUMENT;
   }
   const proton_win_custom_titlebar_t previous = window->custom_titlebar;

@@ -16,7 +16,7 @@ pub extend TitlebarStyle with Debug::{to_repr}
 /// Appearance of host-drawn caption buttons on a Windows overlay window.
 #derive(Debug, Eq)
 pub(all) struct TitlebarOverlay {
-  /// Positive height in window device-independent pixels (DIPs).
+  /// Height in window device-independent pixels (DIPs), at least 16.
   height : Int32
   /// Opaque color under the caption buttons, in `#RRGGBB` format.
   background_color : String

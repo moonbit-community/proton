@@ -312,9 +312,9 @@ window.set_titlebar_overlay(Some({
 }))
 ```
 
-`height` is a positive number of window DIPs, independent of browser zoom.
-Both colors must be opaque `#RRGGBB` values. Reapply the option when the app
-changes its titlebar height or theme, and use the extent reported by
+`height` is measured in window DIPs, independent of browser zoom. Heights below
+16 DIPs are rejected. Both colors must be opaque `#RRGGBB` values. Reapply the
+option when the app changes its titlebar height or theme, and use the extent reported by
 `window.titlebar_area()` (MoonBit) or `getTitlebarArea()` (JavaScript) for the
 page layout. Both report the same usable rectangle in **CSS pixels**, or no
 rectangle in fullscreen. The buttons stay hidden in fullscreen and return with

@@ -121,6 +121,16 @@ test "custom titlebar height drives hit testing and child clipping" {
 
 ///|
 #cfg(platform="windows")
+extern "C" fn titlebar_close_interception_test() -> Int32 = "proton_test_custom_titlebar_close_interception"
+
+///|
+#cfg(platform="windows")
+test "custom titlebar close respects both denial and approval" {
+  assert_eq(titlebar_close_interception_test(), 0)
+}
+
+///|
+#cfg(platform="windows")
 extern "C" fn closed_modal_collection_test() -> Int32 = "proton_test_closed_modal_window_collection"
 
 ///|
