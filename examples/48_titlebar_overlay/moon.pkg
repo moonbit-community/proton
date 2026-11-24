@@ -1,6 +1,6 @@
 import {
-  "moonbitlang/core/async",
   "moonbit-community/proton",
+  "moonbit-community/proton_contract",
 }
 
 supported_targets = "native"

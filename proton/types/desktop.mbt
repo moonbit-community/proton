@@ -13,6 +13,37 @@ pub extend TitlebarStyle with Eq::{not_equal, equal}
 pub extend TitlebarStyle with Debug::{to_repr}
 
 ///|
+/// Appearance of host-drawn caption buttons on a Windows overlay window.
+#derive(Debug, Eq)
+pub(all) struct TitlebarOverlay {
+  /// Height in window device-independent pixels (DIPs), at least 16.
+  height : Int32
+  /// Opaque color under the caption buttons, in `#RRGGBB` format.
+  background_color : String
+  /// Opaque color of the caption button glyphs, in `#RRGGBB` format.
+  symbol_color : String
+}
+
+///|
+pub extend TitlebarOverlay with Eq::{not_equal, equal}
+
+///|
+pub extend TitlebarOverlay with Debug::{to_repr}
+
+///|
+/// Usable overlay area in CSS pixels, relative to the web contents origin.
+#derive(ToJson)
+pub(all) struct TitlebarArea {
+  x : Double
+  y : Double
+  width : Double
+  height : Double
+}
+
+///|
+pub extend TitlebarArea with ToJson::{to_json}
+
+///|
 /// Controls how Proton chooses the native window chrome theme.
 #derive(Debug, Eq)
 pub(all) enum WindowThemePreference {

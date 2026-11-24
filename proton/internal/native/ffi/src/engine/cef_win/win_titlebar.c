@@ -1,10 +1,13 @@
 #if defined(_WIN32)
 
 #include "win_internal.h"
+#include "win_geometry.h"
+#include "../cef_common/message.h"
 
 #include <commctrl.h>
 #include <dwmapi.h>
 #include <string.h>
+#include <wchar.h>
 #include <windowsx.h>
 
 static int proton_win_is_caption_button_hit(LRESULT hit_test) {
@@ -196,17 +199,480 @@ int proton_engine_overlay_caption_buttons_rect(HWND hwnd, RECT *out) {
   return out->right > out->left && out->bottom > out->top;
 }
 
-void proton_engine_overlay_apply_frame(HWND hwnd) {
-  MARGINS margins = {
-      .cxLeftWidth = 0,
-      .cxRightWidth = 0,
-      .cyTopHeight = proton_engine_overlay_caption_band_height(hwnd),
-      .cyBottomHeight = 0,
+int proton_win_custom_titlebar_controls_rect(const RECT *client, int height,
+                                             UINT dpi, RECT *out) {
+  const int button_width =
+      min(proton_win_pixels(46, dpi), (client->right - client->left) / 3);
+  *out = (RECT){
+      .left = client->right - 3 * button_width,
+      .top = client->top,
+      .right = client->right,
+      .bottom = client->top + min(client->bottom - client->top,
+                                  proton_win_pixels(height, dpi)),
   };
-  (void)DwmExtendFrameIntoClientArea(hwnd, &margins);
+  return out->left < out->right && out->top < out->bottom;
 }
 
-static int proton_engine_overlay_drag_strip_rect(HWND hwnd, RECT *out) {
+int proton_engine_overlay_controls_rect(const proton_engine_window_t *window,
+                                        RECT *out) {
+  if (window->custom_titlebar.height == 0) {
+    return proton_engine_overlay_caption_buttons_rect(window->hwnd, out);
+  }
+  RECT client;
+  if (window->fullscreen || !GetClientRect(window->hwnd, &client) ||
+      IsIconic(window->hwnd)) {
+    return 0;
+  }
+  return proton_win_custom_titlebar_controls_rect(
+      &client, window->custom_titlebar.height,
+      proton_win_window_dpi(window->hwnd), out);
+}
+
+HRESULT proton_engine_overlay_apply_frame(proton_engine_window_t *window) {
+  // Keep the Win32 frame styles (resize, system menu, Snap), but do not
+  // extend the DWM caption surface into a host-drawn overlay.
+  MARGINS margins = {0};
+  if (window->custom_titlebar.height == 0) {
+    margins.cyTopHeight =
+        proton_engine_overlay_caption_band_height(window->hwnd);
+  }
+  return DwmExtendFrameIntoClientArea(window->hwnd, &margins);
+}
+
+static const LRESULT proton_win_caption_hits[] = {HTMINBUTTON, HTMAXBUTTON,
+                                                  HTCLOSE};
+
+static UINT
+proton_win_custom_titlebar_command(const proton_engine_window_t *window,
+                                   LRESULT button) {
+  const LONG style = GetWindowLongW(window->hwnd, GWL_STYLE);
+  switch (button) {
+  case HTMINBUTTON:
+    return (style & WS_MINIMIZEBOX) ? SC_MINIMIZE : 0;
+  case HTMAXBUTTON:
+    return (style & WS_MAXIMIZEBOX)
+               ? (IsZoomed(window->hwnd) ? SC_RESTORE : SC_MAXIMIZE)
+               : 0;
+  case HTCLOSE:
+    return window->closable ? SC_CLOSE : 0;
+  default:
+    return 0;
+  }
+}
+
+static void proton_win_custom_titlebar_glyph(HDC dc, RECT rect, LRESULT button,
+                                             UINT command, UINT dpi,
+                                             COLORREF color) {
+  const int width = rect.right - rect.left;
+  const int height = rect.bottom - rect.top;
+  const int size = min(proton_win_pixels(10, dpi), min(width, height) - 2);
+  if (size < 3) {
+    return;
+  }
+  const int x = rect.left + (width - size) / 2;
+  const int y = rect.top + (height - size) / 2;
+  const int end = size - 1;
+  HPEN pen = CreatePen(PS_SOLID, max(1, proton_win_pixels(1, dpi)), color);
+  if (pen == NULL) {
+    return;
+  }
+  HGDIOBJ old_pen = SelectObject(dc, pen);
+  HGDIOBJ old_brush = SelectObject(dc, GetStockObject(NULL_BRUSH));
+  if (button == HTMINBUTTON) {
+    MoveToEx(dc, x, y + size / 2, NULL);
+    LineTo(dc, x + size, y + size / 2);
+  } else if (button == HTMAXBUTTON && command == SC_RESTORE) {
+    const int offset = max(1, size / 4);
+    Rectangle(dc, x, y + offset, x + size - offset, y + size);
+    MoveToEx(dc, x + offset, y + offset, NULL);
+    LineTo(dc, x + offset, y);
+    LineTo(dc, x + end, y);
+    LineTo(dc, x + end, y + end - offset);
+    LineTo(dc, x + end - offset, y + end - offset);
+  } else if (button == HTMAXBUTTON) {
+    Rectangle(dc, x, y, x + size, y + size);
+  } else {
+    MoveToEx(dc, x, y, NULL);
+    LineTo(dc, x + size, y + size);
+    MoveToEx(dc, x + end, y, NULL);
+    LineTo(dc, x - 1, y + size);
+  }
+  SelectObject(dc, old_brush);
+  SelectObject(dc, old_pen);
+  DeleteObject(pen);
+}
+
+static LRESULT
+proton_win_caption_hit_for_hwnd(const proton_engine_window_t *window,
+                                HWND hwnd) {
+  for (int i = 0; hwnd != NULL && i < 3; ++i) {
+    if (window->titlebar_buttons[i] == hwnd) {
+      return proton_win_caption_hits[i];
+    }
+  }
+  return HTNOWHERE;
+}
+
+static void proton_win_custom_titlebar_draw(proton_engine_window_t *window,
+                                            HWND hwnd, HDC dc) {
+  const LRESULT button = proton_win_caption_hit_for_hwnd(window, hwnd);
+  RECT rect;
+  if (button == HTNOWHERE || !GetClientRect(hwnd, &rect)) {
+    return;
+  }
+  const UINT command = proton_win_custom_titlebar_command(window, button);
+  const int enabled =
+      command != 0 && IsWindowEnabled(hwnd) && IsWindowEnabled(window->hwnd);
+  const int selected =
+      (SendMessageW(hwnd, BM_GETSTATE, 0, 0) & BST_PUSHED) != 0;
+  const int pressed = window->titlebar_pressed_button == button || selected;
+  COLORREF foreground = enabled ? window->custom_titlebar.foreground
+                                : GetSysColor(COLOR_GRAYTEXT);
+  COLORREF background = window->custom_titlebar.background;
+  if (enabled && (window->titlebar_hot_button == button || selected)) {
+    if (button == HTCLOSE) {
+      background = pressed ? RGB(196, 43, 28) : RGB(232, 17, 35);
+      foreground = RGB(255, 255, 255);
+    } else {
+      /* Blend a little of the glyph color into the background. */
+      const int weight = pressed ? 5 : 9;
+      background =
+          RGB(GetRValue(background) +
+                  (GetRValue(foreground) - GetRValue(background)) / weight,
+              GetGValue(background) +
+                  (GetGValue(foreground) - GetGValue(background)) / weight,
+              GetBValue(background) +
+                  (GetBValue(foreground) - GetBValue(background)) / weight);
+    }
+  }
+  SetDCBrushColor(dc, background);
+  FillRect(dc, &rect, (HBRUSH)GetStockObject(DC_BRUSH));
+  proton_win_custom_titlebar_glyph(dc, rect, button, command,
+                                   proton_win_window_dpi(window->hwnd),
+                                   foreground);
+  if (GetFocus() == hwnd &&
+      !(SendMessageW(hwnd, WM_QUERYUISTATE, 0, 0) & UISF_HIDEFOCUS)) {
+    InflateRect(&rect, -3, -3);
+    DrawFocusRect(dc, &rect);
+  }
+}
+
+int proton_engine_custom_titlebar_click(proton_engine_window_t *window,
+                                        HWND hwnd) {
+  const LRESULT button = proton_win_caption_hit_for_hwnd(window, hwnd);
+  if (button == HTNOWHERE) {
+    return 0;
+  }
+  if (IsWindowVisible(hwnd) && IsWindowEnabled(window->hwnd)) {
+    const UINT command = proton_win_custom_titlebar_command(window, button);
+    if (command != 0) {
+      PostMessageW(window->hwnd, WM_SYSCOMMAND, command, 0);
+    }
+  }
+  return 1;
+}
+
+static const wchar_t *
+proton_win_titlebar_button_name(const proton_engine_window_t *window,
+                                LRESULT button) {
+  if (button == HTMINBUTTON) {
+    return *window->titlebar_minimize_label ? window->titlebar_minimize_label
+                                            : L"Minimize";
+  }
+  if (button == HTCLOSE) {
+    return *window->titlebar_close_label ? window->titlebar_close_label
+                                         : L"Close";
+  }
+  if (IsZoomed(window->hwnd)) {
+    return *window->titlebar_restore_label ? window->titlebar_restore_label
+                                           : L"Restore";
+  }
+  return *window->titlebar_maximize_label ? window->titlebar_maximize_label
+                                          : L"Maximize";
+}
+
+static int proton_win_titlebar_forward_system_menu(
+    proton_engine_window_t *window, UINT msg, WPARAM wparam, LPARAM lparam) {
+  // A focused child receives Alt+Space instead of the frame. Open the
+  // native menu on the first keydown and consume its translated character.
+  if ((msg != WM_SYSKEYDOWN && msg != WM_SYSCHAR) || wparam != VK_SPACE ||
+      !(lparam & (1L << 29)) || window->custom_titlebar.height == 0 ||
+      window->fullscreen ||
+      !(GetWindowLongW(window->hwnd, GWL_STYLE) & WS_SYSMENU)) {
+    return 0;
+  }
+  if (msg == WM_SYSKEYDOWN && !(lparam & (1L << 30))) {
+    PostMessageW(window->hwnd, WM_SYSCOMMAND, SC_KEYMENU, L' ');
+  }
+  return 1;
+}
+
+static LRESULT CALLBACK proton_win_titlebar_button_proc(HWND hwnd, UINT msg,
+                                                        WPARAM wparam,
+                                                        LPARAM lparam,
+                                                        UINT_PTR id,
+                                                        DWORD_PTR data) {
+  proton_engine_window_t *window = (proton_engine_window_t *)data;
+  switch (msg) {
+  case WM_NCHITTEST:
+    // Keep standard push buttons for UI Automation, but route physical mouse
+    // input to the frame so the shell sees HTMAXBUTTON.
+    return HTTRANSPARENT;
+  case WM_SYSKEYDOWN:
+  case WM_SYSCHAR:
+    if (proton_win_titlebar_forward_system_menu(window, msg, wparam, lparam)) {
+      return 0;
+    }
+    break;
+  case WM_ERASEBKGND:
+    return 1;
+  case WM_PAINT: {
+    PAINTSTRUCT paint;
+    HDC dc = BeginPaint(hwnd, &paint);
+    proton_win_custom_titlebar_draw(window, hwnd, dc);
+    EndPaint(hwnd, &paint);
+    return 0;
+  }
+  case WM_PRINTCLIENT:
+    proton_win_custom_titlebar_draw(window, hwnd, (HDC)wparam);
+    return 0;
+  case WM_SETFOCUS:
+  case WM_KILLFOCUS:
+  case WM_UPDATEUISTATE:
+  case BM_SETSTATE: {
+    // The native class owns keyboard and focus; repaint its custom face after
+    // it changes state (the button procedure can paint synchronously).
+    LRESULT result = DefSubclassProc(hwnd, msg, wparam, lparam);
+    InvalidateRect(hwnd, NULL, FALSE);
+    return result;
+  }
+  case WM_NCDESTROY:
+    RemoveWindowSubclass(hwnd, proton_win_titlebar_button_proc, id);
+    break;
+  }
+  return DefSubclassProc(hwnd, msg, wparam, lparam);
+}
+
+static void
+proton_win_titlebar_destroy_buttons(proton_engine_window_t *window) {
+  for (int i = 0; i < 3; ++i) {
+    if (window->titlebar_buttons[i] != NULL) {
+      DestroyWindow(window->titlebar_buttons[i]);
+      window->titlebar_buttons[i] = NULL;
+    }
+  }
+}
+
+static int proton_win_titlebar_create_buttons(proton_engine_window_t *window) {
+  for (int i = 0; i < 3; ++i) {
+    HWND button = CreateWindowExW(
+        WS_EX_NOPARENTNOTIFY, L"BUTTON",
+        proton_win_titlebar_button_name(window, proton_win_caption_hits[i]),
+        WS_CHILD | WS_TABSTOP | BS_PUSHBUTTON, 0, 0, 0, 0, window->hwnd,
+        (HMENU)(INT_PTR)(100 + i), GetModuleHandleW(NULL), NULL);
+    window->titlebar_buttons[i] = button;
+    if (button == NULL ||
+        !SetWindowSubclass(button, proton_win_titlebar_button_proc, 1,
+                           (DWORD_PTR)window)) {
+      proton_win_titlebar_destroy_buttons(window);
+      return 0;
+    }
+  }
+  return 1;
+}
+
+void proton_engine_custom_titlebar_layout(proton_engine_window_t *window) {
+  if (window->custom_titlebar.height == 0) {
+    return;
+  }
+  RECT controls;
+  const int visible = proton_engine_overlay_controls_rect(window, &controls);
+  // Insert right to left so the HWND/assistive traversal order is left to
+  // right.
+  for (int i = 2; i >= 0; --i) {
+    const HWND hwnd = window->titlebar_buttons[i];
+    if (!visible) {
+      ShowWindow(hwnd, SW_HIDE);
+      continue;
+    }
+    const LRESULT button = proton_win_caption_hits[i];
+    const int width = (controls.right - controls.left) / 3;
+    if (button == HTMAXBUTTON) {
+      const wchar_t *name = proton_win_titlebar_button_name(window, button);
+      wchar_t previous[PROTON_ENGINE_MAX_LABEL_BYTES] = {0};
+      GetWindowTextW(hwnd, previous, PROTON_ENGINE_MAX_LABEL_BYTES);
+      if (wcscmp(previous, name) != 0) {
+        SetWindowTextW(hwnd, name);
+      }
+    }
+    const int enabled = proton_win_custom_titlebar_command(window, button) != 0;
+    if (IsWindowEnabled(hwnd) != enabled) {
+      EnableWindow(hwnd, enabled);
+    }
+    SetWindowPos(hwnd, HWND_TOP, controls.left + i * width, controls.top, width,
+                 controls.bottom - controls.top,
+                 SWP_NOACTIVATE | SWP_SHOWWINDOW);
+    InvalidateRect(hwnd, NULL, FALSE);
+  }
+}
+
+int32_t proton_engine_window_set_titlebar_overlay(
+    proton_engine_window_t *window, int32_t height, uint32_t background,
+    uint32_t symbol, char *error, size_t error_len) {
+  if (window == NULL) {
+    proton_engine_set_message(error, error_len, "window is not initialized");
+    return PROTON_ERR_INVALID_HANDLE;
+  }
+  if (window->headless || !window->titlebar_overlay) {
+    proton_engine_set_message(
+        error, error_len, "custom titlebar requires a native Overlay window");
+    return PROTON_ERR_UNSUPPORTED;
+  }
+  if (window->hwnd == NULL) {
+    proton_engine_set_message(error, error_len, "window is not initialized");
+    return PROTON_ERR_INVALID_HANDLE;
+  }
+  if (height != 0 && height < 16) {
+    proton_engine_set_message(
+        error, error_len, "custom titlebar height must be at least 16 DIPs");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  if (height != 0 && ((background >> 24) != 0xff || (symbol >> 24) != 0xff)) {
+    proton_engine_set_message(error, error_len,
+                              "custom titlebar requires opaque colors");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  const proton_win_custom_titlebar_t previous = window->custom_titlebar;
+  const int enabling = previous.height == 0 && height > 0;
+  const int disabling = previous.height > 0 && height == 0;
+  const proton_win_custom_titlebar_t requested = {
+      .height = height,
+      .background =
+          height ? RGB(background >> 16, background >> 8, background) : 0,
+      .foreground = height ? RGB(symbol >> 16, symbol >> 8, symbol) : 0,
+  };
+  if (previous.height == requested.height &&
+      previous.background == requested.background &&
+      previous.foreground == requested.foreground) {
+    return PROTON_OK;
+  }
+  if (enabling && !proton_win_titlebar_create_buttons(window)) {
+    proton_engine_set_message(error, error_len,
+                              "failed to create titlebar buttons");
+    return PROTON_ERR_PLATFORM;
+  }
+  window->custom_titlebar = requested;
+  if ((enabling || disabling) &&
+      FAILED(proton_engine_overlay_apply_frame(window))) {
+    window->custom_titlebar = previous;
+    if (enabling) {
+      proton_win_titlebar_destroy_buttons(window);
+    }
+    proton_engine_set_message(error, error_len,
+                              "failed to update the native titlebar frame");
+    return PROTON_ERR_PLATFORM;
+  }
+  if (disabling) {
+    window->titlebar_hot_button = HTNOWHERE;
+    if (window->titlebar_pressed_button != HTNOWHERE) {
+      window->titlebar_pressed_button = HTNOWHERE;
+      ReleaseCapture();
+    }
+    proton_win_titlebar_destroy_buttons(window);
+  }
+  proton_engine_custom_titlebar_relayout(window);
+  return PROTON_OK;
+}
+
+static LRESULT proton_win_custom_titlebar_hit(proton_engine_window_t *window,
+                                              POINT client_point) {
+  RECT controls;
+  return proton_engine_overlay_controls_rect(window, &controls)
+             ? proton_win_titlebar_caption_button_hit(client_point, &controls)
+             : HTNOWHERE;
+}
+
+static void proton_win_custom_titlebar_hot(proton_engine_window_t *window,
+                                           LRESULT button) {
+  if (window->titlebar_hot_button != button) {
+    window->titlebar_hot_button = button;
+    for (int i = 0; i < 3; ++i) {
+      if (window->titlebar_buttons[i] != NULL) {
+        InvalidateRect(window->titlebar_buttons[i], NULL, FALSE);
+      }
+    }
+  }
+}
+
+int proton_engine_custom_titlebar_mouse(proton_engine_window_t *window,
+                                        UINT msg, WPARAM wparam,
+                                        LPARAM lparam) {
+  const HWND hwnd = window->hwnd;
+  POINT point = {GET_X_LPARAM(lparam), GET_Y_LPARAM(lparam)};
+  switch (msg) {
+  case WM_NCMOUSEMOVE:
+    if (proton_win_is_caption_button_hit(wparam)) {
+      TRACKMOUSEEVENT tracking = {sizeof(tracking), TME_LEAVE | TME_NONCLIENT,
+                                  hwnd, 0};
+      TrackMouseEvent(&tracking);
+      proton_win_custom_titlebar_hot(window, wparam);
+    } else {
+      proton_win_custom_titlebar_hot(window, HTNOWHERE);
+    }
+    // Leave non-client hover handling to Windows for Snap Layouts.
+    break;
+  case WM_NCMOUSELEAVE:
+    proton_win_custom_titlebar_hot(window, HTNOWHERE);
+    break;
+  case WM_NCLBUTTONDOWN:
+  case WM_NCLBUTTONDBLCLK:
+    if (proton_win_is_caption_button_hit(wparam)) {
+      if (proton_win_custom_titlebar_command(window, wparam) != 0) {
+        window->titlebar_pressed_button = wparam;
+        SetCapture(hwnd);
+        window->titlebar_hot_button = HTNOWHERE;
+        proton_win_custom_titlebar_hot(window, wparam);
+      }
+      return 1; // Never let DefWindowProc draw a system pressed button.
+    }
+    break;
+  case WM_MOUSEMOVE:
+    if (window->titlebar_pressed_button != HTNOWHERE) {
+      LRESULT hit = proton_win_custom_titlebar_hit(window, point);
+      proton_win_custom_titlebar_hot(
+          window, hit == window->titlebar_pressed_button ? hit : HTNOWHERE);
+    }
+    break;
+  case WM_LBUTTONUP:
+    if (window->titlebar_pressed_button != HTNOWHERE) {
+      const LRESULT button = proton_win_custom_titlebar_hit(window, point);
+      const UINT command =
+          button == window->titlebar_pressed_button
+              ? proton_win_custom_titlebar_command(window, button)
+              : 0;
+      window->titlebar_pressed_button = HTNOWHERE;
+      proton_win_custom_titlebar_hot(window, HTNOWHERE);
+      ReleaseCapture();
+      if (command != 0) {
+        SendMessageW(hwnd, WM_SYSCOMMAND, command, 0);
+      }
+      return 1;
+    }
+    break;
+  case WM_CANCELMODE:
+  case WM_CAPTURECHANGED:
+    if (window->titlebar_pressed_button != HTNOWHERE) {
+      window->titlebar_pressed_button = HTNOWHERE;
+      proton_win_custom_titlebar_hot(window, HTNOWHERE);
+    }
+    break;
+  }
+  return 0;
+}
+
+static int proton_engine_overlay_drag_strip_rect(HWND hwnd,
+                                                 const RECT *caption_buttons,
+                                                 RECT *out) {
   if (hwnd == NULL || out == NULL) {
     return 0;
   }
@@ -228,12 +694,9 @@ static int proton_engine_overlay_drag_strip_rect(HWND hwnd, RECT *out) {
   const int caption_height = GetSystemMetricsForDpi(SM_CYCAPTION, dpi);
   int drag_handle_width = GetSystemMetricsForDpi(SM_CXSIZE, dpi);
 
-  RECT caption_buttons;
-  const int has_caption_buttons =
-      proton_engine_overlay_caption_buttons_rect(hwnd, &caption_buttons);
-  if (has_caption_buttons) {
+  if (caption_buttons != NULL) {
     const int live_caption_button_width =
-        (caption_buttons.right - caption_buttons.left) / 3;
+        (caption_buttons->right - caption_buttons->left) / 3;
     if (live_caption_button_width > 0) {
       drag_handle_width = live_caption_button_width;
     }
@@ -249,8 +712,8 @@ static int proton_engine_overlay_drag_strip_rect(HWND hwnd, RECT *out) {
   out->left = client.left;
   out->right = min(client.right, client.left + drag_handle_width);
   out->top = max(client.top, drag_top_in_window - client_top);
-  out->bottom = has_caption_buttons
-                    ? min(client.bottom, caption_buttons.bottom)
+  out->bottom = caption_buttons != NULL
+                    ? min(client.bottom, caption_buttons->bottom)
                     : min(client.bottom, out->top + caption_height);
   return out->right > out->left && out->bottom > out->top;
 }
@@ -286,6 +749,10 @@ static LRESULT CALLBACK proton_engine_overlay_child_proc(
   if (window == NULL || !window->titlebar_overlay || window->hwnd == NULL ||
       !IsWindow(window->hwnd)) {
     return DefSubclassProc(hwnd, msg, wparam, lparam);
+  }
+
+  if (proton_win_titlebar_forward_system_menu(window, msg, wparam, lparam)) {
+    return 0;
   }
 
   if (msg == WM_PARENTNOTIFY && LOWORD(wparam) == WM_CREATE) {
@@ -347,7 +814,7 @@ void proton_engine_overlay_clip_browser(proton_engine_window_t *window,
     return;
   }
   RECT buttons;
-  if (proton_engine_overlay_caption_buttons_rect(window->hwnd, &buttons)) {
+  if (proton_engine_overlay_controls_rect(window, &buttons)) {
     MapWindowPoints(window->hwnd, NULL, (POINT *)&buttons, 2);
     OffsetRect(&buttons, -frame.left, -frame.top);
     proton_engine_overlay_subtract_rect(region, &buttons);
@@ -393,18 +860,32 @@ void proton_engine_resize_browser(proton_engine_window_t *window,
 }
 
 LRESULT proton_engine_overlay_hit_test(HWND hwnd, LPARAM lparam) {
+  proton_engine_window_t *window =
+      (proton_engine_window_t *)GetWindowLongPtrW(hwnd, GWLP_USERDATA);
+  const int custom = window != NULL && window->custom_titlebar.height > 0;
   LRESULT system_hit_test = HTNOWHERE;
-  (void)DwmDefWindowProc(hwnd, WM_NCHITTEST, 0, lparam, &system_hit_test);
+  if (custom) {
+    if (window->fullscreen) {
+      return HTCLIENT;
+    }
+  } else {
+    (void)DwmDefWindowProc(hwnd, WM_NCHITTEST, 0, lparam, &system_hit_test);
+  }
 
   POINT client_point = {GET_X_LPARAM(lparam), GET_Y_LPARAM(lparam)};
   ScreenToClient(hwnd, &client_point);
   RECT caption_buttons;
   const int has_caption_buttons =
-      proton_engine_overlay_caption_buttons_rect(hwnd, &caption_buttons);
+      custom
+          ? proton_engine_overlay_controls_rect(window, &caption_buttons)
+          : proton_engine_overlay_caption_buttons_rect(hwnd, &caption_buttons);
   if (has_caption_buttons) {
-    LRESULT caption_hit = proton_win_titlebar_caption_button_hit(
-        client_point, &caption_buttons);
+    LRESULT caption_hit =
+        proton_win_titlebar_caption_button_hit(client_point, &caption_buttons);
     if (caption_hit != HTNOWHERE) {
+      if (custom && !proton_win_custom_titlebar_command(window, caption_hit)) {
+        return HTCLIENT;
+      }
       system_hit_test = caption_hit;
     }
   }
@@ -418,22 +899,24 @@ LRESULT proton_engine_overlay_hit_test(HWND hwnd, LPARAM lparam) {
   if (dpi == 0) {
     dpi = USER_DEFAULT_SCREEN_DPI;
   }
-  const int padded_border =
-      GetSystemMetricsForDpi(SM_CXPADDEDBORDER, dpi);
+  const int resizable =
+      !custom || (GetWindowLongW(hwnd, GWL_STYLE) & WS_THICKFRAME);
+  const int padded_border = GetSystemMetricsForDpi(SM_CXPADDEDBORDER, dpi);
   const int resize_border_x =
-      GetSystemMetricsForDpi(SM_CXSIZEFRAME, dpi) + padded_border;
+      resizable ? GetSystemMetricsForDpi(SM_CXSIZEFRAME, dpi) + padded_border
+                : 0;
   const int resize_border_y =
-      GetSystemMetricsForDpi(SM_CYSIZEFRAME, dpi) + padded_border;
+      resizable ? GetSystemMetricsForDpi(SM_CYSIZEFRAME, dpi) + padded_border
+                : 0;
   const int maximized = IsZoomed(hwnd);
   POINT client_origin = {0, 0};
   ClientToScreen(hwnd, &client_origin);
   const int client_left = client_origin.x - window_rect.left;
   const int client_top = client_origin.y - window_rect.top;
   RECT drag_strip = {0};
-  proton_engine_window_t *window =
-      (proton_engine_window_t *)GetWindowLongPtrW(hwnd, GWLP_USERDATA);
   if (window == NULL || !window->draggable_regions_reported) {
-    (void)proton_engine_overlay_drag_strip_rect(hwnd, &drag_strip);
+    (void)proton_engine_overlay_drag_strip_rect(
+        hwnd, has_caption_buttons ? &caption_buttons : NULL, &drag_strip);
   }
 
   proton_win_titlebar_hit_test_input_t input = {

@@ -2156,6 +2156,46 @@ pub fn Window::set_background_color(
 }
 
 ///|
+fn parse_titlebar_color(
+  color : String,
+  name : String,
+) -> UInt32 raise NativeError {
+  guard color.length() == 7 else {
+    raise invalid_argument(name + " must be an opaque #RRGGBB color")
+  }
+  parse_color_argb(color, name)
+}
+
+///|
+pub fn Window::set_titlebar_overlay(
+  self : Window,
+  overlay : TitlebarOverlay?,
+) -> Unit raise NativeError {
+  let handle = self.live_handle()
+  let (height, background, symbol) : (Int32, UInt32, UInt32) = match overlay {
+    None => (0, 0, 0)
+    Some(style) => {
+      guard style.height > 0 else {
+        raise invalid_argument("titlebar overlay height must be positive")
+      }
+      (
+        style.height,
+        parse_titlebar_color(
+          style.background_color,
+          "titlebar background color",
+        ),
+        parse_titlebar_color(style.symbol_color, "titlebar symbol color"),
+      )
+    }
+  }
+  check_status(
+    @native_ffi.proton_window_set_titlebar_overlay_ffi(
+      handle, height, background, symbol,
+    ),
+  )
+}
+
+///|
 pub fn Window::set_theme(
   self : Window,
   theme : WindowThemePreference,

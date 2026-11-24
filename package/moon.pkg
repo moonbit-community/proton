@@ -1,7 +1,6 @@
 import {
   "moonbit-community/proton_package/arguments" @package_args,
   "moonbit-community/proton_package/lib" @package,
-  "moonbitlang/core/async",
   "moonbitlang/core/async/fs" @async_fs,
   "moonbitlang/core/argparse",
   "moonbitlang/core/env",
@@ -9,6 +8,10 @@ import {
   "moonbitlang/x/path",
   "moonbitlang/x/sys",
 }
+
+import {
+  "moonbitlang/core/async",
+} for "wbtest"
 
 pkgtype(kind: "executable")
 

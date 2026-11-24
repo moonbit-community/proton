@@ -3,6 +3,7 @@ package "moonbit-community/proton/types"
 
 import {
   "moonbitlang/core/debug",
+  "moonbitlang/core/json",
 }
 
 // Values
@@ -275,6 +276,25 @@ pub(all) enum ThumbarButtonFlag {
 pub fn ThumbarButtonFlag::equal(Self, Self) -> Bool
 pub fn ThumbarButtonFlag::not_equal(Self, Self) -> Bool
 pub fn ThumbarButtonFlag::to_repr(Self) -> @debug.Repr
+
+#derive(@json.ToJson)
+pub(all) struct TitlebarArea {
+  x : Double
+  y : Double
+  width : Double
+  height : Double
+}
+pub fn TitlebarArea::to_json(Self) -> @json.Json
+
+#derive(Eq, @debug.Debug)
+pub(all) struct TitlebarOverlay {
+  height : Int32
+  background_color : String
+  symbol_color : String
+}
+pub fn TitlebarOverlay::equal(Self, Self) -> Bool
+pub fn TitlebarOverlay::not_equal(Self, Self) -> Bool
+pub fn TitlebarOverlay::to_repr(Self) -> @debug.Repr
 
 #derive(Eq, @debug.Debug)
 pub(all) enum TitlebarStyle {

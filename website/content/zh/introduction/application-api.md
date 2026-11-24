@@ -289,6 +289,29 @@ on_render_process_gone 同时覆盖主页面和子视图，无需额外订阅 on
 
 `TitlebarStyle::Overlay` 适用于 macOS、Windows 和 Linux。叠加标题栏页面通过 `await window.__MoonBit__.getTitlebarArea()` 查询可用区域，返回 CSS 像素单位的 `{ x, y, width, height }`，不可用时返回 `null`。在布局时及窗口缩放后查询，由应用将结果应用到 CSS。拖动区域内的交互控件需要设置 `-webkit-app-region: no-drag`。
 
+### Windows 自定义叠加标题栏（未发布）
+
+对于以 `TitlebarStyle::Overlay` 创建的 Windows 窗口，应用宿主可以选择自行绘制窗口按钮，使其与应用标题栏一致：
+
+```moonbit
+window.set_titlebar_overlay(Some({
+  height: 48,
+  background_color: "#2b2b2b",
+  symbol_color: "#f0f0f0",
+}))
+```
+
+`height` 的单位是窗口 DIP，不随浏览器缩放变化；低于 16 DIP 的高度会被拒绝。
+两种颜色都必须是不透明的 `#RRGGBB`。应用标题栏的高度或主题变化时，可重新调用接口，再以
+`window.titlebar_area()`（MoonBit）或 `getTitlebarArea()`（JavaScript）查询页面布局区域。
+两者返回相同的可用矩形，单位是 **CSS 像素**；全屏时不返回矩形，也不显示按钮。
+退出全屏时，按钮恢复为进入前的样式。
+
+未配置时使用系统按钮；配置后传入 `None` 可恢复系统按钮。在非叠加标题栏窗口、
+无窗口模式或其他平台调用此接口会抛出 `WindowSessionError`。配置接口由应用宿主调用，
+默认 JavaScript 桥接不提供配置入口。[叠加标题栏示例](https://github.com/moonbit-community/proton/tree/main/examples/48_titlebar_overlay)
+演示了如何注册应用命令并将返回的区域应用到页面。
+
 **无障碍与无窗口执行**
 
 Web 内容使用 Chromium 原生无障碍树。页面应提供语义化 HTML、ARIA、键盘导航和可见焦点。默认遵循平台无障碍策略；`App.accessibility(AccessibilityMode::AlwaysEnabled)` 使无障碍树在整个运行期间保持可用。参见[各平台无障碍行为](https://github.com/moonbit-community/proton/blob/9a0c5a9300f293015288acc1ff5f186f563e6a77/proton/README.md#accessibility)。

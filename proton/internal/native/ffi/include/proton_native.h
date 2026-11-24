@@ -343,6 +343,9 @@ int32_t proton_window_set_ignore_mouse_events(proton_window_handle_t window,
                                               int32_t forward);
 int32_t proton_window_set_background_color(proton_window_handle_t window,
                                            uint32_t color);
+int32_t proton_window_set_titlebar_overlay(proton_window_handle_t window,
+                                           int32_t height, uint32_t background,
+                                           uint32_t symbol);
 int32_t proton_window_set_theme(proton_window_handle_t window,
                                 int32_t theme_preference);
 int32_t proton_window_set_visible_on_all_workspaces(

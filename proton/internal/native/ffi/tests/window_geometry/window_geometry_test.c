@@ -262,6 +262,11 @@ int32_t proton_test_window_native_sizes(int32_t overlay) {
   window.resizable = 1;
   window.titlebar_overlay = overlay;
   char error[256] = {0};
+  if (!overlay) {
+    CHECK(proton_engine_window_set_titlebar_overlay(
+              &window, 48, 0xff222222, 0xffffffff, error, sizeof(error)) ==
+          PROTON_ERR_UNSUPPORTED);
+  }
   CHECK(proton_engine_window_set_size(&window, 640, 480, error,
                                       sizeof(error)) == PROTON_OK);
   CHECK(GetWindowRect(hwnd, &frame));
@@ -459,6 +464,309 @@ cleanup:
     UnregisterClassW(L"ProtonTitlebarHitTest", instance);
   if (previous != NULL)
     SetThreadDpiAwarenessContext(previous);
+  return result;
+}
+
+static LRESULT custom_titlebar_hit(HWND hwnd, POINT point) {
+  ClientToScreen(hwnd, &point);
+  return SendMessageW(hwnd, WM_NCHITTEST, 0, MAKELPARAM(point.x, point.y));
+}
+
+int32_t proton_test_custom_titlebar_dpi(void) {
+  int result = 0;
+  const UINT dpis[] = {96, 144, 240};
+  const RECT clients[] = {
+      {0, 0, 800, 600}, {0, 0, 1200, 900}, {0, 0, 2000, 1500}};
+  const RECT expected[] = {
+      {662, 0, 800, 64}, {993, 0, 1200, 96}, {1655, 0, 2000, 160}};
+  for (size_t i = 0; i < sizeof(dpis) / sizeof(dpis[0]); ++i) {
+    RECT buttons;
+    CHECK(proton_win_custom_titlebar_controls_rect(&clients[i], 64, dpis[i],
+                                                   &buttons));
+    CHECK(EqualRect(&buttons, &expected[i]));
+  }
+cleanup:
+  return result;
+}
+
+static const wchar_t titlebar_preview_child_class[] =
+    L"ProtonTitlebarPreviewChild";
+
+static LRESULT CALLBACK titlebar_preview_child(HWND hwnd, UINT msg,
+                                               WPARAM wparam, LPARAM lparam) {
+  if (msg == WM_PAINT) {
+    const proton_engine_window_t *window =
+        (proton_engine_window_t *)GetWindowLongPtrW(GetParent(hwnd),
+                                                    GWLP_USERDATA);
+    PAINTSTRUCT paint;
+    HDC dc = BeginPaint(hwnd, &paint);
+    RECT row;
+    GetClientRect(hwnd, &row);
+    FillRect(dc, &row, (HBRUSH)GetStockObject(WHITE_BRUSH));
+    const UINT dpi = proton_win_window_dpi(hwnd);
+    row.bottom = proton_win_pixels(window->custom_titlebar.height, dpi);
+    SetDCBrushColor(dc, window->custom_titlebar.background);
+    FillRect(dc, &row, (HBRUSH)GetStockObject(DC_BRUSH));
+    row.left += proton_win_pixels(16, dpi);
+    SetBkMode(dc, TRANSPARENT);
+    SetTextColor(dc, window->custom_titlebar.foreground);
+    DrawTextW(dc, L"Proton titlebar preview - F6 changes height and theme", -1,
+              &row, DT_SINGLELINE | DT_VCENTER | DT_NOPREFIX);
+    EndPaint(hwnd, &paint);
+    return 0;
+  }
+  return DefWindowProcW(hwnd, msg, wparam, lparam);
+}
+
+/* Optional real input/painting check. The child stands in for the browser's
+ * paint surface but runs through the same HWND clipping and subclassing. */
+static int preview_custom_titlebar(proton_engine_window_t *window,
+                                   proton_engine_view_t *view,
+                                   proton_win_titlebar_region_t *drag_region) {
+  const HWND hwnd = window->hwnd;
+  ShowWindow(view->hwnd, SW_SHOWNA);
+  ShowWindow(hwnd, SW_SHOW);
+  MSG msg;
+  while (IsWindow(hwnd)) {
+    if (GetMessageW(&msg, NULL, 0, 0) <= 0) {
+      return 0;
+    }
+    if (msg.message == WM_KEYDOWN && msg.wParam == VK_F6) {
+      const int tall = window->custom_titlebar.height == 64;
+      if (proton_engine_window_set_titlebar_overlay(
+              window, tall ? 32 : 64, tall ? 0xffecf0f7 : 0xff243144,
+              tall ? 0xff19212e : 0xfff2f5f9, NULL, 0) != PROTON_OK) {
+        return 0;
+      }
+      drag_region->height = window->custom_titlebar.height;
+      InvalidateRect(view->hwnd, NULL, FALSE);
+    } else {
+      TranslateMessage(&msg);
+      DispatchMessageW(&msg);
+    }
+    RECT client;
+    if (!IsIconic(hwnd) && GetClientRect(hwnd, &client)) {
+      const UINT dpi = proton_win_window_dpi(hwnd);
+      int width = proton_win_logical(client.right, dpi);
+      int height = proton_win_logical(client.bottom, dpi);
+      if (width != view->width || height != view->height) {
+        view->width = width;
+        view->height = height;
+        proton_engine_custom_titlebar_relayout(window);
+      }
+    }
+  }
+  return 1;
+}
+
+int32_t proton_test_custom_titlebar_overlay(void) {
+  int result = 0;
+  HWND hwnd = NULL;
+  HRGN region = NULL;
+  ATOM child_class = 0;
+  const HINSTANCE instance = GetModuleHandleW(NULL);
+  DPI_AWARENESS_CONTEXT previous =
+      SetThreadDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
+  CHECK(previous != NULL);
+  proton_engine_register_window_class();
+  proton_win_titlebar_region_t regions[] = {{0, 0, 160, 32, 1},
+                                            {14, 10, 28, 18, 0}};
+  proton_engine_window_t window = {0};
+  window.resizable = window.movable = window.closable = window.focusable = 1;
+  window.titlebar_overlay = 1;
+  window.fullscreenable = 1;
+  window.draggable_regions_reported = 1;
+  window.draggable_regions = regions;
+  window.draggable_region_count = 2;
+  hwnd = CreateWindowExW(0, PROTON_ENGINE_WINDOW_CLASS,
+                         L"Proton custom titlebar preview",
+                         WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN, 100, 100, 880,
+                         480, NULL, NULL, GetModuleHandleW(NULL), &window);
+  CHECK(hwnd != NULL);
+  proton_engine_overlay_apply_frame(&window);
+  CHECK(SetWindowPos(hwnd, NULL, 0, 0, 0, 0,
+                     SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE |
+                         SWP_FRAMECHANGED));
+  WNDCLASSW cls = {.lpfnWndProc = titlebar_preview_child,
+                   .hInstance = instance,
+                   .lpszClassName = titlebar_preview_child_class};
+  child_class = RegisterClassW(&cls);
+  CHECK(child_class != 0);
+  HWND child = CreateWindowExW(0, cls.lpszClassName, L"", WS_CHILD, 0, 0, 1, 1,
+                               hwnd, NULL, instance, NULL);
+  CHECK(child != NULL);
+  region = CreateRectRgn(0, 0, 0, 0);
+  CHECK(region != NULL);
+  const UINT dpi = proton_win_window_dpi(hwnd);
+  RECT client;
+  CHECK(GetClientRect(hwnd, &client));
+  proton_engine_view_t view = {0};
+  view.window = &window;
+  view.hwnd = child;
+  view.width = proton_win_logical(client.right, dpi);
+  view.height = proton_win_logical(client.bottom, dpi);
+  window.views = &view;
+  int32_t x, y, width, band_height, zoom;
+  CHECK(proton_engine_window_set_titlebar_overlay(&window, 64, 0x80ecf0f7,
+                                                  0xff19212e, NULL, 0) ==
+        PROTON_ERR_INVALID_ARGUMENT);
+  CHECK(window.titlebar_buttons[0] == NULL);
+  CHECK(proton_engine_window_set_titlebar_overlay(
+            &window, 16, 0xffecf0f7, 0xff19212e, NULL, 0) == PROTON_OK);
+  CHECK(proton_engine_window_set_titlebar_overlay(&window, 15, 0xffecf0f7,
+                                                  0xff19212e, NULL, 0) ==
+        PROTON_ERR_INVALID_ARGUMENT);
+  CHECK(proton_engine_window_get_titlebar_area(&window, &x, &y, &width,
+                                               &band_height, &zoom, NULL,
+                                               0) == PROTON_OK);
+  CHECK(band_height == 16);
+  for (int height = 64; height >= 32; height -= 32) {
+    regions[0].height = height;
+    CHECK(proton_engine_window_set_titlebar_overlay(
+              &window, height, 0xffecf0f7, 0xff19212e, NULL, 0) == PROTON_OK);
+    CHECK(proton_engine_window_get_titlebar_area(&window, &x, &y, &width,
+                                                 &band_height, &zoom, NULL,
+                                                 0) == PROTON_OK);
+    const int button_width = proton_win_pixels(46, dpi);
+    const int controls_left = client.right - 3 * button_width;
+    const int bottom = proton_win_pixels(height, dpi);
+    CHECK(x == 0 && y == 0 && band_height == height && zoom == 100);
+    CHECK(width == proton_win_logical(controls_left, dpi));
+    const POINT max_top = {controls_left + button_width, 0};
+    const POINT max_bottom = {max_top.x, bottom - 1};
+    const POINT below = {max_top.x, bottom};
+    RECT button_rect;
+    CHECK(GetWindowRect(window.titlebar_buttons[1], &button_rect));
+    MapWindowPoints(NULL, hwnd, (POINT *)&button_rect, 2);
+    CHECK(button_rect.left == max_top.x && button_rect.top == 0 &&
+          button_rect.right == max_top.x + button_width &&
+          button_rect.bottom == bottom);
+    CHECK(custom_titlebar_hit(hwnd, max_top) == HTMAXBUTTON);
+    CHECK(custom_titlebar_hit(hwnd, max_bottom) == HTMAXBUTTON);
+    CHECK(custom_titlebar_hit(hwnd, below) == HTCLIENT);
+    CHECK(GetWindowRgn(child, region) == COMPLEXREGION);
+    CHECK(!PtInRegion(region, max_bottom.x, max_bottom.y));
+    CHECK(PtInRegion(region, below.x, below.y));
+    const int expected_y = proton_win_pixels(20, dpi);
+    CHECK(custom_titlebar_hit(hwnd, (POINT){proton_win_pixels(28, dpi),
+                                            expected_y}) == HTCLIENT);
+    CHECK(custom_titlebar_hit(hwnd, (POINT){proton_win_pixels(80, dpi),
+                                            expected_y}) == HTCAPTION);
+    CHECK(custom_titlebar_hit(hwnd, (POINT){proton_win_pixels(80, dpi), 0}) ==
+          HTTOP);
+  }
+  // A focused browser child must not swallow the standard system-menu shortcut.
+  SendMessageW(child, WM_SYSKEYDOWN, VK_SPACE, 1L << 29);
+  SendMessageW(child, WM_SYSCHAR, L' ', 1L << 29);
+  MSG menu;
+  CHECK(PeekMessageW(&menu, hwnd, WM_SYSCOMMAND, WM_SYSCOMMAND, PM_REMOVE));
+  CHECK(menu.hwnd == hwnd && menu.wParam == SC_KEYMENU && menu.lParam == L' ');
+  CHECK(!PeekMessageW(&menu, hwnd, WM_SYSCOMMAND, WM_SYSCOMMAND, PM_NOREMOVE));
+
+  const HWND maximize = window.titlebar_buttons[1];
+  proton_engine_window_action_t fullscreen = {
+      .kind = PROTON_ENGINE_WINDOW_SET_FULLSCREEN, .value = 1};
+  CHECK(proton_engine_window_apply(&window, &fullscreen, NULL, 0) == PROTON_OK);
+  CHECK(!(GetWindowLongW(maximize, GWL_STYLE) & WS_VISIBLE));
+  CHECK(proton_engine_window_get_titlebar_area(&window, &x, &y, &width,
+                                               &band_height, &zoom, NULL,
+                                               0) == PROTON_OK);
+  CHECK(width == 0 && band_height == 0);
+  CHECK(GetWindowRgn(child, region) == SIMPLEREGION);
+  fullscreen.value = 0;
+  CHECK(proton_engine_window_apply(&window, &fullscreen, NULL, 0) == PROTON_OK);
+  CHECK(GetWindowLongW(maximize, GWL_STYLE) & WS_VISIBLE);
+  CHECK(proton_engine_window_get_titlebar_area(&window, &x, &y, &width,
+                                               &band_height, &zoom, NULL,
+                                               0) == PROTON_OK);
+  CHECK(band_height == 32);
+  CHECK(GetWindowRgn(child, region) == COMPLEXREGION);
+
+  // Drive the real window-procedure relayout with a system-style suggested
+  // rect, without requiring two physical displays for the fixture.
+  RECT suggested;
+  CHECK(GetWindowRect(hwnd, &suggested));
+  suggested.right -= proton_win_pixels(32, dpi);
+  SendMessageW(hwnd, WM_DPICHANGED, MAKEWPARAM(dpi, dpi), (LPARAM)&suggested);
+  CHECK(GetClientRect(hwnd, &client));
+  RECT moved_button;
+  CHECK(GetWindowRect(maximize, &moved_button));
+  MapWindowPoints(NULL, hwnd, (POINT *)&moved_button, 2);
+  CHECK(moved_button.right == client.right - proton_win_pixels(46, dpi));
+  CHECK(moved_button.bottom == proton_win_pixels(32, dpi));
+  CHECK(GetWindowRgn(child, region) == COMPLEXREGION);
+  CHECK(!PtInRegion(region, moved_button.left, moved_button.bottom - 1));
+
+  CHECK(proton_engine_window_set_titlebar_overlay(&window, 0, 0, 0, NULL, 0) ==
+        PROTON_OK);
+  CHECK(window.titlebar_buttons[1] == NULL && !IsWindow(maximize));
+
+  wchar_t preview[2];
+  if (GetEnvironmentVariableW(L"PROTON_TEST_TITLEBAR_PREVIEW", preview, 2) ==
+          1 &&
+      preview[0] == L'1') {
+    CHECK(proton_engine_window_set_titlebar_overlay(
+              &window, 32, 0xffecf0f7, 0xff19212e, NULL, 0) == PROTON_OK);
+    CHECK(preview_custom_titlebar(&window, &view, &regions[0]));
+  }
+cleanup:
+  if (region != NULL)
+    DeleteObject(region);
+  if (hwnd != NULL && IsWindow(hwnd))
+    DestroyWindow(hwnd);
+  if (child_class != 0)
+    UnregisterClassW(titlebar_preview_child_class, instance);
+  if (previous != NULL)
+    SetThreadDpiAwarenessContext(previous);
+  return result;
+}
+
+int32_t proton_test_custom_titlebar_close_interception(void) {
+  int result = 0;
+  HWND hwnd = NULL;
+  proton_engine_window_t window = {0};
+  window.titlebar_overlay = 1;
+  window.closable = 1;
+  proton_engine_register_window_class();
+  hwnd = CreateWindowExW(0, PROTON_ENGINE_WINDOW_CLASS, L"Overlay close test",
+                         WS_OVERLAPPEDWINDOW, 100, 100, 640, 480, NULL, NULL,
+                         GetModuleHandleW(NULL), &window);
+  CHECK(hwnd != NULL);
+  CHECK(proton_engine_window_set_titlebar_overlay(
+            &window, 32, 0xffecf0f7, 0xff19212e, NULL, 0) == PROTON_OK);
+  CHECK(proton_engine_window_set_close_interception(&window, 1, NULL, 0) ==
+        PROTON_OK);
+
+  // Follow the physical caption-button path through capture and release.
+  RECT controls;
+  CHECK(proton_engine_overlay_controls_rect(&window, &controls));
+  const POINT client_point = {controls.right - 1, (controls.bottom - 1) / 2};
+  POINT screen_point = client_point;
+  CHECK(ClientToScreen(hwnd, &screen_point));
+  const LPARAM screen = MAKELPARAM(screen_point.x, screen_point.y);
+  CHECK(SendMessageW(hwnd, WM_NCHITTEST, 0, screen) == HTCLOSE);
+  uint64_t last_request = 0;
+  MSG msg;
+  for (int allow = 0; allow <= 1; ++allow) {
+    SendMessageW(hwnd, WM_NCLBUTTONDOWN, HTCLOSE, screen);
+    SendMessageW(hwnd, WM_LBUTTONUP, 0,
+                 MAKELPARAM(client_point.x, client_point.y));
+    CHECK(IsWindow(hwnd) && window.close_request_pending &&
+          window.close_request_id != last_request);
+    last_request = window.close_request_id;
+    CHECK(proton_engine_window_respond_close_request(
+              &window, last_request, allow, NULL, 0) == PROTON_OK);
+    CHECK(IsWindow(hwnd) && !window.close_request_pending);
+    if (!allow) {
+      CHECK(!PeekMessageW(&msg, hwnd, WM_CLOSE, WM_CLOSE, PM_NOREMOVE));
+    }
+  }
+  CHECK(PeekMessageW(&msg, hwnd, WM_CLOSE, WM_CLOSE, PM_REMOVE));
+  DispatchMessageW(&msg);
+  CHECK(!IsWindow(hwnd));
+cleanup:
+  if (hwnd != NULL && IsWindow(hwnd))
+    DestroyWindow(hwnd);
   return result;
 }
 

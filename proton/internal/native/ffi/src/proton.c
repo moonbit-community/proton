@@ -1731,6 +1731,25 @@ int32_t proton_window_set_background_color(proton_window_handle_t window,
   return PROTON_OK;
 }
 
+int32_t proton_window_set_titlebar_overlay(proton_window_handle_t window,
+                                           int32_t height, uint32_t background,
+                                           uint32_t symbol) {
+  proton_window_slot_t *slot = NULL;
+  int32_t status = proton_get_window(window, &slot);
+  if (status != PROTON_OK) return status;
+  if (slot->engine_window == NULL) {
+    return proton_set_error(PROTON_ERR_UNSUPPORTED,
+                            "custom titlebar overlay requires a native window");
+  }
+  char engine_error[512] = {0};
+  status = proton_engine_window_set_titlebar_overlay(
+      slot->engine_window, height, background, symbol, engine_error,
+      sizeof(engine_error));
+  if (status != PROTON_OK) return proton_set_engine_status(status, engine_error);
+  g_last_error[0] = '\0';
+  return PROTON_OK;
+}
+
 int32_t proton_window_set_theme(proton_window_handle_t window,
                                 int32_t theme_preference) {
   if (theme_preference < PROTON_WINDOW_THEME_PREFERENCE_SYSTEM ||

@@ -225,7 +225,9 @@ static void proton_engine_window_refresh_non_client_theme(
       window->current_theme == PROTON_WINDOW_THEME_DARK;
   (void)DwmSetWindowAttribute(window->hwnd, attribute, &use_dark_caption,
                               sizeof(use_dark_caption));
-  if (redraw) {
+  if (redraw && window->custom_titlebar.height > 0) {
+    InvalidateRect(window->hwnd, NULL, FALSE);
+  } else if (redraw) {
     BOOL active = GetActiveWindow() == window->hwnd;
     DefWindowProcW(window->hwnd, WM_NCACTIVATE, active ? FALSE : TRUE, 0);
     DefWindowProcW(window->hwnd, WM_NCACTIVATE, active ? TRUE : FALSE, 0);
@@ -283,6 +285,12 @@ static LRESULT CALLBACK proton_engine_window_proc(HWND hwnd,
                                                   LPARAM lparam) {
   proton_engine_window_t *window =
       (proton_engine_window_t *)GetWindowLongPtrW(hwnd, GWLP_USERDATA);
+  const int custom_titlebar = window != NULL && window->titlebar_overlay &&
+                             window->custom_titlebar.height > 0;
+  if (custom_titlebar &&
+      proton_engine_custom_titlebar_mouse(window, msg, wparam, lparam)) {
+    return 0;
+  }
   switch (msg) {
   case PROTON_ENGINE_WM_DESTROY_SELF:
     // Self-destruction deferred from OnBeforeClose; the owning engine window
@@ -311,7 +319,8 @@ static LRESULT CALLBACK proton_engine_window_proc(HWND hwnd,
     }
     break;
   case WM_NCCALCSIZE:
-    if (window != NULL && window->titlebar_overlay && wparam == TRUE) {
+    if (window != NULL && window->titlebar_overlay && wparam == TRUE &&
+        !(custom_titlebar && window->fullscreen)) {
       NCCALCSIZE_PARAMS *params = (NCCALCSIZE_PARAMS *)lparam;
       LONG proposed_top = params->rgrc[0].top;
       LRESULT result = DefWindowProcW(hwnd, msg, wparam, lparam);
@@ -323,6 +332,12 @@ static LRESULT CALLBACK proton_engine_window_proc(HWND hwnd,
           (IsZoomed(hwnd) ? proton_engine_overlay_frame_top_thickness(hwnd)
                           : 0);
       return 0;
+    }
+    break;
+  case WM_NCACTIVATE:
+    if (custom_titlebar && !IsIconic(hwnd)) {
+      // Keep activation behavior without repainting the system caption.
+      return DefWindowProcW(hwnd, msg, wparam, -1);
     }
     break;
   case WM_MOUSEACTIVATE:
@@ -381,14 +396,18 @@ static LRESULT CALLBACK proton_engine_window_proc(HWND hwnd,
                    suggested->bottom - suggested->top,
                    SWP_NOZORDER | SWP_NOACTIVATE);
       if (window->titlebar_overlay) {
-        proton_engine_overlay_apply_frame(hwnd);
+        proton_engine_overlay_apply_frame(window);
       }
-      RECT client;
-      if (GetClientRect(hwnd, &client)) {
-        proton_engine_resize_browser(window, client.right - client.left,
-                                     client.bottom - client.top);
+      if (custom_titlebar) {
+        proton_engine_custom_titlebar_relayout(window);
+      } else {
+        RECT client;
+        if (GetClientRect(hwnd, &client)) {
+          proton_engine_resize_browser(window, client.right - client.left,
+                                       client.bottom - client.top);
+        }
+        proton_engine_window_layout_views(window);
       }
-      proton_engine_window_layout_views(window);
       return 0;
     }
     break;
@@ -411,7 +430,7 @@ static LRESULT CALLBACK proton_engine_window_proc(HWND hwnd,
                                        PROTON_WAIT_PLATFORM);
     }
     if (window != NULL && window->titlebar_overlay) {
-      proton_engine_overlay_apply_frame(hwnd);
+      proton_engine_overlay_apply_frame(window);
       RECT client;
       if (GetClientRect(hwnd, &client)) {
         proton_engine_resize_browser(window, client.right - client.left,
@@ -422,6 +441,10 @@ static LRESULT CALLBACK proton_engine_window_proc(HWND hwnd,
   case WM_SIZE:
     if (window != NULL) {
       proton_engine_resize_browser(window, LOWORD(lparam), HIWORD(lparam));
+      if (custom_titlebar) {
+        proton_engine_custom_titlebar_layout(window);
+        InvalidateRect(hwnd, NULL, FALSE);
+      }
       proton_engine_signal_wait_source(window->runtime,
                                        PROTON_WAIT_PLATFORM);
     }
@@ -508,8 +531,16 @@ static LRESULT CALLBACK proton_engine_window_proc(HWND hwnd,
         proton_engine_window_refresh_non_client_theme(window, 0);
       }
       proton_engine_publish_native_theme_change(window->runtime);
-      proton_engine_signal_wait_source(window->runtime,
-                                       PROTON_WAIT_PLATFORM);
+      proton_engine_signal_wait_source(window->runtime, PROTON_WAIT_PLATFORM);
+    }
+    break;
+  case WM_STYLECHANGED:
+    if (custom_titlebar && (int)wparam == GWL_STYLE) {
+      const STYLESTRUCT *style = (const STYLESTRUCT *)lparam;
+      if ((style->styleOld ^ style->styleNew) &
+          (WS_MINIMIZEBOX | WS_MAXIMIZEBOX)) {
+        proton_engine_custom_titlebar_layout(window);
+      }
     }
     break;
   case WM_ERASEBKGND:
@@ -581,6 +612,10 @@ static LRESULT CALLBACK proton_engine_window_proc(HWND hwnd,
     break;
   case WM_COMMAND:
     if (window != NULL) {
+      if (custom_titlebar && HIWORD(wparam) == BN_CLICKED &&
+          proton_engine_custom_titlebar_click(window, (HWND)lparam)) {
+        return 0;
+      }
       if (HIWORD(wparam) == PROTON_THUMBAR_CLICKED) {
         const int index = (int)LOWORD(wparam) - PROTON_THUMBAR_BUTTON_ID_BASE;
         if (index >= 0 && index < PROTON_THUMBAR_MAX_BUTTONS &&
@@ -630,7 +665,7 @@ static LRESULT CALLBACK proton_engine_window_proc(HWND hwnd,
   default:
     break;
   }
-  if (window != NULL && window->titlebar_overlay) {
+  if (window != NULL && window->titlebar_overlay && !custom_titlebar) {
     LRESULT dwm_result = 0;
     if (DwmDefWindowProc(hwnd, msg, wparam, lparam, &dwm_result)) {
       return dwm_result;
@@ -680,6 +715,16 @@ static int proton_engine_window_device_to_dip(HWND hwnd, int value) {
   return MulDiv(value, USER_DEFAULT_SCREEN_DPI, (int)dpi);
 }
 
+void proton_engine_custom_titlebar_relayout(proton_engine_window_t *window) {
+  RECT client;
+  if (GetClientRect(window->hwnd, &client)) {
+    proton_engine_resize_browser(window, client.right, client.bottom);
+  }
+  proton_engine_window_layout_views(window);
+  proton_engine_custom_titlebar_layout(window);
+  InvalidateRect(window->hwnd, NULL, FALSE);
+}
+
 static proton_engine_titlebar_area_t
 proton_engine_window_titlebar_area(
     proton_engine_window_t *window) {
@@ -698,7 +743,11 @@ proton_engine_window_titlebar_area(
     return area;
   }
   RECT controls = {0};
-  if (!proton_engine_overlay_caption_buttons_rect(window->hwnd, &controls)) {
+  const int custom = window->custom_titlebar.height > 0;
+  if (!proton_engine_overlay_controls_rect(window, &controls)) {
+    if (custom) {
+      return area;
+    }
     UINT dpi = GetDpiForWindow(window->hwnd);
     if (dpi == 0) {
       dpi = USER_DEFAULT_SCREEN_DPI;
@@ -717,10 +766,13 @@ proton_engine_window_titlebar_area(
   int right_space = client.right - controls.right;
   int safe_left = left_space >= right_space ? client.left : controls.right;
   int safe_right = left_space >= right_space ? controls.left : client.right;
-  int safe_height = min(
-      client.bottom - client.top,
-      max(controls.bottom - client.top,
-          proton_engine_overlay_caption_band_height(window->hwnd)));
+  int safe_height = controls.bottom - client.top;
+  if (!custom) {
+    safe_height = min(
+        client.bottom - client.top,
+        max(safe_height,
+            proton_engine_overlay_caption_band_height(window->hwnd)));
+  }
   area.x = proton_engine_window_device_to_dip(
       window->hwnd, safe_left - client.left);
   area.y = 0;
@@ -866,6 +918,20 @@ int32_t proton_engine_window_create(
   window->max_width = config.size_hint == 3 ? config.width : 0;
   window->max_height = config.size_hint == 3 ? config.height : 0;
   window->titlebar_overlay = config.titlebar_overlay;
+  if (window->titlebar_overlay && !window->headless) {
+    proton_engine_utf8_to_wide(config.titlebar_minimize_label,
+                               window->titlebar_minimize_label,
+                               PROTON_ENGINE_MAX_LABEL_BYTES);
+    proton_engine_utf8_to_wide(config.titlebar_maximize_label,
+                               window->titlebar_maximize_label,
+                               PROTON_ENGINE_MAX_LABEL_BYTES);
+    proton_engine_utf8_to_wide(config.titlebar_restore_label,
+                               window->titlebar_restore_label,
+                               PROTON_ENGINE_MAX_LABEL_BYTES);
+    proton_engine_utf8_to_wide(config.titlebar_close_label,
+                               window->titlebar_close_label,
+                               PROTON_ENGINE_MAX_LABEL_BYTES);
+  }
   window->theme_preference = config.theme_preference;
   proton_engine_window_refresh_non_client_theme(window, 0);
   window->zoom_percent = 100;
@@ -951,7 +1017,7 @@ int32_t proton_engine_window_create(
     }
     proton_engine_window_refresh_non_client_theme(window, 0);
     if (window->titlebar_overlay) {
-      proton_engine_overlay_apply_frame(window->hwnd);
+      proton_engine_overlay_apply_frame(window);
       SetWindowPos(window->hwnd, NULL, 0, 0, 0, 0,
                    SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE |
                        SWP_FRAMECHANGED);
@@ -1352,6 +1418,7 @@ int32_t proton_engine_window_set_closable(
   }
   DrawMenuBar(window->hwnd);
   window->closable = closable;
+  proton_engine_custom_titlebar_layout(window);
   return PROTON_OK;
 }
 
@@ -2374,12 +2441,14 @@ int32_t proton_engine_window_apply(
     ShowWindow(window->hwnd, SW_RESTORE);
     break;
   case PROTON_ENGINE_WINDOW_SET_FULLSCREEN:
-  case PROTON_ENGINE_WINDOW_SET_KIOSK:
+  case PROTON_ENGINE_WINDOW_SET_KIOSK: {
     if (action->kind == PROTON_ENGINE_WINDOW_SET_FULLSCREEN &&
-        !window->fullscreenable && action->value != 0) break;
-    if (action->value != 0 && !window->fullscreen) {
-      window->windowed_style =
-          (DWORD)GetWindowLongW(window->hwnd, GWL_STYLE);
+        !window->fullscreenable && action->value != 0)
+      break;
+    const int was_fullscreen = window->fullscreen;
+    const int custom_titlebar = window->custom_titlebar.height > 0;
+    if (action->value != 0 && !was_fullscreen) {
+      window->windowed_style = (DWORD)GetWindowLongW(window->hwnd, GWL_STYLE);
       window->windowed_placement.length = sizeof(WINDOWPLACEMENT);
       GetWindowPlacement(window->hwnd, &window->windowed_placement);
       HMONITOR monitor =
@@ -2390,25 +2459,33 @@ int32_t proton_engine_window_apply(
                                   "failed to read monitor geometry");
         return PROTON_ERR_PLATFORM;
       }
+      if (custom_titlebar) {
+        window->fullscreen = 1;
+      }
       SetWindowLongW(window->hwnd, GWL_STYLE,
-                     (LONG)(window->windowed_style &
-                            ~WS_OVERLAPPEDWINDOW));
+                     (LONG)(window->windowed_style & ~WS_OVERLAPPEDWINDOW));
       SetWindowPos(window->hwnd, HWND_TOP, info.rcMonitor.left,
                    info.rcMonitor.top,
                    info.rcMonitor.right - info.rcMonitor.left,
                    info.rcMonitor.bottom - info.rcMonitor.top,
                    SWP_NOOWNERZORDER | SWP_FRAMECHANGED);
       window->fullscreen = 1;
-    } else if (action->value == 0 && window->fullscreen) {
-      SetWindowLongW(window->hwnd, GWL_STYLE,
-                     (LONG)window->windowed_style);
+    } else if (action->value == 0 && was_fullscreen) {
+      if (custom_titlebar) {
+        window->fullscreen = 0;
+      }
+      SetWindowLongW(window->hwnd, GWL_STYLE, (LONG)window->windowed_style);
       SetWindowPlacement(window->hwnd, &window->windowed_placement);
       SetWindowPos(window->hwnd, NULL, 0, 0, 0, 0,
-                   SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER |
-                       SWP_NOACTIVATE | SWP_FRAMECHANGED);
+                   SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE |
+                       SWP_FRAMECHANGED);
       window->fullscreen = 0;
     }
+    if (custom_titlebar && was_fullscreen != window->fullscreen) {
+      proton_engine_custom_titlebar_relayout(window);
+    }
     break;
+  }
   case PROTON_ENGINE_WINDOW_SET_POSITION:
     SetWindowPos(window->hwnd, NULL, action->x, action->y, 0, 0,
                  SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);

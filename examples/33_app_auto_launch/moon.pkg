@@ -1,5 +1,4 @@
 import {
-  "moonbitlang/core/async",
   "moonbit-community/proton_ext/auto_launch",
   "moonbit-community/proton",
 }

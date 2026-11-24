@@ -1,6 +1,5 @@
 import {
   "moonbit-community/proton_cefsetup/store",
-  "moonbitlang/core/async",
   "moonbitlang/core/argparse",
   "moonbitlang/core/env",
   "moonbitlang/x/sys",

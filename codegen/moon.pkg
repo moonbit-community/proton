@@ -1,6 +1,5 @@
 import {
   "moonbit-community/proton_codegen/lib" @codegen,
-  "moonbitlang/core/async",
   "moonbitlang/core/async/fs" @async_fs,
   "moonbitlang/core/async/stdio",
   "moonbitlang/core/argparse",

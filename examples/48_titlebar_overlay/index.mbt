@@ -86,6 +86,19 @@ let resource : String =
   #|      user-select: none;
   #|    }
   #|
+  #|    .custom-overlay .titlebar {
+  #|      border-bottom: 0;
+  #|    }
+  #|
+  #|    .no-overlay .titlebar {
+  #|      overflow: hidden;
+  #|      border-bottom: 0;
+  #|    }
+  #|
+  #|    .no-overlay {
+  #|      --fallback-titlebar-height: 0px;
+  #|    }
+  #|
   #|    .titlebar-content {
   #|      position: absolute;
   #|      left: var(--titlebar-x);
@@ -207,6 +220,15 @@ let resource : String =
   #|      color: var(--secondary-text);
   #|      font-size: 13px;
   #|    }
+  #|
+  #|    #overlay-controls {
+  #|      display: none;
+  #|    }
+  #|
+  #|    .is-windows #overlay-controls {
+  #|      display: block;
+  #|      margin-top: 16px;
+  #|    }
   #|  </style>
   #|</head>
   #|<body>
@@ -232,13 +254,19 @@ let resource : String =
   #|    <div>
   #|      <h1>Native titlebar overlay</h1>
   #|      <p id="geometry">Web content extends beneath the native window controls</p>
+  #|      <div id="overlay-controls">
+  #|        <button type="button" data-height="32">32 DIP</button>
+  #|        <button type="button" data-height="64">64 DIP</button>
+  #|        <button type="button" data-height="0">System buttons</button>
+  #|        <button type="button" id="fullscreen">Toggle fullscreen</button>
+  #|      </div>
   #|    </div>
   #|  </main>
   #|  <script>
   #|    const root = document.documentElement;
   #|    const output = document.querySelector('#geometry');
-  #|    const showGeometry = async () => {
-  #|      const area = await window.__MoonBit__.getTitlebarArea();
+  #|    const applyGeometry = (area) => {
+  #|      root.classList.toggle('no-overlay', !area);
   #|      if (!area) {
   #|        root.style.removeProperty('--titlebar-x');
   #|        root.style.removeProperty('--titlebar-y');
@@ -254,8 +282,34 @@ let resource : String =
   #|      output.textContent =
   #|        `Usable titlebar: ${area.x}, ${area.y}, ${area.width} × ${area.height}`;
   #|    };
+  #|    const showGeometry = async () => applyGeometry(await window.__MoonBit__.getTitlebarArea());
   #|    showGeometry();
   #|    window.addEventListener('resize', showGeometry);
+  #|
+  #|    const reportError = (error) => { output.textContent = String(error); };
+  #|    const invoke = (name, payload) => window.__MoonBit__.core.invokeOp(`app:${name}`, payload);
+  #|    document.querySelectorAll('[data-height]').forEach((button) => {
+  #|      button.addEventListener('click', async () => {
+  #|        const height = Number(button.dataset.height);
+  #|        try {
+  #|          const area = await invoke('set-overlay', height);
+  #|          root.classList.toggle('custom-overlay', height > 0);
+  #|          applyGeometry(area);
+  #|        } catch (error) {
+  #|          reportError(error);
+  #|        }
+  #|      });
+  #|    });
+  #|    let fullscreen = false;
+  #|    document.querySelector('#fullscreen').addEventListener('click', async () => {
+  #|      try {
+  #|        const area = await invoke('set-fullscreen', !fullscreen);
+  #|        fullscreen = !fullscreen;
+  #|        applyGeometry(area);
+  #|      } catch (error) {
+  #|        reportError(error);
+  #|      }
+  #|    });
   #|
   #|    // Assign after DOM creation so CEF emits the initial draggable regions.
   #|    setTimeout(() => {
