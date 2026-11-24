@@ -1,6 +1,6 @@
 name = "moonbit-community/proton_clipboard"
 
-version = "0.9.1"
+version = "0.10.0"
 
 import {
 }
