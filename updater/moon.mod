@@ -1,6 +1,6 @@
 name = "moonbit-community/proton_updater"
 
-version = "0.9.1"
+version = "0.10.0"
 
 readme = "README.mbt.md"
 
