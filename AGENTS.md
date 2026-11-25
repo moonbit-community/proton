@@ -127,7 +127,7 @@ native checks before handing off larger refactors.
 ### Release Checklist
 
 - `.github/workflows/publish.yml` publishes the lockstep dependency chain in this order:
-  `proton_config`, `proton_codegen`, `proton_contract`, `proton_rsa`,
+  `proton_config`, `proton_codegen`, `proton_contract`, `proton_pki`, `proton_rsa`,
   `proton_updater`, `proton_cefsetup`, `proton_package`, the ten `sys` modules,
   `proton_client`, `proton_rabbita`, `proton`, `proton_ext`, `proton_cli`, and
   `proton_cdp`. The `examples` and `e2e` modules are not published.

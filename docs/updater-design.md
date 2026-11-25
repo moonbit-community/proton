@@ -173,9 +173,9 @@ or PKCS#1 (`RSA PUBLIC KEY`). The application embeds the public PEM contents,
 not a file path, and never includes its private key. There is no Proton-specific
 key conversion command or custom key encoding.
 
-`proton_rsa` uses `oilleelssq-wq/MoonBit-PKI` for PEM and ASN.1 DER decoding.
-Proton selects the RSA algorithm, extracts the modulus and exponent, and retains
-its existing minimum size and exponent checks. Signature verification remains
+`proton_pki` decodes a single PEM public key and extracts the RSA modulus and
+exponent from its DER payload. `proton_rsa` checks the minimum modulus size
+and the public exponent. Signature verification remains
 RSASSA-PKCS1-v1_5 over SHA-256. Non-RSA keys, private keys, certificates, malformed
 DER, and multiple PEM blocks in a single configured key are rejected.
 

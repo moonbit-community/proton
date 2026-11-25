@@ -24,7 +24,7 @@ artifact can be streamed through a hash instead of being held in memory.
 `public_key_pem` is the PEM text, not a file path. Both SubjectPublicKeyInfo
 (`-----BEGIN PUBLIC KEY-----`) and PKCS#1 (`-----BEGIN RSA PUBLIC KEY-----`)
 are accepted. Private keys, certificates, and the former custom key encoding
-are rejected. PEM and DER decoding use `oilleelssq-wq/MoonBit-PKI`.
+are rejected. PEM and DER decoding use `moonbit-community/proton_pki`.
 
 Export a public key with OpenSSL:
 

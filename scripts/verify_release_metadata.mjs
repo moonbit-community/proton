@@ -60,6 +60,7 @@ const workspaceModuleManifests = [
   "codegen/moon.mod",
   "config/moon.mod",
   "contract/moon.mod",
+  "pki/moon.mod",
   "rsa/moon.mod",
   "updater/moon.mod",
   "cefsetup/moon.mod",

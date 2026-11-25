@@ -75,3 +75,7 @@ renderer 与宿主有独立的执行环境。Proton 在页面中注入 bridge，
 | 打包应用 | 内联内容或打包的静态资源；URL 入口也可使用远程页面 | 产物携带的运行时与子进程程序 |
 
 前端开发服务器只提供页面资源，不承担宿主业务逻辑。通过普通浏览器访问同一个 URL 时，没有 Proton 注入的原生 bridge。打包将应用可执行文件、所需页面资源、CEF 运行时和子进程程序组装成可分发产物，文件职责与输出路径见 Configuration 章节，打包格式及前提见 Command Line Interface 章节。
+
+需要读取更新公钥的工具可以使用尚未发布的 `moonbit-community/proton_pki` 模块。
+`parse_rsa_public_key(pem)` 接受一份 PKCS#1 或 SubjectPublicKeyInfo 格式的 PEM 公钥，
+返回 RSA 模数和公钥指数。

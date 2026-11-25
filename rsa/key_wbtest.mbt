@@ -7,14 +7,40 @@ fn parse_error(text : String) -> KeyError {
 ///|
 /// Test-only encoding for key-policy cases. The accepted signature vectors use
 /// PEM exported independently by OpenSSL, not this encoder.
-fn test_key_pem(
-  modulus : @bigint.BigInt,
-  exponent : @bigint.BigInt,
-) -> String raise {
-  let n = @asn1.encode_integer(modulus)
-  let e = @asn1.encode_integer(exponent)
-  let encoded = @asn1.encode_sequence([n[:], e[:]])
-  @pem.encode_pem("RSA PUBLIC KEY", encoded[:])
+fn test_key_pem(modulus : @bigint.BigInt, exponent : @bigint.BigInt) -> String {
+  let n = test_unsigned_integer(modulus)
+  let e = test_unsigned_integer(exponent)
+  test_pem("RSA PUBLIC KEY", test_field(b'\x30', n + e))
+}
+
+///|
+fn test_pem(label : String, der : Bytes) -> String {
+  "-----BEGIN \{label}-----\n\{@base64.encode(der[:])}\n-----END \{label}-----"
+}
+
+///|
+/// The generated test fixtures are all smaller than 64 KiB.
+fn test_field(tag : Byte, value : Bytes) -> Bytes {
+  let n = value.length()
+  let prefix : Array[Byte] = if n < 128 {
+    [tag, n.to_byte()]
+  } else if n < 256 {
+    [tag, b'\x81', n.to_byte()]
+  } else {
+    [tag, b'\x82', (n >> 8).to_byte(), n.to_byte()]
+  }
+  Bytes::from_array(prefix[:]) + value
+}
+
+///|
+fn test_unsigned_integer(n : @bigint.BigInt) -> Bytes {
+  let bytes = n.to_octets()
+  let value = if bytes.is_empty() || bytes[0] >= b'\x80' {
+    b"\x00" + bytes
+  } else {
+    bytes
+  }
+  test_field(b'\x02', value)
 }
 
 ///|
@@ -66,44 +92,26 @@ test "rejects private keys and certificates instead of treating them as public k
 
 ///|
 test "rejects non-RSA algorithms and malformed DER" {
-  let ec_oid = @asn1.encode_object_identifier(
-    @asn1.ObjectIdentifier::from_string("1.2.840.10045.2.1"),
-  )
-  let null = @asn1.encode_null()
-  let algorithm = @asn1.encode_sequence([ec_oid[:], null[:]])
-  let bits = @asn1.encode_bit_string(b"fixture"[:])
-  let spki = @asn1.encode_sequence([algorithm[:], bits[:]])
-  assert_true(
-    parse_error(@pem.encode_pem("PUBLIC KEY", spki[:])) is Malformed(_),
-  )
+  // An id-ecPublicKey AlgorithmIdentifier followed by a BIT STRING.
+  let spki = b"\x30\x11\x30\x0b\x06\x07\x2a\x86\x48\xce\x3d\x02\x01\x05\x00\x03\x02\x00x"
+  assert_true(parse_error(test_pem("PUBLIC KEY", spki)) is Malformed(_))
   for
     data in [
       b"", b"\x30\x82\xff\xff", b"\x30\x80", b"\x30\x00", b"\x30\x00\x00",
     ] {
-    assert_true(
-      parse_error(@pem.encode_pem("PUBLIC KEY", data[:])) is Malformed(_),
-    )
+    assert_true(parse_error(test_pem("PUBLIC KEY", data)) is Malformed(_))
   }
 }
 
 ///|
 test "rejects noncanonical or negative DER modulus integers" {
-  let modulus = decode_hex(vector_modulus_hex)
-  let bad_integer = @asn1.encode_tlv(
-    @asn1.Tag::new(Universal, @asn1.TAG_INTEGER),
-    (b"\x00\x00" + modulus)[:],
-  )
-  let exponent = @asn1.encode_int(65537)
-  let der = @asn1.encode_sequence([bad_integer[:], exponent[:]])
-  assert_true(
-    parse_error(@pem.encode_pem("RSA PUBLIC KEY", der[:])) is Malformed(_),
-  )
-  assert_true(
-    parse_error(
-      test_key_pem(-vector_modulus(), @bigint.BigInt::from_int(65537)),
-    )
-    is Malformed(_),
-  )
+  for
+    der in [
+      b"\x30\x07\x02\x02\x00\x01\x02\x01\x03", // redundant sign octet
+       b"\x30\x06\x02\x01\xff\x02\x01\x03", // modulus -1
+    ] {
+    assert_true(parse_error(test_pem("RSA PUBLIC KEY", der)) is Malformed(_))
+  }
 }
 
 ///|
