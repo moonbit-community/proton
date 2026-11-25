@@ -1,6 +1,6 @@
 name = "moonbit-community/proton_rsa"
 
-version = "0.10.0"
+version = "0.10.1"
 
 readme = "README.mbt.md"
 
@@ -13,5 +13,5 @@ keywords = [ "rsa", "pkcs1", "signature", "verification" ]
 description = "RSASSA-PKCS1-v1_5 signature verification over SHA-256."
 
 import {
-  "moonbit-community/proton_pki@0.10.0",
+  "moonbit-community/proton_pki@0.10.1",
 }

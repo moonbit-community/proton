@@ -1,23 +1,27 @@
 # Release Notes
 
-## 未发布
+## 0.10.1
 
 后端的 `@net.download` 现可流式解压 gzip 响应并写入文件。下载进度按实际写入的字节计数，
 gzip 响应不提供总大小。Windows 下载会通过目录联接解析目标文件的父目录。
 
+新增 `moonbit-community/proton_pki` 模块，提供解析应用更新所用 PEM 公钥的接口。
+
+## 0.10.0
+
 Windows 叠加标题栏窗口可通过 `WindowHandle::set_titlebar_overlay()` 选择由宿主绘制
 窗口按钮，并在运行时更新高度（至少 16 DIP）和颜色，使窗口按钮与应用标题栏对齐。
 默认仍使用系统按钮。
-参见 [Windows 自定义叠加标题栏](../introduction/application-api.md#windows-自定义叠加标题栏未发布)。
+参见 [Windows 自定义叠加标题栏](../introduction/application-api.md#windows-自定义叠加标题栏)。
+
+## 0.9.1
 
 macOS 应用可在启动前调用 `App.macos_render_when_occluded()`，使窗口被完全遮挡或
 位于另一个 Space 时，原生窗口截图仍能获取更新后的页面内容。此设置作用于所有
 窗口和子视图，默认关闭。它保留真实焦点，但遮挡不再通过 Page Visibility 将页面
 标为隐藏，后台工作可能增加功耗。最小化或显式隐藏的页面也可能保持 `visible`，
 这些状态下的原生截图可用性不受保证。参见
-[应用配置](../introduction/application-api.md#macos-遮挡时继续绘制未发布)。
-
-新增 `moonbit-community/proton_pki` 模块，提供解析应用更新所用 PEM 公钥的接口。
+[应用配置](../introduction/application-api.md#macos-遮挡时继续绘制)。
 
 ## 0.9.0
 

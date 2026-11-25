@@ -76,6 +76,6 @@ Development and distribution use the same native host and browser architecture. 
 
 A frontend development server serves page resources; it does not run host business logic. Opening the same URL in an ordinary browser provides no Proton native bridge. Packaging assembles the application executable, required page resources, CEF runtime and subprocess executable into a distributable artifact. Configuration documents file responsibilities and output paths; Command Line Interface documents packaging formats and requirements.
 
-For tools that inspect update keys, the unreleased `moonbit-community/proton_pki`
+For tools that inspect update keys, the `moonbit-community/proton_pki`
 module provides `parse_rsa_public_key(pem)`. It accepts a single PKCS#1 or
 SubjectPublicKeyInfo PEM public key and returns its RSA modulus and exponent.

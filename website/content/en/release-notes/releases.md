@@ -1,16 +1,23 @@
 # Release Notes
 
-## Unreleased
+## 0.10.1
 
 Host-side `@net.download` now streams gzip responses to disk as decoded bytes.
 Progress counts bytes written and reports an unknown total for gzip. Windows
 downloads resolve the destination parent through directory junctions.
 
+The new `moonbit-community/proton_pki` module exposes a parser for the PEM
+public keys used to verify application updates.
+
+## 0.10.0
+
 Windows overlay windows can opt into host-drawn caption buttons with
 `WindowHandle::set_titlebar_overlay()`. Applications can update the height
 (at least 16 DIPs) and colors at runtime to align their titlebar with the window
 controls. The system buttons remain the default. See
-[custom titlebar overlay on Windows](../introduction/application-api.md#custom-titlebar-overlay-on-windows-unreleased).
+[custom titlebar overlay on Windows](../introduction/application-api.md#custom-titlebar-overlay-on-windows).
+
+## 0.9.1
 
 Applications on macOS can opt into `App.macos_render_when_occluded()` before
 startup to keep page content updating in native window captures while fully
@@ -19,10 +26,7 @@ and defaults to off. It preserves real focus, but occlusion no longer hides the
 page through Page Visibility and background work can use more power. Minimized
 or explicitly hidden pages can also remain `visible`; native capture in those
 states is not guaranteed. See
-[application configuration](../introduction/application-api.md#rendering-while-occluded-on-macos-unreleased).
-
-The new `moonbit-community/proton_pki` module exposes a parser for the PEM
-public keys used to verify application updates.
+[application configuration](../introduction/application-api.md#rendering-while-occluded-on-macos).
 
 ## 0.9.0
 

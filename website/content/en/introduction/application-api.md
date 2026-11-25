@@ -299,7 +299,7 @@ A view declaration sets initial geometry; it does not provide automatic layout. 
 
 `TitlebarStyle::Overlay` is available on macOS, Windows and Linux. In an overlay page, `await window.__MoonBit__.getTitlebarArea()` returns the usable titlebar area as `{ x, y, width, height }` in CSS pixels, or `null` when unavailable. Query it during layout and after resizing; the application applies the result to its CSS. Interactive controls inside draggable regions need `-webkit-app-region: no-drag`.
 
-### Custom titlebar overlay on Windows (unreleased)
+### Custom titlebar overlay on Windows
 
 On a live Windows window created with `TitlebarStyle::Overlay`, the host can
 opt into drawing the caption buttons to match the app's titlebar:
@@ -333,7 +333,7 @@ Web content uses Chromium's native accessibility tree. Use semantic HTML, ARIA, 
 
 `App.headless()` or `PROTON_HEADLESS=1` selects off-screen rendering without native top-level windows. Native dialogs, menus, titlebars and other window-bound UI are unavailable. Linux still requires an X11 display, such as Xvfb. Browser automation and native-window behavior therefore require different validation environments.
 
-**Rendering while occluded on macOS (unreleased)**
+### Rendering while occluded on macOS
 
 By default, a fully covered window or a window on another Space can stop
 rendering; native window captures may contain only its page background. To keep
@@ -490,7 +490,7 @@ the HTTP request. POSIX filesystem resolution preserves `symlink/..` traversal;
 Windows follows directory junctions and preserves extended path semantics. A final symbolic link is replaced only with explicit overwrite;
 its target is left unchanged.
 Only HTTP 200 is accepted: redirects and partial downloads are not supported.
-In the unreleased version, downloads accept gzip and identity by default and
+Since 0.10.1, downloads accept gzip and identity by default and
 stream decoded gzip bytes to disk, including when the caller supplies
 `Accept-Encoding`. Earlier releases require an unencoded response.
 It raises `DownloadError`; cancellation follows the calling async task and

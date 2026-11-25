@@ -289,7 +289,7 @@ on_render_process_gone 同时覆盖主页面和子视图，无需额外订阅 on
 
 `TitlebarStyle::Overlay` 适用于 macOS、Windows 和 Linux。叠加标题栏页面通过 `await window.__MoonBit__.getTitlebarArea()` 查询可用区域，返回 CSS 像素单位的 `{ x, y, width, height }`，不可用时返回 `null`。在布局时及窗口缩放后查询，由应用将结果应用到 CSS。拖动区域内的交互控件需要设置 `-webkit-app-region: no-drag`。
 
-### Windows 自定义叠加标题栏（未发布）
+### Windows 自定义叠加标题栏
 
 对于以 `TitlebarStyle::Overlay` 创建的 Windows 窗口，应用宿主可以选择自行绘制窗口按钮，使其与应用标题栏一致：
 
@@ -318,7 +318,7 @@ Web 内容使用 Chromium 原生无障碍树。页面应提供语义化 HTML、A
 
 `App.headless()` 或 `PROTON_HEADLESS=1` 使用离屏渲染，不创建原生顶层窗口。原生对话框、菜单、标题栏等依赖窗口的 UI 不可用。Linux 仍需要 X11 display，例如 Xvfb。因此，浏览器自动化与原生窗口行为需要不同的验证环境。
 
-**macOS 遮挡时继续绘制（未发布）**
+### macOS 遮挡时继续绘制
 
 默认情况下，窗口被完全遮挡或位于另一个 Space 时，页面可能停止绘制，原生窗口
 截图可能只剩页面背景。需要持续更新原生截图的应用可以在启动前配置：
@@ -462,7 +462,7 @@ net 扩展在宿主执行 HTTP 请求，返回状态、响应头及 UTF-8 文本
 保留 `符号链接/..` 的遍历含义；Windows 解析目录联接，并保留扩展路径的语义。最终文件名若为符号链接，只有显式覆盖才会替换链接本身，
 不会修改其目标文件。
 只接受 HTTP 200，不自动跟随重定向，不支持部分下载。
-未发布版本的下载默认接受 gzip 和 identity。gzip 响应会流式解压后写入文件，调用者自定义
+从 0.10.1 起，下载默认接受 gzip 和 identity。gzip 响应会流式解压后写入文件，调用者自定义
 `Accept-Encoding` 时也一样。先前发布的版本要求服务端返回未编码的内容。
 失败抛出 `DownloadError`；取消调用任务会结束下载并清理临时文件。
 最终移动一旦开始，就会在不可取消的区间完成；已提交的目标文件不会被取消清理删除。
