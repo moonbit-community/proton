@@ -872,7 +872,7 @@ Native dialogs, menus, title bars, and other window-bound UI are unavailable in
 headless mode. In particular, open, save, and directory dialogs fail with an
 unsupported-operation error instead of displaying unparented system UI.
 
-## Rendering while occluded on macOS (unreleased)
+## Rendering while occluded on macOS
 
 macOS normally lets Chromium throttle and reclaim rendering resources for a
 fully covered window or a window on another Space. Native window captures may

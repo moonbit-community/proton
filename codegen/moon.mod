@@ -1,11 +1,11 @@
 name = "moonbit-community/proton_codegen"
 
-version = "0.10.0"
+version = "0.10.1"
 
 import {
   "moonbitlang/lexer@0.4.4",
   "moonbitlang/parser@0.4.4",
-  "moonbitlang/x@0.5.5",
+  "moonbitlang/x@0.5.7",
 }
 
 readme = "README.md"
