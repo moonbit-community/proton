@@ -600,18 +600,23 @@ async test "download does not require permission to list the parent directory" {
 }
 
 ///|
-async test "download preserves Windows extended and junction paths to dotted directories" {
-  guard @async.platform is Windows else { return }
-  let root = @fs.tmpdir(prefix="proton-net-download-")
-  defer @fs.remove(root, recursive=true)
-  let absolute = @path.Path(root).resolve().to_string()
-  let extended = if absolute.has_prefix("\\\\?\\") {
+fn windows_extended_path(absolute : String) -> String {
+  if absolute.has_prefix("\\\\?\\") {
     absolute
   } else if absolute.has_prefix("\\\\") {
     "\\\\?\\UNC\\" + absolute[2:].to_owned()
   } else {
     "\\\\?\\" + absolute
   }
+}
+
+///|
+async test "download preserves Windows extended and junction paths to dotted directories" {
+  guard @async.platform is Windows else { return }
+  let root = @fs.tmpdir(prefix="proton-net-download-")
+  defer @fs.remove(root, recursive=true)
+  let absolute = @path.Path(root).resolve().to_string()
+  let extended = windows_extended_path(absolute)
   let parent = extended + "\\folder."
   @fs.mkdir(parent)
   // Keep backslashes: async's recursive rmdir joins children with '/'.
@@ -655,4 +660,26 @@ async test "download preserves Windows extended and junction paths to dotted dir
       assert_eq(@fs.readdir(root, sort=true), ["alias", "folder."])
     }
   }
+}
+
+///|
+async test "download preserves a verbatim Windows filename under an ordinary directory" {
+  guard @async.platform is Windows else { return }
+  let root = @fs.tmpdir(prefix="proton-net-download-")
+  defer @fs.remove(root, recursive=true)
+  let extended = windows_extended_path(@path.Path(root).resolve().to_string())
+  let dotted = extended + "\\result."
+  let ordinary = extended + "\\result"
+  @fs.write_text(dotted, "old")
+  defer @fs.remove(dotted)
+  @fs.write_text(ordinary, "neighbor")
+  with_download_server(
+    connection => {
+      ignore(connection.read_until(b"\r\n\r\n"))
+      connection.write(b"HTTP/1.1 200 OK\r\nContent-Length: 3\r\n\r\nnew")
+    },
+    url => @net.download(url, dotted, overwrite=true),
+  )
+  assert_eq(@fs.read_text(dotted), "new")
+  assert_eq(@fs.read_text(ordinary), "neighbor")
 }
