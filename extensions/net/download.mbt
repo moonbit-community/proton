@@ -106,7 +106,20 @@ pub async fn download(
     guard @fs.kind(parent) is Directory else {
       raise FileFailed(detail="parent of '\{destination}' is not a directory")
     }
-    @fs.realpath(parent)
+    let resolved = @fs.realpath(parent)
+    // realpath may shorten an ordinary parent even when the caller needs
+    // verbatim semantics for the final filename (for example, "result.").
+    if @async.platform is Windows &&
+      parent.has_prefix("\\\\?\\") &&
+      !resolved.has_prefix("\\\\?\\") {
+      if resolved.has_prefix("\\\\") {
+        "\\\\?\\UNC\\" + resolved[2:].to_owned()
+      } else {
+        "\\\\?\\" + resolved
+      }
+    } else {
+      resolved
+    }
   } catch {
     FileFailed(..) as error => raise error
     error =>
