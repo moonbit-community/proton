@@ -1,0 +1,8 @@
+import {
+  "moonbitlang/core/bigint",
+  "moonbitlang/core/encoding/base64",
+}
+
+import {
+  "moonbitlang/core/encoding/base64",
+} for "test"

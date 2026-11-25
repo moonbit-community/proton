@@ -23,11 +23,8 @@ pub struct PublicKey {
 /// Accepts SubjectPublicKeyInfo (`PUBLIC KEY`, produced by `openssl pkey -pubout`)
 /// and PKCS#1 (`RSA PUBLIC KEY`). Private keys and certificates are not accepted.
 pub fn PublicKey::parse(text : String) -> PublicKey raise KeyError {
-  let block = @pem.decode_pem_single(text[:]) catch {
-    error => raise Malformed(detail=error.to_string())
-  }
-  let (modulus, exponent) = parse_parameters(block) catch {
-    error => raise Malformed(detail=error.to_string())
+  let (modulus, exponent) = @pki.parse_rsa_public_key(text[:]) catch {
+    @pki.InvalidKey(detail) => raise Malformed(detail~)
   }
   guard modulus.compare_int(0) > 0 else {
     raise Malformed(detail="RSA modulus must be positive")
@@ -46,47 +43,6 @@ pub fn PublicKey::parse(text : String) -> PublicKey raise KeyError {
   }
   guard exponent.is_odd() else { raise InvalidExponent(detail="must be odd") }
   PublicKey::{ modulus, exponent, size: (bits + 7) / 8, }
-}
-
-///|
-/// Uses the DER library for framing and integer decoding; this layer only
-/// selects RSA and checks the public-key structure.
-fn parse_parameters(
-  block : @pem.PemBlock,
-) -> (@bigint.BigInt, @bigint.BigInt) raise @asn1.DerError {
-  let encoded = match block.label {
-    "RSA PUBLIC KEY" => block.data
-    "PUBLIC KEY" => {
-      let fields = @asn1.DerReader::from_bytes(block.data)
-        .read_single()
-        .as_sequence()
-      guard fields is [algorithm, key] else {
-        raise @asn1.InvalidValue("expected SubjectPublicKeyInfo")
-      }
-      let algorithm = algorithm.as_sequence()
-      guard algorithm is [oid, parameters] else {
-        raise @asn1.InvalidValue(
-          "expected RSA algorithm identifier and NULL parameters",
-        )
-      }
-      let oid = oid.as_object_identifier().to_string()
-      guard oid == "1.2.840.113549.1.1.1" else {
-        raise @asn1.InvalidValue("unsupported public key algorithm: \{oid}")
-      }
-      parameters.as_null()
-      let (unused_bits, encoded) = key.as_bit_string()
-      guard unused_bits == 0 else {
-        raise @asn1.InvalidValue("RSA public key must contain complete octets")
-      }
-      encoded
-    }
-    _ => raise @asn1.InvalidValue("expected PUBLIC KEY or RSA PUBLIC KEY PEM")
-  }
-  let fields = @asn1.DerReader::from_bytes(encoded).read_single().as_sequence()
-  guard fields is [modulus, exponent] else {
-    raise @asn1.InvalidValue("expected RSA modulus and public exponent")
-  }
-  (modulus.as_integer(), exponent.as_integer())
 }
 
 ///|

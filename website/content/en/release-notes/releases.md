@@ -17,6 +17,9 @@ or explicitly hidden pages can also remain `visible`; native capture in those
 states is not guaranteed. See
 [application configuration](../introduction/application-api.md#rendering-while-occluded-on-macos-unreleased).
 
+The new `moonbit-community/proton_pki` module exposes a parser for the PEM
+public keys used to verify application updates.
+
 ## 0.9.0
 
 **Async runtime migration (breaking API change)**

@@ -1,0 +1,20 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbit-community/proton_pki"
+
+import {
+  "moonbitlang/core/bigint",
+}
+
+// Values
+pub fn parse_rsa_public_key(StringView) -> (@bigint.BigInt, @bigint.BigInt) raise InvalidKey
+
+// Errors
+pub suberror InvalidKey {
+  InvalidKey(String)
+}
+
+// Types and methods
+
+// Type aliases
+
+// Traits

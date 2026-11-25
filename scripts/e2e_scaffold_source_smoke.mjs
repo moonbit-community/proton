@@ -191,6 +191,7 @@ function connectLocalSourceModules(destination, template) {
     "client",
     "rabbita",
     "config",
+    "pki",
     "rsa",
     "updater",
     "sys/ffi",

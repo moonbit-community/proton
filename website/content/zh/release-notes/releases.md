@@ -14,6 +14,8 @@ macOS 应用可在启动前调用 `App.macos_render_when_occluded()`，使窗口
 这些状态下的原生截图可用性不受保证。参见
 [应用配置](../introduction/application-api.md#macos-遮挡时继续绘制未发布)。
 
+新增 `moonbit-community/proton_pki` 模块，提供解析应用更新所用 PEM 公钥的接口。
+
 ## 0.9.0
 
 **异步运行时迁移（破坏性 API 变更）**

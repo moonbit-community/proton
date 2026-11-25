@@ -4,6 +4,7 @@ members = [
   "./codegen",
   "./contract",
   "./rabbita",
+  "./pki",
   "./rsa",
   "./updater",
   "./proton",
