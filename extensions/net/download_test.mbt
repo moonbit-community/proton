@@ -29,7 +29,6 @@ async test "download streams authenticated binary content and reports written by
     connection => {
       let request = @utf8.decode(connection.read_until(b"\r\n\r\n").unwrap())
       assert_true(request.contains("Authorization: Bearer test-token\r\n"))
-      assert_true(request.contains("Accept-Encoding: identity\r\n"))
       assert_true(request.has_prefix("GET /file?q=1 HTTP/1.1\r\n"))
       connection.write(
         @utf8.encode(
@@ -389,35 +388,37 @@ async test "relative destination paths are resolved before file submission" {
 }
 
 ///|
-async test "encoded responses are rejected instead of saving gzip bytes" {
+let gzip_hello : Bytes = b"\x1f\x8b\x08\x00\x00\x00\x00\x00\x02\x03\xcb\x48\xcd\xc9\xc9\x07\x00\x86\xa6\x10\x36\x05\x00\x00\x00"
+
+///|
+async test "download decodes gzip with any HTTP framing and counts decoded bytes" {
   let root = @fs.tmpdir(prefix="proton-net-download-")
   defer @fs.remove(root, recursive=true)
   let destination = root + "/file"
-  @fs.write_text(destination, "old")
-  // async#672: even a valid gzip stream can bypass decoding with close framing.
-  let gzip = b"\x1f\x8b\x08\x00\x00\x00\x00\x00\x02\x03\xcb\x48\xcd\xc9\xc9\x07\x00\x86\xa6\x10\x36\x05\x00\x00\x00"
   for
-    (framing, body) in [
-      ("Connection: close\r\n", gzip),
-      ("Content-Length: 25\r\n", gzip),
-      ("Transfer-Encoding: chunked\r\n", b"19\r\n" + gzip + b"\r\n0\r\n\r\n"),
+    (framing, body, expected_content) in [
+      ("Connection: close\r\n", gzip_hello, b"hello"),
+      ("Content-Length: 25\r\n", gzip_hello, b"hello"),
+      (
+        "Transfer-Encoding: chunked\r\n",
+        b"19\r\n" + gzip_hello + b"\r\n0\r\n\r\n",
+        b"hello",
+      ),
+      ("Content-Length: 50\r\n", gzip_hello + gzip_hello, b"hellohello"),
     ] {
     for explicit_encoding in [false, true] {
-      let progress_called = Ref(false)
+      let progress : Array[@net.DownloadProgress] = []
       with_download_server(
         connection => {
           let request = @utf8.decode(
             connection.read_until(b"\r\n\r\n").unwrap(),
           )
-          assert_true(
-            request.contains(
-              if explicit_encoding {
-                "Accept-Encoding: gzip\r\n"
-              } else {
-                "Accept-Encoding: identity\r\n"
-              },
-            ),
-          )
+          let expected = if explicit_encoding {
+            "gzip"
+          } else {
+            "gzip,identity"
+          }
+          assert_true(request.contains("Accept-Encoding: \{expected}\r\n"))
           connection.write(
             @utf8.encode(
               "HTTP/1.1 200 OK\r\nContent-Encoding: gzip\r\n\{framing}\r\n",
@@ -426,31 +427,64 @@ async test "encoded responses are rejected instead of saving gzip bytes" {
           )
         },
         url => {
-          try
-            @net.download(
-              url,
-              destination,
-              overwrite=true,
-              headers=if explicit_encoding {
-                { "Accept-Encoding": "gzip" }
-              } else {
-                {}
-              },
-              on_progress=_ => progress_called.val = true,
-            )
-          catch {
-            @net.NetworkFailed(detail~) =>
-              assert_true(detail.contains("identity encoding"))
-            error => raise error
-          } noraise {
-            _ => fail("encoded bytes were accepted as a complete download")
-          }
+          @net.download(
+            url,
+            destination,
+            overwrite=true,
+            headers=if explicit_encoding {
+              { "Accept-Encoding": "gzip" }
+            } else {
+              {}
+            },
+            on_progress=p => progress.push(p),
+          )
         },
       )
-      assert_false(progress_called.val)
-      assert_eq(@fs.read_text(destination), "old")
-      assert_eq(@fs.readdir(root), ["file"])
+      assert_eq(@fs.read_binary(destination), expected_content)
+      assert_eq(
+        progress.last().unwrap().received_bytes,
+        expected_content.length().to_int64(),
+      )
+      for p in progress {
+        assert_eq(p.total_bytes, None)
+      }
     }
+  }
+}
+
+///|
+async test "invalid or unsupported content encoding preserves the destination" {
+  let root = @fs.tmpdir(prefix="proton-net-download-")
+  defer @fs.remove(root, recursive=true)
+  let destination = root + "/file"
+  @fs.write_text(destination, "old")
+  for
+    (encoding, body) in [
+      ("gzip", b"\x1f\x8b"),
+      ("gzip", gzip_hello + b"trailing"),
+      ("br", b"data"),
+    ] {
+    with_download_server(
+      connection => {
+        ignore(connection.read_until(b"\r\n\r\n"))
+        connection.write(
+          @utf8.encode(
+            "HTTP/1.1 200 OK\r\nContent-Encoding: \{encoding}\r\nContent-Length: \{body.length()}\r\n\r\n",
+          ) +
+          body,
+        )
+      },
+      url => {
+        try @net.download(url, destination, overwrite=true) catch {
+          @net.NetworkFailed(..) => ()
+          error => raise error
+        } noraise {
+          _ => fail("expected encoded download failure")
+        }
+      },
+    )
+    assert_eq(@fs.read_text(destination), "old")
+    assert_eq(@fs.readdir(root), ["file"])
   }
 }
 
@@ -566,18 +600,23 @@ async test "download does not require permission to list the parent directory" {
 }
 
 ///|
-async test "download preserves Windows extended and junction paths to dotted directories" {
-  guard @async.platform is Windows else { return }
-  let root = @fs.tmpdir(prefix="proton-net-download-")
-  defer @fs.remove(root, recursive=true)
-  let absolute = @path.Path(root).resolve().to_string()
-  let extended = if absolute.has_prefix("\\\\?\\") {
+fn windows_extended_path(absolute : String) -> String {
+  if absolute.has_prefix("\\\\?\\") {
     absolute
   } else if absolute.has_prefix("\\\\") {
     "\\\\?\\UNC\\" + absolute[2:].to_owned()
   } else {
     "\\\\?\\" + absolute
   }
+}
+
+///|
+async test "download preserves Windows extended and junction paths to dotted directories" {
+  guard @async.platform is Windows else { return }
+  let root = @fs.tmpdir(prefix="proton-net-download-")
+  defer @fs.remove(root, recursive=true)
+  let absolute = @path.Path(root).resolve().to_string()
+  let extended = windows_extended_path(absolute)
   let parent = extended + "\\folder."
   @fs.mkdir(parent)
   // Keep backslashes: async's recursive rmdir joins children with '/'.
@@ -621,4 +660,26 @@ async test "download preserves Windows extended and junction paths to dotted dir
       assert_eq(@fs.readdir(root, sort=true), ["alias", "folder."])
     }
   }
+}
+
+///|
+async test "download preserves a verbatim Windows filename under an ordinary directory" {
+  guard @async.platform is Windows else { return }
+  let root = @fs.tmpdir(prefix="proton-net-download-")
+  defer @fs.remove(root, recursive=true)
+  let extended = windows_extended_path(@path.Path(root).resolve().to_string())
+  let dotted = extended + "\\result."
+  let ordinary = extended + "\\result"
+  @fs.write_text(dotted, "old")
+  defer @fs.remove(dotted)
+  @fs.write_text(ordinary, "neighbor")
+  with_download_server(
+    connection => {
+      ignore(connection.read_until(b"\r\n\r\n"))
+      connection.write(b"HTTP/1.1 200 OK\r\nContent-Length: 3\r\n\r\nnew")
+    },
+    url => @net.download(url, dotted, overwrite=true),
+  )
+  assert_eq(@fs.read_text(dotted), "new")
+  assert_eq(@fs.read_text(ordinary), "neighbor")
 }

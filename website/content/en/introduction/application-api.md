@@ -487,19 +487,18 @@ and submits it to the chosen destination only after completion. The parent
 directory must exist; existing entries are preserved unless `overwrite=true`.
 The destination must end in a filename. Its original parent is checked before
 the HTTP request. POSIX filesystem resolution preserves `symlink/..` traversal;
-Windows absolute paths preserve directory junctions and explicit extended path
-prefixes. A final symbolic link is replaced only with explicit overwrite;
+Windows follows directory junctions and preserves extended path semantics. A final symbolic link is replaced only with explicit overwrite;
 its target is left unchanged.
 Only HTTP 200 is accepted: redirects and partial downloads are not supported.
-Downloads temporarily default to `Accept-Encoding: identity` and reject encoded
-responses, even when custom headers request compression, pending an upstream
-HTTP decoding fix. The server must provide unencoded content.
+In the unreleased version, downloads accept gzip and identity by default and
+stream decoded gzip bytes to disk, including when the caller supplies
+`Accept-Encoding`. Earlier releases require an unencoded response.
 It raises `DownloadError`; cancellation follows the calling async task and
 cleans up the temporary file. Once the final move starts, it finishes without
 cancellation, and an already submitted destination is not deleted.
 
 The optional synchronous `on_progress` callback receives `received_bytes` and
-`total_bytes : Int64?`. Chunked and close-delimited responses have no total. Reaching the final byte count is not success: await normal return
+`total_bytes : Int64?`. Gzip, chunked and close-delimited responses have no total. Reaching the final byte count is not success: await normal return
 for confirmation that the destination was saved. No browser download events
 are emitted. Applications can wrap this function in their own commands, keeping
 tokens and destination authorization in the backend; `net.capability()` does

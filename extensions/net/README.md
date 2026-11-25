@@ -50,19 +50,16 @@ Only HTTP 200 is accepted. Redirects, partial responses and other HTTP statuses
 raise `HttpStatus(status~)`; a `Range` request header is rejected. Servers that
 redirect to a download URL require the application to resolve that URL before
 calling this function. There is no automatic retry, resume or file size limit.
-Downloads temporarily default to `Accept-Encoding: identity` and reject any
-response whose `Content-Encoding` is not identity, including when custom request
-headers explicitly ask for compression. This avoids silently saving compressed
-bytes while [async#672](https://github.com/moonbitlang/async/issues/672) remains
-unfixed. Servers must provide an unencoded response for this function to succeed;
-compressed responses raise `NetworkFailed` before any file is created.
+Downloads accept gzip and identity by default. Custom `Accept-Encoding` headers
+are forwarded. A gzip response is streamed to disk as decoded bytes in either
+case. Unsupported or malformed encodings raise `NetworkFailed`.
 
 `destination` is a complete file path, relative to the process working directory
 or absolute. It must end in a filename, not `.` or `..` or a directory separator.
 The existing parent directory is checked before the HTTP request starts.
 On POSIX, filesystem resolution preserves traversal of paths such as
-`link/../file` when `link` is a symbolic link. On Windows, the absolute path
-preserves directory junctions and explicit extended path prefixes. The function does not
+`link/../file` when `link` is a symbolic link. On Windows, resolving the parent follows directory junctions and preserves
+extended path prefixes where needed to identify the same directory. The function does not
 choose filenames from response headers or open a save dialog. Existing entries
 are not replaced unless `overwrite=true`. A symbolic link at the destination
 is an existing entry: explicit overwrite replaces the link itself, not its
@@ -96,7 +93,7 @@ Optional progress uses a synchronous, non-raising observer:
 ```
 
 `DownloadProgress.received_bytes` counts bytes written to the temporary file.
-`total_bytes` is `None` when the size cannot be determined, including chunked
+`total_bytes` is `None` when the size cannot be determined, including gzip, chunked
 and close-delimited responses. Notifications are coalesced;
 keep the observer short. The final byte count is reported before file
 submission, so reaching the total is not a success notification. Only normal

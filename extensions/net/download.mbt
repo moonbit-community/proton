@@ -55,12 +55,10 @@ async fn create_download_file(destination : String) -> (String, @fs.File) {
 /// Headers belong only to this request. Only HTTP 200 is accepted; redirects
 /// and partial responses are not followed or saved. Browser cookies, download
 /// handlers and events are not used, and no renderer command is registered.
-/// Temporarily requests identity encoding by default and rejects encoded
-/// responses until async/http fixes close-delimited gzip decoding.
+/// Gzip responses are decoded as they are written; their decoded size is unknown.
 ///
-/// The existing parent directory is checked before the request starts. POSIX
-/// resolves it through the filesystem; Windows preserves directory junctions
-/// in the absolute path. The final filename is not followed as a symbolic link.
+/// The existing parent directory is resolved before the request starts.
+/// The final filename is not followed as a symbolic link.
 /// Bytes are streamed to an exclusive sibling temporary file, then moved to
 /// the destination. Existing files are preserved
 /// unless `overwrite=true`; failure before the move preserves the old file.
@@ -96,12 +94,10 @@ pub async fn download(
   guard !headers.contains("Range") else {
     raise InvalidRequest(detail="partial downloads are not supported")
   }
-  // FIXME: Remove this workaround after upgrading to async with the fix for
-  // https://github.com/moonbitlang/async/issues/672. Close-delimited gzip can
-  // bypass decoding. Request identity and reject encoded responses rather than
-  // silently saving compressed bytes, even if the server ignores negotiation.
+  // Explicit negotiation gives us the wire body even with custom request headers.
+  // Decode it once below so progress always measures bytes written to disk.
   if !headers.contains("Accept-Encoding") {
-    headers["Accept-Encoding"] = "identity"
+    headers["Accept-Encoding"] = "gzip,identity"
   }
   // Validate the original parent before fixing the destination path.
   // Leave the final entry unresolved so rename replaces it.
@@ -110,13 +106,19 @@ pub async fn download(
     guard @fs.kind(parent) is Directory else {
       raise FileFailed(detail="parent of '\{destination}' is not a directory")
     }
-    if @async.platform is Windows {
-      // FIXME: Use realpath after async preserves Windows path semantics:
-      // https://github.com/moonbitlang/async/issues/675. Until then, keep the
-      // junction path instead of reopening its target without the prefix.
-      @path.Path(parent).resolve().to_string()
+    let resolved = @fs.realpath(parent)
+    // realpath may shorten an ordinary parent even when the caller needs
+    // verbatim semantics for the final filename (for example, "result.").
+    if @async.platform is Windows &&
+      parent.has_prefix("\\\\?\\") &&
+      !resolved.has_prefix("\\\\?\\") {
+      if resolved.has_prefix("\\\\") {
+        "\\\\?\\UNC\\" + resolved[2:].to_owned()
+      } else {
+        "\\\\?\\" + resolved
+      }
     } else {
-      @fs.realpath(parent)
+      resolved
     }
   } catch {
     FileFailed(..) as error => raise error
@@ -136,13 +138,22 @@ pub async fn download(
   }
   defer client.close()
   guard response.code == 200 else { raise HttpStatus(status=response.code) }
-  if response.headers.get("Content-Encoding") is Some(encoding) &&
-    encoding.trim().to_owned().to_lower() != "identity" {
-    raise NetworkFailed(
-      detail="encoded download responses are temporarily unsupported; expected identity encoding",
-    )
+  let gzipped = match response.headers.get("Content-Encoding") {
+    None => false
+    Some(value) =>
+      match value.trim().to_owned().to_lower() {
+        "identity" => false
+        "gzip" => true
+        _ =>
+          raise NetworkFailed(detail="unsupported content encoding: \{value}")
+      }
   }
-  let total_bytes = if response.headers.contains("Transfer-Encoding") {
+  let reader : &@io.BinaryReader = if gzipped {
+    @gzip.StreamDecoder(client, multistream=true) as &@io.BinaryReader
+  } else {
+    client
+  }
+  let total_bytes = if gzipped || response.headers.contains("Transfer-Encoding") {
     None
   } else {
     match response.headers.get("Content-Length") {
@@ -184,7 +195,7 @@ pub async fn download(
       notify({ received_bytes: received, total_bytes, })
       notified = received
     }
-    while (client.read() catch {
+    while (reader.read() catch {
             error => raise NetworkFailed(detail=@debug.render(Repr(error)))
           })
           is Some(chunk) {
@@ -198,6 +209,14 @@ pub async fn download(
         last_notice = now
         notified = received
       }
+    }
+    // The gzip reader leaves non-member trailing bytes on the underlying stream.
+    if gzipped &&
+      (client.peek() catch {
+        error => raise NetworkFailed(detail=@debug.render(Repr(error)))
+      })
+      is Some(_) {
+      raise NetworkFailed(detail="trailing data after gzip response")
     }
     if notified != received && on_progress is Some(notify) {
       notify({ received_bytes: received, total_bytes, })
