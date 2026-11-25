@@ -59,9 +59,14 @@ test "accepts OpenSSL SubjectPublicKeyInfo and PKCS1 public keys" {
 }
 
 ///|
-test "accepts PEM whitespace and CRLF" {
-  let text = "\n" + vector_public_key_pem.replace(old="\n", new="\r\n") + "\r\n"
-  assert_eq(PublicKey::parse(text).bits(), 2048)
+test "accepts PEM whitespace with LF, CRLF and CR line endings" {
+  for ending in ["\n", "\r\n", "\r"] {
+    let text = ending +
+      vector_public_key_pem.replace(old="\n", new=ending) +
+      ending
+    let key = PublicKey::parse(text)
+    assert_true(verify_pkcs1_sha256(key, vector_digest(), vector_signature()))
+  }
 }
 
 ///|
@@ -91,10 +96,28 @@ test "rejects private keys and certificates instead of treating them as public k
 }
 
 ///|
-test "rejects non-RSA algorithms and malformed DER" {
-  // An id-ecPublicKey AlgorithmIdentifier followed by a BIT STRING.
-  let spki = b"\x30\x11\x30\x0b\x06\x07\x2a\x86\x48\xce\x3d\x02\x01\x05\x00\x03\x02\x00x"
-  assert_true(parse_error(test_pem("PUBLIC KEY", spki)) is Malformed(_))
+test "SPKI requires rsaEncryption, NULL parameters and octet-aligned key bits" {
+  let modulus = test_unsigned_integer(vector_modulus())
+  let exponent = test_unsigned_integer(@bigint.BigInt::from_int(65537))
+  let pkcs1 = test_field(b'\x30', modulus + exponent)
+  let rsa_oid = b"\x06\x09\x2a\x86\x48\x86\xf7\x0d\x01\x01\x01"
+  let ec_oid = b"\x06\x07\x2a\x86\x48\xce\x3d\x02\x01"
+  let null_der = b"\x05\x00"
+  fn spki(oid : Bytes, parameters : Bytes, unused_bits : Byte) -> String {
+    let algorithm = test_field(b'\x30', oid + parameters)
+    let bits = test_field(b'\x03', Bytes::from_array([unused_bits]) + pkcs1)
+    test_pem("PUBLIC KEY", test_field(b'\x30', algorithm + bits))
+  }
+
+  let key = PublicKey::parse(spki(rsa_oid, null_der, 0))
+  assert_true(verify_pkcs1_sha256(key, vector_digest(), vector_signature()))
+  assert_true(parse_error(spki(ec_oid, null_der, 0)) is Malformed(_))
+  assert_true(parse_error(spki(rsa_oid, b"", 0)) is Malformed(_))
+  assert_true(parse_error(spki(rsa_oid, null_der, 1)) is Malformed(_))
+}
+
+///|
+test "rejects malformed DER" {
   for
     data in [
       b"", b"\x30\x82\xff\xff", b"\x30\x80", b"\x30\x00", b"\x30\x00\x00",

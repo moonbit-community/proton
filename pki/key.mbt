@@ -10,7 +10,8 @@ pub suberror InvalidKey {
 pub fn parse_rsa_public_key(
   text : StringView,
 ) -> (@bigint.BigInt, @bigint.BigInt) raise InvalidKey {
-  let lines = text.split("\n")
+  // A CRLF boundary contributes an empty line, which PEM readers ignore.
+  let lines = text.split("\r").flat_map(part => part.split("\n"))
   let mut result = None
   for line in lines {
     let line = line.trim()
@@ -65,7 +66,7 @@ fn read_body(
     }
     for ch in line {
       match ch {
-        ' ' | '\t' | '\r' => ()
+        ' ' | '\t' => ()
         _ => body.write_char(ch)
       }
     }
