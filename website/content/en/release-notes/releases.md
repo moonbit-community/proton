@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+Host-side `@net.download` now streams gzip responses to disk as decoded bytes.
+Progress counts bytes written and reports an unknown total for gzip. Windows
+downloads resolve the destination parent through directory junctions.
+
 Windows overlay windows can opt into host-drawn caption buttons with
 `WindowHandle::set_titlebar_overlay()`. Applications can update the height
 (at least 16 DIPs) and colors at runtime to align their titlebar with the window
