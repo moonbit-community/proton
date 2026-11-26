@@ -211,7 +211,8 @@ static int32_t package_icon_update_resources(
     memcpy(target, source, 8);
     package_icon_write_u32(target + 8, image_size);
     package_icon_write_u16(target + 12, resource_id);
-    if (!UpdateResourceW(update, RT_ICON, MAKEINTRESOURCEW(resource_id),
+    if (!UpdateResourceW(update, MAKEINTRESOURCEW((ULONG_PTR)RT_ICON),
+                         MAKEINTRESOURCEW(resource_id),
                          language, (void *)(icon_data + image_offset),
                          image_size)) {
       DWORD error_code = GetLastError();
@@ -223,7 +224,8 @@ static int32_t package_icon_update_resources(
     }
   }
 
-  if (!UpdateResourceW(update, RT_GROUP_ICON, MAKEINTRESOURCEW(1), language,
+  if (!UpdateResourceW(update, MAKEINTRESOURCEW((ULONG_PTR)RT_GROUP_ICON),
+                       MAKEINTRESOURCEW(1), language,
                        group, (DWORD)group_size)) {
     DWORD error_code = GetLastError();
     free(group);
