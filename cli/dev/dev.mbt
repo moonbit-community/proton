@@ -547,6 +547,8 @@ async fn terminate_frontend_tree(pid : Int32) -> Unit {
         "taskkill",
         ["/pid", pid.to_string(), "/t", "/f"],
         no_console_window=true,
+        stdout=Discard,
+        stderr=Discard,
         cancel_handler=@process.hard_cancel(),
       ).exit_code,
     )
