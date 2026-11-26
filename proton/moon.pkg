@@ -33,7 +33,6 @@ supported_targets = "native"
 
 options(
   "allow-experimental-packages": true,
-  "is-main": false,
   targets: {
     "exports.mbt": [ "native" ],
     "facade_app_metadata.mbt": [ "native" ],

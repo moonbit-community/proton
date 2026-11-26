@@ -34,7 +34,3 @@ source = "."
 preferred_target = "native"
 
 supported_targets = "+native"
-
-options(
-  warn_list: "",
-)

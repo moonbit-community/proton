@@ -30,5 +30,4 @@ supported_targets = "+native"
 
 options(
   "--moonbit-unstable-prebuild": "build.mjs",
-  warn_list: "",
 )

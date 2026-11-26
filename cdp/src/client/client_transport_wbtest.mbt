@@ -2,11 +2,11 @@
 async test "response diagnostics precede consumption and cancellation clears state" {
   @async.with_task_group(group => {
     let server = @http.Server(@socket.Addr::parse("127.0.0.1:0"))
-    let port = server.addr.port
+    let port = server.local_addr().port
     let peer_closed = Ref(false)
     let server_task = group.spawn(() => {
       defer server.close()
-      let (connection, _) = server.accept()
+      let connection = server.accept()
       defer connection.close()
       let request = connection.read_request()
       let websocket = @websocket.from_http_server(request, connection)
@@ -73,10 +73,10 @@ async test "response diagnostics precede consumption and cancellation clears sta
 async test "send failure clears registered command state" {
   @async.with_task_group(group => {
     let server = @http.Server(@socket.Addr::parse("127.0.0.1:0"))
-    let port = server.addr.port
+    let port = server.local_addr().port
     let server_task = group.spawn(() => {
       defer server.close()
-      let (connection, _) = server.accept()
+      let connection = server.accept()
       defer connection.close()
       let request = connection.read_request()
       let websocket = @websocket.from_http_server(request, connection)
@@ -106,11 +106,11 @@ async test "send failure clears registered command state" {
 async test "task group exit closes client after cancelling reader" {
   @async.with_task_group(outer => {
     let server = @http.Server(@socket.Addr::parse("127.0.0.1:0"))
-    let port = server.addr.port
+    let port = server.local_addr().port
     let peer_closed = Ref(false)
     let server_task = outer.spawn(() => {
       defer server.close()
-      let (connection, _) = server.accept()
+      let connection = server.accept()
       defer connection.close()
       let request = connection.read_request()
       let websocket = @websocket.from_http_server(request, connection)

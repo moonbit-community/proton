@@ -44,11 +44,13 @@ fn ApplicationUpdates::discard(self : ApplicationUpdates) -> Unit {
   if self.prepared is Some(prepared) {
     prepared.discard() catch {
       error =>
-        @xlog.warn(category="proton.updater") <?
-          {
-            "message": "downloaded update cleanup failed",
-            "detail": error.to_string(),
-          }
+        if @xlog.warn(category="proton.updater") is Some(w) {
+          w
+          ..write_object_begin()
+          ..write_object_field("message", "downloaded update cleanup failed")
+          ..write_object_field("detail", error.to_string())
+          .write_object_end()
+        }
     }
     self.prepared = None
     self.prepared_version = None
@@ -253,8 +255,12 @@ fn start_update_check(
     @async.sleep(update_check_delay_ms + update_check_jitter())
     let offered = channel.poll(updates) catch {
       _ => {
-        @xlog.warn(category="proton.updater") <?
-          { "message": "update check failed" }
+        if @xlog.warn(category="proton.updater") is Some(w) {
+          w
+          ..write_object_begin()
+          ..write_object_field("message", "update check failed")
+          .write_object_end()
+        }
         return
       }
     }
@@ -276,11 +282,13 @@ fn start_update_check(
 fn cleanup_previous_update() -> Unit {
   @native.update_cleanup_previous() catch {
     error =>
-      @xlog.warn(category="proton.updater") <?
-        {
-          "message": "previous update cleanup failed",
-          "detail": error.to_string(),
-        }
+      if @xlog.warn(category="proton.updater") is Some(w) {
+        w
+        ..write_object_begin()
+        ..write_object_field("message", "previous update cleanup failed")
+        ..write_object_field("detail", error.to_string())
+        .write_object_end()
+      }
   }
 }
 

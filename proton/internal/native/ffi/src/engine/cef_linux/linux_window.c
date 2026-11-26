@@ -406,7 +406,7 @@ void proton_engine_sync_browser_bounds(proton_engine_window_t *window) {
                         (unsigned int)attributes.height);
     }
     XSync(display, False);
-    (void)gdk_x11_display_error_trap_pop(gdk_display);
+    gdk_x11_display_error_trap_pop_ignored(gdk_display);
   }
   if (host->was_resized != NULL) {
     host->was_resized(host);
@@ -1544,10 +1544,27 @@ int32_t proton_engine_window_set_background_color(
       .blue = (double)(color & 0xff) / 255.0,
       .alpha = (double)((color >> 24) & 0xff) / 255.0,
   };
-  gtk_widget_override_background_color(window->window, GTK_STATE_FLAG_NORMAL,
-                                       &native_color);
-  gtk_widget_override_background_color(window->root_box, GTK_STATE_FLAG_NORMAL,
-                                       &native_color);
+  const char *provider_key = "proton-window-background";
+  GtkCssProvider *provider =
+      g_object_get_data(G_OBJECT(window->window), provider_key);
+  if (provider == NULL) {
+    provider = gtk_css_provider_new();
+    // The widget owns this reference; its style contexts retain their own.
+    // Reuse the provider so repeated color changes do not accumulate providers.
+    g_object_set_data_full(G_OBJECT(window->window), provider_key, provider,
+                           g_object_unref);
+    gtk_style_context_add_provider(
+        gtk_widget_get_style_context(window->window),
+        GTK_STYLE_PROVIDER(provider), GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
+    gtk_style_context_add_provider(
+        gtk_widget_get_style_context(window->root_box),
+        GTK_STYLE_PROVIDER(provider), GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
+  }
+  char *rgba = gdk_rgba_to_string(&native_color);
+  char *css = g_strdup_printf("* { background-color: %s; }", rgba);
+  gtk_css_provider_load_from_data(provider, css, -1, NULL);
+  g_free(css);
+  g_free(rgba);
   return PROTON_OK;
 }
 

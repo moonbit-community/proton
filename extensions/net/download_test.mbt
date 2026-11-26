@@ -8,11 +8,11 @@ async fn with_download_server(
     defer server.close()
     @async.with_task_group(group => {
       let sender = group.spawn(() => {
-        let (connection, _) = server.accept()
+        let connection = server.accept()
         defer connection.close()
         serve(connection)
       })
-      run("http://\{server.addr}/file")
+      run("http://\{server.local_addr()}/file")
       sender.wait()
     })
   })
@@ -254,7 +254,7 @@ async test "concurrent downloads cannot both claim the same destination" {
     @async.with_task_group(group => {
       group.spawn_bg(() => {
         for content in [b"one", b"two"] {
-          let (connection, _) = server.accept()
+          let connection = server.accept()
           group.spawn_bg(() => {
             defer connection.close()
             ignore(connection.read_until(b"\r\n\r\n"))
@@ -267,7 +267,7 @@ async test "concurrent downloads cannot both claim the same destination" {
       let tasks = Array::makei(2, _ => {
         group.spawn(() => {
           try
-            @net.download("http://\{server.addr}/file", destination, on_progress=p => {
+            @net.download("http://\{server.local_addr()}/file", destination, on_progress=p => {
               if p.received_bytes == 0L {
                 ignore(try! ready.try_put(()))
               }
@@ -418,7 +418,14 @@ async test "download decodes gzip with any HTTP framing and counts decoded bytes
           } else {
             "gzip,identity"
           }
-          assert_true(request.contains("Accept-Encoding: \{expected}\r\n"))
+          assert_true(
+            request
+            .split("\r\n")
+            .any(line => {
+              line.to_owned().to_lower() == "accept-encoding: \{expected}"
+            }),
+            msg=request,
+          )
           connection.write(
             @utf8.encode(
               "HTTP/1.1 200 OK\r\nContent-Encoding: gzip\r\n\{framing}\r\n",

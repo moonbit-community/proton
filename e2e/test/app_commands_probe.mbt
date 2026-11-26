@@ -423,11 +423,11 @@ async fn run_http_origin_probe(
     })
     defer server.close()
     let server_task = group.spawn(no_wait=true, () => {
-      let (connection, _) = server.accept()
+      let connection = server.accept()
       defer connection.close()
       ignore(connection.read_request())
       connection.send_response(200, "OK")
-      connection.write_string(
+      connection.text.write_string(
         "<!doctype html><title>Non Proton HTTP Probe</title><h1>http probe</h1>",
       )
       connection.end_response()
@@ -436,7 +436,9 @@ async fn run_http_origin_probe(
       navigate_and_read_origin(
         group,
         target,
-        "http://127.0.0.1:" + server.addr.port.to_string() + "/probe.html",
+        "http://127.0.0.1:" +
+        server.local_addr().port.to_string() +
+        "/probe.html",
         timeout,
       ),
     )

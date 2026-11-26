@@ -335,6 +335,51 @@ async test "dev starts the selected script from the CLI-overridden frontend dire
 }
 
 ///|
+async test "dev shutdown terminates and reaps the frontend process tree" {
+  for cancel_group in [false, true] {
+    let root = @async_fs.tmpdir(prefix="proton-frontend-tree-")
+    defer @async_fs.remove(root, recursive=true)
+    @async_fs.write_text(
+      @fsutil.path_join(root, "frontend.cjs"),
+      (
+        #|const { spawn } = require('node:child_process');
+        #|const child = spawn(process.execPath, ['-e', `
+        #|  require('node:fs').writeFileSync('child.pid', String(process.pid));
+        #|  setInterval(() => {}, 1000);
+        #|`], { stdio: 'inherit' });
+        #|process.on('SIGTERM', () => {});
+        #|child.on('exit', () => process.exit(0));
+      ),
+      create_mode=CreateOrTruncate,
+    )
+    let mut child_pid = ""
+    @async.with_task_group(group => {
+      let frontend = start_frontend(group, root, "node frontend.cjs", Map([]))
+      @async.with_timeout(10000, () => {
+        let ready = @fsutil.path_join(root, "child.pid")
+        while !@async_fs.exists(ready) {
+          @async.sleep(10)
+        }
+        child_pid = @async_fs.read_text(ready)
+      })
+      assert_true(frontend_exit_code(Some(frontend)) is None)
+      if cancel_group {
+        group.return_immediately()
+      } else {
+        cancel_frontend(Some(frontend))
+      }
+    })
+    let probe = @process.run("node", [
+      "-e",
+      "try { process.kill(Number(process.argv[1]), 0); process.exit(1); } " +
+      "catch (e) { process.exit(e.code === 'ESRCH' ? 0 : 2); }",
+      child_pid,
+    ])
+    assert_eq(probe.exit_code, 0)
+  }
+}
+
+///|
 async test "dev prepares the runtime without an opt-in flag" {
   let root = @async_fs.tmpdir(prefix="proton-auto-dev-")
   defer @async_fs.remove(root, recursive=true)

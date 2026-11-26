@@ -9,7 +9,7 @@ async fn spawn_windowed_close_probe(
   let output_path = join_path(output_root, "windowed-close.log")
   let env = app_process_env(root, output_root, "windowed_close", run_id)
   env["PROTON_HEADLESS"] = "0"
-  let process = @process.spawn(
+  let process = spawn_app_process(
     group,
     program,
     args,
@@ -17,8 +17,6 @@ async fn spawn_windowed_close_probe(
     extra_env=env,
     stdout=ToFile(output_path),
     stderr=DuplicateStdout,
-    cancel_handler=app_cancel_handler(),
-    no_wait=true,
   )
   SpawnedScenarioApp::{ process, output_path, }
 }

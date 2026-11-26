@@ -10,7 +10,6 @@ import {
 supported_targets = "native"
 
 options(
-  "is-main": false,
   "native-stub": [ "logging_io.c" ],
   targets: { "logging.mbt": [ "native" ], "logging_wbtest.mbt": [ "native" ] },
 )

@@ -85,7 +85,7 @@ async fn run_dev_extension_command(
   let output_path = join_path(output_root, name + ".log")
   @async.with_task_group(group => {
     let (program, args) = isolated_app_command(program, args)
-    let process = @process.spawn(
+    let process = spawn_app_process(
       group,
       program,
       args,
@@ -93,8 +93,6 @@ async fn run_dev_extension_command(
       extra_env=env,
       stdout=ToFile(output_path),
       stderr=DuplicateStdout,
-      cancel_handler=app_cancel_handler(),
-      no_wait=true,
     )
     let mut finished = false
     defer (if !finished { process.cancel() })
@@ -215,7 +213,7 @@ async fn spawn_dev_extension_cli_app(
     timeout_ms().to_string(),
   ]
   let (program, args) = isolated_app_command("moon", args)
-  let process = @process.spawn(
+  let process = spawn_app_process(
     group,
     program,
     args,
@@ -223,8 +221,6 @@ async fn spawn_dev_extension_cli_app(
     extra_env=dev_extension_host_env(root, output_root, run_id),
     stdout=ToFile(output_path),
     stderr=DuplicateStdout,
-    cancel_handler=app_cancel_handler(),
-    no_wait=true,
   )
   SpawnedScenarioApp::{ process, output_path, }
 }
@@ -252,7 +248,7 @@ async fn spawn_dev_extension_production_app(
     "--diagnostic-limit",
     "120",
   ])
-  let process = @process.spawn(
+  let process = spawn_app_process(
     group,
     program,
     args,
@@ -260,8 +256,6 @@ async fn spawn_dev_extension_production_app(
     extra_env=dev_extension_runtime_env(root, output_root, run_id),
     stdout=ToFile(output_path),
     stderr=DuplicateStdout,
-    cancel_handler=app_cancel_handler(),
-    no_wait=true,
   )
   SpawnedScenarioApp::{ process, output_path, }
 }

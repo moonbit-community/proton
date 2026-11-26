@@ -13,7 +13,6 @@ license = "Apache-2.0"
 description = "A minimal Proton desktop application."
 
 options(
-  warn_list: "",
   preferred_target: "native",
   supported_targets: "+native",
 )

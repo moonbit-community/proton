@@ -165,7 +165,7 @@ async fn spawn_quit_chain_probe(
   env["PROTON_QUIT_CHAIN_LOG"] = log_path
   env["PROTON_QUIT_CHAIN_READY"] = ready_path
   env["PROTON_QUIT_CHAIN_GATE"] = gate_path
-  let process = @process.spawn(
+  let process = spawn_app_process(
     group,
     program,
     args,
@@ -173,8 +173,6 @@ async fn spawn_quit_chain_probe(
     extra_env=env,
     stdout=ToFile(output_path),
     stderr=DuplicateStdout,
-    cancel_handler=app_cancel_handler(),
-    no_wait=true,
   )
   SpawnedScenarioApp::{ process, output_path, }
 }

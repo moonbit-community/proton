@@ -837,8 +837,13 @@ fn RuntimeSession::create_window(
       self.view_handle(running, view).web_contents(),
     )
   }
-  @xlog.info(category="proton.window") <?
-    { "message": "window created", "window": running.id }
+  if @xlog.info(category="proton.window") is Some(w) {
+    w
+    ..write_object_begin()
+    ..write_object_field("message", "window created")
+    ..write_object_field("window", running.id)
+    .write_object_end()
+  }
   running
 }
 
@@ -2747,12 +2752,14 @@ fn CommandExtensionEventSource::disable(
   detail : String,
 ) -> Unit {
   self.stop()
-  @xlog.error(category="proton.extension") <?
-    {
-      "message": "event source disabled",
-      "extension_id": self.extension_id,
-      "detail": detail,
-    }
+  if @xlog.error(category="proton.extension") is Some(w) {
+    w
+    ..write_object_begin()
+    ..write_object_field("message", "event source disabled")
+    ..write_object_field("extension_id", self.extension_id)
+    ..write_object_field("detail", detail)
+    .write_object_end()
+  }
 }
 
 ///|
@@ -3847,14 +3854,16 @@ fn RuntimeSession::check_bridge_failures(
         raise native_run_error("read bridge failure for " + running.id, error)
     }
     self.fail_page_requests(running)
-    @xlog.warn(category="proton.bridge") <?
-      {
-        "message": "page bridge failed",
-        "window": running.id,
-        "code": diagnostic.code,
-        "url": diagnostic.url,
-        "detail": diagnostic.message,
-      }
+    if @xlog.warn(category="proton.bridge") is Some(w) {
+      w
+      ..write_object_begin()
+      ..write_object_field("message", "page bridge failed")
+      ..write_object_field("window", running.id)
+      ..write_object_field("code", diagnostic.code)
+      ..write_object_field("url", diagnostic.url)
+      ..write_object_field("detail", diagnostic.message)
+      .write_object_end()
+    }
     // Renderer failure has its own notification; do not report it twice.
     if diagnostic.code != renderer_process_terminated_failure_code {
       let browser = self.browser_handle(running)
@@ -4048,8 +4057,13 @@ fn RuntimeSession::retire_window(
       break
     }
   }
-  @xlog.info(category="proton.window") <?
-    { "message": "window closed", "window": running.id }
+  if @xlog.info(category="proton.window") is Some(w) {
+    w
+    ..write_object_begin()
+    ..write_object_field("message", "window closed")
+    ..write_object_field("window", running.id)
+    .write_object_end()
+  }
 }
 
 ///|

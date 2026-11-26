@@ -7,7 +7,6 @@ import {
 supported_targets = "native"
 
 options(
-  "is-main": false,
   "native-stub": [
     "src/proton_app_instance.c",
     "src/proton_bridge_config.c",

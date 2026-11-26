@@ -395,7 +395,7 @@ void proton_engine_overlay_update_input_shape(
     XMapRaised(display, input_window);
   }
   XSync(display, False);
-  (void)gdk_x11_display_error_trap_pop(gdk_display);
+  gdk_x11_display_error_trap_pop_ignored(gdk_display);
   cairo_region_destroy(region);
 }
 

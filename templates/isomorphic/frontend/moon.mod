@@ -15,7 +15,6 @@ license = "Apache-2.0"
 description = "Rabbita frontend for Proton App."
 
 options(
-  warn_list: "",
   preferred_target: "js",
   supported_targets: "js",
 )

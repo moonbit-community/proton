@@ -22,8 +22,12 @@ async fn App::run_with_destroy(
   start_runtime_logging(log_directory)
   let failure_log = RuntimeFailureLog::{ primary_logged: false, }
   try {
-    @xlog.info(category="proton.runtime") <?
-      { "message": "application runtime starting" }
+    if @xlog.info(category="proton.runtime") is Some(w) {
+      w
+      ..write_object_begin()
+      ..write_object_field("message", "application runtime starting")
+      .write_object_end()
+    }
     let browser_data_dir = resolve_browser_data_dir(self, resolved) catch {
       error => raise ConfigurationError(error)
     }
@@ -50,8 +54,14 @@ async fn App::run_with_destroy(
     }
     let app_instance = match acquire_app_instance(resolved) {
       Some(@native.AppInstanceAcquire::Forwarded) => {
-        @xlog.info(category="proton.runtime") <?
-          { "message": "application activation forwarded to primary instance" }
+        if @xlog.info(category="proton.runtime") is Some(w) {
+          w
+          ..write_object_begin()
+          ..write_object_field(
+            "message", "application activation forwarded to primary instance",
+          )
+          .write_object_end()
+        }
         return
       }
       Some(@native.AppInstanceAcquire::Primary(instance)) => Some(instance)
@@ -121,8 +131,12 @@ async fn App::run_with_destroy(
     @native.process_run_relaunches() catch {
       error => raise native_run_error("relaunch application", error)
     }
-    @xlog.info(category="proton.runtime") <?
-      { "message": "application runtime stopped" }
+    if @xlog.info(category="proton.runtime") is Some(w) {
+      w
+      ..write_object_begin()
+      ..write_object_field("message", "application runtime stopped")
+      .write_object_end()
+    }
     if outcome.forced || outcome.exit_code != 0 {
       // Forced exits terminate even with status zero. Cleanup and scheduled
       // relaunches are complete before adopting the application exit status.
@@ -135,12 +149,14 @@ async fn App::run_with_destroy(
 
 ///|
 fn log_runtime_failure(error : AppRunError) -> Unit {
-  @xlog.error(category="proton.runtime") <?
-    {
-      "message": "application runtime failed",
-      "code": app_run_error_log_code(error),
-      "error": error.message(),
-    }
+  if @xlog.error(category="proton.runtime") is Some(w) {
+    w
+    ..write_object_begin()
+    ..write_object_field("message", "application runtime failed")
+    ..write_object_field("code", app_run_error_log_code(error))
+    ..write_object_field("error", error.message())
+    .write_object_end()
+  }
 }
 
 ///|
@@ -454,11 +470,13 @@ async fn run_manifest(
           if bridge_enabled {
             session.wait_for_bridge_startup(config.bridge_startup_timeout_ms)
             if !session.is_quitting() {
-              @xlog.info(category="proton.bridge") <?
-                {
-                  "message": "renderer bridge ready",
-                  "window_count": windows.length(),
-                }
+              if @xlog.info(category="proton.bridge") is Some(w) {
+                w
+                ..write_object_begin()
+                ..write_object_field("message", "renderer bridge ready")
+                ..write_object_field("window_count", windows.length())
+                .write_object_end()
+              }
             }
           }
         }

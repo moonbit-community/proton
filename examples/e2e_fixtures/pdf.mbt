@@ -6,7 +6,7 @@ pub async fn run_pdf_regression() -> Unit {
     "Content-Type": "text/html",
   })
   defer server.close()
-  let url = "http://127.0.0.1:" + server.addr.port.to_string()
+  let url = "http://127.0.0.1:" + server.local_addr().port.to_string()
   let loaded : Array[String] = []
   let printing = Ref(false)
   let release_print = Ref(false)
@@ -40,7 +40,7 @@ pub async fn run_pdf_regression() -> Unit {
     .task_group()
     .spawn_bg(no_wait=true, () => {
       while true {
-        let (connection, _) = server.accept()
+        let connection = server.accept()
         context
         .task_group()
         .spawn_bg(no_wait=true, () => {
@@ -70,7 +70,7 @@ pub async fn run_pdf_regression() -> Unit {
             gate_changed.broadcast()
           } else {
             connection.send_response(200, "OK")
-            connection.write_string(
+            connection.text.write_string(
               (
                 #|<title>PDF lifecycle</title><p>Printable content</p>
                 #|<script>

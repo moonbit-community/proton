@@ -35,7 +35,7 @@ async fn spawn_single_instance_probe(
     ] {
     env[key] = output_root
   }
-  let process = @process.spawn(
+  let process = spawn_app_process(
     group,
     program,
     args,
@@ -43,8 +43,6 @@ async fn spawn_single_instance_probe(
     extra_env=env,
     stdout=ToFile(output_path),
     stderr=DuplicateStdout,
-    cancel_handler=app_cancel_handler(),
-    no_wait=true,
   )
   SpawnedScenarioApp::{ process, output_path, }
 }

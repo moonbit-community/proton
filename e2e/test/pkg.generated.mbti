@@ -207,6 +207,8 @@ pub fn ReloadProbeResult::not_equal(Self, Self) -> Bool
 pub fn ReloadProbeResult::to_json(Self) -> @json.Json
 pub fn ReloadProbeResult::to_repr(Self) -> @debug.Repr
 
+type ScenarioProcess
+
 #derive(Eq, @debug.Debug)
 type ScreenshotProbeResult
 pub fn ScreenshotProbeResult::equal(Self, Self) -> Bool
