@@ -102,8 +102,18 @@ async test "repeated runtime logging startup preserves application changes" {
   logger.set_handler(capture)
   logger.set_config(@xlog.Config(level=@xlog.Error))
   start_runtime_logging("")
-  @xlog.warn() <? { "message": "filtered" }
-  @xlog.error() <? { "message": "application handler retained" }
+  if @xlog.warn() is Some(w) {
+    w
+    ..write_object_begin()
+    ..write_object_field("message", "filtered")
+    .write_object_end()
+  }
+  if @xlog.error() is Some(w) {
+    w
+    ..write_object_begin()
+    ..write_object_field("message", "application handler retained")
+    .write_object_end()
+  }
   assert_eq(capture.entries.length(), 1)
   assert_eq(
     capture.entries[0].fields.get("message"),
@@ -130,11 +140,36 @@ async test "first runtime logging startup preserves root and category filtering"
     start_runtime_logging("")
     let capture = RuntimeLogCapture::{ entries: [], }
     logger.set_handler(capture)
-    @xlog.debug() <? { "message": "root debug" }
-    @xlog.warn() <? { "message": "root warn" }
-    @xlog.error() <? { "message": "root error" }
-    @xlog.trace(category="app.verbose.child") <? { "message": "category trace" }
-    @xlog.error(category="app.quiet.child") <? { "message": "filtered" }
+    if @xlog.debug() is Some(w) {
+      w
+      ..write_object_begin()
+      ..write_object_field("message", "root debug")
+      .write_object_end()
+    }
+    if @xlog.warn() is Some(w) {
+      w
+      ..write_object_begin()
+      ..write_object_field("message", "root warn")
+      .write_object_end()
+    }
+    if @xlog.error() is Some(w) {
+      w
+      ..write_object_begin()
+      ..write_object_field("message", "root error")
+      .write_object_end()
+    }
+    if @xlog.trace(category="app.verbose.child") is Some(w) {
+      w
+      ..write_object_begin()
+      ..write_object_field("message", "category trace")
+      .write_object_end()
+    }
+    if @xlog.error(category="app.quiet.child") is Some(w) {
+      w
+      ..write_object_begin()
+      ..write_object_field("message", "filtered")
+      .write_object_end()
+    }
     let messages = capture.entries.map(entry => {
       entry.fields.get("message").unwrap()
     })

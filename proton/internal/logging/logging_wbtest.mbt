@@ -16,7 +16,12 @@ suberror LoggingProbeError {
 ///|
 fn run_logging_probe(path : String, fail~ : Bool) -> Unit raise {
   configure(Output::File(path))
-  @xlog.warn(category="proton.test") <? { "message": "runtime probe" }
+  if @xlog.warn(category="proton.test") is Some(w) {
+    w
+    ..write_object_begin()
+    ..write_object_field("message", "runtime probe")
+    .write_object_end()
+  }
   if fail {
     raise Failed("runtime failed during create window (-7): owner closed")
   }
@@ -39,9 +44,20 @@ test "file logging remains active after runtime return and error propagation" {
     defer (@fs.remove_file(path) catch { _ => () })
     try {
       run_logging_probe(path, fail~)
-      @xlog.error() <? { "message": "application shutdown complete" }
+      if @xlog.error() is Some(w) {
+        w
+        ..write_object_begin()
+        ..write_object_field("message", "application shutdown complete")
+        .write_object_end()
+      }
     } catch {
-      Failed(detail) => @xlog.error() <? { "message": detail }
+      Failed(detail) =>
+        if @xlog.error() is Some(w) {
+          w
+          ..write_object_begin()
+          ..write_object_field("message", detail)
+          .write_object_end()
+        }
       error => raise error
     }
     let contents = @fs.read_file_to_string(path)
@@ -77,7 +93,17 @@ test "failed logging initialization preserves the current handler and filtering"
     _ => false
   }
   assert_true(failed)
-  @xlog.warn() <? { "message": "filtered" }
-  @xlog.error() <? { "message": "after initialization failure" }
+  if @xlog.warn() is Some(w) {
+    w
+    ..write_object_begin()
+    ..write_object_field("message", "filtered")
+    .write_object_end()
+  }
+  if @xlog.error() is Some(w) {
+    w
+    ..write_object_begin()
+    ..write_object_field("message", "after initialization failure")
+    .write_object_end()
+  }
   assert_eq(capture.messages, [Json::string("after initialization failure")])
 }

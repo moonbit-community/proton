@@ -92,7 +92,7 @@ fn WindowConfig::validation_error(
         InvalidSetting(name="views.id", message="duplicate view id: " + id),
       )
     }
-    ids.add(id) |> ignore
+    ids.insert(id) |> ignore
   }
   None
 }

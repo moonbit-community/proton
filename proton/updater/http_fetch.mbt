@@ -138,7 +138,7 @@ async fn fetch_metadata_stream(url : String) -> Bytes raise UpdateError {
         detail="body exceeds the \{maximum_metadata_bytes} byte limit",
       )
     }
-    buffer.write_bytes(chunk)
+    buffer.write_bytesview(chunk)
   }
   buffer.to_bytes()
 }

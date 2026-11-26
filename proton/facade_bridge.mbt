@@ -7,8 +7,13 @@ fn build_command_host(
   let host = @core.AppCommandHost(
     expose_error_details=proton_dev_mode_enabled(),
     diagnostic_reporter=fn(detail) {
-      @xlog.error(category="proton.command") <?
-        { "message": "command dispatch failed", "detail": detail }
+      if @xlog.error(category="proton.command") is Some(w) {
+        w
+        ..write_object_begin()
+        ..write_object_field("message", "command dispatch failed")
+        ..write_object_field("detail", detail)
+        .write_object_end()
+      }
     },
   )
   let destroy_hooks : Array[CommandExtensionDestroyHook] = []
@@ -498,12 +503,14 @@ async fn dispatch_bridge_request(
     command_tasks.return_immediately()
   }) catch {
     error => {
-      @xlog.error(category="proton.command") <?
-        {
-          "message": "command scope failed",
-          "op": request.op(),
-          "detail": @debug.render(Repr(error)),
-        }
+      if @xlog.error(category="proton.command") is Some(w) {
+        w
+        ..write_object_begin()
+        ..write_object_field("message", "command scope failed")
+        ..write_object_field("op", request.op())
+        ..write_object_field("detail", @debug.render(Repr(error)))
+        .write_object_end()
+      }
       return Some(
         @native.BridgeResponse::Err(
           request_id=request.request_id(),
