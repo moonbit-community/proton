@@ -15,15 +15,65 @@ async fn[X] run_e2e_operation_with_timeout(
 
 ///|
 struct SpawnedScenarioApp {
-  process : @process.Process
+  process : ScenarioProcess
   output_path : String
+}
+
+///|
+struct ScenarioProcess {
+  pid : Int32
+  result : @async.Task[Int32]
+}
+
+///|
+fn ScenarioProcess::cancel(self : ScenarioProcess) -> Unit {
+  self.result.cancel()
+}
+
+///|
+fn ScenarioProcess::try_wait(self : ScenarioProcess) -> Int32? raise {
+  self.result.try_wait()
+}
+
+///|
+async fn spawn_app_process(
+  group : @async.TaskGroup,
+  program : String,
+  args : Array[String],
+  cwd~ : String,
+  extra_env~ : Map[String, String],
+  stdout~ : @process.ProcessOutput,
+  stderr~ : @process.ProcessOutput,
+) -> ScenarioProcess {
+  // The async library's cancellation handlers are opaque. Keep tree teardown
+  // inside the owning task so cancellation still kills and reaps the app.
+  let process = @process.spawn_orphan(
+    program,
+    args,
+    cwd~,
+    extra_env~,
+    stdout~,
+    stderr~,
+  )
+  let result = group.spawn(no_wait=true, () => {
+    defer process.close()
+    match @async.handle_cancellation(() => process.wait()) {
+      Some(code) => code
+      None =>
+        @async.protect_from_cancel(() => {
+          terminate_app_tree(process.pid)
+          process.wait()
+        })
+    }
+  })
+  { pid: process.pid, result, }
 }
 
 ///|
 async fn choose_frontend_port() -> Int32 {
   let server = @socket.TcpServer(@socket.Addr::parse("127.0.0.1:0"))
   defer server.close()
-  server.addr.port.to_int()
+  server.local_addr().port.to_int()
 }
 
 ///|
@@ -216,7 +266,7 @@ async fn spawn_scenario_app(
     output_root,
     "child-" + run_id.to_string() + ".log",
   )
-  let process = @process.spawn(
+  let process = spawn_app_process(
     group,
     program,
     args,
@@ -224,8 +274,6 @@ async fn spawn_scenario_app(
     extra_env=app_process_env(root, output_root, scenario, run_id),
     stdout=ToFile(output_path),
     stderr=DuplicateStdout,
-    cancel_handler=app_cancel_handler(),
-    no_wait=true,
   )
   SpawnedScenarioApp::{ process, output_path, }
 }
@@ -334,25 +382,19 @@ fn current_test_executable() -> String raise {
 }
 
 ///|
-fn app_cancel_handler() -> @process.CancellationHandler {
+async fn terminate_app_tree(pid : Int32) -> Unit {
   if @path.sep == '\\' {
-    @process.CancellationHandler(async fn(pid) {
-      ignore(
-        @process.run(
-          "taskkill",
-          ["/pid", pid.to_string(), "/t", "/f"],
-          no_console_window=true,
-          stdout=Discard,
-          stderr=Discard,
-        ),
-      )
-    })
-  } else {
-    @process.CancellationHandler(async fn(pid) {
-      if kill_isolated_unix_app_group(pid) != 0 {
-        terminate_unix_app_tree(pid, "KILL")
-      }
-    })
+    ignore(
+      @process.run(
+        "taskkill",
+        ["/pid", pid.to_string(), "/t", "/f"],
+        no_console_window=true,
+        stdout=Discard,
+        stderr=Discard,
+      ),
+    )
+  } else if kill_isolated_unix_app_group(pid) != 0 {
+    terminate_unix_app_tree(pid, "KILL")
   }
 }
 
@@ -465,7 +507,7 @@ async fn wait_for_spawned_app_cdp(
 }
 
 ///|
-fn app_exit_code(process : @process.Process) -> Int32? {
+fn app_exit_code(process : ScenarioProcess) -> Int32? {
   process.try_wait() catch {
     _ => Some(-1)
   }

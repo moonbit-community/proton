@@ -23,12 +23,12 @@ async fn run_i18n_scenario_page_probe(
     defer server.close()
     let accept_language : Ref[String?] = Ref(None)
     let server_task = group.spawn(no_wait=true, () => {
-      let (connection, _) = server.accept()
+      let connection = server.accept()
       defer connection.close()
       let request = connection.read_request()
       accept_language.val = request.headers.get("accept-language")
       connection.send_response(200, "OK")
-      connection.write_string(
+      connection.text.write_string(
         "<!doctype html><title>Proton I18n HTTP Probe</title>",
       )
       connection.end_response()
@@ -37,7 +37,7 @@ async fn run_i18n_scenario_page_probe(
       navigate_page_and_connect(
         group,
         target,
-        "http://127.0.0.1:" + server.addr.port.to_string() + "/i18n",
+        "http://127.0.0.1:" + server.local_addr().port.to_string() + "/i18n",
         timeout,
       ),
     )

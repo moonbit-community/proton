@@ -497,21 +497,31 @@ async fn start_frontend(
   frontend_path : String,
   command : String,
   env : Map[String, String],
-) -> @process.Process raise DevProcessError {
+) -> @async.Task[Int32] raise DevProcessError {
   @output.info("Starting frontend: " + command)
   @output.info("Frontend path: " + frontend_path)
   let (program, args) = @project.shell_command(command)
-  @process.spawn(
-    group,
+  // CancellationHandler is opaque. Own the process explicitly so shutdown
+  // can terminate descendants before closing and reaping their parent.
+  let process = @process.spawn_orphan(
     program,
     args,
     cwd=frontend_path,
     extra_env=env,
-    cancel_handler=frontend_cancel_handler(),
-    no_wait=true,
   ) catch {
     err => raise Start(role="frontend command", detail=@debug.render(Repr(err)))
   }
+  group.spawn(no_wait=true, () => {
+    defer process.close()
+    match @async.handle_cancellation(() => process.wait()) {
+      Some(code) => code
+      None =>
+        @async.protect_from_cancel(() => {
+          terminate_frontend_tree(process.pid)
+          process.wait()
+        })
+    }
+  })
 }
 
 ///|
@@ -530,24 +540,20 @@ fn managed_frontend_command(
 }
 
 ///|
-fn frontend_cancel_handler() -> @process.CancellationHandler {
+async fn terminate_frontend_tree(pid : Int32) -> Unit {
   if @path.sep == '\\' {
-    @process.CancellationHandler(async fn(pid) {
-      ignore(
-        @process.run(
-          "taskkill",
-          ["/pid", pid.to_string(), "/t", "/f"],
-          no_console_window=true,
-          cancel_handler=@process.hard_cancel(),
-        ).exit_code,
-      )
-    })
+    ignore(
+      @process.run(
+        "taskkill",
+        ["/pid", pid.to_string(), "/t", "/f"],
+        no_console_window=true,
+        cancel_handler=@process.hard_cancel(),
+      ).exit_code,
+    )
   } else {
-    @process.CancellationHandler(async fn(pid) {
-      terminate_unix_frontend_tree(pid, "TERM")
-      @async.sleep(1000)
-      terminate_unix_frontend_tree(pid, "KILL")
-    })
+    terminate_unix_frontend_tree(pid, "TERM")
+    @async.sleep(1000)
+    terminate_unix_frontend_tree(pid, "KILL")
   }
 }
 
@@ -607,7 +613,7 @@ async fn wait_for_frontend(
   frontend_url : String?,
   ready_path : String?,
   timeout_ms : Int32,
-  frontend_process : @process.Process?,
+  frontend_process : @async.Task[Int32]?,
 ) -> Unit {
   match frontend_url {
     None => ()
@@ -678,7 +684,7 @@ fn shell_quote(value : String) -> String {
 }
 
 ///|
-fn frontend_exit_code(process : @process.Process?) -> Int32? {
+fn frontend_exit_code(process : @async.Task[Int32]?) -> Int32? {
   match process {
     None => None
     Some(process) => process.try_wait() catch { _ => Some(-1) }
@@ -793,7 +799,7 @@ async fn run_app(
 }
 
 ///|
-fn cancel_frontend(process : @process.Process?) -> Unit {
+fn cancel_frontend(process : @async.Task[Int32]?) -> Unit {
   match process {
     Some(process) => process.cancel()
     None => ()

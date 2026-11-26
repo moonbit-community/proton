@@ -1357,9 +1357,9 @@ pub async fn run_proxy_regression(case : ProxySource) -> Unit {
   defer server.close()
   // Exercise request-less disconnects independently of Chromium's platform
   // specific speculative connection behavior.
-  let speculative = @socket.Tcp::connect(server.addr)
+  let speculative = @socket.Tcp::connect(server.local_addr())
   speculative.close()
-  let proxy = "http://127.0.0.1:" + server.addr.port.to_string()
+  let proxy = "http://127.0.0.1:" + server.local_addr().port.to_string()
   let configured = case is Explicit
   let environment_proxy = if configured { "http://127.0.0.1:1" } else { proxy }
   @env.set_env_var("PROTON_PROXY_SERVER", environment_proxy)
@@ -1389,7 +1389,7 @@ pub async fn run_proxy_regression(case : ProxySource) -> Unit {
         .task_group()
         .spawn(no_wait=true, () => {
           while !served.val {
-            let (connection, _) = server.accept()
+            let connection = server.accept()
             eprintln("PROXY_CONNECTION accepted")
             ignore(
               context
@@ -1408,7 +1408,9 @@ pub async fn run_proxy_regression(case : ProxySource) -> Unit {
                 eprintln("PROXY_REQUEST " + request.path)
                 if request.path == "http://proton-proxy.invalid:8080/probe" {
                   connection.send_response(200, "OK")
-                  connection.write_string("<title>" + page_title + "</title>")
+                  connection.text.write_string(
+                    "<title>" + page_title + "</title>",
+                  )
                   connection.end_response()
                   served.val = true
                 } else {
@@ -2434,8 +2436,8 @@ pub async fn run_navigation_regression() -> Unit {
     "Content-Type": "text/html; charset=utf-8",
   })
   defer second.close()
-  let origin = "http://127.0.0.1:" + first.addr.port.to_string()
-  let other = "http://127.0.0.1:" + second.addr.port.to_string()
+  let origin = "http://127.0.0.1:" + first.local_addr().port.to_string()
+  let other = "http://127.0.0.1:" + second.local_addr().port.to_string()
   let requests : Array[(@proton.NavigationRequest, String?)] = []
   let served : Array[String] = []
   let failures : Array[String] = []
@@ -2474,7 +2476,7 @@ pub async fn run_navigation_regression() -> Unit {
         .task_group()
         .spawn(no_wait=true, () => {
           while true {
-            let (connection, _) = server.accept()
+            let connection = server.accept()
             ignore(
               context
               .task_group()
@@ -2494,7 +2496,9 @@ pub async fn run_navigation_regression() -> Unit {
                   })
                 } else {
                   connection.send_response(200, "OK")
-                  connection.write_string("<title>" + request.path + "</title>")
+                  connection.text.write_string(
+                    "<title>" + request.path + "</title>",
+                  )
                 }
                 connection.end_response()
               }),

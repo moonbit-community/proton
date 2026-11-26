@@ -7,7 +7,7 @@ async test "metadata streaming accepts the exact limit and closes oversized chun
       @async.with_task_group(group => {
         let peer_closed = Ref(false)
         let sender = group.spawn(() => {
-          let (conn, _) = server.accept()
+          let conn = server.accept()
           defer conn.close()
           ignore(conn.read_request())
           conn.send_response(200, "OK")
@@ -22,7 +22,7 @@ async test "metadata streaming accepts the exact limit and closes oversized chun
             _ => peer_closed.val = true
           }
         })
-        let url = "http://\{server.addr}"
+        let url = "http://\{server.local_addr()}"
         if size == maximum_metadata_bytes {
           assert_eq(fetch_metadata_stream(url).length(), size)
         } else {
@@ -50,11 +50,11 @@ async test "metadata cancellation closes the streaming connection" {
       let started = Ref(false)
       let closed = Ref(false)
       let sender = group.spawn(() => {
-        let (conn, _) = server.accept()
+        let conn = server.accept()
         defer conn.close()
         ignore(conn.read_request())
         conn.send_response(200, "OK")
-        conn.write_string("partial metadata")
+        conn.text.write_string("partial metadata")
         conn.flush_partial_data()
         started.val = true
         ignore(conn.read_request()) catch {
@@ -62,7 +62,7 @@ async test "metadata cancellation closes the streaming connection" {
         }
       })
       let reader = group.spawn(allow_failure=true, () => {
-        fetch_metadata_stream("http://\{server.addr}")
+        fetch_metadata_stream("http://\{server.local_addr()}")
       })
       while !started.val {
         @async.sleep(5)

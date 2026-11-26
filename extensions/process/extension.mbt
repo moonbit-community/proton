@@ -85,8 +85,8 @@ async fn ProcessOwner::kill(
   request : @process_contract.KillRequest,
 ) -> @process_contract.KillReply {
   let process = self.lookup_process(request.process_id)
-  let @async_process.CancellationHandler(kill_process) = @async_process.hard_cancel()
-  kill_process(process.pid) catch {
+  process.cancel()
+  ignore(process.wait()) catch {
     error => raise KillFailed(detail=@debug.render(Repr(error)))
   }
   context.emit(@process_contract.activity, @process_contract.ProcessActivity::{
