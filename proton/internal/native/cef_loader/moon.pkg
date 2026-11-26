@@ -1,7 +1,6 @@
 supported_targets = "native"
 
 options(
-  "is-main": false,
   "native-stub": [ "loader_stub.objcxx.c" ],
   link: { "native": { "stub-cc-flags": "${build.PROTON_CEF_LOADER_CC_FLAGS}" } },
   targets: { "loader.mbt": [ "native" ] },

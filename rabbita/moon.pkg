@@ -7,7 +7,3 @@ import {
 }
 
 supported_targets = "js"
-
-options(
-  "is-main": false,
-)

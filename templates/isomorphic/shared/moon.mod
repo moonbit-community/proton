@@ -11,6 +11,5 @@ license = "Apache-2.0"
 description = "Shared typed contracts for Proton App."
 
 options(
-  warn_list: "",
   preferred_target: "js",
 )

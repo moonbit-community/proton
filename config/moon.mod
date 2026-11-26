@@ -16,7 +16,3 @@ description = "Typed application configuration shared by Proton and its CLI."
 preferred_target = "wasm"
 
 supported_targets = "native+wasm"
-
-options(
-  warn_list: "",
-)

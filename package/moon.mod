@@ -19,7 +19,3 @@ description = "Host-native desktop application packaging library and CLI."
 preferred_target = "wasm"
 
 supported_targets = "native+wasm"
-
-options(
-  warn_list: "",
-)

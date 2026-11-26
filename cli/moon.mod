@@ -24,7 +24,3 @@ description = "Developer CLI for Proton desktop applications."
 preferred_target = "wasm"
 
 supported_targets = "native+wasm"
-
-options(
-  warn_list: "",
-)

@@ -15,7 +15,6 @@ license = "Apache-2.0"
 description = "Proton backend for Proton App."
 
 options(
-  warn_list: "",
   preferred_target: "native",
   supported_targets: "+native",
 )

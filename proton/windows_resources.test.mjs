@@ -1,8 +1,10 @@
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
+import { fileURLToPath } from "node:url";
 import { iconBytes } from "../scripts/windows_icon_fixture.mjs";
 import { createNativeLinkConfig } from "./build.mjs";
 import { compileWindowsIcon, findResourceCompiler } from "./windows_resources.mjs";
@@ -12,6 +14,16 @@ function temporary(t) {
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
   return root;
 }
+
+test("native link bootstrap reads the environment without parsing stdin", () => {
+  const result = spawnSync(process.execPath, [fileURLToPath(new URL("./build.mjs", import.meta.url))], {
+    env: { ...process.env, PROTON_CEF_SETUP_BOOTSTRAP: "1" },
+    input: "not a JSON payload",
+    encoding: "utf8",
+  });
+  assert.equal(result.status, 0, result.stderr);
+  assert.deepEqual(JSON.parse(result.stdout), { vars: {}, link_configs: [] });
+});
 
 
 test("no resource request needs no SDK or output directory", () => {

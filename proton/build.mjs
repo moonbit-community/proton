@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 
 import { spawnSync } from "node:child_process";
-import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { compileWindowsIcon } from "./windows_resources.mjs";
@@ -13,11 +12,6 @@ import {
 
 const moduleRoot = path.dirname(fileURLToPath(import.meta.url));
 const ffiRoot = path.join(moduleRoot, "internal", "native", "ffi");
-
-function readPayloadEnv() {
-  const raw = fs.readFileSync(0, "utf8").trim();
-  return raw.length === 0 ? {} : JSON.parse(raw).env ?? {};
-}
 
 function envValue(env, name) {
   return env[name] ?? process.env[name] ?? "";
@@ -134,7 +128,7 @@ function platformConfig(cefRoot) {
   throw new Error(`Unsupported Proton platform: ${process.platform}`);
 }
 
-export function createNativeLinkConfig(env = readPayloadEnv()) {
+export function createNativeLinkConfig(env = process.env) {
   // A source checkout runs workspace prebuilds before it can build the setup
   // executable that creates the first store installation. Only that bootstrap
   // build has no Proton native link target.
